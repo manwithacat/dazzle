@@ -171,8 +171,7 @@ _UNSUPPORTED_FIELD_TYPES: frozenset[str] = frozenset()
 # Empty string / None means "use the surface mode default" (e.g.
 # `mode: list` + no display → standard Table).
 #
-# Mirrored against `WorkspaceRegionAdapter._BUILDERS | _ALIASES |
-# _TIMESERIES_VIEWS` in src/dazzle/render/fragment/region/ (ADR-0038).
+# Mirrored against `WorkspaceRegionAdapter._BUILDERS | _ALIASES` in src/dazzle/render/fragment/region/ (ADR-0038).
 # We can't import the backend from core (layering rule) so the two
 # lists must stay in sync. The drift is enforced by
 # `tests/unit/render/fragment/test_coverage.py::test_supported_displays_match_adapter`.
@@ -189,34 +188,17 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "pivot_table",
         "tabbed_list",
         "activity_feed",
-        "detail",
         "queue",
-        "histogram",
-        "funnel_chart",
         "status_list",
-        "accordion",
         "conversation",
-        "carousel",
-        "map",  # marker pin board — vendor-free plan canvas (2026-08-09)
-        "profile_card",
-        "action_grid",
-        "tree",
         "pipeline_steps",
-        "progress",
-        "progress_bar",  # HM progress hyperpart — toned determinate .dz-progress
-        "heatmap",
         "confirm_action_panel",
         "search_box",
-        "bar_track",
         "comparison",  # #1470 ranked league
         "insight_summary",  # #1470 deterministic narrative
-        "bullet",
         "diagram",
         "line_chart",
-        "area_chart",
-        "sparkline",
         "radar",
-        "box_plot",
         "cohort_strip",  # #1018 (v0.67.7) — adapter live; data resolution pending
         "day_timeline",  # #1016 (v0.67.8) — adapter live; data resolution pending
         "task_inbox",  # #1015 (v0.67.8) — adapter live; data resolution pending
@@ -236,25 +218,12 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
 #       substrate render this?" question is legitimately answered "no", and
 #       that's by design, not an accidental omission.
 #
-# `map` (a — DEFERRED): vendor-neutral geographic rendering is genuinely
-#   hard. Three options, each with a real cost:
-#     1. Static SVG basemap — vendor-free but zero-zoom (granularity
-#        is fixed at the embedded SVG asset).
-#     2. Bring-your-own-tile-URL via Leaflet (BSD-licensed) — keeps the
-#        framework neutral but pushes vendor choice to the deployer.
-#     3. Defer until a real user picks. We've taken option 3.
-#   The granularity question (street pin vs. region choropleth vs.
-#   density heatmap) is more painful than the vendor question — each
-#   wants a different IR shape and committing prematurely is worse
-#   than the visible gap. (fieldtest_hub `engineering_dashboard.device_map`.)
-#
 # `pdf_viewer` (b — CUSTOM-RENDERED): shipped and working, but it renders
 #   through a dedicated path — the scope-gated `/_dazzle/documents` range
 #   proxy (#162) + the HM pdf-viewer component (hx-pdf), NOT a Fragment
 #   primitive. So the substrate genuinely does not render it and the audit
 #   correctly reports it as unsupported; listed here so that persistent
 #   blocked-count (project_tracker `attachment_view`) reads as intentional.
-# `map` shipped 2026-08-09 as vendor-free Marker pin board (no tile SDK).
 _DEFERRED_DISPLAYS: frozenset[str] = frozenset({"pdf_viewer"})
 
 
@@ -308,8 +277,7 @@ def _audit_surface(appspec: object, surface: object) -> SurfaceCoverage:
             blockers.append(Blocker(kind=BlockerKind.UNSUPPORTED_FEATURE, detail=feature_attr))
 
     # `display:` clause — Phase 4A. Surfaces with non-default display
-    # (kanban, timeline, bar_chart, pivot_table, metrics, heatmap,
-    # funnel_chart) need dedicated adapter dispatch the substrate
+    # (kanban, timeline, bar_chart, pivot_table, metrics) need dedicated adapter dispatch the substrate
     # doesn't yet provide. Currently the adapter's _build_list emits
     # a Table regardless of `display:`, so a `display: kanban` surface
     # silently renders as a table — exactly the under-reporting Plan 13

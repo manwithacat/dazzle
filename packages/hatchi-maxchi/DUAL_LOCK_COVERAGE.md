@@ -11,9 +11,9 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 | Component CSS modules | 76 |
 | Controllers | 34 |
 | Contract modules | 146 |
-| Dual-lock schema+DOM | 42 |
-| Dual-lock DOM-only | 102 |
-| Dual-lock deferred | 2 |
+| Dual-lock schema+DOM | 31 |
+| Dual-lock DOM-only | 101 |
+| Dual-lock deferred | 14 |
 | Contract with no dual-lock row | 0 |
 
 Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
@@ -23,8 +23,8 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | Part | Contract | Controller | DOM_CONTRACT | Model | render() | Dual-lock |
 |------|----------|------------|--------------|-------|----------|-----------|
 | `accordion` | `accordion.py` | `—` | yes | no | no | **DOM-only** |
-| `action_grid` | `action_grid.py` | `—` | yes | yes | yes | **schema+DOM** |
-| `action_grid_region` | `action_grid_region.py` | `—` | yes | no | no | **DOM-only** |
+| `action_grid` | `action_grid.py` | `—` | yes | yes | yes | **deferred** |
+| `action_grid_region` | `action_grid_region.py` | `—` | yes | no | no | **deferred** |
 | `activity_feed` | `activity_feed.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `activity_feed_list` | `activity_feed_list.py` | `—` | yes | no | no | **DOM-only** |
 | `add_card_row` | `add_card_row.py` | `—` | yes | no | no | **DOM-only** |
@@ -36,11 +36,11 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `badge` | `badge.py` | `—` | yes | no | no | **DOM-only** |
 | `bar_chart` | `bar_chart.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `bar_track` | `bar_track.py` | `—` | yes | yes | yes | **schema+DOM** |
-| `box_plot` | `box_plot.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `box_plot` | `box_plot.py` | `—` | yes | yes | yes | **deferred** |
 | `breadcrumb` | `breadcrumb.py` | `—` | yes | no | no | **DOM-only** |
 | `bubble` | `bubble.py` | `—` | yes | no | no | **DOM-only** |
 | `bulk_actions` | `bulk_actions.py` | `—` | yes | no | no | **DOM-only** |
-| `bullet` | `bullet.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `bullet` | `bullet.py` | `—` | yes | yes | yes | **deferred** |
 | `button` | `button.py` | `—` | yes | no | no | **DOM-only** |
 | `calendar` | `calendar.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `card` | `card.py` | `—` | yes | no | no | **DOM-only** |
@@ -78,7 +78,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `form_section` | `form_section.py` | `—` | yes | no | no | **DOM-only** |
 | `form_stack` | `form_stack.py` | `—` | yes | no | no | **DOM-only** |
 | `form_stepper` | `form_stepper.py` | `—` | yes | no | no | **DOM-only** |
-| `funnel` | `funnel.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `funnel` | `funnel.py` | `—` | yes | yes | yes | **deferred** |
 | `grid` | `grid.py` | `dz-grid.js` | yes | no | no | **DOM-only** |
 | `grid_cols` | `grid_cols.py` | `dz-grid-cols.js` | yes | no | no | **DOM-only** |
 | `grid_edit` | `grid_edit.py` | `dz-grid-edit.js` | yes | yes | yes | **schema+DOM** |
@@ -86,8 +86,8 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `grid_region` | `grid_region.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `grid_resize` | `grid_resize.py` | `dz-grid-resize.js` | yes | no | no | **DOM-only** |
 | `heading` | `heading.py` | `—` | yes | no | no | **DOM-only** |
-| `heatmap` | `heatmap.py` | `—` | yes | yes | yes | **schema+DOM** |
-| `histogram` | `histogram.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `heatmap` | `heatmap.py` | `—` | yes | yes | yes | **deferred** |
+| `histogram` | `histogram.py` | `—` | yes | yes | yes | **deferred** |
 | `hover_card` | `hover_card.py` | `dz-hover-card.js` | yes | no | no | **DOM-only** |
 | `icon` | `icon.py` | `—` | yes | no | no | **DOM-only** |
 | `inline_edit` | `inline_edit.py` | `—` | yes | no | no | **DOM-only** |
@@ -120,9 +120,9 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `pivot` | `pivot.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `pivot_table` | `pivot_table.py` | `—` | yes | no | no | **DOM-only** |
 | `popover` | `popover.py` | `—` | yes | no | no | **DOM-only** |
-| `profile_card` | `profile_card.py` | `—` | yes | yes | yes | **schema+DOM** |
-| `progress` | `progress.py` | `—` | yes | yes | yes | **schema+DOM** |
-| `progress_bar` | `progress_bar.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `profile_card` | `profile_card.py` | `—` | yes | yes | yes | **deferred** |
+| `progress` | `progress.py` | `—` | yes | yes | yes | **deferred** |
+| `progress_bar` | `progress_bar.py` | `—` | yes | yes | yes | **deferred** |
 | `queue` | `queue.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `queue_filters` | `queue_filters.py` | `—` | yes | no | no | **DOM-only** |
 | `queue_region` | `queue_region.py` | `—` | yes | no | no | **DOM-only** |
@@ -140,7 +140,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `skip_link` | `skip_link.py` | `—` | yes | no | no | **DOM-only** |
 | `slider` | `slider.py` | `dz-slider.js` | yes | no | no | **DOM-only** |
 | `sort_header` | `sort_header.py` | `—` | yes | no | no | **DOM-only** |
-| `sparkline` | `sparkline.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `sparkline` | `sparkline.py` | `—` | yes | yes | yes | **deferred** |
 | `split` | `split.py` | `—` | yes | no | no | **DOM-only** |
 | `stack` | `stack.py` | `—` | yes | no | no | **DOM-only** |
 | `status_list` | `status_list.py` | `—` | yes | yes | yes | **schema+DOM** |
@@ -162,7 +162,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `toolbar` | `toolbar.py` | `—` | yes | no | no | **DOM-only** |
 | `tooltip` | `tooltip.py` | `—` | yes | no | no | **DOM-only** |
 | `topbar` | `topbar.py` | `—` | yes | no | no | **DOM-only** |
-| `tree` | `tree.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `tree` | `tree.py` | `—` | yes | yes | yes | **deferred** |
 | `two_factor` | `two_factor.py` | `—` | yes | no | no | **DOM-only** |
 | `wizard` | `wizard.py` | `dz-wizard.js` | yes | no | no | **DOM-only** |
 | `workspace_context` | `workspace_context.py` | `—` | yes | no | no | **DOM-only** |

@@ -13,12 +13,9 @@ import json
 from collections.abc import Sequence
 
 from dazzle.render.fragment.ingest.models import (
-    ActionCard,
     ActivityRow,
     BarChart,
     BarTrack,
-    BoxPlot,
-    Bullet,
     Calendar,
     CohortStrip,
     ComboboxField,
@@ -28,11 +25,8 @@ from dazzle.render.fragment.ingest.models import (
     Diagram,
     EmptyState,
     EntityCard,
-    Funnel,
     GridEditCell,
     GridRegion,
-    Heatmap,
-    Histogram,
     KanbanCard,
     ListRegion,
     MetricTile,
@@ -40,23 +34,17 @@ from dazzle.render.fragment.ingest.models import (
     Pagination,
     Pipeline,
     PivotTable,
-    ProfileCard,
-    Progress,
-    ProgressBarModel,
-    ProgressStage,
     QueueRow,
     Radar,
     SearchBox,
     SearchResultRow,
     SearchSelectShell,
     Skeleton,
-    Sparkline,
     StatusListEntry,
     TagsField,
     TaskInbox,
     TimelineEvent,
     TimeSeries,
-    Tree,
 )
 from dazzle.render.open_discovery import (
     drill_open_discovery_attrs as _leaf_drill_open_discovery_attrs,
@@ -64,14 +52,6 @@ from dazzle.render.open_discovery import (
 from dazzle.render.open_discovery import (
     hub_open_discovery_attrs as _leaf_hub_open_discovery_attrs,
 )
-
-_BULLET_BAND_COLORS: dict[str, str] = {
-    "target": "var(--colour-brand)",
-    "positive": "hsl(145, 55%, 45%)",
-    "warning": "hsl(40, 90%, 55%)",
-    "destructive": "var(--colour-danger)",
-    "muted": "var(--colour-text-muted)",
-}
 
 
 def edit_span_attrs(cell: GridEditCell) -> str:
@@ -250,46 +230,6 @@ def search_select_root_attrs(shell: SearchSelectShell) -> str:
     )
 
 
-def action_card_root_attrs(card: ActionCard) -> str:
-    """Assemble action-card dual-lock root + tone — sole emitter site."""
-    return f'data-dz-action-card data-dz-tone="{_html.escape(card.tone, quote=True)}"'
-
-
-def render_action_card(card: ActionCard) -> str:
-    """Model → one action card (search-select pattern; matches HM render).
-
-    Structure matches ``packages/hatchi-maxchi/contracts/action_grid.py``
-    ``render`` (dual-lock DOM). Cycle 1643: when ``url`` is a real app path,
-    stamp ``data-dz-open-*`` discovery attrs (queue/dashboard drill parity)
-    so agents attr-read the hop without scraping the label alone.
-    """
-    tone = _html.escape(card.tone, quote=True)
-    label = _html.escape(card.label)
-    if card.icon_html.strip():
-        icon_html = card.icon_html
-    else:
-        icon_html = '<span class="dz-action-card-icon-spacer"></span>'
-    count_html = ""
-    if card.count is not None:
-        count_html = (
-            f'<span class="dz-action-card-count" data-dz-tone-badge="{tone}">{card.count}</span>'
-        )
-    body = (
-        f'<div class="dz-action-card-row">{icon_html}{count_html}</div>'
-        f'<span class="dz-action-card-label">{label}</span>'
-    )
-    root_attrs = action_card_root_attrs(card)
-    if card.url:
-        href = _html.escape(card.url, quote=True)
-        url = str(card.url).strip()
-        # Skip fragment-only / empty placeholders (gallery exemplars use "#").
-        open_extra = ""
-        if url and url != "#" and not url.startswith("#"):
-            open_extra = f" {drill_open_discovery_attrs(url)}"
-        return f'<a href="{href}" class="dz-action-card" {root_attrs}{open_extra}>{body}</a>'
-    return f'<div class="dz-action-card" {root_attrs}>{body}</div>'
-
-
 def status_list_entry_root_attrs(entry: StatusListEntry) -> str:
     """Assemble status-entry dual-lock root + state — sole emitter site."""
     return f'data-dz-status-entry data-dz-state="{_html.escape(entry.state, quote=True)}"'
@@ -459,21 +399,6 @@ def activity_row_root_attrs(_row: ActivityRow) -> str:
 def timeline_item_root_attrs(_evt: TimelineEvent) -> str:
     """Assemble timeline-item dual-lock root — sole emitter site."""
     return "data-dz-timeline-item"
-
-
-def profile_card_root_attrs(_card: ProfileCard) -> str:
-    """Assemble profile-card dual-lock root — sole emitter site."""
-    return "data-dz-profile-card"
-
-
-def sparkline_root_attrs(_s: Sparkline) -> str:
-    """Assemble sparkline dual-lock root — sole emitter site."""
-    return "data-dz-sparkline"
-
-
-def funnel_root_attrs(_f: Funnel) -> str:
-    """Assemble funnel dual-lock root — sole emitter site."""
-    return "data-dz-funnel"
 
 
 def bar_chart_root_attrs(_c: BarChart) -> str:
@@ -663,160 +588,6 @@ def render_timeline_event(evt: TimelineEvent) -> str:
     )
 
 
-def render_profile_card(card: ProfileCard) -> str:
-    """Model → profile card (matches HM contracts/profile_card.py)."""
-    if card.avatar_url:
-        avatar_html = (
-            f'<img src="{_html.escape(card.avatar_url, quote=True)}" '
-            f'alt="{_html.escape(card.primary, quote=True)}" '
-            f'class="dz-profile-avatar" />'
-        )
-    elif card.initials:
-        avatar_html = (
-            f'<span class="dz-profile-initials" aria-hidden="true">'
-            f"{_html.escape(card.initials)}</span>"
-        )
-    else:
-        avatar_html = ""
-
-    text_inner = ""
-    if card.primary:
-        text_inner += f'<h3 class="dz-profile-primary">{_html.escape(card.primary)}</h3>'
-    if card.secondary:
-        text_inner += f'<p class="dz-profile-secondary">{_html.escape(card.secondary)}</p>'
-    identity_html = (
-        f'<div class="dz-profile-identity">'
-        f"{avatar_html}"
-        f'<div class="dz-profile-text">{text_inner}</div>'
-        f"</div>"
-    )
-
-    stats_html = ""
-    if card.stats:
-        stat_rows = "".join(
-            f'<div class="dz-profile-stat">'
-            f'<dt class="dz-profile-stat-label">{_html.escape(label)}</dt>'
-            f'<dd class="dz-profile-stat-value">'
-            f"{_html.escape(value) if value else '—'}</dd>"
-            f"</div>"
-            for label, value in card.stats
-        )
-        stats_html = f'<dl class="dz-profile-stats">{stat_rows}</dl>'
-
-    facts_html = ""
-    if card.facts:
-        fact_items = "".join(
-            f'<li class="dz-profile-fact">'
-            f'<span class="dz-profile-fact-bullet" aria-hidden="true">·</span>'
-            f'<span class="dz-profile-fact-text">{_html.escape(fact)}</span>'
-            f"</li>"
-            for fact in card.facts
-        )
-        facts_html = f'<ul class="dz-profile-facts">{fact_items}</ul>'
-
-    root_attrs = profile_card_root_attrs(card)
-    return (
-        f'<div class="dz-profile-card-region">'
-        f'<div class="dz-profile-card" {root_attrs}>'
-        f"{identity_html}{stats_html}{facts_html}"
-        f"</div>"
-        f"</div>"
-    )
-
-
-def render_sparkline(s: Sparkline) -> str:
-    """Model → sparkline region (matches HM contracts/sparkline.py)."""
-    root_attrs = sparkline_root_attrs(s)
-    if not s.points:
-        return (
-            f'<div class="dz-sparkline-region" {root_attrs}>'
-            f'<div class="dz-sparkline-empty">{_html.escape(s.empty_message)}</div>'
-            f"</div>"
-        )
-
-    last_label, last_value = s.points[-1]
-    last_value_str = str(int(last_value)) if last_value == int(last_value) else str(last_value)
-    max_val = max(v for _, v in s.points)
-    if max_val <= 0:
-        max_val = 1.0
-    max_val_str = str(int(max_val)) if max_val == int(max_val) else str(max_val)
-    count = len(s.points)
-
-    headline = (
-        f'<div class="dz-sparkline-headline">'
-        f'<span class="dz-sparkline-value">{_html.escape(last_value_str)}</span>'
-        f'<span class="dz-sparkline-bucket-label">{_html.escape(last_label)}</span>'
-        f"</div>"
-    )
-
-    if count <= 1:
-        return f'<div class="dz-sparkline-region" {root_attrs}>{headline}</div>'
-
-    w, h, pt, pb = 180, 32, 2, 2
-    plot_h = h - pt - pb
-    step = w / (count - 1)
-    pts = []
-    for i, (_, v) in enumerate(s.points):
-        x = round(i * step, 2)
-        y = round(pt + plot_h - (v / max_val * plot_h), 2)
-        pts.append(f"{x},{y}")
-    pts_str = " ".join(pts)
-
-    svg = (
-        f'<svg xmlns="http://www.w3.org/2000/svg" '
-        f'viewBox="0 0 {w} {h}" '
-        f'preserveAspectRatio="none" '
-        f'class="dz-sparkline-svg" role="img" '
-        f'aria-label="Sparkline — {count} points, latest '
-        f'{_html.escape(last_value_str)}, peak {_html.escape(max_val_str)}">'
-        f'<polygon points="0,{h} {pts_str} {w},{h}" '
-        f'fill="var(--colour-brand)" fill-opacity="0.15" stroke="none" />'
-        f'<polyline points="{pts_str}" fill="none" '
-        f'stroke="var(--colour-brand)" stroke-width="1.25" '
-        f'vector-effect="non-scaling-stroke" '
-        f'stroke-linejoin="round" stroke-linecap="round" />'
-        f"</svg>"
-    )
-    return f'<div class="dz-sparkline-region" {root_attrs}>{headline}{svg}</div>'
-
-
-def render_funnel(f: Funnel) -> str:
-    """Model → funnel chart (matches HM contracts/funnel.py)."""
-    root_attrs = funnel_root_attrs(f)
-    if not f.stages:
-        return (
-            f'<div class="dz-funnel-chart-region" {root_attrs}>'
-            f'<p class="dz-empty-dense" role="status">'
-            f"{_html.escape(f.empty_message)}</p>"
-            f"</div>"
-        )
-
-    base = f.stages[0].count if f.stages[0].count > 0 else 1
-    items: list[str] = []
-    for i, stage in enumerate(f.stages):
-        pct = int(stage.count / base * 100)
-        width = pct if pct >= 20 else 20
-        step = i if i < 8 else 7
-        items.append(
-            f'<div class="dz-funnel-stage-row">'
-            f'<div class="dz-funnel-stage" '
-            f'data-dz-funnel-step="{step}" '
-            f'style="width: {width}%;">'
-            f'<span class="dz-funnel-stage-label">{_html.escape(stage.label)}</span> '
-            f'<span class="dz-funnel-stage-count">({stage.count})</span>'
-            f"</div>"
-            f"</div>"
-        )
-
-    total = f.total if f.total else f.stages[0].count
-    return (
-        f'<div class="dz-funnel-chart-region" {root_attrs}>'
-        f'<div class="dz-funnel-stages">{"".join(items)}</div>'
-        f'<p class="dz-funnel-summary">{total} total</p>'
-        f"</div>"
-    )
-
-
 def render_bar_chart(chart: BarChart) -> str:
     """Model → bar chart (matches HM contracts/bar_chart.py)."""
     root_attrs = bar_chart_root_attrs(chart)
@@ -843,31 +614,8 @@ def render_bar_chart(chart: BarChart) -> str:
     )
 
 
-def heatmap_root_attrs(_h: Heatmap) -> str:
-    return "data-dz-heatmap"
-
-
-def bullet_root_attrs(_b: Bullet) -> str:
-    return "data-dz-bullet"
-
-
 def bar_track_root_attrs(_b: BarTrack) -> str:
     return "data-dz-bar-track"
-
-
-def _heatmap_tone_attr(value: float, thresholds: list[float]) -> str:
-    n = len(thresholds)
-    if n >= 2:
-        if value < thresholds[0]:
-            return ' data-dz-heatmap-tone="bad"'
-        if value < thresholds[1]:
-            return ' data-dz-heatmap-tone="warn"'
-        return ' data-dz-heatmap-tone="good"'
-    if n == 1:
-        if value < thresholds[0]:
-            return ' data-dz-heatmap-tone="bad"'
-        return ' data-dz-heatmap-tone="good"'
-    return ""
 
 
 def _jinja_num(value: float) -> str:
@@ -877,111 +625,6 @@ def _jinja_num(value: float) -> str:
 def _measure_num(value: float, suffix: str = "") -> str:
     shown = _jinja_num(value)
     return f"{shown}{suffix}" if suffix else shown
-
-
-def render_heatmap(h: Heatmap) -> str:
-    """Model → heatmap region (matches HM contracts/heatmap.py)."""
-    root_attrs = heatmap_root_attrs(h)
-    if not h.rows:
-        return (
-            f'<div class="dz-heatmap-region" {root_attrs}>'
-            f'<p class="dz-empty-dense" role="status">'
-            f"{_html.escape(h.empty_message)}</p>"
-            f"</div>"
-        )
-
-    head_cols = "".join(f"<th>{_html.escape(c)}</th>" for c in h.columns)
-    thead = f"<thead><tr><th></th>{head_cols}</tr></thead>"
-    body_rows: list[str] = []
-    for row in h.rows:
-        cells_html = ""
-        for cell in row.cells:
-            cells_html += (
-                f'<td class="dz-heatmap-cell"{_heatmap_tone_attr(cell, h.thresholds)}> '
-                f"{cell:.1f} </td>"
-            )
-        body_rows.append(
-            f'<tr><td class="dz-heatmap-row-label">{_html.escape(row.label)}</td>{cells_html}</tr>'
-        )
-    tbody = f"<tbody>{''.join(body_rows)}</tbody>"
-    overflow_html = ""
-    if h.total > len(h.rows):
-        overflow_html = f'<p class="dz-heatmap-overflow">Showing {len(h.rows)} of {h.total}</p>'
-    return (
-        f'<div class="dz-heatmap-region" {root_attrs}>'
-        f'<div class="dz-heatmap-scroll">'
-        f'<table class="dz-heatmap-grid">{thead}{tbody}</table>'
-        f"</div>"
-        f"{overflow_html}"
-        f"</div>"
-    )
-
-
-def render_bullet(b: Bullet) -> str:
-    """Model → bullet chart (matches HM contracts/bullet.py)."""
-    root_attrs = bullet_root_attrs(b)
-    if not b.rows or b.max_value <= 0:
-        return (
-            f'<div class="dz-bullet-region" {root_attrs}>'
-            f'<p class="dz-empty-dense" role="status">'
-            f"{_html.escape(b.empty_message)}</p>"
-            f"</div>"
-        )
-
-    suffix = b.unit_suffix
-    rows_html: list[str] = []
-    for row in b.rows:
-        actual_pct = round(row.actual / b.max_value * 100, 2)
-        bands_html = ""
-        for band in b.bands:
-            band_left = round(band.from_value / b.max_value * 100, 2)
-            band_width = round((band.to_value - band.from_value) / b.max_value * 100, 2)
-            colour = _BULLET_BAND_COLORS.get(band.color, _BULLET_BAND_COLORS["target"])
-            bands_html += (
-                f'<span class="dz-bullet-band" '
-                f'style="left: {band_left}%; width: {band_width}%; '
-                f'background: {colour};" '
-                f'title="{_html.escape(band.label, quote=True)}: '
-                f'{_measure_num(band.from_value, suffix)}–{_measure_num(band.to_value, suffix)}"></span>'
-            )
-
-        actual_rounded = round(row.actual, 1)
-        value_html = _measure_num(actual_rounded, suffix)
-        target_html = ""
-        if row.target is not None:
-            target_pct = round(row.target / b.max_value * 100, 2)
-            target_html = (
-                f'<span class="dz-bullet-target" '
-                f'style="left: {target_pct}%;" '
-                f'title="{_html.escape(row.label, quote=True)} target: '
-                f'{_measure_num(row.target, suffix)}"></span>'
-            )
-            target_rounded = round(row.target, 1)
-            value_html += f" / {_measure_num(target_rounded, suffix)}"
-
-        rows_html.append(
-            f'<div class="dz-bullet-row">'
-            f'<span class="dz-bullet-label">{_html.escape(row.label)}</span>'
-            f'<div class="dz-bullet-track">'
-            f"{bands_html}"
-            f'<span class="dz-bullet-actual" '
-            f'style="width: {actual_pct}%;" '
-            f'title="{_html.escape(row.label, quote=True)} actual: '
-            f'{_measure_num(row.actual, suffix)}"></span>'
-            f"{target_html}"
-            f"</div>"
-            f'<span class="dz-bullet-value">{value_html}</span>'
-            f"</div>"
-        )
-
-    return (
-        f'<div class="dz-bullet-region" {root_attrs}>'
-        f'<div class="dz-bullet-rows">{"".join(rows_html)}</div>'
-        f'<p class="dz-bullet-summary">'
-        f"{len(b.rows)} rows · scale 0–{_measure_num(round(b.max_value, 1), suffix)}"
-        f"</p>"
-        f"</div>"
-    )
 
 
 def render_bar_track(b: BarTrack) -> str:
@@ -1029,25 +672,8 @@ def render_bar_track(b: BarTrack) -> str:
     )
 
 
-def histogram_root_attrs(_h: Histogram) -> str:
-    return "data-dz-histogram"
-
-
 def pivot_root_attrs(_p: PivotTable) -> str:
     return "data-dz-pivot"
-
-
-def box_plot_root_attrs(_b: BoxPlot) -> str:
-    return "data-dz-box-plot"
-
-
-def progress_root_attrs(_p: Progress) -> str:
-    return "data-dz-progress-region"
-
-
-def progress_bar_root_attrs(_p: ProgressBarModel) -> str:
-    """Root marker for the toned determinate progress bar (class-based)."""
-    return 'class="dz-progress" role="progressbar"'
 
 
 def radar_root_attrs(_r: Radar) -> str:
@@ -1088,10 +714,6 @@ def diagram_root_attrs(_d: Diagram) -> str:
 
 def task_inbox_root_attrs(_t: TaskInbox) -> str:
     return "data-dz-task-inbox"
-
-
-def tree_root_attrs(_t: Tree) -> str:
-    return "data-dz-tree"
 
 
 def calendar_root_attrs(_c: Calendar) -> str:
@@ -1190,32 +812,6 @@ def render_task_inbox(t: TaskInbox) -> str:
     return (
         f'<div class="dz-task-inbox-region" {root_attrs} '
         f'data-dz-region-name="{rname}">{t.body_html}</div>'
-    )
-
-
-def render_tree(t: Tree) -> str:
-    """Model → tree region (matches HM contracts/tree.py)."""
-    root_attrs = tree_root_attrs(t)
-    return f'<div class="dz-tree" {root_attrs}>{t.body_html}</div>'
-
-
-def render_tree_node_label(label: str, drill_url: str = "") -> str:
-    """Tree node label HTML (#1303 hub drill) — sole-emitter for ``data-dz-tree-*``.
-
-    Host recursive emit (`_emit_tree_node`) builds structure; contract attrs
-    for the label link live here so ``test_typed_path_is_sole_emitter`` holds.
-    ``stopPropagation`` keeps branch expand on summary chrome while the link
-    navigates (kanban-title / queue-row drill parity).
-    """
-    label_esc = _html.escape(label)
-    if not drill_url:
-        return f'<span class="dz-tree-label">{label_esc}</span>'
-    href = _html.escape(str(drill_url), quote=True)
-    link_open, _host = _hub_open_discovery_attrs(str(drill_url))
-    return (
-        f'<a class="dz-tree-label" href="{href}" data-dz-tree-drill '
-        f"{link_open}"
-        f'onclick="event.stopPropagation()">{label_esc}</a>'
     )
 
 
@@ -1324,26 +920,6 @@ def render_date_range(d: DateRange) -> str:
     )
 
 
-def render_histogram(h: Histogram) -> str:
-    """Model → histogram region (matches HM contracts/histogram.py)."""
-    root_attrs = histogram_root_attrs(h)
-    if not h.bins:
-        return (
-            f'<div class="dz-histogram-region" {root_attrs}>'
-            f'<p class="dz-empty-dense" role="status">'
-            f"{_html.escape(h.empty_message)}</p>"
-            f"</div>"
-        )
-    total = sum(b.count for b in h.bins)
-    max_count = max(b.count for b in h.bins) or 1
-    summary = (
-        f'<p class="dz-histogram-summary">'
-        f"{len(h.bins)} bins · {total} samples · peak {max_count}"
-        f"</p>"
-    )
-    return f'<div class="dz-histogram-region" {root_attrs}>{h.svg_html}{summary}</div>'
-
-
 def render_pivot_table(p: PivotTable) -> str:
     """Model → pivot region (matches HM contracts/pivot.py)."""
     root_attrs = pivot_root_attrs(p)
@@ -1380,88 +956,6 @@ def render_pivot_table(p: PivotTable) -> str:
         f'<table class="dz-pivot-grid">{thead}{tbody}</table>'
         f"</div>"
         f"{summary}"
-        f"</div>"
-    )
-
-
-def render_box_plot(b: BoxPlot) -> str:
-    """Model → box-plot region (matches HM contracts/box_plot.py)."""
-    root_attrs = box_plot_root_attrs(b)
-    if not b.groups:
-        return (
-            f'<div class="dz-box-plot-region" {root_attrs}>'
-            f'<p class="dz-empty-dense" role="status">'
-            f"{_html.escape(b.empty_message)}</p>"
-            f"</div>"
-        )
-    n_total = sum(g.samples for g in b.groups)
-    summary = f'<p class="dz-box-plot-summary">{len(b.groups)} groups · {n_total} samples</p>'
-    return f'<div class="dz-box-plot-region" {root_attrs}>{b.svg_html}{summary}</div>'
-
-
-def _progress_stage_tone(stage: ProgressStage) -> str:
-    if stage.complete:
-        return "complete"
-    if stage.count > 0:
-        return "active"
-    return "empty"
-
-
-def _progress_pct_str(pct: float) -> str:
-    return str(int(pct)) if pct == int(pct) else str(pct)
-
-
-def render_progress(p: Progress) -> str:
-    """Model → progress region (matches HM contracts/progress.py)."""
-    root_attrs = progress_root_attrs(p)
-    pct_str = _progress_pct_str(p.complete_pct)
-    chips_html = "".join(
-        f'<span class="dz-progress-chip" data-dz-stage-tone="{_progress_stage_tone(s)}">'
-        f"{_html.escape(s.name)} ({s.count})"
-        f"</span>"
-        for s in p.stages
-    )
-    summary_html = (
-        f'<p class="dz-progress-summary">{p.complete_count} of {p.total} complete</p>'
-        if p.total > 0
-        else ""
-    )
-    return (
-        f'<div class="dz-progress-region" {root_attrs}>'
-        f'<div class="dz-progress-header">'
-        f'<progress data-dz-progress value="{pct_str}" max="100"></progress>'
-        f"<span>{pct_str}%</span>"
-        f"</div>"
-        f'<div class="dz-progress-stages">{chips_html}</div>'
-        f"{summary_html}"
-        f"</div>"
-    )
-
-
-def _progress_bar_pct_str(value: float, max_value: float) -> str:
-    pct = max(0.0, min(100.0, (float(value) / float(max_value)) * 100.0))
-    return str(int(pct)) if pct == int(pct) else f"{pct:.1f}".rstrip("0").rstrip(".")
-
-
-def render_progress_bar(p: ProgressBarModel) -> str:
-    """Model → toned determinate bar (matches HM contracts/progress_bar.py)."""
-    pct = _progress_bar_pct_str(p.value, p.max_value)
-    now = (
-        str(int(p.value))
-        if float(p.value) == int(p.value)
-        else f"{float(p.value):.1f}".rstrip("0").rstrip(".")
-    )
-    max_s = (
-        str(int(p.max_value))
-        if float(p.max_value) == int(p.max_value)
-        else f"{float(p.max_value):.1f}".rstrip("0").rstrip(".")
-    )
-    label = _html.escape(p.label or "Progress", quote=True)
-    tone_attr = f' data-dz-tone="{_html.escape(p.tone, quote=True)}"' if p.tone else ""
-    return (
-        f'<div class="dz-progress" role="progressbar" aria-label="{label}" '
-        f'aria-valuenow="{now}" aria-valuemin="0" aria-valuemax="{max_s}"{tone_attr}>'
-        f'<div class="dz-progress__bar" style="--dz-progress-value:{pct}%"></div>'
         f"</div>"
     )
 

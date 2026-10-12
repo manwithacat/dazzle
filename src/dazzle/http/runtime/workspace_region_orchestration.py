@@ -11,10 +11,10 @@ Pipeline:
 - **Phase 4** (aggregate setup, cross-display): scope-gated aggregate
   metrics, bucketed aggregates (single-dim charts), kanban columns,
   filter columns, attention signals.
-- **Phase 5** (per-display computes): histograms, box plots, overlay
-  series, bullet rows, bar tracks, action grids, pipeline stages,
-  profile cards, confirm action state, pivot buckets, queue
-  transitions, heatmap matrices, progress stages, tree items.
+- **Phase 5** (per-display computes): overlay series, comparison
+  rows, insight narrative, pipeline stages, confirm action state,
+  pivot buckets, queue transitions, kanban rearrange, tabbed slices,
+  cohort aggregates.
 
 Each step is a call to an already-extracted helper — this module
 is the orchestrator that wires them in the right order.
@@ -28,14 +28,11 @@ from dazzle.core.ir import BucketRef as _BucketRef
 from dazzle.core.ir.workspaces import ComparisonOutlierSpec
 from dazzle.http.runtime.handlers.list_handlers import (
     _principal_can_op,
-    entity_name_for_app_path,
 )
 from dazzle.http.runtime.insight_store import get_stored_insight
 from dazzle.http.runtime.workspace_aggregation import (
     _compute_aggregate_metrics,
-    _compute_box_plot_stats,
     _compute_bucketed_aggregates,
-    _compute_histogram_bins,
     _compute_pivot_buckets,
 )
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
@@ -45,22 +42,13 @@ from dazzle.http.runtime.workspace_region_computes import (
     build_insight_inputs,
     build_outlier_flags,
     build_rag_tones,
-    compute_action_grid,
-    compute_bar_track,
-    compute_bullet,
     compute_confirm_action_state,
     compute_filter_columns_and_active,
-    compute_heatmap,
     compute_kanban_columns,
     compute_kanban_rearrange,
     compute_pipeline_steps,
-    compute_profile_card,
-    compute_progress,
     compute_queue,
     compute_tabbed_slices,
-    compute_tree,
-    heatmap_from_bucketed_metrics,
-    infer_progress_stages,
 )
 from dazzle.http.runtime.workspace_region_fetch import RegionItemsResult
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
@@ -156,44 +144,6 @@ def gate_confirm_action_urls_for_principal(
     return "", "", ""
 
 
-def gate_action_grid_cards_for_principal(
-    cards: list[dict[str, Any]],
-    entity_access_specs: dict[str, Any] | None,
-    auth_ctx: Any,
-) -> list[dict[str, Any]]:
-    """Drop action_grid create CTAs when CREATE is denied for the target entity.
-
-    ``action: system_create`` compiles to ``/app/system/create``. List create
-    buttons and workspace heading New X already suppress when CREATE is denied
-    (#582 / #827); action_grid still painted \"Add system\" for ops engineers
-    who can only list/read Systems (cycle 1397). Read/list card targets are
-    left intact. Cards whose create URL cannot be mapped to a known entity
-    stay (permissive; write path still enforces).
-
-    Entity mapping reuses :func:`entity_name_for_app_path` (EDIT drills too —
-    cycle 1408 clone-ratchet).
-    """
-    if not cards:
-        return cards
-    out: list[dict[str, Any]] = []
-    for card in cards:
-        url = str(card.get("url") or "")
-        entity_name = entity_name_for_app_path(url, entity_access_specs, terminal="create")
-        if entity_name is None:
-            out.append(card)
-            continue
-        cedar = (entity_access_specs or {}).get(entity_name)
-        if _principal_can_op(
-            cedar,
-            AccessOperationKind.CREATE,
-            auth_ctx,
-            entity_name=entity_name,
-        ):
-            out.append(card)
-        # else: omit create CTA for denied principal
-    return out
-
-
 def _read_stored_insight(region_name: str) -> Any:
     """Read the stored narrative for a region; a provider error → None (fallback)."""
     try:
@@ -206,26 +156,17 @@ def _read_stored_insight(region_name: str) -> Any:
 
 
 # Display-mode groupings used by phase-4 gates.
-_GROUPED_MODES: frozenset[str] = frozenset({"KANBAN", "BAR_CHART", "FUNNEL_CHART", "HEATMAP"})
-# AREA_CHART is here *and* in _MULTI_DIM_MODES: with a single scalar/bucket
-# group_by it renders one filled series (this block); with `group_by: [a, b]`
-# the scalar group_by is None so this block is skipped and it routes through
-# the pivot path instead. Without AREA_CHART here a single-dim area computed
-# no bucketed_metrics and rendered empty (#1470, caught by the catalogue).
+_GROUPED_MODES: frozenset[str] = frozenset({"KANBAN", "BAR_CHART"})
 _SINGLE_DIM_CHART_MODES: frozenset[str] = frozenset(
     {
         "BAR_CHART",
         "LINE_CHART",
-        "AREA_CHART",
-        "SPARKLINE",
         "RADAR",
-        "BAR_TRACK",
         "COMPARISON",
         "INSIGHT_SUMMARY",
-        "HEATMAP",
     }
 )
-_MULTI_DIM_MODES: frozenset[str] = frozenset({"PIVOT_TABLE", "AREA_CHART"})
+_MULTI_DIM_MODES: frozenset[str] = frozenset({"PIVOT_TABLE"})
 
 
 async def compute_region_render_inputs(
@@ -257,7 +198,7 @@ async def compute_region_render_inputs(
     # gates every aggregate below. `region_filters` names the source entity's
     # columns, so the metric / bucketed helpers take it separately and apply
     # it only to aggregates over `ctx.source`; the same-source-only consumers
-    # (pivot, action_grid, pipeline_steps) take the composed dict.
+    # (pivot, pipeline_steps) take the composed dict.
     region_filters = fetched.region_filters
     agg_scope_filters: dict[str, Any] = {
         **(region_filters or {}),
@@ -302,8 +243,8 @@ async def compute_region_render_inputs(
     if group_by and not gb_is_bucket and display in _GROUPED_MODES and ctx.entity_spec:
         kanban_columns = compute_kanban_columns(ctx.entity_spec, group_by)
 
-    # Single-dim bucketed aggregates (bar_chart / line_chart / sparkline /
-    # radar / bar_track). #887: scope-gated.
+    # Single-dim bucketed aggregates (bar_chart / line_chart / radar /
+    # comparison / insight_summary). #887: scope-gated.
     bucketed_metrics: list[dict[str, Any]] = []
     if (
         display in _SINGLE_DIM_CHART_MODES
@@ -324,28 +265,11 @@ async def compute_region_render_inputs(
 
     # ─── Phase 5: per-display computes ─────────────────────────────────
 
-    # Histogram (#882): bin a continuous numeric column from items.
-    histogram_bins: list[dict[str, Any]] = []
-    if display == "HISTOGRAM":
-        value_field = (getattr(ctx_region, "heatmap_value", "") or "").strip()
-        bin_count = getattr(ctx.ir_region, "bin_count", None)
-        if value_field:
-            histogram_bins = _compute_histogram_bins(items, value_field, bin_count)
-
-    # Box plot (#881): per-group quartile/whisker stats from items.
-    box_plot_stats: list[dict[str, Any]] = []
-    if display == "BOX_PLOT":
-        value_field = (getattr(ctx_region, "heatmap_value", "") or "").strip()
-        bp_group_by = group_by if isinstance(group_by, str) else None
-        show_outliers = bool(getattr(ctx.ir_region, "show_outliers", True))
-        if value_field:
-            box_plot_stats = _compute_box_plot_stats(items, value_field, bp_group_by, show_outliers)
-
-    # Overlay series (#883): for line/area chart regions, fire one extra
+    # Overlay series (#883): for line chart regions, fire one extra
     # bucketed-aggregate query per overlay. #887: same scope gate.
     overlay_series_data: list[dict[str, Any]] = []
     ir_overlays = (getattr(ctx.ir_region, "overlay_series", None) if ctx.ir_region else None) or []
-    if ir_overlays and display in {"LINE_CHART", "AREA_CHART"} and group_by and not scope_denied:
+    if ir_overlays and display == "LINE_CHART" and group_by and not scope_denied:
         for overlay in ir_overlays:
             ovl_source = overlay.source or ctx.source
             try:
@@ -371,31 +295,6 @@ async def compute_region_render_inputs(
                     overlay.label,
                     exc_info=True,
                 )
-
-    # Bullet chart (#880): per-row {label, actual, target}.
-    if display == "BULLET":
-        bullet_rows, bullet_max_value = compute_bullet(
-            items,
-            label_field=getattr(ctx.ir_region, "bullet_label", None),
-            actual_field=getattr(ctx.ir_region, "bullet_actual", None),
-            target_field=getattr(ctx.ir_region, "bullet_target", None),
-            reference_bands=getattr(ctx.ir_region, "reference_bands", None),
-        )
-    else:
-        bullet_rows = []
-        bullet_max_value = 0.0
-
-    # Bar track (#893): rows + auto-max from bucketed_metrics.
-    if display == "BAR_TRACK" and bucketed_metrics:
-        bar_track_rows, bar_track_max = compute_bar_track(
-            bucketed_metrics,
-            explicit_max=ctx_region.track_max,
-            format_spec=ctx_region.track_format or "",
-            region_name=ctx_region.name,
-        )
-    else:
-        bar_track_rows = []
-        bar_track_max = 0.0
 
     # Comparison (#1470): ranked league from group buckets or scoped entity rows.
     if display == "COMPARISON":
@@ -454,23 +353,6 @@ async def compute_region_render_inputs(
         rag_tones = []
         rag_on = ""
 
-    # Action grid (#891): async per-card count fan-out.
-    # Create-target cards are CREATE chrome — drop when denied (cycle 1397).
-    action_card_data: list[dict[str, Any]] = []
-    if display == "ACTION_GRID":
-        action_card_data = await compute_action_grid(
-            ctx_region.action_cards or [],
-            ctx.repositories,
-            ctx.source,
-            agg_scope_filters,  # #1773: scope + region filter
-            scope_denied,
-        )
-        action_card_data = gate_action_grid_cards_for_principal(
-            action_card_data,
-            getattr(ctx, "entity_access_specs", None) or None,
-            user_ctx.auth_ctx_for_filters,
-        )
-
     # Pipeline steps (#890): async per-stage aggregate.
     pipeline_stage_data: list[dict[str, Any]] = []
     if display == "PIPELINE_STEPS":
@@ -481,11 +363,6 @@ async def compute_region_render_inputs(
             agg_scope_filters,  # #1773: scope + region filter
             scope_denied,
         )
-
-    # Profile card (#892): single-record identity panel.
-    profile_card_data: dict[str, Any] = {}
-    if display == "PROFILE_CARD":
-        profile_card_data = compute_profile_card(items, ctx_region)
 
     # Confirm action panel (v0.61.72): state_field read + UPDATE chrome gate.
     # primary/secondary/revoke are mutation affordances — clear when denied
@@ -601,94 +478,6 @@ async def compute_region_render_inputs(
     # Multi-source tabbed regions.
     source_tabs = ctx_region.source_tabs or []
 
-    # Heatmap (v0.44.0): pivot items into matrix. Thresholds may come
-    # from a ParamRef in IR (#572, #575); fall back to ctx_region defaults.
-    heatmap_matrix: list[dict[str, Any]] = []
-    heatmap_col_values: list[str] = []
-    ir_thresholds = getattr(ctx.ir_region, "heatmap_thresholds", None)
-    if hasattr(ir_thresholds, "key"):  # ParamRef
-        from dazzle.http.runtime.param_store import resolve_value
-
-        resolved = resolve_value(
-            ir_thresholds,
-            getattr(ctx, "param_resolver", None),
-            tenant_id=getattr(ctx, "tenant_id", None),
-        )
-        heatmap_thresholds: list[float] = list(
-            resolved or getattr(ctx_region, "heatmap_thresholds", None) or []
-        )
-    else:
-        heatmap_thresholds = list(getattr(ctx_region, "heatmap_thresholds", None) or [])
-    if display == "HEATMAP":
-        rows_field = (getattr(ctx_region, "heatmap_rows", "") or "").strip()
-        cols_field = (getattr(ctx_region, "heatmap_columns", "") or "").strip()
-        value_field = (getattr(ctx_region, "heatmap_value", "") or "").strip()
-        gb_str = group_by if isinstance(group_by, str) else ""
-        if rows_field or cols_field:
-            if items:
-                heatmap_matrix, heatmap_col_values = compute_heatmap(
-                    items,
-                    rows_field=rows_field,
-                    cols_field=cols_field,
-                    value_field=value_field,
-                )
-        elif bucketed_metrics:
-            heatmap_matrix, heatmap_col_values = heatmap_from_bucketed_metrics(
-                bucketed_metrics,
-                bucket_values=kanban_columns or None,
-            )
-        elif items and gb_str:
-            heatmap_matrix, heatmap_col_values = compute_heatmap(
-                items,
-                rows_field="",
-                cols_field="",
-                value_field=value_field,
-                group_by=gb_str,
-                bucket_values=kanban_columns or None,
-            )
-
-    # Progress (v0.44.0 / oral #165): authored stages, else enum/SM + leftover.
-    authored_progress_stages: list[str] = list(getattr(ctx_region, "progress_stages", None) or [])
-    progress_complete_at: str = getattr(ctx_region, "progress_complete_at", "") or ""
-    progress_stages_list: list[str] = []
-    leftover_progress: frozenset[str] = frozenset()
-    progress_group = group_by if isinstance(group_by, str) else ""
-    if display == "PROGRESS":
-        status_field = progress_group or "status"
-        progress_stages_list, leftover_progress = infer_progress_stages(
-            items if isinstance(items, list) else [],
-            status_field,
-            ctx.entity_spec,
-            authored_progress_stages,
-        )
-        if not authored_progress_stages and not progress_complete_at:
-            canonical = [s for s in progress_stages_list if s not in leftover_progress]
-            if canonical:
-                progress_complete_at = canonical[-1]
-    if display == "PROGRESS" and items and progress_stages_list:
-        prog = compute_progress(
-            items,
-            progress_stages_list,
-            progress_complete_at,
-            progress_group or "status",
-            leftover_stages=leftover_progress,
-        )
-        progress_stage_counts: list[dict[str, Any]] = prog["stage_counts"]
-        progress_total: int = prog["total"]
-        progress_complete_count: int = prog["complete_count"]
-        progress_complete_pct: float = prog["complete_pct"]
-    else:
-        progress_stage_counts = []
-        progress_total = 0
-        progress_complete_count = 0
-        progress_complete_pct = 0.0
-
-    # Tree (#565 / oral #163): parent-ref nest, else scalar group folders.
-    tree_items: list[dict[str, Any]] = []
-    tree_group = group_by if isinstance(group_by, str) else ""
-    if display == "TREE" and tree_group and items:
-        tree_items = compute_tree(items, tree_group)
-
     # Tabbed list (oral #164): scalar group_by without multi-source tabs.
     tabbed_slices: list[dict[str, Any]] = []
     tab_group = group_by if isinstance(group_by, str) else ""
@@ -742,18 +531,10 @@ async def compute_region_render_inputs(
         metrics=metrics,
         bucketed_metrics=bucketed_metrics,
         kanban_columns=kanban_columns,
-        heatmap_matrix=heatmap_matrix,
-        heatmap_col_values=heatmap_col_values,
-        heatmap_thresholds=heatmap_thresholds,
-        histogram_bins=histogram_bins,
-        box_plot_stats=box_plot_stats,
         pivot_buckets=pivot_buckets,
         pivot_dim_specs=pivot_dim_specs,
-        tree_items=tree_items,
         tabbed_slices=tabbed_slices,
         source_tabs=source_tabs,
-        bar_track_rows=bar_track_rows,
-        bar_track_max=bar_track_max,
         comparison_rows=comparison_rows,
         comparison_max=comparison_max,
         insight_narrative=insight_narrative,
@@ -762,15 +543,7 @@ async def compute_region_render_inputs(
         outlier_on=outlier_on,
         rag_tones=rag_tones,
         rag_on=rag_on,
-        bullet_rows=bullet_rows,
-        bullet_max_value=bullet_max_value,
-        progress_stage_counts=progress_stage_counts,
-        progress_total=progress_total,
-        progress_complete_count=progress_complete_count,
-        progress_complete_pct=progress_complete_pct,
-        action_card_data=action_card_data,
         pipeline_stage_data=pipeline_stage_data,
-        profile_card_data=profile_card_data,
         confirm_state_value=confirm_state_value,
         confirm_primary_action_url=confirm_primary_action_url,
         confirm_secondary_action_url=confirm_secondary_action_url,

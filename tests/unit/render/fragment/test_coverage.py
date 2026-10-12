@@ -349,7 +349,7 @@ def test_audit_walks_workspace_regions_and_flags_unsupported_display() -> None:
     region_bar = WorkspaceRegion(
         name="metrics_chart",
         source="Metric",
-        display=DisplayMode.MAP,
+        display=DisplayMode.BAR_CHART,
     )
     region_list = WorkspaceRegion(
         name="task_list",
@@ -372,7 +372,7 @@ def test_audit_walks_workspace_regions_and_flags_unsupported_display() -> None:
     by_name = {s.name: s for s in report.surfaces}
     assert "my_workspace.metrics_chart" in by_name
     assert "my_workspace.task_list" in by_name
-    # map is supported (Marker pin board, 2026-08-09)
+    # bar_chart is supported
     bar_entry = by_name["my_workspace.metrics_chart"]
     assert bar_entry.is_ready
     assert bar_entry.mode == "REGION"
@@ -492,10 +492,8 @@ def test_supported_displays_match_adapter() -> None:
     from dazzle.render.fragment.coverage import _SUPPORTED_DISPLAYS
     from dazzle.render.fragment.region import WorkspaceRegionAdapter
 
-    adapter_displays = (
-        set(WorkspaceRegionAdapter._BUILDERS.keys())
-        | set(WorkspaceRegionAdapter._ALIASES.keys())
-        | set(WorkspaceRegionAdapter._TIMESERIES_VIEWS.keys())
+    adapter_displays = set(WorkspaceRegionAdapter._BUILDERS.keys()) | set(
+        WorkspaceRegionAdapter._ALIASES.keys()
     )
     audit_displays = set(_SUPPORTED_DISPLAYS)
 

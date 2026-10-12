@@ -1573,7 +1573,7 @@ title = "Reports & Charts"
 slug = "reports"
 order = 104
 handwritten = true
-intro = "How chart and report regions (bar_chart, pivot_table, heatmap, funnel, metrics) compile to scope-aware aggregate queries."
+intro = "How chart and report regions (bar_chart, pivot_table, line_chart, metrics) compile to scope-aware aggregate queries."
 
 [pages.runtime-capabilities]
 title = "Runtime UI Capabilities"

@@ -1,8 +1,8 @@
-"""Aggregate-metric machinery: bucketed counts, pivots, histograms.
+"""Aggregate-metric machinery: bucketed counts and pivots.
 
 Extracted from workspace_rendering.py in #1057 cut 4 (v0.67.103).
-Owns the SQL aggregation path used by chart, pivot, histogram,
-box-plot, KPI, and bucketed bar/line region types. All callers
+Owns the SQL aggregation path used by chart, pivot, KPI, and
+bucketed bar/line region types. All callers
 go through `_compute_aggregate_metrics` (single-bucket scalar
 counts) or `_compute_bucketed_aggregates` (group_by ladders).
 
@@ -24,7 +24,6 @@ Contents:
 - `_resolve_fk_target_spec`: FK → target entity lookup for joins.
 - `_compute_pivot_buckets`, `_aggregate_via_groupby`: GROUP BY paths.
 - `_enumerate_distinct_buckets`: pivot-axis cardinality probe.
-- `_compute_box_plot_stats`, `_compute_histogram_bins`: distribution shapes.
 - `_compute_bucketed_aggregates`: top-level bucketed dispatcher.
 - `_bucket_key_label`: shared key/label tuple for a bucket value.
 - `_compute_aggregate_metrics`: top-level scalar dispatcher.
@@ -52,7 +51,6 @@ from dazzle.http.runtime.tenant_isolation import (
 )
 from dazzle.i18n.display_locale import get_display_locale
 from dazzle.page.runtime.comparison_resolver import resolve_comparison
-from dazzle.render.display_names import _resolve_display_name
 
 logger = logging.getLogger(__name__)
 
@@ -788,195 +786,6 @@ async def _enumerate_distinct_buckets(
             break
         page += 1
     return out, True
-
-
-def _compute_box_plot_stats(
-    items: list[dict[str, Any]],
-    value_field: str,
-    group_by: str | None,
-    show_outliers: bool = True,
-) -> list[dict[str, Any]]:
-    """Compute per-group quartile statistics for the box plot display (#881).
-
-    Returns one dict per group_by bucket (or one global bucket if
-    ``group_by`` is empty), each with:
-      ``label``    – the group_by value (str),
-      ``n``        – sample count,
-      ``min``      – minimum value,
-      ``q1``       – 25th percentile (linear-interp / "type 7"),
-      ``median``   – 50th percentile,
-      ``q3``       – 75th percentile,
-      ``max``      – maximum value,
-      ``iqr``      – Q3 − Q1,
-      ``whisker_low``  – furthest data point ≥ Q1 − 1.5*IQR (Tukey fence),
-      ``whisker_high`` – furthest data point ≤ Q3 + 1.5*IQR,
-      ``outliers`` – list of values outside the fences (empty when
-                     ``show_outliers=False``).
-
-    Uses NumPy-default linear interpolation (R "type 7" / numpy.percentile
-    default) — Q at position ``(n-1)*p``, fractional positions interpolate
-    linearly between adjacent order statistics. Pure stdlib; no NumPy
-    needed.
-
-    Skips items where ``value_field`` is None or non-numeric. Groups
-    with ``n < 2`` are returned with degenerate stats (q1 = median = q3
-    = the single value, iqr = 0, no whiskers, no outliers) so the
-    template can render a single-point marker rather than crash.
-    """
-
-    def _percentile(sorted_vals: list[float], p: float) -> float:
-        n = len(sorted_vals)
-        if n == 1:
-            return sorted_vals[0]
-        pos = (n - 1) * p
-        lo_idx = int(pos)
-        hi_idx = min(lo_idx + 1, n - 1)
-        frac = pos - lo_idx
-        return sorted_vals[lo_idx] + frac * (sorted_vals[hi_idx] - sorted_vals[lo_idx])
-
-    # Bucket values by group_by (or one global bucket if absent).
-    buckets: dict[str, list[float]] = {}
-    order: list[str] = []
-    for item in items:
-        v = item.get(value_field)
-        if v is None:
-            continue
-        try:
-            v_num = float(v)
-        except (TypeError, ValueError):
-            continue
-        # FK columns: prefer the `{field}_display` sibling injected by
-        # `_inject_display_names()` so the bucket label is the resolved
-        # display name (e.g. "AO1") rather than the dict repr (#889).
-        # Mirrors heatmap's resolution at lines 1058-1074.
-        if not group_by:
-            key = ""
-        else:
-            display = item.get(f"{group_by}_display")
-            if display:
-                key = str(display)
-            else:
-                key = _resolve_display_name(item.get(group_by)) or ""
-        if key not in buckets:
-            buckets[key] = []
-            order.append(key)
-        buckets[key].append(v_num)
-
-    stats: list[dict[str, Any]] = []
-    for key in order:
-        vals = sorted(buckets[key])
-        n = len(vals)
-        if n == 0:
-            continue
-        if n == 1:
-            stats.append(
-                {
-                    "label": key,
-                    "n": 1,
-                    "min": vals[0],
-                    "q1": vals[0],
-                    "median": vals[0],
-                    "q3": vals[0],
-                    "max": vals[0],
-                    "iqr": 0.0,
-                    "whisker_low": vals[0],
-                    "whisker_high": vals[0],
-                    "outliers": [],
-                }
-            )
-            continue
-        q1 = _percentile(vals, 0.25)
-        median = _percentile(vals, 0.5)
-        q3 = _percentile(vals, 0.75)
-        iqr = q3 - q1
-        fence_lo = q1 - 1.5 * iqr
-        fence_hi = q3 + 1.5 * iqr
-        in_fence = [v for v in vals if fence_lo <= v <= fence_hi]
-        whisker_low = in_fence[0] if in_fence else vals[0]
-        whisker_high = in_fence[-1] if in_fence else vals[-1]
-        outliers = [v for v in vals if v < fence_lo or v > fence_hi] if show_outliers else []
-        stats.append(
-            {
-                "label": key,
-                "n": n,
-                "min": vals[0],
-                "q1": q1,
-                "median": median,
-                "q3": q3,
-                "max": vals[-1],
-                "iqr": iqr,
-                "whisker_low": whisker_low,
-                "whisker_high": whisker_high,
-                "outliers": outliers,
-            }
-        )
-
-    return stats
-
-
-def _compute_histogram_bins(
-    items: list[dict[str, Any]],
-    value_field: str,
-    bin_count: int | None,
-) -> list[dict[str, Any]]:
-    """Bin numeric values from ``items`` into equal-width buckets (#882).
-
-    Returns one dict per bin in ascending order, each with:
-      ``label``    – ``"<lo>–<hi>"`` (rounded for display),
-      ``count``    – number of items whose ``value_field`` falls in [lo, hi),
-      ``low``      – numeric lower edge (inclusive),
-      ``high``     – numeric upper edge (exclusive, except final bin which
-                     is closed so the global max isn't dropped).
-
-    ``bin_count`` semantics:
-      ``None``  → Sturges' rule: ⌈log2(N) + 1⌉, clamped to [1, 50].
-      ``int``   → exact bin count (caller validates ≥ 1).
-
-    Returns ``[]`` for empty input or when no item has a numeric value at
-    ``value_field`` — the template falls back to its empty-state message.
-    """
-    import math
-
-    raw_values: list[float] = []
-    for item in items:
-        v = item.get(value_field)
-        if v is None:
-            continue
-        try:
-            raw_values.append(float(v))
-        except (TypeError, ValueError):
-            continue
-
-    if not raw_values:
-        return []
-
-    lo, hi = min(raw_values), max(raw_values)
-    if lo == hi:
-        # Single distinct value — one degenerate bin so the chart still
-        # renders something meaningful instead of a divide-by-zero.
-        return [
-            {"label": f"{lo:g}", "count": len(raw_values), "low": lo, "high": hi},
-        ]
-
-    if bin_count is None:
-        sturges = math.ceil(math.log2(len(raw_values)) + 1) if len(raw_values) > 1 else 1
-        bin_count = max(1, min(sturges, 50))
-
-    width = (hi - lo) / bin_count
-    buckets: list[dict[str, Any]] = [
-        {"low": lo + i * width, "high": lo + (i + 1) * width, "count": 0} for i in range(bin_count)
-    ]
-
-    for v in raw_values:
-        # Final bin is closed on the right so v == hi lands in the last
-        # bucket instead of falling through.
-        idx = min(int((v - lo) / width), bin_count - 1)
-        buckets[idx]["count"] += 1
-
-    for b in buckets:
-        b["label"] = f"{b['low']:g}–{b['high']:g}"
-
-    return buckets
 
 
 async def _compute_bucketed_aggregates(

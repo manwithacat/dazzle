@@ -1,15 +1,14 @@
 """Tables-family render mixin.
 
-Houses the 17 tabular + data-display primitives — anything that
+Houses the tabular + data-display primitives — anything that
 emits a Table/Grid/List structure or a metric/card tile:
 
   - _emit_table, _emit_kpi
   - _emit_pivot_table, _emit_pivot_table_region
   - _emit_list_region, _emit_grid_region
-  - _emit_detail_grid, _emit_status_list, _emit_accordion, _emit_carousel, _emit_activity_feed
-  - _emit_profile_card, _emit_action_card, _emit_action_grid
+  - _emit_detail_grid, _emit_status_list, _emit_activity_feed
   - _emit_metrics_grid, _emit_metric_tile
-  - _emit_bar_track, _emit_stage_bar
+  - _emit_bar_track
   - _emit_queue_region
 
 All methods only call `self._emit(child, ctx)` for recursion, plus
@@ -38,7 +37,6 @@ from dazzle.render.filters import (
 )
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
-from dazzle.render.fragment.ingest import ActionCard as ActionCardSeam
 from dazzle.render.fragment.ingest import ActivityRow as ActivityRowSeam
 from dazzle.render.fragment.ingest import BarTrack as BarTrackSeam
 from dazzle.render.fragment.ingest import BarTrackRow as BarTrackRowSeam
@@ -46,23 +44,15 @@ from dazzle.render.fragment.ingest import GridRegion as GridRegionSeam
 from dazzle.render.fragment.ingest import ListRegion as ListRegionSeam
 from dazzle.render.fragment.ingest import MetricTile as MetricTileSeam
 from dazzle.render.fragment.ingest import PivotTable as PivotTableSeam
-from dazzle.render.fragment.ingest import ProfileCard as ProfileCardSeam
-from dazzle.render.fragment.ingest import Progress as ProgressSeam
-from dazzle.render.fragment.ingest import ProgressBarModel as ProgressBarSeam
-from dazzle.render.fragment.ingest import ProgressStage as ProgressStageSeam
 from dazzle.render.fragment.ingest import QueueRow as QueueRowSeam
 from dazzle.render.fragment.ingest import StatusListEntry as StatusListEntrySeam
 from dazzle.render.fragment.ingest import (
-    render_action_card,
     render_activity_row,
     render_bar_track,
     render_grid_region,
     render_list_region,
     render_metric_tile,
     render_pivot_table,
-    render_profile_card,
-    render_progress,
-    render_progress_bar,
     render_queue_row,
     render_status_list_entry,
 )
@@ -72,12 +62,8 @@ from dazzle.render.fragment.ingest.emit import (
 )
 from dazzle.render.fragment.primitives import (
     KPI,
-    Accordion,
-    ActionCard,
-    ActionGrid,
     ActivityFeed,
     BarTrack,
-    Carousel,
     ColumnVisibilityMenu,
     DataListScroll,
     DetailGrid,
@@ -88,14 +74,11 @@ from dazzle.render.fragment.primitives import (
     MetricTile,
     PivotTable,
     PivotTableRegion,
-    ProfileCard,
-    ProgressBar,
     QueueRegion,
     RelatedGroup,
     RelatedTab,
     SlideOver,
     SortHeader,
-    StageBar,
     StatusList,
     Table,
 )
@@ -122,7 +105,7 @@ if TYPE_CHECKING:
 
 
 class _RenderTablesMixin:
-    """Mixin adding the 17 tables-family `_emit_*` methods to
+    """Mixin adding the tables-family `_emit_*` methods to
     `FragmentRenderer`. Same pattern as the other render mixins.
     """
 
@@ -894,37 +877,6 @@ class _RenderTablesMixin:
             f"</table>"
         )
 
-    def _emit_action_card(self, a: ActionCard, ctx: RenderContext) -> str:
-        """Render an ActionCard via the HM dual-lock seam (ingest ActionCard).
-
-        Product API remains the frozen dataclass; emission maps icon name →
-        trusted HTML then ``render_action_card`` so markup matches
-        ``contracts/action_grid.py`` (schema + DOM dual-lock).
-        """
-        icon_html = lucide_icon_html(a.icon, cls="dz-action-card-icon") if a.icon else ""
-        return render_action_card(
-            ActionCardSeam(
-                label=a.label,
-                tone=a.tone,
-                url=a.url,
-                count=a.count,
-                icon_html=icon_html,
-            )
-        )
-
-    def _emit_profile_card(self, p: ProfileCard, ctx: RenderContext) -> str:
-        """Render a ProfileCard via HM dual-lock ProfileCard seam."""
-        return render_profile_card(
-            ProfileCardSeam(
-                primary=p.primary,
-                secondary=p.secondary,
-                avatar_url=p.avatar_url,
-                initials=p.initials,
-                stats=list(p.stats),
-                facts=list(p.facts),
-            )
-        )
-
     def _emit_metric_tile(self, m: MetricTile, ctx: RenderContext) -> str:
         """Render a MetricTile via HM dual-lock MetricTile seam.
 
@@ -983,27 +935,6 @@ class _RenderTablesMixin:
                 )
             )
         return f'<ul class="dz-activity-feed">{"".join(rows)}</ul>'
-
-    def _emit_action_grid(self, g: ActionGrid, ctx: RenderContext) -> str:
-        """Render an ActionGrid matching legacy
-        `workspace/regions/action_grid.html` byte-for-byte: outer
-        `dz-action-grid-region` + `dz-action-grid` wrapper. Empty
-        path renders the `dz-empty-dense` fallback inside the region
-        wrapper.
-        """
-        if not g.cards:
-            return (
-                f'<div class="dz-action-grid-region">'
-                f'<p class="dz-empty-dense" role="status">'
-                f"{ctx.escape(g.empty_message)}</p>"
-                f"</div>"
-            )
-        cards_html = "".join(self._emit(c, ctx) for c in g.cards)  # type: ignore[arg-type]
-        return (
-            f'<div class="dz-action-grid-region">'
-            f'<div class="dz-action-grid">{cards_html}</div>'
-            f"</div>"
-        )
 
     def _queue_actions_html(self, q: QueueRegion, row: Any, ctx: RenderContext) -> str:
         """Inline state-transition buttons for one queue row (or empty)."""
@@ -1357,125 +1288,6 @@ class _RenderTablesMixin:
             GridRegionSeam(body_html=f'<div class="dz-grid-list">{"".join(cells_html)}</div>')
         )
 
-    def _emit_accordion(self, a: Accordion, ctx: RenderContext) -> str:
-        """HM Accordion — ``div.dz-accordion`` of exclusive native details.
-
-        Dual-lock root ``.dz-accordion`` (contracts/accordion.py). Shared
-        ``name=`` on items gives single-open exclusive policy (zero JS).
-        """
-        if not a.items:
-            return (
-                f'<div class="dz-accordion" data-dz-entry-count="0">'
-                f'<p class="dz-empty-dense" role="status">'
-                f"{ctx.escape(a.empty_message)}</p>"
-                f"</div>"
-            )
-        name = ctx.escape_attr(a.name)
-        parts: list[str] = []
-        for item in a.items:
-            open_attr = " open" if item.open else ""
-            parts.append(
-                f'<details class="dz-accordion__item" name="{name}"{open_attr}>'
-                f'<summary class="dz-accordion__trigger">'
-                f"{ctx.escape(item.title)}</summary>"
-                f'<div class="dz-accordion__panel">'
-                f"{ctx.escape(item.body)}</div>"
-                f"</details>"
-            )
-        return (
-            f'<div class="dz-accordion" data-dz-entry-count="{len(a.items)}">{"".join(parts)}</div>'
-        )
-
-    def _emit_carousel_slide(self, slide: Any, index: int, ctx: RenderContext) -> tuple[str, str]:
-        """Return (slide_html, dot_html) for one carousel peer."""
-        active = " data-dz-active" if index == 0 else ""
-        current = ' aria-current="true"' if index == 0 else ""
-        alt = ctx.escape_attr(slide.alt or slide.title or f"Slide {index + 1}")
-        slide_label = slide.alt or slide.title or f"Slide {index + 1}"
-        if slide.src:
-            chip = (
-                f'<span class="dz-carousel__chip">{ctx.escape(slide.chip)}</span>'
-                if slide.chip
-                else ""
-            )
-            inner = (
-                f'<div class="dz-carousel__media">'
-                f'<img src="{ctx.escape_attr(slide.src)}" alt="{alt}">'
-                f"{chip}</div>"
-            )
-            slide_cls = "dz-carousel__slide dz-carousel__slide--media"
-        else:
-            title_html = (
-                f'<p class="dz-carousel__hero-title">{ctx.escape(slide.title)}</p>'
-                if slide.title
-                else ""
-            )
-            body_html = (
-                f'<p class="dz-carousel__hero-text">{ctx.escape(slide.body)}</p>'
-                if slide.body
-                else ""
-            )
-            inner = f'<div class="dz-carousel__hero">{title_html}{body_html}</div>'
-            slide_cls = "dz-carousel__slide dz-carousel__slide--hero"
-        slide_html = f'<div class="{slide_cls}"{active}>{inner}</div>'
-        dot_html = (
-            f'<button type="button" class="dz-carousel__dot"{current} '
-            f'aria-label="Slide {index + 1}, {ctx.escape_attr(slide_label)}"></button>'
-        )
-        return slide_html, dot_html
-
-    def _emit_carousel(self, c: Carousel, ctx: RenderContext) -> str:
-        """HM Carousel — ``div.dz-carousel`` stage with prev/next/dots.
-
-        Dual-lock root ``.dz-carousel`` + ``data-dz-carousel``
-        (contracts/carousel.py · Decision 0009). First slide starts
-        ``data-dz-active``; clamp wrap disables Previous on index 0.
-        """
-        if not c.slides:
-            return (
-                f'<div class="dz-carousel" data-dz-carousel data-dz-carousel-index="0" '
-                f'data-dz-entry-count="0" role="region" aria-roledescription="carousel" '
-                f'aria-label="{ctx.escape_attr(c.label)}">'
-                f'<p class="dz-empty-dense" role="status">'
-                f"{ctx.escape(c.empty_message)}</p>"
-                f"</div>"
-            )
-        n = len(c.slides)
-        label = ctx.escape_attr(c.label)
-        wrap = ctx.escape_attr(c.wrap)
-        ratio = ctx.escape_attr(c.ratio or "16/9")
-        size_attr = f' data-dz-size="{ctx.escape_attr(c.size)}"' if c.size else ""
-        interval_attr = (
-            f' data-dz-carousel-interval="{int(c.interval_ms)}"' if c.interval_ms >= 500 else ""
-        )
-        slides_html: list[str] = []
-        dots_html: list[str] = []
-        for i, slide in enumerate(c.slides):
-            slide_html, dot_html = self._emit_carousel_slide(slide, i, ctx)
-            slides_html.append(slide_html)
-            dots_html.append(dot_html)
-        prev_disabled = " disabled" if c.wrap == "none" else ""
-        status = f"Slide 1 of {n}"
-        return (
-            f'<div class="dz-carousel" data-dz-carousel data-dz-carousel-index="0" '
-            f'data-dz-carousel-wrap="{wrap}"{size_attr}{interval_attr} '
-            f'data-dz-entry-count="{n}" aria-roledescription="carousel" '
-            f'aria-label="{label}">'
-            f'<div class="dz-carousel__viewport" data-dz-ratio="{ratio}">'
-            f'<div class="dz-carousel__track">{"".join(slides_html)}</div></div>'
-            f'<div class="dz-carousel__controls">'
-            f'<button type="button" class="dz-carousel__btn" data-dz-carousel-prev '
-            f'aria-label="Previous slide"{prev_disabled}>‹</button>'
-            f'<div class="dz-carousel__dots" role="group" aria-label="Slides">'
-            f"{''.join(dots_html)}</div>"
-            f'<button type="button" class="dz-carousel__btn" data-dz-carousel-next '
-            f'aria-label="Next slide">›</button>'
-            f"</div>"
-            f'<p class="dz-carousel__status" data-dz-carousel-status '
-            f'aria-live="polite">{ctx.escape(status)}</p>'
-            f"</div>"
-        )
-
     def _emit_status_list(self, s: StatusList, ctx: RenderContext) -> str:
         """Render a StatusList via HM dual-lock StatusListEntry seams.
 
@@ -1559,35 +1371,3 @@ class _RenderTablesMixin:
         )
         refs = _render_references("dz-bar-track", b.reference_lines, b.reference_bands, ctx)
         return f"{region}{refs}"
-
-    def _emit_stage_bar(self, s: StageBar, ctx: RenderContext) -> str:
-        """Render a StageBar via HM dual-lock Progress seam."""
-        return render_progress(
-            ProgressSeam(
-                stages=[
-                    ProgressStageSeam(name=name, count=count, complete=complete)
-                    for name, count, complete in s.stages
-                ],
-                complete_pct=s.complete_pct,
-                complete_count=s.complete_count,
-                total=s.total,
-            )
-        )
-
-    def _emit_progress_bar(self, p: ProgressBar, ctx: RenderContext) -> str:
-        """HM Progress hyperpart — toned determinate ``.dz-progress`` bar.
-
-        Dual-lock root ``.dz-progress`` + ``role=progressbar`` (hm-core).
-        Fill via ``--dz-progress-value`` on ``.dz-progress__bar``. Distinct
-        from StageBar / progress-region (``display: progress``).
-        Sole-emitter: ``render_progress_bar`` / contracts/progress_bar.py.
-        """
-        del ctx  # escape owned by ingest sole-emitter
-        return render_progress_bar(
-            ProgressBarSeam(
-                value=float(p.value),
-                label=(p.label or "Progress").strip() or "Progress",
-                tone=p.tone or "",
-                max_value=float(p.max_value),
-            )
-        )

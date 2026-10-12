@@ -1,6 +1,6 @@
-"""Tests for the v0.61.86 (#916) heatmap `action: <workspace_name>` fix.
+"""Tests for the v0.61.86 (#916) region `action: <workspace_name>` fix.
 
-A `display: heatmap` region with `action: <workspace_name>` should route
+A workspace region with `action: <workspace_name>` should route
 row clicks to that workspace (with the row's identifier as `context_id`),
 not to the source-record detail drawer. The previous behaviour silently
 downgraded the action because the routing code only looked at `surfaces`,
@@ -10,7 +10,7 @@ Three layers:
   1. The workspace_renderer's action-resolution loop now checks
      `app_spec.workspaces` BEFORE `app_spec.surfaces`.
   2. When a workspace match is found, the URL pattern is
-     `/app/workspaces/<name>?context_id={id}` — the heatmap template
+     `/app/workspaces/<name>?context_id={id}` — the row renderer
      replaces `{id}` literally with the row identifier, so the final
      emitted URL is the workspace's app-shell URL with the row's
      identifier passed via the standard `context_id` query param.
@@ -49,17 +49,13 @@ workspace pupil_dashboard "Pupil Dashboard":
     entity: Pupil
   pupil_overview:
     source: Pupil
-    display: detail
+    display: list
 
 workspace teacher_workspace "Teacher Workspace":
   pupil_ao_heatmap:
     source: MarkingResult
-    display: heatmap
-    rows: pupil
-    columns: ao
+    display: list
     action: pupil_dashboard
-    aggregate:
-      avg_score: avg(score)
 """
 
 
@@ -82,13 +78,13 @@ class TestActionWorkspaceRouting:
             domain=SimpleNamespace(entities=list(module.entities)),
         )
         ctx = build_workspace_context(teacher, app_spec=appspec)
-        # First region is the heatmap
+        # First region is the action-bearing list
         return ctx.regions[0].action_url
 
     def test_action_workspace_routes_to_workspace_url(self) -> None:
         """`action: pupil_dashboard` (a workspace name) → URL pattern is
-        `/app/workspaces/pupil_dashboard?context_id={id}` (the heatmap
-        template substitutes `{id}` with the row identifier later)."""
+        `/app/workspaces/pupil_dashboard?context_id={id}` (the row
+        renderer substitutes `{id}` with the row identifier later)."""
         url = self._heatmap_action_url(_BASE_DSL)
         assert url == "/app/workspaces/pupil_dashboard?context_id={id}"
 

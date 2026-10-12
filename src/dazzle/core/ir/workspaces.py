@@ -15,7 +15,6 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from .aggregates import AggregateRef, DerivedMetric
 from .conditions import ConditionExpr, ViaCondition
 from .location import SourceLocation
-from .params import ParamRef
 from .ux import SortSpec, UXSpec
 
 
@@ -58,31 +57,17 @@ class DisplayMode(StrEnum):
     LIST = "list"
     GRID = "grid"
     TIMELINE = "timeline"
-    MAP = "map"
-    DETAIL = "detail"  # v0.3.1: Single item detail view
     SUMMARY = "summary"  # v0.9.5: Metrics/KPI summary cards
     METRICS = "metrics"  # v0.9.5: Alias for summary
     KANBAN = "kanban"  # v0.9.5: Kanban board view for workflows
     BAR_CHART = "bar_chart"  # v0.9.5: Bar chart visualization
-    FUNNEL_CHART = "funnel_chart"  # v0.9.5: Funnel chart (e.g., sales pipeline)
     QUEUE = "queue"  # v0.33.0: Review queue with inline actions
     TABBED_LIST = "tabbed_list"  # v0.33.0: Tabbed multi-source list
-    HEATMAP = "heatmap"  # v0.44.0: Heat-map matrix view
     DIAGRAM = "diagram"  # v0.48.15: Entity relationship diagram
-    PROGRESS = "progress"  # v0.44.0: Progress bar view
     ACTIVITY_FEED = "activity_feed"  # v0.44.0: Activity feed / timeline display
-    TREE = "tree"  # v0.44.0: Tree / hierarchy display
     PIVOT_TABLE = "pivot_table"  # v0.59.3: Multi-dimension cross-tab view (cycle 25)
     LINE_CHART = "line_chart"  # v0.60.0: Time-series line chart (cycle 28)
-    AREA_CHART = "area_chart"  # v0.60.0: Stacked time-series area chart (cycle 28)
-    SPARKLINE = "sparkline"  # v0.60.0: Compact line for KPI tiles (cycle 28)
-    HISTOGRAM = "histogram"  # v0.61.27 (#882): continuous-variable distribution
     RADAR = "radar"  # v0.61.28 (#879): polar/radar profile shape
-    BOX_PLOT = "box_plot"  # v0.61.29 (#881): per-group quartile spread
-    BULLET = "bullet"  # v0.61.30 (#880): actual-vs-target rows with bands
-    BAR_TRACK = "bar_track"  # v0.61.53 (#893): per-row label + filled track + value
-    ACTION_GRID = "action_grid"  # v0.61.54 (#891): CTA cards on dashboards
-    PROFILE_CARD = "profile_card"  # v0.61.55 (#892): single-record identity panel
     PIPELINE_STEPS = "pipeline_steps"  # v0.61.56 (#890): sequential-stage workflow
     STATUS_LIST = "status_list"  # v0.61.69 (#7): vertical icon + title + copy + state-pill list
     CONFIRM_ACTION_PANEL = (
@@ -99,10 +84,7 @@ class DisplayMode(StrEnum):
     ENTITY_CARD = "entity_card"  # #1017: 360° single-entity drill-down composite
     COMPARISON = "comparison"  # #1470: ranked-league (rank rows by metric + flag outliers)
     INSIGHT_SUMMARY = "insight_summary"  # #1470: deterministic grounded narrative
-    ACCORDION = "accordion"  # hyperpart emitter: exclusive details group (FAQ / section disclosure)
     CONVERSATION = "conversation"  # hyperpart emitter: stack of Bubble shells (chat thread)
-    CAROUSEL = "carousel"  # hyperpart emitter: media stage strip prev/next/dots
-    PROGRESS_BAR = "progress_bar"  # hyperpart emitter: toned determinate .dz-progress bar
 
 
 class WhenEmpty(StrEnum):
@@ -278,54 +260,6 @@ class PipelineStageSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class ProfileCardStatSpec(BaseModel):
-    """v0.61.55 (#892): one stat in a profile_card's stat grid.
-
-    Attributes:
-        label: Human-readable stat label (e.g. "Target", "Projected").
-        value: Field name (or dotted path) on the source row to render.
-            The runtime resolves the path against the fetched item dict
-            and renders the resulting value verbatim.
-    """
-
-    label: str
-    value: str
-
-    model_config = ConfigDict(frozen=True)
-
-
-class ActionCardSpec(BaseModel):
-    """v0.61.54 (#891): one CTA card in an action_grid region.
-
-    Each card carries a label, optional icon (Lucide name), an optional
-    count_aggregate (counted per-card via the existing aggregate
-    machinery), an action surface name (resolved to URL at render time),
-    and a tone token mapping to the design palette.
-
-    Attributes:
-        label: Human-readable CTA text rendered prominently on the card.
-        icon: Lucide icon name (e.g. "file-text", "clipboard-check"). Empty
-            string means no icon.
-        count: Optional :class:`AggregateRef` driving the count badge —
-            same vocabulary as any other aggregate consumer (ADR-0024).
-            ``None`` means no count badge. DSL key remains
-            ``count_aggregate:`` for familiarity.
-        action: Surface name to navigate to on click — same resolution
-            path as region-level ``action:``. Empty string means no
-            click-through (informational card).
-        tone: Palette token — ``positive`` / ``warning`` / ``destructive``
-            / ``neutral`` / ``accent``. Defaults to ``neutral``.
-    """
-
-    label: str
-    icon: str = ""
-    count: AggregateRef | None = None
-    action: str = ""
-    tone: str = "neutral"
-
-    model_config = ConfigDict(frozen=True)
-
-
 class DeltaSpec(BaseModel):
     """v0.61.25 (#884): period-over-period delta config for summary/metrics tiles.
 
@@ -369,7 +303,7 @@ class StatusListEntrySpec(BaseModel):
             shadows Pydantic's deprecated `BaseModel.copy()` method.
         icon: Lucide icon name (e.g. "check-circle", "clock"). Empty
             string omits the icon column.
-        state: Pill state token — same vocabulary as action_grid /
+        state: Pill state token — same vocabulary as
             metrics / notice tones (``positive`` / ``warning`` /
             ``destructive`` / ``accent`` / ``neutral``). Defaults to
             ``neutral``. Empty string also resolves to ``neutral``.
@@ -468,7 +402,7 @@ class NoticeSpec(BaseModel):
         body: Optional secondary line — the explanation. Empty string
             means single-line notice.
         tone: Palette token — ``positive`` / ``warning`` / ``destructive``
-            / ``accent`` / ``neutral``. Reuses the action_grid +
+            / ``accent`` / ``neutral``. Reuses the
             metrics tones vocabulary so the visual language stays
             consistent across components. Defaults to ``neutral``
             (subtle muted band).
@@ -518,8 +452,8 @@ class LensAggregatePrimary(BaseModel):
             row reference via a single ``ref`` field each. Mutually
             exclusive with ``via``.
         format: Optional Python format spec applied to the computed
-            aggregate value when rendering the cell (#1300). Mirrors
-            bar_track's ``track_format``: a bare format spec (``".1f"``,
+            aggregate value when rendering the cell (#1300). A
+            bare format spec (``".1f"``,
             ``".0%"``) or a ``str.format`` template (``"{:,.2f}"``).
             Empty (default) → the renderer applies a sensible numeric
             default-round (2dp, trailing zeros trimmed) so an ``avg``
@@ -946,7 +880,7 @@ class DayTimelineConfig(BaseModel):
         card: ``{{ field }}`` / ``{{ field.path }}`` template
             rendered against each slot's source row to produce the
             slot body (#1146 part 1). Same grammar as
-            ``profile_card`` / ``task_inbox`` templates — graceful
+            ``task_inbox`` templates — graceful
             degradation when a path is unresolved (renders as empty
             string). When ``card == ""`` slots render with a minimal
             default body (start/end label only).
@@ -1050,7 +984,7 @@ class WorkspaceRegion(BaseModel):
     notice: NoticeSpec | None = None
     # v0.61.65: per-tile palette tokens for `display: metrics`. Map metric
     # name → tone token (positive / warning / destructive / accent / neutral).
-    # Reuses the action_grid card vocabulary for consistency. Surfaced by
+    # Shared tone vocabulary with notice / status_list. Surfaced by
     # the metrics template as a per-tile background tint. Pure presentation
     # — no impact on data, scope, or semantics. AegisMark UX patterns
     # roadmap item #2.
@@ -1058,21 +992,11 @@ class WorkspaceRegion(BaseModel):
     # v0.34.0: Date-range filtering
     date_field: str | None = None
     date_range: bool = False  # Enable date picker on this region
-    # v0.44.0: Heatmap configuration
-    heatmap_rows: str | None = None  # FK field for row grouping
-    heatmap_columns: str | None = None  # FK field for column grouping
-    heatmap_value: str | None = None  # Expression for cell value
-    heatmap_thresholds: list[float] | ParamRef = Field(
-        default_factory=list
-    )  # e.g. [0.4, 0.6] for RAG
-    # v0.44.0: Progress bar configuration
-    progress_stages: list[str] = Field(default_factory=list)  # ordered status values
-    progress_complete_at: str | None = None  # which stage means "done"
     # v0.61.25 (#884): Period-over-period delta for summary/metrics tiles.
     # When set, the runtime computes a prior-window aggregate alongside the
     # current one and the metrics template renders an arrow + delta + pct.
     delta: DeltaSpec | None = None
-    # v0.61.26 (#883): Reference lines + shaded bands on line/area charts.
+    # v0.61.26 (#883): Reference lines + shaded bands on line charts.
     # Pure template overlay — no extra DB queries.
     reference_lines: list[ReferenceLine] = Field(default_factory=list)
     reference_bands: list[ReferenceBand] = Field(default_factory=list)
@@ -1092,27 +1016,8 @@ class WorkspaceRegion(BaseModel):
     # (descending `at`, first `value >= at` wins). Only for display: list.
     rag_on: str | None = None
     tone_bands: list[ToneBandSpec] = Field(default_factory=list)
-    # v0.61.27 (#882): Histogram-mode bin count.
-    # ``None`` means "auto" (Sturges' rule: ⌈log2(N) + 1⌉). A positive int
-    # forces N equal-width bins. Histograms read ``heatmap_value`` for the
-    # value column to bin (it's a generic "the value to plot" field, just
-    # legacy-named — rename deferred to keep this patch focused).
-    bin_count: int | None = None
-    # v0.61.29 (#881): Box plot — render outlier dots (points outside
-    # Tukey fences [Q1 - 1.5*IQR, Q3 + 1.5*IQR]). Default True; set False
-    # for a clean compact view that omits the dots.
-    show_outliers: bool = True
-    # v0.61.30 (#880): Bullet chart — column names on each item that
-    # provide the row label, the actual bar length, and the target tick.
-    # The bullet template renders one row per item, with `reference_bands`
-    # (#883) drawn behind as comparative qualitative zones. Pre-computed
-    # MVP — extension to per-group_by aggregates deferred (would need
-    # multi-measure support in `_compute_bucketed_aggregates`).
-    bullet_label: str | None = None
-    bullet_actual: str | None = None
-    bullet_target: str | None = None
-    # v0.61.33 (#883): line/area chart overlay series — additional
-    # polylines/stacked layers driven by their own source/filter/aggregate.
+    # v0.61.33 (#883): line chart overlay series — additional
+    # polylines driven by their own source/filter/aggregate.
     # Each overlay fires one extra `_compute_bucketed_aggregates` call.
     overlay_series: list[OverlaySeriesSpec] = Field(default_factory=list)
     # v0.61.52 (#894): project-supplied CSS class on the region's outer
@@ -1175,32 +1080,6 @@ class WorkspaceRegion(BaseModel):
     # Range: 1..12 inclusive; values outside that band are clamped at
     # parse time with a warning. None = "use stage default".
     width: int | None = None
-    # v0.61.53 (#893): bar_track display config — per-row horizontal
-    # value bar. Reuses `group_by` for the row dimension and
-    # `aggregates` for the bar value (single-dim chart pipeline). These
-    # two fields are bar_track-specific:
-    #   track_max — denominator for the fill ratio. None means "auto"
-    #     (max of the bucketed values).
-    #   track_format — Python format spec applied to the value for the
-    #     right-side numeric (e.g. "{:.0%}", "{:,.0f}"). None means raw
-    #     str() of the value.
-    track_max: float | None = None
-    track_format: str | None = None
-    # v0.61.54 (#891): action_grid CTA cards. Each entry is fully
-    # specified — label / icon / count_aggregate / action / tone. The
-    # runtime fires one count query per card with a non-empty
-    # `count_aggregate`. Empty list = legacy behaviour (no cards).
-    action_cards: list[ActionCardSpec] = Field(default_factory=list)
-    # v0.61.55 (#892): profile_card single-record display config. All
-    # fields default to empty/None so non-profile_card regions are
-    # unaffected. The `secondary` and `facts` strings support tiny
-    # `{{ field }}` / `{{ field.path }}` interpolation against the
-    # fetched item dict — no Jinja eval, no expressions.
-    avatar_field: str | None = None
-    primary: str | None = None
-    secondary: str | None = None
-    profile_stats: list[ProfileCardStatSpec] = Field(default_factory=list)
-    facts: list[str] = Field(default_factory=list)
     # v0.61.56 (#890): pipeline_steps sequential-stage display.
     # Each stage fires its own aggregate query; renders as a left-to-right
     # row of stage cards with arrow connectors. Empty list = legacy

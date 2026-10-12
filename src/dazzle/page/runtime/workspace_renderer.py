@@ -21,9 +21,6 @@ from pydantic import BaseModel, Field
 from dazzle.core import ir
 from dazzle.page import app_paths
 from dazzle.page.runtime.action_urls import (
-    action_to_url as _action_to_url,
-)
-from dazzle.page.runtime.action_urls import (
     confirm_action_to_url as _confirm_action_to_url,
 )
 from dazzle.page.runtime.action_urls import (
@@ -40,9 +37,6 @@ from dazzle.page.runtime.workspace_persona_focus import (
     collect_workspace_persona_overrides,
 )
 from dazzle.render.diagram_mermaid import compute_diagram_data
-
-# Action URL helpers live in action_urls.py (MI leaf). Tests may import
-# `_action_to_url` from this module or from action_urls directly.
 
 
 def _entity_to_app_url(entity_name: str) -> str:
@@ -101,14 +95,6 @@ class RegionContext(BaseModel):
     # Multi-source (v0.33.0)
     sources: list[str] = Field(default_factory=list)
     source_tabs: list[SourceTabContext] = Field(default_factory=list)
-    # Heatmap fields (v0.44.0)
-    heatmap_rows: str = ""
-    heatmap_columns: str = ""
-    heatmap_value: str = ""
-    heatmap_thresholds: list[float] = Field(default_factory=list)
-    # Progress fields (v0.44.0)
-    progress_stages: list[str] = Field(default_factory=list)
-    progress_complete_at: str = ""
     # Date range filtering (v0.44.0)
     date_field: str = ""
     date_range: bool = False
@@ -119,16 +105,12 @@ class RegionContext(BaseModel):
     diagram_data: str = ""  # Mermaid diagram source for DIAGRAM regions
     # Region actions (v0.48.15: action buttons on region header)
     region_actions: list[dict[str, str]] = Field(default_factory=list)
-    # v0.61.26 (#883): line/area chart overlays. Server-rendered SVG primitives
+    # v0.61.26 (#883): line chart overlays. Server-rendered SVG primitives
     # behind the data series — no extra DB queries, no JS. Each entry is a
     # plain dict (label/value/style for lines, label/from/to/color for bands)
     # so Jinja can read it without import dance.
     reference_lines: list[dict[str, Any]] = Field(default_factory=list)
     reference_bands: list[dict[str, Any]] = Field(default_factory=list)
-    # v0.61.30 (#880): Bullet chart row column references — read off each item.
-    bullet_label: str = ""
-    bullet_actual: str = ""
-    bullet_target: str = ""
     # v0.61.25 (#884): Period-over-period delta config for summary tiles.
     # Threaded through so `_compute_aggregate_metrics(delta=...)` resolves
     # without AttributeError. Forward-ref since IR import would cycle.
@@ -146,26 +128,6 @@ class RegionContext(BaseModel):
     # no polling. Threaded to the DashboardCard so its HTMX trigger appends
     # `, every Ns`.
     refresh_interval: int | None = None
-    # v0.61.53 (#893): bar_track display config — fill denominator and
-    # value format string. Defaults preserve the legacy "raw" rendering
-    # for non-bar_track displays.
-    track_max: float | None = None
-    track_format: str = ""
-    # v0.61.54 (#891): action_grid CTA cards. Each entry is a plain dict
-    # (label / icon / count_label / url / tone) — count resolved at
-    # request time by the runtime branch via `_fetch_count_metric`. List
-    # of dicts (not the IR type) avoids importing core.ir into the UI
-    # render context.
-    action_cards: list[dict[str, Any]] = Field(default_factory=list)
-    # v0.61.55 (#892): profile_card single-record display config. The
-    # avatar/primary fields hold raw column names; secondary + facts
-    # carry user-template strings interpolated against the fetched item
-    # at request time. profile_stats is a list of {label, value-field}.
-    avatar_field: str = ""
-    primary: str = ""
-    secondary: str = ""
-    profile_stats: list[dict[str, str]] = Field(default_factory=list)
-    facts: list[str] = Field(default_factory=list)
     # v0.61.56 (#890): pipeline_steps stages — each entry is a plain
     # dict (label/caption/value). Runtime branch fires one count query
     # per aggregate-shaped value, and renders literal-string values
@@ -318,39 +280,22 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "ENTITY_CARD": _TYPED_SHIM,
     # Phase 4 migrations (v0.67.46 → v0.67.51 prepared the adapter
     # plumbing; v0.67.52 flips the consumer to actually use it).
-    "PROGRESS": _TYPED_SHIM,
-    "DETAIL": _TYPED_SHIM,
-    "TREE": _TYPED_SHIM,
-    "MAP": _TYPED_SHIM,  # oral #167 — vendor-free Marker pin board
-    "ACCORDION": _TYPED_SHIM,  # oral #168 — exclusive FAQ disclosure
-    "CAROUSEL": _TYPED_SHIM,  # oral #168 — media stage strip
-    "PROGRESS_BAR": _TYPED_SHIM,  # oral #168 — determinate .dz-progress
     "DIAGRAM": _TYPED_SHIM,
     "SEARCH_BOX": _TYPED_SHIM,
     "TABBED_LIST": _TYPED_SHIM,
     "GRID": _TYPED_SHIM,
-    "HEATMAP": _TYPED_SHIM,
-    "SPARKLINE": _TYPED_SHIM,
     "STATUS_LIST": _TYPED_SHIM,
-    "PROFILE_CARD": _TYPED_SHIM,
     "METRICS": _TYPED_SHIM,
     "SUMMARY": _TYPED_SHIM,  # alias for METRICS (adapter dispatches identically)
-    "FUNNEL_CHART": _TYPED_SHIM,
-    "HISTOGRAM": _TYPED_SHIM,
     "PIVOT_TABLE": _TYPED_SHIM,
     "TIMELINE": _TYPED_SHIM,
     "KANBAN": _TYPED_SHIM,
     "PIPELINE_STEPS": _TYPED_SHIM,
     "QUEUE": _TYPED_SHIM,
-    "ACTION_GRID": _TYPED_SHIM,
     "CONFIRM_ACTION_PANEL": _TYPED_SHIM,
     "BAR_CHART": _TYPED_SHIM,
     "LINE_CHART": _TYPED_SHIM,
-    "AREA_CHART": _TYPED_SHIM,
-    "BAR_TRACK": _TYPED_SHIM,
     "COMPARISON": _TYPED_SHIM,  # #1470 ranked league
-    "BULLET": _TYPED_SHIM,
-    "BOX_PLOT": _TYPED_SHIM,
     "ACTIVITY_FEED": _TYPED_SHIM,
     "LIST": _TYPED_SHIM,
     "RADAR": _TYPED_SHIM,  # Phase 4 region migration (v0.67.70)
@@ -393,27 +338,6 @@ STAGE_FOLD_COUNTS: dict[str, int] = {
 # =============================================================================
 # Builder
 # =============================================================================
-
-
-def _resolve_thresholds(raw: object) -> list[float]:
-    """Extract thresholds from a literal list or ParamRef (use default).
-
-    ParamRef objects carry the DSL default — extract it at context-build time
-    so that RegionContext passes Pydantic validation. Full tenant-scoped
-    resolution happens later in the rendering handler (#572, #575).
-    """
-    if raw is None:
-        return []
-    # ParamRef — use the declared default
-    if hasattr(raw, "default") and hasattr(raw, "key"):
-        default = raw.default
-        if isinstance(default, list):
-            return [float(v) for v in default]
-        return []
-    # Already a list of floats
-    if isinstance(raw, list):
-        return [float(v) for v in raw]
-    return []
 
 
 def build_workspace_context(
@@ -583,12 +507,6 @@ def build_workspace_context(
                 action_id_field=action_id_field,
                 sources=region_sources,
                 source_tabs=source_tabs,
-                heatmap_rows=getattr(region, "heatmap_rows", None) or "",
-                heatmap_columns=getattr(region, "heatmap_columns", None) or "",
-                heatmap_value=getattr(region, "heatmap_value", None) or "",
-                heatmap_thresholds=_resolve_thresholds(getattr(region, "heatmap_thresholds", None)),
-                progress_stages=list(getattr(region, "progress_stages", None) or []),
-                progress_complete_at=getattr(region, "progress_complete_at", None) or "",
                 date_field=getattr(region, "date_field", None) or "",
                 date_range=bool(getattr(region, "date_range", False)),
                 col_span=col_span,
@@ -608,44 +526,17 @@ def build_workspace_context(
                     }
                     for rb in (getattr(region, "reference_bands", None) or [])
                 ],
-                bullet_label=getattr(region, "bullet_label", None) or "",
-                bullet_actual=getattr(region, "bullet_actual", None) or "",
-                bullet_target=getattr(region, "bullet_target", None) or "",
                 delta=getattr(region, "delta", None),
                 css_class=getattr(region, "css_class", None) or "",  # #894
                 eyebrow=getattr(region, "eyebrow", None) or "",  # v0.61.60
                 refresh_interval=getattr(region, "refresh_interval", None),  # #1391
-                track_max=getattr(region, "track_max", None),  # #893
-                track_format=getattr(region, "track_format", None) or "",  # #893
-                action_cards=[
-                    {
-                        "label": c.label,
-                        "icon": c.icon,
-                        "count": c.count,  # AggregateRef | None (ADR-0024)
-                        "url": _action_to_url(c.action, app_spec),  # #979
-                        "tone": c.tone,
-                    }
-                    for c in (getattr(region, "action_cards", None) or [])
-                ],  # #891
-                avatar_field=getattr(region, "avatar_field", None) or "",  # #892
-                primary=getattr(region, "primary", None) or "",  # #892
-                secondary=getattr(region, "secondary", None) or "",  # #892
-                profile_stats=[
-                    {"label": s.label, "value": s.value}
-                    for s in (getattr(region, "profile_stats", None) or [])
-                ],  # #892
-                facts=list(getattr(region, "facts", None) or []),  # #892
                 pipeline_stages=[
                     {
                         "label": s.label,
                         "caption": s.caption,
                         "value": s.value,
-                        # v0.61.81 (#912): progress was added to PipelineStageSpec
-                        # in v0.61.79 (#911) but the IR→template-context boundary
-                        # silently dropped it — same bug shape as #910's
-                        # profile_stats AttributeError. Parser landed; render
-                        # path never received the value. The progress: 0..100
-                        # field needs to flow through here too.
+                        # v0.61.81 (#912): progress: 0..100 must flow through
+                        # the IR→template-context boundary too.
                         "progress": s.progress,
                     }
                     for s in (getattr(region, "pipeline_stages", None) or [])

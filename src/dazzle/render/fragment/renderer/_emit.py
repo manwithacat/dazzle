@@ -19,9 +19,6 @@ from dazzle.render.fragment.escape import (
 )
 from dazzle.render.fragment.primitives import (
     KPI,
-    Accordion,
-    ActionCard,
-    ActionGrid,
     ActivityFeed,
     AddCardRow,
     AppShell,
@@ -29,16 +26,13 @@ from dazzle.render.fragment.primitives import (
     Badge,
     BarChart,
     BarTrack,
-    BoxPlot,
     Breadcrumb,
     Bubble,
     BulkActionToolbar,
-    Bullet,
     Button,
     CalendarGrid,
     Card,
     CardPicker,
-    Carousel,
     CohortStripRegion,
     ColorField,
     ColumnVisibilityMenu,
@@ -64,12 +58,9 @@ from dazzle.render.fragment.primitives import (
     FormStack,
     FormStepper,
     Fragment,
-    Funnel,
     Grid,
     GridRegion,
     Heading,
-    Heatmap,
-    Histogram,
     HoverCard,
     Icon,
     InlineEdit,
@@ -80,8 +71,6 @@ from dazzle.render.fragment.primitives import (
     Link,
     ListFilterBar,
     ListRegion,
-    MapBoard,
-    Marker,
     Menubar,
     Message,
     MessageScroller,
@@ -98,8 +87,6 @@ from dazzle.render.fragment.primitives import (
     PivotTable,
     PivotTableRegion,
     Popover,
-    ProfileCard,
-    ProgressBar,
     QueueRegion,
     Radar,
     RefPicker,
@@ -116,10 +103,8 @@ from dazzle.render.fragment.primitives import (
     SlideOver,
     SliderField,
     SortHeader,
-    Sparkline,
     Split,
     Stack,
-    StageBar,
     StatusList,
     Submit,
     Surface,
@@ -136,7 +121,6 @@ from dazzle.render.fragment.primitives import (
     ToggleGroupField,
     Toolbar,
     Topbar,
-    Tree,
     WidgetCombobox,
     WorkspaceContextSelector,
     WorkspaceDrawer,
@@ -270,10 +254,6 @@ class FragmentRenderer(
                 return self._emit_hover_card(fragment, ctx)
             case Popover():
                 return self._emit_popover(fragment, ctx)
-            case Marker():
-                return self._emit_marker(fragment, ctx)
-            case MapBoard():
-                return self._emit_map_board(fragment, ctx)
             case EmptyState():
                 return self._emit_empty_state(fragment, ctx)
             case Skeleton():
@@ -316,26 +296,8 @@ class FragmentRenderer(
                 return self._emit_time_series(fragment, ctx)
             case Radar():
                 return self._emit_radar(fragment, ctx)
-            case BoxPlot():
-                return self._emit_box_plot(fragment, ctx)
-            case Bullet():
-                return self._emit_bullet(fragment, ctx)
             case PipelineSteps():
                 return self._emit_pipeline_steps(fragment, ctx)
-            case Sparkline():
-                return self._emit_sparkline(fragment, ctx)
-            case Tree():
-                return self._emit_tree(fragment, ctx)
-            case ActionCard():
-                return self._emit_action_card(fragment, ctx)
-            case Accordion():
-                return self._emit_accordion(fragment, ctx)
-            case Carousel():
-                return self._emit_carousel(fragment, ctx)
-            case ActionGrid():
-                return self._emit_action_grid(fragment, ctx)
-            case ProfileCard():
-                return self._emit_profile_card(fragment, ctx)
             case MetricTile():
                 return self._emit_metric_tile(fragment, ctx)
             case MetricsGrid():
@@ -346,16 +308,10 @@ class FragmentRenderer(
                 return self._emit_grid_region(fragment, ctx)
             case ListRegion():
                 return self._emit_list_region(fragment, ctx)
-            case Histogram():
-                return self._emit_histogram(fragment, ctx)
-            case Heatmap():
-                return self._emit_heatmap(fragment, ctx)
             case PivotTableRegion():
                 return self._emit_pivot_table_region(fragment, ctx)
             case QueueRegion():
                 return self._emit_queue_region(fragment, ctx)
-            case Funnel():
-                return self._emit_funnel(fragment, ctx)
             case KanbanRegion():
                 return self._emit_kanban_region(fragment, ctx)
             case ActivityFeed():
@@ -364,10 +320,6 @@ class FragmentRenderer(
                 return self._emit_status_list(fragment, ctx)
             case BarTrack():
                 return self._emit_bar_track(fragment, ctx)
-            case ProgressBar():
-                return self._emit_progress_bar(fragment, ctx)
-            case StageBar():
-                return self._emit_stage_bar(fragment, ctx)
             case LazyTabPanel():
                 return self._emit_lazy_tab_panel(fragment, ctx)
             case SearchBox():

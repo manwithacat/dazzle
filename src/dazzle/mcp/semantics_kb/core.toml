@@ -176,7 +176,6 @@ Workspaces aggregate related surfaces and data for specific user needs.
 Region types:
   - Data region: has source + optional filter/sort/limit → renders entity rows
   - Aggregate-only region: has only aggregate: block → renders KPI metric cards
-  - Detail region: display: detail with source → renders a single record view
 
 Key features:
   - filter: applies a ConditionExpr so regions only show matching rows (e.g. status = open)
@@ -197,7 +196,7 @@ workspace <workspace_name> "<Display Name>":
     [filter: <condition>]
     [sort: <field> [asc|desc], ...]
     [limit: <number>]
-    [display: <list|grid|detail|summary|metrics>]
+    [display: <list|grid|summary|metrics>]
     [action: <surface_name>]
     [empty: "<message>"]
     [group_by: <field>]
@@ -302,10 +301,6 @@ workspace contacts "Contact Manager":
     source: Contact
     display: list
     limit: 20
-
-  contact_detail:
-    source: Contact
-    display: detail
 """
 
 related = ["workspace", "persona", "attention_signals"]

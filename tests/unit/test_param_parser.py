@@ -3,7 +3,6 @@
 from pathlib import Path
 
 from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle.core.ir.params import ParamRef
 
 
 def _parse(dsl_text: str):
@@ -193,31 +192,3 @@ param tags.defaults "Default tags":
         p = fragment.params[0]
         assert p.param_type == "list[str]"
         assert p.default == ["urgent", "review"]
-
-
-class TestParamRefInWorkspace:
-    """Tests for param() references in workspace heatmap thresholds."""
-
-    def test_param_ref_in_heatmap_thresholds(self):
-        dsl = """\
-module test_mod
-app test "Test"
-
-entity Score "Score":
-  id: uuid pk
-  value: int
-
-workspace dashboard "Dashboard":
-  scores:
-    source: Score
-    display: heatmap
-    rows: category
-    columns: period
-    value: avg(value)
-    thresholds: param("heatmap.rag.thresholds")
-"""
-        fragment = _parse(dsl)
-        assert len(fragment.workspaces) == 1
-        region = fragment.workspaces[0].regions[0]
-        assert isinstance(region.heatmap_thresholds, ParamRef)
-        assert region.heatmap_thresholds.key == "heatmap.rag.thresholds"

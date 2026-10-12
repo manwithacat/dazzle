@@ -21,8 +21,7 @@ debugger.
 Fast path (recommended — one SQL query, scope evaluated once):
 - ``count(<source_entity>)`` with ``group_by: <field>`` — bar_chart
 - ``count(<source_entity>)`` with ``group_by: [<a>, <b>]`` — pivot_table
-- ``count(<source_entity>)`` with ``group_by: bucket(<ts>, day|week|month|quarter|year)`` — time-series (line_chart, sparkline) — v0.60.0
-- ``count(<source_entity>)`` with ``group_by: [bucket(<ts>, week), severity]`` — stacked area_chart — v0.60.0
+- ``count(<source_entity>)`` with ``group_by: bucket(<ts>, day|week|month|quarter|year)`` — time-series (line_chart) — v0.60.0
 - ``sum:<col>``, ``avg:<col>``, ``min:<col>``, ``max:<col>`` — numeric measures
 
 Slow path (N+1 — avoid when the fast path applies):
@@ -40,7 +39,7 @@ aggregate:
 related = ["regions", "workspace", "display_modes"]
 v0_2_changes = "NEW in v0.2"
 v0_59_changes = "Strategy C aggregate primitive. count(<source>) routes through Repository.aggregate (one GROUP BY query, scope pre-applied). Multi-dim via group_by: [a, b] in v0.59.3. dazzle db explain-aggregate CLI in v0.59.4."
-v0_60_changes = "Time bucketing via bucket(<ts>, day|week|month|quarter|year) — emits date_trunc in SQL, chronological ASC order, formatted labels (2026-04-23, 2026-W17, Apr 2026, Q2 2026, 2026). Powers line_chart + area_chart + sparkline display modes."
+v0_60_changes = "Time bucketing via bucket(<ts>, day|week|month|quarter|year) — emits date_trunc in SQL, chronological ASC order, formatted labels (2026-04-23, 2026-W17, Apr 2026, Q2 2026, 2026). Powers the line_chart display mode."
 
 [concepts.display_modes]
 category = "Workspace Component (v0.2)"
@@ -50,28 +49,25 @@ definition = """
 Visualization modes for workspace regions. Each display consumes a
 specific IR shape:
 
-- ``list`` / ``grid`` / ``timeline`` / ``map`` — row-per-item views
+- ``list`` / ``grid`` / ``timeline`` — row-per-item views
 - ``metrics`` / ``summary`` — KPI tiles from an aggregate: block
-- ``bar_chart`` / ``funnel_chart`` — single-dim count/measure distribution
+- ``bar_chart`` — single-dim count/measure distribution
   (uses ``group_by: <field>``)
 - ``kanban`` — single-dim grouping with column-per-value layout
-- ``heatmap`` — 2-dim matrix (``heatmap_rows:`` + ``heatmap_columns:``)
 - ``pivot_table`` — N-dim cross-tab (``group_by: [field, field]``) — v0.59.3
 - ``line_chart`` — single-dim time series (``group_by: bucket(ts, day)``) — v0.60.0
-- ``area_chart`` — stacked time series (``group_by: [bucket(ts, week), series]``) — v0.60.0
-- ``sparkline`` — compact time-series tile — v0.60.0
-- ``tree`` / ``activity_feed`` / ``queue`` / ``progress`` — specialised
+- ``activity_feed`` / ``queue`` — specialised
 
 **New in v0.59: Strategy C aggregate primitive.** Chart regions now run
 one scope-aware GROUP BY SQL query via Repository.aggregate — no more
 N+1 enumeration. See the ``reports`` doc for the canonical entry
 point when writing any chart region.
 """
-syntax = "display: <list|grid|timeline|map|metrics|bar_chart|funnel_chart|pivot_table|heatmap|kanban|tree|queue|tabbed_list|activity_feed|progress>"
+syntax = "display: <list|grid|timeline|metrics|bar_chart|pivot_table|kanban|queue|tabbed_list|activity_feed>"
 related = ["regions", "workspace", "aggregates"]
 v0_2_changes = "NEW in v0.2"
 v0_59_changes = "pivot_table display added; bar_chart / pivot_table routed through Repository.aggregate (Strategy C)."
-v0_60_changes = "Time-series displays: line_chart (single-dim time bucket), area_chart (stacked time + series), sparkline (compact KPI). All three consume bucket(<ts>, unit) via the same Strategy C primitive — single scope-safe GROUP BY query, no JS."
+v0_60_changes = "Time-series display: line_chart (single-dim time bucket) consumes bucket(<ts>, unit) via the Strategy C primitive — single scope-safe GROUP BY query, no JS."
 
 [concepts.regions]
 category = "Workspace Component (v0.2)"
@@ -96,7 +92,7 @@ syntax = '''
     [<EntityName>: <condition>]
   [sort: <field> [asc|desc], ...]            # Sort order
   [limit: <1-1000>]                          # Max records
-  [display: <list|grid|timeline|map|detail|summary|metrics|kanban|bar_chart|funnel_chart|queue|tabbed_list>]
+  [display: <list|grid|timeline|summary|metrics|kanban|bar_chart|queue|tabbed_list>]
   [action: <surface_name>]                   # Click-through surface
   [empty: "<message>"]                       # Empty state message
   [group_by: <field>]                        # Group data by field
@@ -125,11 +121,6 @@ workspace ops_dashboard "Operations Dashboard":
       total_tickets: count(Ticket)
       open_count: count(Ticket where status = open)
     display: metrics
-
-  # Detail region (single record view)
-  current_user_profile:
-    source: UserProfile
-    display: detail
 
   # Multi-source tabbed region
   activity:

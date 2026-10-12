@@ -41,27 +41,18 @@ from dazzle.core.ir import WhenEmpty
 
 # Display forms that are *supporting widgets* — an empty one is dead scaffolding
 # on a dashboard, so an unset region of this form suppresses when empty. Anything
-# not listed here (list/grid/kanban/queue/timeline/tree/map/detail/entity_card/…)
+# not listed here (list/grid/kanban/queue/timeline/entity_card/…)
 # is treated as *primary content* and keeps its empty-state message by default.
 _SUPPORTING_DISPLAYS = frozenset(
     {
         "summary",
         "metrics",
         "bar_chart",
-        "funnel_chart",
         "line_chart",
-        "area_chart",
-        "sparkline",
-        "histogram",
         "radar",
-        "box_plot",
-        "bullet",
-        "bar_track",
         "pivot_table",
-        "heatmap",
         "comparison",
         "insight_summary",
-        "progress",
         "diagram",
     }
 )

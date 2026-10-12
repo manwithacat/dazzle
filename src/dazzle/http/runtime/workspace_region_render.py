@@ -14,16 +14,15 @@ Pipeline (post phases 1-5):
 4. Wrap the typed-primitive HTML in the ``<div data-dz-region>``
    chrome and return the string.
 
-Family layout (39 displays):
+Family layout (24 displays):
 
-- **chart** (11): BAR_CHART, LINE_CHART, AREA_CHART, SPARKLINE,
-  HISTOGRAM, HEATMAP, FUNNEL_CHART, BAR_TRACK, BULLET, BOX_PLOT, RADAR
-- **list** (12): LIST, KANBAN, QUEUE, TIMELINE, GRID, TREE, ACTIVITY_FEED,
-  CONVERSATION, MAP, ACCORDION, CAROUSEL, PROGRESS_BAR
-- **card** (6): DETAIL, PROFILE_CARD, ENTITY_CARD (async), CONFIRM_ACTION_PANEL,
-  METRICS, STATUS_LIST
-- **dashboard** (6): COHORT_STRIP, DAY_TIMELINE, TASK_INBOX (async),
-  PROGRESS, ACTION_GRID, PIPELINE_STEPS
+- **chart** (5): BAR_CHART, LINE_CHART, RADAR, COMPARISON, INSIGHT_SUMMARY
+- **list** (7): LIST, KANBAN, QUEUE, TIMELINE, GRID, ACTIVITY_FEED,
+  CONVERSATION
+- **card** (5): ENTITY_CARD (async), CONFIRM_ACTION_PANEL, METRICS,
+  SUMMARY, STATUS_LIST
+- **dashboard** (4): COHORT_STRIP, DAY_TIMELINE, TASK_INBOX (async),
+  PIPELINE_STEPS
 - **specialty** (4): DIAGRAM, SEARCH_BOX, TABBED_LIST, PIVOT_TABLE
 
 The two ``RenderEnv`` + ``RegionRenderInputs`` dataclasses thread
@@ -56,7 +55,6 @@ from dazzle.http.runtime.workspace_card_fetchers import (
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.render.cell_chrome import is_sequence_title_key
-from dazzle.render.filters import clerk_stage_label
 from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_catalog_id,
     leftover_honest_iso_date,
@@ -85,18 +83,10 @@ class RegionRenderInputs:
     kanban_columns: list[str] = field(default_factory=list)
 
     # Per-display pre-computes
-    heatmap_matrix: list[dict[str, Any]] = field(default_factory=list)
-    heatmap_col_values: list[str] = field(default_factory=list)
-    heatmap_thresholds: list[float] = field(default_factory=list)
-    histogram_bins: list[dict[str, Any]] = field(default_factory=list)
-    box_plot_stats: list[dict[str, Any]] = field(default_factory=list)
     pivot_buckets: list[dict[str, Any]] = field(default_factory=list)
     pivot_dim_specs: list[dict[str, Any]] = field(default_factory=list)
-    tree_items: list[dict[str, Any]] = field(default_factory=list)
     tabbed_slices: list[dict[str, Any]] = field(default_factory=list)
     source_tabs: list[Any] = field(default_factory=list)
-    bar_track_rows: list[dict[str, Any]] = field(default_factory=list)
-    bar_track_max: float = 0.0
     # #1470 display: comparison — ranked-league rows + shared bar scale.
     comparison_rows: list[dict[str, Any]] = field(default_factory=list)
     comparison_max: float = 0.0
@@ -110,15 +100,7 @@ class RegionRenderInputs:
     # #1470 rag_on — per-row band tones + the decorated column key.
     rag_tones: list[Any] = field(default_factory=list)
     rag_on: str = ""
-    bullet_rows: list[dict[str, Any]] = field(default_factory=list)
-    bullet_max_value: float = 0.0
-    progress_stage_counts: list[dict[str, Any]] = field(default_factory=list)
-    progress_total: int = 0
-    progress_complete_count: int = 0
-    progress_complete_pct: float = 0.0
-    action_card_data: list[dict[str, Any]] = field(default_factory=list)
     pipeline_stage_data: list[dict[str, Any]] = field(default_factory=list)
-    profile_card_data: dict[str, Any] = field(default_factory=dict)
     confirm_state_value: str = ""
     # Gated per-request (cycle 1397): empty when UPDATE denied for source entity.
     confirm_primary_action_url: str = ""
@@ -178,14 +160,6 @@ _CHART_FAMILY: frozenset[str] = frozenset(
     {
         "BAR_CHART",
         "LINE_CHART",
-        "AREA_CHART",
-        "SPARKLINE",
-        "HISTOGRAM",
-        "HEATMAP",
-        "FUNNEL_CHART",
-        "BAR_TRACK",
-        "BULLET",
-        "BOX_PLOT",
         "RADAR",
         "COMPARISON",
         "INSIGHT_SUMMARY",
@@ -199,27 +173,16 @@ _LIST_FAMILY: frozenset[str] = frozenset(
         "QUEUE",
         "TIMELINE",
         "GRID",
-        "TREE",
         "ACTIVITY_FEED",
         # Goal B conversation — MessageScroller of Message/Bubble rows
         # (display: conversation). Without this whitelist membership the
         # HTTP path returned empty region chrome (no adapter_ctx items).
         "CONVERSATION",
-        # oral #167 — display: map dumped empty MapBoard for the same
-        # reason (fieldtest device_map / simple_task sample_map).
-        "MAP",
-        # oral #168 — sourceless hyperpart emitters dumped empty chrome
-        # (simple_task task_faq / sample_gallery / sample_progress).
-        "ACCORDION",
-        "CAROUSEL",
-        "PROGRESS_BAR",
     }
 )
 
 _CARD_FAMILY: frozenset[str] = frozenset(
     {
-        "DETAIL",
-        "PROFILE_CARD",
         "ENTITY_CARD",
         "CONFIRM_ACTION_PANEL",
         "METRICS",
@@ -236,8 +199,6 @@ _DASHBOARD_FAMILY: frozenset[str] = frozenset(
         "COHORT_STRIP",
         "DAY_TIMELINE",
         "TASK_INBOX",
-        "PROGRESS",
-        "ACTION_GRID",
         "PIPELINE_STEPS",
     }
 )
@@ -385,62 +346,6 @@ def _entity_display_field(ctx: Any) -> str:
 # ──────────────────────────── chart family ─────────────────────────────
 
 
-def _clerk_series_dim_label(row: dict[str, Any], s_name: str) -> str:
-    """Clerk-facing stacked-area series name (oral #148).
-
-    Scalar enum dims dumped ``critical`` / ``in_progress`` as the legend
-    while bar-chart emit already humanizes via status-badge HTML. FK
-    ``_label`` display names ride. Leftover junk stays put. The
-    ``(none)`` sentinel is unchanged.
-    """
-    labeled = row.get(f"{s_name}_label")
-    if labeled:
-        return str(labeled)
-    raw = row.get(s_name)
-    if raw is None or raw == "":
-        return "(none)"
-    text = str(raw)
-    return clerk_stage_label(text) or text
-
-
-def _pivot_to_series(
-    pivot_buckets: list[dict[str, Any]],
-    pivot_dim_specs: list[dict[str, Any]],
-    measure_name: str,
-) -> list[dict[str, Any]]:
-    """Shape flat pivot cells into one named series per series-dim value.
-
-    Stacked `area_chart` declares `group_by: [bucket(date, unit), <dim>]`,
-    so dim[0] is the time bucket (the shared x-axis) and dim[1] is the
-    series dimension. Each pivot row is one `(time, series)` cell; we
-    group rows by their series-dim value (its `_label` when an FK/label
-    is present, else the clerk-humanized raw value) and emit
-    `{name, points}` per series, preserving first-seen order. Returns
-    `[]` unless there are ≥2 dims.
-    """
-    if len(pivot_dim_specs) < 2 or not measure_name:
-        return []
-    x_name = pivot_dim_specs[0]["name"]
-    s_name = pivot_dim_specs[1]["name"]
-    order: list[str] = []
-    points_by_series: dict[str, list[dict[str, Any]]] = {}
-    for row in pivot_buckets:
-        # A NULL dim value yields an empty label; substitute a visible
-        # sentinel so the bucket survives `_coerce_series_points`' empty-
-        # label drop and never renders a blank legend chip (#1473 review).
-        x_label = str(row.get(f"{x_name}_label") or row.get(x_name) or "") or "(none)"
-        s_label = _clerk_series_dim_label(row, s_name)
-        try:
-            value = float(row.get(measure_name) or 0)
-        except (TypeError, ValueError):
-            value = 0.0
-        if s_label not in points_by_series:
-            points_by_series[s_label] = []
-            order.append(s_label)
-        points_by_series[s_label].append({"label": x_label, "value": value})
-    return [{"name": name, "points": points_by_series[name]} for name in order]
-
-
 def _overlays_to_series(
     base_name: str,
     base_points: list[dict[str, Any]],
@@ -474,9 +379,8 @@ def _build_chart_adapter_ctx(
     """Populate adapter_ctx for chart-family displays.
 
     All chart displays read from one of the pre-computed aggregate
-    shapes (``bucketed_metrics`` / ``heatmap_matrix`` /
-    ``histogram_bins`` / ``box_plot_stats``). None of them need
-    request or auth context.
+    shapes (``bucketed_metrics``, comparison rows, insight narrative).
+    None of them need request or auth context.
     """
     inputs = env.inputs
     ctx_region = env.ctx.ctx_region
@@ -485,55 +389,21 @@ def _build_chart_adapter_ctx(
     if display_upper == "BAR_CHART":
         adapter_ctx["buckets"] = inputs.bucketed_metrics
         adapter_ctx["chart_label"] = ctx_region.title
-    elif display_upper in ("LINE_CHART", "AREA_CHART"):
-        # TimeSeries variants share the same point shape.
+    elif display_upper == "LINE_CHART":
         adapter_ctx["points"] = inputs.bucketed_metrics
         adapter_ctx["chart_label"] = ctx_region.title
         adapter_ctx["reference_lines"] = getattr(ctx_region, "reference_lines", [])
         adapter_ctx["reference_bands"] = getattr(ctx_region, "reference_bands", [])
         adapter_ctx["overlay_series_data"] = inputs.overlay_series_data
-        # Multi-series (#1473): a stacked area_chart (`group_by:
-        # [bucket(date, unit), <dim>]`) shapes its series from the
-        # pivot cells; line/area `overlay_series` (#883) shape theirs
-        # from the base distribution + overlays. When a `series` list is
+        # Multi-series (#883): `overlay_series` shapes one series from the
+        # base distribution plus one per overlay. When a `series` list is
         # set the builder draws overlaid layers + a legend; otherwise it
         # falls back to the single-series `points` path.
-        measure_name = next(iter(getattr(ctx_region, "aggregates", None) or {}), "")
-        series: list[dict[str, Any]] = []
-        if display_upper == "AREA_CHART" and inputs.pivot_buckets:
-            series = _pivot_to_series(inputs.pivot_buckets, inputs.pivot_dim_specs, measure_name)
-        if not series:
-            series = _overlays_to_series(
-                ctx_region.title or "", inputs.bucketed_metrics, inputs.overlay_series_data
-            )
+        series = _overlays_to_series(
+            ctx_region.title or "", inputs.bucketed_metrics, inputs.overlay_series_data
+        )
         if series:
             adapter_ctx["series"] = series
-    elif display_upper == "SPARKLINE":
-        adapter_ctx["points"] = inputs.bucketed_metrics
-        adapter_ctx["chart_label"] = ctx_region.title
-    elif display_upper == "HISTOGRAM":
-        adapter_ctx["histogram_bins"] = inputs.histogram_bins
-        adapter_ctx["reference_lines"] = getattr(ctx_region, "reference_lines", [])
-    elif display_upper == "HEATMAP":
-        adapter_ctx["heatmap_matrix"] = inputs.heatmap_matrix
-        adapter_ctx["heatmap_col_values"] = inputs.heatmap_col_values
-        adapter_ctx["heatmap_thresholds"] = inputs.heatmap_thresholds
-        adapter_ctx["total"] = inputs.total
-        adapter_ctx["items"] = inputs.items
-    elif display_upper == "FUNNEL_CHART":
-        # `_build_funnel_chart` counts `items` per `group_by` value across the
-        # ordered `kanban_columns` stages. It never reads `bucketed_metrics`,
-        # so without `items` + `group_by` the funnel rendered empty in every
-        # real app — caught by the UX catalogue fidelity gate (#1470).
-        adapter_ctx["kanban_columns"] = inputs.kanban_columns
-        adapter_ctx["items"] = inputs.items
-        adapter_ctx["group_by"] = (
-            inputs.group_by.field if isinstance(inputs.group_by, _BucketRef) else inputs.group_by
-        )
-        adapter_ctx["total"] = inputs.total
-    elif display_upper == "BAR_TRACK":
-        adapter_ctx["bar_track_rows"] = inputs.bar_track_rows
-        adapter_ctx["bar_track_max"] = inputs.bar_track_max
     elif display_upper == "COMPARISON":
         adapter_ctx["comparison_rows"] = inputs.comparison_rows
         adapter_ctx["comparison_max"] = inputs.comparison_max
@@ -541,16 +411,6 @@ def _build_chart_adapter_ctx(
     elif display_upper == "INSIGHT_SUMMARY":
         adapter_ctx["insight_narrative"] = inputs.insight_narrative
         adapter_ctx["stored_insight"] = inputs.stored_insight
-    elif display_upper == "BULLET":
-        adapter_ctx["bullet_rows"] = inputs.bullet_rows
-        adapter_ctx["bullet_max_value"] = inputs.bullet_max_value
-    elif display_upper == "BOX_PLOT":
-        # `_build_box_plot` reads `groups` (label + quartile keys); the
-        # computed `box_plot_stats` dicts carry exactly those keys (+ `n`
-        # for the sample-count tooltip). Without this rename the builder
-        # saw no `groups` key and every box_plot rendered empty — caught by
-        # the UX catalogue fidelity gate (#1470).
-        adapter_ctx["groups"] = inputs.box_plot_stats
     elif display_upper == "RADAR":
         # Radar consumes (label, value) axis tuples — the bucketed
         # metrics shape is one step richer than what the primitive
@@ -597,7 +457,7 @@ def _set_detail_url_template(
 
     Cycle 1406/1407: EDIT-path templates (``…/{id}/edit``) demote to VIEW
     detail when UPDATE is denied for the target entity — same class of
-    mutation-chrome leak as confirm panel / action_grid CREATE gates, without
+    mutation-chrome leak as the confirm panel UPDATE gate, without
     blanking row navigation for read-only personas.
     """
     tmpl = getattr(ctx, "detail_url_template", "") or ""
@@ -754,28 +614,13 @@ def _build_list_adapter_ctx(
         _set_display_key(adapter_ctx, inputs, ctx)
         adapter_ctx["entity_name"] = ctx.source
         _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
-    elif display_upper == "TREE":
-        adapter_ctx["tree_items"] = inputs.tree_items
-        adapter_ctx["items"] = inputs.items
-        _set_display_key(adapter_ctx, inputs, ctx)
-        # #1303 / cycle 1445 — tree node labels drill via detail_url_template
-        # (action: …/edit demotes when UPDATE denied, same as LIST/GRID).
-        _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
     elif display_upper == "ACTIVITY_FEED":
         adapter_ctx["items"] = inputs.items
         # #1303 / cycle 1415 — activity rows drill via detail_url_template
         # (action: …/edit demotes when UPDATE denied, same as TIMELINE/LIST).
         _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
-    elif display_upper in (
-        "CONVERSATION",
-        "MAP",
-        "ACCORDION",
-        "CAROUSEL",
-        "PROGRESS_BAR",
-    ):
-        _apply_conversation_list_ctx(
-            adapter_ctx, inputs, ctx, ctx_region, env, display_upper=display_upper
-        )
+    elif display_upper == "CONVERSATION":
+        _apply_conversation_list_ctx(adapter_ctx, inputs, ctx, ctx_region, env)
 
     return adapter_ctx
 
@@ -786,28 +631,14 @@ def _apply_conversation_list_ctx(
     ctx: Any,
     ctx_region: Any,
     env: RenderEnv,
-    *,
-    display_upper: str = "CONVERSATION",
 ) -> None:
-    """Populate adapter_ctx for row+entry list displays.
+    """Populate adapter_ctx for ``display: conversation``.
 
-    ``display: conversation`` — MessageScroller of live Comment/Note rows
-    plus static status_entries (sample_thread).
-    ``display: map`` — MapBoard of entity pins plus authored entries
-    (fieldtest device_map / simple_task sample_map). Oral #167: without
-    this branch the HTTP typed path dumped empty chrome.
-    ``display: accordion`` / ``carousel`` / ``progress_bar`` — sourceless
-    hyperpart emitters (simple_task task_faq / sample_gallery /
-    sample_progress). Oral #168: remaining whitelist dumps closed in
-    one ship after MAP's helper existed.
-    Extracted so ``_build_list_adapter_ctx`` stays under the complexity ratchet.
+    MessageScroller of live Comment/Note rows plus static status_entries
+    (sample_thread). Extracted so ``_build_list_adapter_ctx`` stays under
+    the complexity ratchet.
     """
-    empty_defaults = {
-        "ACCORDION": "No panels.",
-        "PROGRESS_BAR": "No progress.",
-        "CONVERSATION": "No conversation yet.",
-    }
-    empty_default = empty_defaults.get(display_upper, "")
+    empty_default = "No conversation yet."
     adapter_ctx["items"] = inputs.items
     adapter_ctx["status_entries"] = getattr(ctx_region, "status_entries", []) or []
     adapter_ctx["empty_message"] = (
@@ -815,11 +646,6 @@ def _apply_conversation_list_ctx(
         or getattr(ctx_region, "empty_message", None)
         or empty_default
     )
-    if display_upper in ("MAP", "CAROUSEL"):
-        # Builder clerks vacant maps (oral #228) / carousels (oral #229);
-        # do not inject generic ``No locations.`` / ``No slides.`` as
-        # authored empty.
-        adapter_ctx["source_entity"] = getattr(ctx, "source", "") or ""
     _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
 
 
@@ -843,12 +669,7 @@ async def _build_card_adapter_ctx(
     ctx_region = ctx.ctx_region
     adapter_ctx = dict(base_ctx)
 
-    if display_upper == "DETAIL":
-        adapter_ctx["item"] = inputs.items[0] if inputs.items else None
-        adapter_ctx["fields"] = inputs.columns
-    elif display_upper == "PROFILE_CARD":
-        adapter_ctx["profile_card_data"] = inputs.profile_card_data
-    elif display_upper == "CONFIRM_ACTION_PANEL":
+    if display_upper == "CONFIRM_ACTION_PANEL":
         adapter_ctx["state_value"] = inputs.confirm_state_value
         adapter_ctx["confirmations"] = getattr(ctx_region, "confirmations", [])
         # Request-time gated URLs (UPDATE chrome) — not compile-time stamps.
@@ -1018,14 +839,6 @@ async def _build_dashboard_adapter_ctx(
             )
             adapter_ctx["task_inbox_items"] = inbox_items
             adapter_ctx["task_inbox_chips"] = inbox_chips
-    elif display_upper == "PROGRESS":
-        adapter_ctx["stage_counts"] = inputs.progress_stage_counts
-        adapter_ctx["progress_total"] = inputs.progress_total
-        adapter_ctx["complete_count"] = inputs.progress_complete_count
-        adapter_ctx["complete_pct"] = inputs.progress_complete_pct
-        adapter_ctx["items"] = inputs.items
-    elif display_upper == "ACTION_GRID":
-        adapter_ctx["action_cards"] = inputs.action_card_data
     elif display_upper == "PIPELINE_STEPS":
         adapter_ctx["pipeline_stage_data"] = inputs.pipeline_stage_data
 

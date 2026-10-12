@@ -577,20 +577,6 @@ def clerk_empty_kanban_lane(
     return _clerk_empty_title(name, catalog, vacant="No items", found="No {noun}s")
 
 
-def clerk_empty_tree_title(
-    name: str,
-    catalog: dict[str, str] | None = None,
-) -> str:
-    """Clerk-facing tree empty speech (oral #224).
-
-    ``No items`` dumped generic chrome while empty lists already say
-    ``No devices found``. Same vacant/found as kanban lanes (oral #223);
-    host is the hierarchy EmptyState, not a lane. Leftover junk invents
-    no collection.
-    """
-    return clerk_empty_kanban_lane(name, catalog)
-
-
 def clerk_empty_queue_title(
     name: str,
     catalog: dict[str, str] | None = None,
@@ -626,63 +612,6 @@ def clerk_empty_cohort_title(
         catalog,
         vacant="No members in this view.",
         found="No {noun}s in this view.",
-    )
-
-
-def clerk_empty_profile_title(
-    name: str,
-    catalog: dict[str, str] | None = None,
-) -> str:
-    """Clerk-facing profile-card empty speech (oral #227).
-
-    ``No profile data`` dumped generic chrome while empty lists already
-    say ``No systems found``. Host is the identity-panel EmptyState, not
-    a detail ``No item`` (skip remaining detail No data) or a member-skim
-    (oral #226). Leftover junk invents no collection.
-    """
-    return _clerk_empty_title(
-        name,
-        catalog,
-        vacant="No profile data",
-        found="No {noun} profile",
-    )
-
-
-def clerk_empty_map_title(
-    name: str,
-    catalog: dict[str, str] | None = None,
-) -> str:
-    """Clerk-facing map empty speech (oral #228).
-
-    ``No locations.`` dumped generic chrome while empty lists already
-    say ``No devices found``. Host is the plan-board empty line, not a
-    profile identity panel (oral #227) or remaining conversation /
-    day-timeline empty (oral #222). Leftover junk invents no collection.
-    """
-    return _clerk_empty_title(
-        name,
-        catalog,
-        vacant="No locations.",
-        found="No {noun}s on this map.",
-    )
-
-
-def clerk_empty_carousel_title(
-    name: str,
-    catalog: dict[str, str] | None = None,
-) -> str:
-    """Clerk-facing carousel empty speech (oral #229).
-
-    ``No slides.`` dumped generic chrome while empty lists already say
-    ``No assets found``. Host is the media-stage empty line, not a
-    plan-board (oral #228) or remaining accordion ``No panels.``.
-    Leftover junk invents no collection.
-    """
-    return _clerk_empty_title(
-        name,
-        catalog,
-        vacant="No slides.",
-        found="No {noun}s in this gallery.",
     )
 
 

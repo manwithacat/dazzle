@@ -1218,10 +1218,8 @@ workspace career_desk "Career Desk":
     empty: "No salary rows"
 
 
-# #1626 P0-7 / P1: department hierarchy via display:tree + parent_department.
-# Post-5.8 Goal B org_structure: people reporting lines above the fold (queue
-# of report→manager), not only dept units. Full recursive tree remains a
-# pattern gap (TODO #hr-hierarchy); queue + person hubs is buyer-true.
+# Goal B org_structure: people reporting lines above the fold (queue of
+# report→manager), not only dept units; queue + person hubs is buyer-true.
 
   ux:
     as hr_admin:
@@ -1241,7 +1239,7 @@ workspace career_desk "Career Desk":
 
 workspace org_chart "Departments & Roles":
   access: persona(hr_admin, manager)
-  purpose: "Who reports to whom, nested departments, and job roles — org hierarchy people can parse"
+  purpose: "Who reports to whom and job roles — org hierarchy people can parse"
 
   org_pulse:
     source: Department
@@ -1263,17 +1261,6 @@ workspace org_chart "Departments & Roles":
     display: queue
     action: managerlink_detail
     empty: "No reporting lines yet — assign a manager to a person"
-
-  # Nested org units (Engineering → Frontend/Backend/Platform, etc.).
-  # group_by parent_department matches fieldtest device_tree pattern.
-  departments:
-    source: Department
-    display: tree
-    group_by: parent_department
-    sort: name asc
-    limit: 40
-    action: department_detail
-    empty: "No departments yet — add one to start the org roster"
 
   # Job roles (title/level/department) are org reference data managed by
   # hr_admin — surfacing them here makes role_list/role_create reachable

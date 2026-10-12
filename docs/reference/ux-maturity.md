@@ -41,7 +41,7 @@ Per workspace/region, the rubric asks (after AegisMark `strategy.md`):
 2. **Answer-first?** — does the surface lead with the answer/anomaly, or a raw
    table the user must compute from?
 3. **Shape** — is the representation right for the question (trend for
-   "improving?", comparison for "who's behind?", heatmap for "which dimension?"),
+   "improving?", comparison for "who's behind?", pivot for "which dimension?"),
    or a generic list?
 4. **Cost** — ≤3 actions for a basic info need, surfaced where the user lands.
 5. **Honesty** — human values, not raw data (no UUID / unrounded float / `True`);

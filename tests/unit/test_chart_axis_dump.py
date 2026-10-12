@@ -1,9 +1,9 @@
-"""Radar / box-plot / heatmap axes must emit Api/Critical, not schema tokens (oral #188)."""
+"""Radar axes must emit Api/Critical, not schema tokens (oral #188)."""
 
 from __future__ import annotations
 
 from dazzle.render.filters import clerk_chart_axis_label, clerk_stage_label
-from dazzle.render.fragment import BoxPlot, FragmentRenderer, Heatmap, HeatmapRow, Radar
+from dazzle.render.fragment import FragmentRenderer, Radar
 from dazzle.render.fragment.region._builders_charts import _BuildersChartsMixin
 
 
@@ -19,26 +19,6 @@ def _radar_html(axes: list[object]) -> str:
     )()
     ctx = {"axes": axes, "chart_label": "Service types"}
     return FragmentRenderer().render(_A()._build_radar(region, ctx))
-
-
-def _box_html(groups: list[object]) -> str:
-    region = type(
-        "R",
-        (),
-        {"name": "response_time_spread", "title": "Spread", "empty_message": None},
-    )()
-    ctx = {"groups": groups, "chart_label": "Spread"}
-    return FragmentRenderer().render(_A()._build_box_plot(region, ctx))
-
-
-def _heat_html(columns: list[str], row: str = "Count") -> str:
-    region = type("R", (), {"name": "alert_heatmap", "title": "Alerts", "empty_message": None})()
-    cells = [{"column": c, "value": 1.0} for c in columns]
-    ctx = {
-        "heatmap_matrix": [{"row": row, "cells": cells}],
-        "heatmap_col_values": columns,
-    }
-    return FragmentRenderer().render(_A()._build_heatmap(region, ctx))
 
 
 def test_clerk_chart_axis_label_schema_not_raw() -> None:
@@ -81,50 +61,3 @@ def test_radar_direct_emit_api_is_api_title() -> None:
     assert ">zzz<" in leftover
     assert ">ghost<" in leftover
     assert ">Zzz<" not in leftover
-
-
-def test_box_plot_builder_api_is_api_title_not_schema() -> None:
-    html = _box_html(
-        [
-            ("api", 0, 1, 2, 3, 4),
-            ("web", 0, 1, 2, 3, 4),
-        ]
-    )
-    assert ">Api<" in html
-    assert ">Web<" in html
-    assert ">api<" not in html
-    leftover = _box_html([("zzz", 0, 1, 2, 3, 4)])
-    assert ">zzz<" in leftover
-    assert ">Zzz<" not in leftover
-
-
-def test_box_plot_direct_emit_api_is_api_title() -> None:
-    html = FragmentRenderer().render(
-        BoxPlot(label="Spread", groups=(("api", 0.0, 1.0, 2.0, 3.0, 4.0),))
-    )
-    assert ">Api<" in html
-    assert ">api<" not in html
-
-
-def test_heatmap_builder_critical_is_title_not_schema() -> None:
-    html = _heat_html(["low", "critical", "zzz"])
-    assert ">Critical<" in html
-    assert ">Low<" in html
-    assert ">critical<" not in html
-    assert ">zzz<" in html
-    assert ">Zzz<" not in html
-    count_row = _heat_html(["critical"], row="Count")
-    assert ">Count<" in count_row
-
-
-def test_heatmap_direct_emit_critical_is_title() -> None:
-    html = FragmentRenderer().render(
-        Heatmap(
-            columns=("critical", "zzz"),
-            rows=(HeatmapRow(label="Count", cells=(4.0, 1.0)),),
-        )
-    )
-    assert ">Critical<" in html
-    assert ">critical<" not in html
-    assert ">zzz<" in html
-    assert ">Count<" in html

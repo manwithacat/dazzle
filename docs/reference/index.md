@@ -42,7 +42,7 @@
 | [Flense Inventory](flense-inventory.md) | Generated usage and mass table — the only admissible evidence for keeping or removing a framework part under ADR-0057. |
 | [Personas and Scenarios](scenarios.md) | Personas define user types; scenarios define test-data states for development and demonstration. |
 | [UI Islands](islands.md) | Self-contained interactive JavaScript components that mount into server-rendered pages. |
-| [Reports & Charts](reports.md) | How chart and report regions (bar_chart, pivot_table, heatmap, funnel, metrics) compile to scope-aware aggregate queries. |
+| [Reports & Charts](reports.md) | How chart and report regions (bar_chart, pivot_table, line_chart, metrics) compile to scope-aware aggregate queries. |
 | [Runtime UI Capabilities](runtime-capabilities.md) | What the Dazzle runtime actually renders for each DSL construct — the map from DSL to live UI. |
 | [Data representation](data-representation.md) | Relational defaults vs pragmatic escape hatches (poly, JSONB, STI) for multi-tenant SaaS — #1617. |
 | [HTMX Template Specification](htmx-templates.md) | The HTMX interaction patterns the runtime emits; SSR + HTMX with no SPA framework. |

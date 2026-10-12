@@ -62,15 +62,11 @@ def test_my_tickets_drops_bar_chart_and_duplicate_dumps() -> None:
     assert block.count("display: timeline") == 1
 
 
-def test_agent_console_hosts_progress_and_activity_feed_coverage() -> None:
-    """Hero prune must not leave display: progress / activity_feed fleet-uncovered."""
+def test_agent_console_hosts_activity_feed_coverage() -> None:
+    """Hero prune must not leave display: activity_feed fleet-uncovered."""
     block = _workspace_block("agent_console")
-    assert "agent_lifecycle_progress:" in block
-    assert "display: progress" in block
     assert "agent_comment_activity:" in block
     assert "display: activity_feed" in block
-    assert "agent_status_funnel:" in block
-    assert "display: funnel_chart" in block
     assert "current_context" in block
 
 
@@ -89,10 +85,7 @@ def test_agent_console_omits_twin_open_queue_and_comment_trail() -> None:
     assert "agent_comment_trail:" not in block
     # Single timeline (agent_ticket_comments) — not twin trails.
     assert block.count("display: timeline") == 1
-    assert (
-        "focus: agent_priority_queue, agent_ticket_comments, "
-        "agent_lifecycle_progress, agent_category_chart" in block
-    )
+    assert "focus: agent_priority_queue, agent_ticket_comments, agent_category_chart" in block
     assert "as manager:" in block
     assert "as agent:" in block
     assert "as admin:" in block

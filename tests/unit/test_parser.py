@@ -297,27 +297,6 @@ workspace sales_dashboard "Sales Dashboard":
 
         assert region.display.value == "bar_chart"
 
-    def test_funnel_chart_display_mode(self):
-        """Test funnel_chart display mode."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Lead "Lead":
-  id: uuid pk
-  stage: enum[awareness, interest, decision, action]
-
-workspace pipeline "Pipeline":
-  funnel:
-    source: Lead
-    display: funnel_chart
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        workspace = fragment.workspaces[0]
-        region = workspace.regions[0]
-
-        assert region.display.value == "funnel_chart"
-
     def test_activity_feed_display_mode(self):
         """Test activity_feed display mode."""
         dsl = """
@@ -384,7 +363,7 @@ workspace dash "Dashboard":
 
         dsl = self._base_dsl(
             "    source: Alert\n"
-            "    display: area_chart\n"
+            "    display: pivot_table\n"
             "    group_by: [bucket(created_at, week), severity]\n"
             "    aggregate:\n"
             "      count: count(Alert)\n"

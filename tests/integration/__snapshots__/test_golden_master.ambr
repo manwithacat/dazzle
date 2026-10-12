@@ -1784,16 +1784,9 @@
         'regions': list([
           dict({
             'action': None,
-            'action_cards': list([
-            ]),
             'after': None,
             'aggregates': dict({
             }),
-            'avatar_field': None,
-            'bin_count': None,
-            'bullet_actual': None,
-            'bullet_label': None,
-            'bullet_target': None,
             'cohort_strip_config': None,
             'confirmations': list([
             ]),
@@ -1807,16 +1800,9 @@
             'empty_message': None,
             'entity_card_config': None,
             'eyebrow': None,
-            'facts': list([
-            ]),
             'filter': None,
             'group_by': None,
             'group_by_dims': None,
-            'heatmap_columns': None,
-            'heatmap_rows': None,
-            'heatmap_thresholds': list([
-            ]),
-            'heatmap_value': None,
             'limit': None,
             'name': 'health',
             'notice': None,
@@ -1827,13 +1813,7 @@
             ]),
             'pipeline_stages': list([
             ]),
-            'primary': None,
             'primary_action': None,
-            'profile_stats': list([
-            ]),
-            'progress_complete_at': None,
-            'progress_stages': list([
-            ]),
             'rag_on': None,
             'rank_by': None,
             'reference_bands': list([
@@ -1844,9 +1824,7 @@
             'render': None,
             'revoke': None,
             'row_action': None,
-            'secondary': None,
             'secondary_action': None,
-            'show_outliers': True,
             'sort': list([
             ]),
             'source': 'SystemHealth',
@@ -1863,24 +1841,15 @@
             ]),
             'tones': dict({
             }),
-            'track_format': None,
-            'track_max': None,
             'transitions': None,
             'when_empty': None,
             'width': None,
           }),
           dict({
             'action': None,
-            'action_cards': list([
-            ]),
             'after': None,
             'aggregates': dict({
             }),
-            'avatar_field': None,
-            'bin_count': None,
-            'bullet_actual': None,
-            'bullet_label': None,
-            'bullet_target': None,
             'cohort_strip_config': None,
             'confirmations': list([
             ]),
@@ -1894,16 +1863,9 @@
             'empty_message': None,
             'entity_card_config': None,
             'eyebrow': None,
-            'facts': list([
-            ]),
             'filter': None,
             'group_by': None,
             'group_by_dims': None,
-            'heatmap_columns': None,
-            'heatmap_rows': None,
-            'heatmap_thresholds': list([
-            ]),
-            'heatmap_value': None,
             'limit': None,
             'name': 'deploys',
             'notice': None,
@@ -1914,13 +1876,7 @@
             ]),
             'pipeline_stages': list([
             ]),
-            'primary': None,
             'primary_action': None,
-            'profile_stats': list([
-            ]),
-            'progress_complete_at': None,
-            'progress_stages': list([
-            ]),
             'rag_on': None,
             'rank_by': None,
             'reference_bands': list([
@@ -1931,9 +1887,7 @@
             'render': None,
             'revoke': None,
             'row_action': None,
-            'secondary': None,
             'secondary_action': None,
-            'show_outliers': True,
             'sort': list([
             ]),
             'source': 'DeployHistory',
@@ -1950,24 +1904,15 @@
             ]),
             'tones': dict({
             }),
-            'track_format': None,
-            'track_max': None,
             'transitions': None,
             'when_empty': None,
             'width': None,
           }),
           dict({
             'action': None,
-            'action_cards': list([
-            ]),
             'after': None,
             'aggregates': dict({
             }),
-            'avatar_field': None,
-            'bin_count': None,
-            'bullet_actual': None,
-            'bullet_label': None,
-            'bullet_target': None,
             'cohort_strip_config': None,
             'confirmations': list([
             ]),
@@ -1981,16 +1926,9 @@
             'empty_message': None,
             'entity_card_config': None,
             'eyebrow': None,
-            'facts': list([
-            ]),
             'filter': None,
             'group_by': None,
             'group_by_dims': None,
-            'heatmap_columns': None,
-            'heatmap_rows': None,
-            'heatmap_thresholds': list([
-            ]),
-            'heatmap_value': None,
             'limit': None,
             'name': 'app_map',
             'notice': None,
@@ -2001,13 +1939,7 @@
             ]),
             'pipeline_stages': list([
             ]),
-            'primary': None,
             'primary_action': None,
-            'profile_stats': list([
-            ]),
-            'progress_complete_at': None,
-            'progress_stages': list([
-            ]),
             'rag_on': None,
             'rank_by': None,
             'reference_bands': list([
@@ -2018,9 +1950,7 @@
             'render': None,
             'revoke': None,
             'row_action': None,
-            'secondary': None,
             'secondary_action': None,
-            'show_outliers': True,
             'sort': list([
             ]),
             'source': None,
@@ -2037,8 +1967,6 @@
             ]),
             'tones': dict({
             }),
-            'track_format': None,
-            'track_max': None,
             'transitions': None,
             'when_empty': None,
             'width': None,

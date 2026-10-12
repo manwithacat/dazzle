@@ -66,9 +66,9 @@ def test_single_series_timeseries_still_renders_without_legend() -> None:
 # === builder: ctx["series"] → multi-series TimeSeries (#1473) ===
 
 
-def test_builder_area_chart_with_series_renders_overlaid() -> None:
+def test_builder_line_chart_with_series_renders_overlaid() -> None:
     html = _build_html(
-        "area_chart",
+        "line_chart",
         {
             "series": [
                 {
@@ -82,16 +82,16 @@ def test_builder_area_chart_with_series_renders_overlaid() -> None:
             ],
         },
     )
-    assert "dz-area-chart-region" in html
+    assert "dz-line-chart-region" in html
     assert html.count("<polyline ") == 2
     assert "dz-chart-legend" in html
 
 
-def test_builder_area_chart_without_series_uses_points() -> None:
+def test_builder_line_chart_without_series_uses_points() -> None:
     html = _build_html(
-        "area_chart",
+        "line_chart",
         {"points": [{"label": "W1", "value": 2}, {"label": "W2", "value": 3}]},
     )
-    assert "dz-area-chart-region" in html
+    assert "dz-line-chart-region" in html
     assert html.count("<polyline ") == 1
     assert "dz-chart-legend" not in html

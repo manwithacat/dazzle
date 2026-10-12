@@ -1,5 +1,5 @@
 """Regression test for #907 — bodyless authored display modes
-(action_grid, pipeline_steps, status_list, confirm_action_panel)
+(pipeline_steps, status_list, confirm_action_panel)
 must get a route registered even though they have no `source:`.
 
 The pre-fix code in `WorkspaceRouteBuilder.init_workspace_routes`
@@ -60,24 +60,12 @@ def _route_paths(app) -> list[str]:
 
 
 class TestSourcelessRoutesRegistered:
-    """Each of the four bodyless display modes must get a route at
+    """Each bodyless display mode must get a route at
     /api/workspaces/<ws>/regions/<region> even with no source."""
 
     @pytest.mark.parametrize(
         "src,expected_path",
         [
-            (
-                """module t
-app t "Test"
-workspace dash "Dash":
-  cta:
-    display: action_grid
-    actions:
-      - label: "Do thing"
-        action: thing_create
-""",
-                "/api/workspaces/dash/regions/cta",
-            ),
             (
                 """module t
 app t "Test"
@@ -116,68 +104,11 @@ workspace dash "Dash":
 """,
                 "/api/workspaces/dash/regions/authorise",
             ),
-            (
-                """module t
-app t "Test"
-workspace dash "Dash":
-  sites:
-    display: map
-    title: "Sites"
-    entries:
-      - title: "HQ"
-        body: "success"
-""",
-                "/api/workspaces/dash/regions/sites",
-            ),
-            (
-                """module t
-app t "Test"
-workspace dash "Dash":
-  faq:
-    display: accordion
-    title: "FAQ"
-    entries:
-      - title: "How does priority work?"
-        body: "Priority is a closed enum."
-""",
-                "/api/workspaces/dash/regions/faq",
-            ),
-            (
-                """module t
-app t "Test"
-workspace dash "Dash":
-  gallery:
-    display: carousel
-    title: "Gallery"
-    entries:
-      - title: "Board"
-        body: "https://placehold.co/640x360/png?text=Board"
-""",
-                "/api/workspaces/dash/regions/gallery",
-            ),
-            (
-                """module t
-app t "Test"
-workspace dash "Dash":
-  capacity:
-    display: progress_bar
-    title: "Capacity"
-    entries:
-      - title: "Board fill"
-        body: "62"
-""",
-                "/api/workspaces/dash/regions/capacity",
-            ),
         ],
         ids=[
-            "test_action_grid_sourceless",
             "test_pipeline_steps_sourceless",
             "test_status_list_sourceless",
             "test_confirm_action_panel_sourceless",
-            "test_map_sourceless",
-            "test_accordion_sourceless",
-            "test_carousel_sourceless",
-            "test_progress_bar_sourceless",
         ],
     )
     def test_sourceless_route_registered(self, tmp_path, src: str, expected_path: str) -> None:

@@ -237,28 +237,12 @@ workspace ux_catalogue "UX Catalogue":
     outlier_method: iqr
     empty: "No boxes"
 
-  cat_heatmap:
-    source: Box
-    display: heatmap
-    rows: team
-    columns: status
-    value: latency_ms
-    empty: "No boxes"
-
   cat_pivot:
     source: Box
     display: pivot_table
     group_by: [team, status]
     aggregate:
       count: count(Box)
-    empty: "No boxes"
-
-  cat_bullet:
-    source: Box
-    display: bullet
-    bullet_label: name
-    bullet_actual: latency_ms
-    bullet_target: target_ms
     empty: "No boxes"
 
   cat_kanban:
@@ -286,29 +270,6 @@ workspace ux_catalogue "UX Catalogue":
       - at: 0
         tone: positive
 
-  cat_histogram:
-    source: Box
-    display: histogram
-    value: latency_ms
-    bins: auto
-    empty: "No boxes"
-
-  cat_box_plot:
-    source: Box
-    display: box_plot
-    group_by: team
-    value: latency_ms
-    show_outliers: true
-    empty: "No boxes"
-
-  cat_funnel:
-    source: Box
-    display: funnel_chart
-    group_by: status
-    aggregate:
-      count: count(Box)
-    empty: "No boxes"
-
   cat_line:
     source: Box
     display: line_chart
@@ -317,34 +278,10 @@ workspace ux_catalogue "UX Catalogue":
       count: count(Box)
     empty: "No boxes"
 
-  cat_sparkline:
-    source: Box
-    display: sparkline
-    group_by: bucket(opened_at, day)
-    aggregate:
-      count: count(Box)
-    empty: "—"
-
   cat_radar:
     source: Box
     display: radar
     group_by: team
-    aggregate:
-      count: count(Box)
-    empty: "No boxes"
-
-  cat_area:
-    source: Box
-    display: area_chart
-    group_by: bucket(opened_at, day)
-    aggregate:
-      count: count(Box)
-    empty: "No boxes"
-
-  cat_area_stacked:
-    source: Box
-    display: area_chart
-    group_by: [bucket(opened_at, week), team]
     aggregate:
       count: count(Box)
     empty: "No boxes"

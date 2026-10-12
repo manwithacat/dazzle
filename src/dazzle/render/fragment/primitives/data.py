@@ -79,7 +79,6 @@ class ReferenceBand:
             )
 
 
-_ACTION_CARD_TONES = ("neutral", "positive", "warning", "destructive", "accent")
 _METRIC_TILE_TONES = ("", "positive", "warning", "destructive", "accent", "neutral")
 _METRIC_DELTA_DIRECTIONS = ("", "up", "down", "flat")
 _METRIC_DELTA_SENTIMENTS = ("", "positive_up", "positive_down")
@@ -451,71 +450,6 @@ class CalendarGrid:
 
 
 @dataclass(frozen=True, slots=True)
-class StageBar:
-    """Workflow progress: header `<progress>` element + chip list of stages.
-
-    Used by `display: progress` regions for an at-a-glance "X of Y
-    complete" + per-stage tone (complete/active/empty). Each stage is
-    `(name, count, complete)` where `complete: bool` flags the stage
-    as already past (chip rendered with the "complete" tone), `count
-    > 0` makes it "active", and `count == 0 and not complete` makes
-    it "empty".
-
-    `complete_pct` is rendered numerically next to the `<progress>`
-    bar; `complete_count + total` produce the "N of M complete"
-    summary when `total > 0`.
-
-    Distinct from :class:`ProgressBar` (HM ``progress`` hyperpart —
-    single toned determinate track via ``display: progress_bar``).
-    """
-
-    stages: tuple[tuple[str, int, bool], ...]
-    complete_pct: float = 0.0
-    complete_count: int = 0
-    total: int = 0
-
-    def __post_init__(self) -> None:
-        if not self.stages:
-            raise ValueError("StageBar requires at least one stage")
-        if not (0.0 <= self.complete_pct <= 100.0):
-            raise ValueError(f"StageBar complete_pct={self.complete_pct} outside [0, 100]")
-
-
-_PROGRESS_BAR_TONES = ("", "success", "warning", "destructive")
-
-
-@dataclass(frozen=True, slots=True)
-class ProgressBar:
-    """HM Progress hyperpart — toned determinate bar (``.dz-progress``).
-
-    Dual-lock root: ``.dz-progress`` + ``role=progressbar`` (hm-core).
-    Authored via ``display: progress_bar`` + ``entries:`` (title=label,
-    caption/body=value 0..max, optional icon=tone) or composed as a
-    Fragment. Distinct from :class:`StageBar` / ``display: progress``
-    (progress-region stage chips).
-    """
-
-    value: float
-    label: str = ""
-    tone: Literal["", "success", "warning", "destructive"] = ""
-    max_value: float = 100.0
-
-    def __post_init__(self) -> None:
-        if self.max_value <= 0:
-            raise ValueError(f"ProgressBar max_value={self.max_value} must be > 0")
-        if float(self.value) < 0:
-            raise ValueError(f"ProgressBar value={self.value} must be >= 0")
-        if self.tone not in _PROGRESS_BAR_TONES:
-            raise ValueError(f"invalid ProgressBar tone {self.tone!r}")
-
-    @property
-    def percent(self) -> float:
-        """Clamp fill percentage to [0, 100] relative to max_value."""
-        pct = (float(self.value) / float(self.max_value)) * 100.0
-        return max(0.0, min(100.0, pct))
-
-
-@dataclass(frozen=True, slots=True)
 class BarTrack:
     """Compact horizontal value-bar list — one row per bucket.
 
@@ -706,55 +640,6 @@ class GridRegion:
 
 
 @dataclass(frozen=True, slots=True)
-class TreeNode:
-    """Single node in a `Tree` — label + recursive children.
-
-    Children are themselves `TreeNode` instances, building an arbitrary-
-    depth hierarchy. Empty `children` tuple means the node is a leaf.
-
-    ``drill_url`` (#1303 / cycle 1445): when set, the label renders as a
-    hub link (same contract as LIST/GRID/KANBAN titles). Branch expand
-    chrome stays on the ``summary``; the link stops propagation so a
-    label click navigates without toggling the node.
-    """
-
-    label: str
-    children: tuple["TreeNode", ...] = ()
-    drill_url: str = ""
-
-
-@dataclass(frozen=True, slots=True)
-class Tree:
-    """Recursive hierarchy display on native `<details>` for branches.
-
-    Branches emit ``<details class="dz-tree-node">`` with a summary of
-    **content only** (label + optional child-count chip). The rotating
-    chevron is CSS disclosure chrome
-    (``.dz-tree-node:has(> .dz-tree-children) > .dz-tree-summary::before``),
-    not an SVG/span in the summary. Leaves emit ``.dz-tree-leaf`` with no
-    expand affordance. Depth-0 branches default to ``[open]``.
-    """
-
-    nodes: tuple[TreeNode, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class ActionGrid:
-    """Container for ACTION_GRID region — emits the legacy
-    `<div class="dz-action-grid-region"><div class="dz-action-grid">`
-    structure wrapping a list of `ActionCard` primitives.
-
-    Phase 4B.4 wave 4: dedicated container primitive (replaces generic
-    `Grid` in `_build_action_grid`) for byte-equivalence with
-    `workspace/regions/action_grid.html`. Empty state renders the
-    `dz-empty-dense` fallback inside the region wrapper.
-    """
-
-    cards: tuple[object, ...]
-    empty_message: str = "No actions available."
-
-
-@dataclass(frozen=True, slots=True)
 class KanbanCard:
     """Single card in a `KanbanRegion` — title + secondary fields + attention.
 
@@ -832,31 +717,6 @@ class KanbanRegion:
     # Vacant-lane speech (oral #223). Whole-board ``empty_message`` is
     # authored collection-empty; leftover junk keeps ``No items``.
     lane_empty_message: str = "No items"
-
-
-@dataclass(frozen=True, slots=True)
-class FunnelStage:
-    """Single stage in a `Funnel` chart — label + count."""
-
-    label: str
-    count: int
-
-
-@dataclass(frozen=True, slots=True)
-class Funnel:
-    """Stacked proportional bars rendering conversion through ordered stages.
-
-    Phase 4B.4 wave 3: dedicated primitive (replaces alias to BarChart)
-    matching `workspace/regions/funnel_chart.html` byte-for-byte. Width
-    is calculated relative to the FIRST stage's count (not max), and
-    clamped to a 20% minimum so tiny conversion stages stay legible.
-    `data-dz-funnel-step` carries the stage index (capped at 7) for
-    per-stage opacity fade via CSS.
-    """
-
-    stages: tuple[FunnelStage, ...]
-    total: int = 0
-    empty_message: str = "No data available."
 
 
 @dataclass(frozen=True, slots=True)
@@ -999,90 +859,6 @@ class PivotTableRegion:
 
 
 @dataclass(frozen=True, slots=True)
-class HeatmapRow:
-    """Single row in a `Heatmap` — label + ordered cell values.
-
-    `cells` length must match the parent Heatmap's column count.
-    `row_id` is optional for click-through to detail (legacy template
-    threads it into the row's hx-get URL).
-    """
-
-    label: str
-    cells: tuple[float, ...]
-    row_id: str = ""
-
-
-@dataclass(frozen=True, slots=True)
-class Heatmap:
-    """Threshold-tinted matrix display with row labels + column headers.
-
-    Phase 4B.4 wave 4: dedicated primitive matching `workspace/regions/
-    heatmap.html` byte-for-byte. Threshold-banded cell tints route
-    through `data-dz-heatmap-tone` (bad / warn / good) attribute
-    selectors. Cell values formatted as `%.1f`. Overflow line when
-    `total > rows count`.
-
-    `thresholds` carries 1 or 2 ascending values:
-      - 0 thresholds: cells render with no tone attr
-      - 1 threshold: <T0 → bad, ≥T0 → good
-      - 2 thresholds: <T0 → bad, <T1 → warn, ≥T1 → good
-    """
-
-    columns: tuple[str, ...]
-    rows: tuple[HeatmapRow, ...]
-    thresholds: tuple[float, ...] = ()
-    total: int = 0
-    empty_message: str = "No data available."
-
-
-@dataclass(frozen=True, slots=True)
-class HistogramBin:
-    """Single bin in a `Histogram` — label + count + continuous range."""
-
-    label: str
-    count: int
-    low: float
-    high: float
-
-
-@dataclass(frozen=True, slots=True)
-class Histogram:
-    """Continuous-axis histogram chart.
-
-    Phase 4B.4 wave 3: dedicated primitive (separate from BarChart)
-    matching the legacy `workspace/regions/histogram.html` shape
-    byte-for-byte. Bars are equal-width with a 1px gap; vertical
-    reference lines overlay at their x-position with a label
-    hugging the top.
-    """
-
-    label: str
-    bins: tuple[HistogramBin, ...]
-    reference_lines: tuple[ReferenceLine, ...] = ()
-    empty_message: str = "No data available."
-    unit_suffix: str = ""
-
-
-@dataclass(frozen=True, slots=True)
-class Sparkline:
-    """Compact time-series for KPI tiles — title + big-number + tiny line.
-
-    Phase 4B.4 wave 2: dedicated primitive (separate from `TimeSeries`)
-    matching the legacy `workspace/regions/sparkline.html` shape
-    byte-for-byte. Visually distinct from line/area charts: 180×32
-    viewBox, no axis labels, no reference overlays, headline showing
-    the latest bucket's label + value.
-
-    `points` is a tuple of `(label, value)` pairs — same shape as
-    TimeSeries but without view selection. Single-point series omit
-    the SVG entirely (the legacy template's `{% if count > 1 %}` guard).
-    """
-
-    points: tuple[tuple[str, float], ...]
-    empty_message: str = "—"
-
-
-@dataclass(frozen=True, slots=True)
 class PipelineStage:
     """Single stage in a `PipelineSteps` row.
 
@@ -1117,48 +893,6 @@ class PipelineSteps:
 
     stages: tuple[PipelineStage, ...]
     empty_message: str = "No pipeline data available."
-
-
-@dataclass(frozen=True, slots=True)
-class BulletRow:
-    """Single row in a `Bullet` chart — Stephen Few bullet shape.
-
-    `actual` is the foreground bar value; `target` is the optional
-    vertical-tick goal position. Both are absolute values; the `Bullet`
-    container's `max_value` provides the percentage scale.
-    """
-
-    label: str
-    actual: float
-    target: float | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class Bullet:
-    """Stephen Few bullet rows — actual-vs-target with comparative bands.
-
-    Phase 4B.4 wave 2: emits the legacy
-    `workspace/regions/bullet.html` shape byte-for-byte —
-    `<div class="dz-bullet-rows">` with per-row label + track (bands
-    behind, actual bar, optional target tick) + formatted value, plus
-    a summary line "N rows · scale 0–MAX".
-
-    Reference bands render as `<span class="dz-bullet-band">` overlays
-    in the track, positioned by `from_value`/`to_value` as a percentage
-    of `max_value`. Colour map matches the chart-family palette
-    (`hsl(var(--primary))`, `hsl(145,55%,45%)`, etc.) keyed off the
-    `color` field.
-    """
-
-    rows: tuple[BulletRow, ...]
-    max_value: float
-    reference_bands: tuple[ReferenceBand, ...] = ()
-    empty_message: str = "No data available."
-    unit_suffix: str = ""
-
-    def __post_init__(self) -> None:
-        if self.max_value <= 0 and self.rows:
-            raise ValueError("Bullet max_value must be > 0 when rows are present")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1198,86 +932,6 @@ class StatusList:
 
     entries: tuple[StatusListEntry, ...]
     empty_message: str = "No status entries."
-
-
-@dataclass(frozen=True, slots=True)
-class AccordionItem:
-    """One exclusive <details> panel in an Accordion (HM accordion hyperpart).
-
-    ``title`` is the summary trigger; ``body`` is plain panel copy (escaped at
-    emit). ``open`` marks the panel that starts expanded (typically one).
-    """
-
-    title: str
-    body: str = ""
-    open: bool = False
-
-    def __post_init__(self) -> None:
-        if not self.title:
-            raise ValueError("AccordionItem requires a non-empty title")
-
-
-@dataclass(frozen=True, slots=True)
-class Accordion:
-    """HM Accordion hyperpart — ``div.dz-accordion`` of native details items.
-
-    Dual-lock root: ``.dz-accordion`` (contracts/accordion.py). Shared
-    ``name=`` on items enforces single-open exclusive policy (zero JS).
-    Authored via ``display: accordion`` + ``entries:`` (title + caption/body).
-    """
-
-    items: tuple[AccordionItem, ...]
-    name: str = "dz-acc"
-    empty_message: str = "No panels."
-
-    def __post_init__(self) -> None:
-        if not self.name:
-            raise ValueError("Accordion requires a non-empty name")
-
-
-@dataclass(frozen=True, slots=True)
-class CarouselSlide:
-    """One peer slide in a Carousel (HM carousel hyperpart).
-
-    Media slides set ``src`` (image URL) + ``alt``; optional ``chip`` names
-    source aspect. Text/hero slides may omit ``src`` and use ``title``/``body``.
-    """
-
-    src: str = ""
-    alt: str = ""
-    chip: str = ""
-    title: str = ""
-    body: str = ""
-
-    def __post_init__(self) -> None:
-        if not self.src and not self.title and not self.body and not self.alt:
-            raise ValueError("CarouselSlide requires src, title, body, or alt (non-empty content)")
-
-
-@dataclass(frozen=True, slots=True)
-class Carousel:
-    """HM Carousel hyperpart — ``div.dz-carousel`` stage with prev/next/dots.
-
-    Dual-lock root: ``.dz-carousel`` + ``data-dz-carousel`` (contracts/carousel.py).
-    Authored via ``display: carousel`` + ``entries:`` (title=alt, caption/body=src)
-    or entity rows with ``preview_url`` / ``logo_url`` / ``photo_url``.
-    """
-
-    slides: tuple[CarouselSlide, ...]
-    label: str = "Gallery"
-    wrap: Literal["none", "loop"] = "none"
-    ratio: str = "16/9"
-    interval_ms: int = 0
-    size: Literal["", "sm", "lg"] = ""
-    empty_message: str = "No slides."
-
-    def __post_init__(self) -> None:
-        if self.wrap not in ("none", "loop"):
-            raise ValueError(f"invalid Carousel wrap {self.wrap!r}; expected none|loop")
-        if self.interval_ms < 0:
-            raise ValueError("Carousel interval_ms must be >= 0")
-        if self.size not in ("", "sm", "lg"):
-            raise ValueError(f"invalid Carousel size {self.size!r}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1359,63 +1013,6 @@ class MetricsGrid:
 
 
 @dataclass(frozen=True, slots=True)
-class ProfileCard:
-    """Single-record identity panel: avatar/initials + name + meta line +
-    optional 3-up stats grid + optional bulleted facts list.
-
-    Used by `display: profile_card` regions for showing one focused
-    record (typically a person — `id = current_context`). The region's
-    `filter:` is expected to narrow to a single row.
-
-    `stats` is a tuple of `(label, value)` pairs; empty values render as
-    em-dash. `facts` is a tuple of free-text strings rendered as a
-    bulleted list. The card requires at least one identity element so
-    we don't render an empty shell — the adapter degrades to EmptyState
-    on missing data rather than letting this through.
-    """
-
-    primary: str = ""
-    secondary: str = ""
-    avatar_url: str = ""
-    initials: str = ""
-    stats: tuple[tuple[str, str], ...] = ()
-    facts: tuple[str, ...] = ()
-
-    def __post_init__(self) -> None:
-        if not (self.primary or self.avatar_url or self.initials):
-            raise ValueError(
-                "ProfileCard requires at least one of primary, avatar_url, or initials"
-            )
-
-
-@dataclass(frozen=True, slots=True)
-class ActionCard:
-    """Tone-tinted CTA card with optional Lucide icon, count badge, and URL.
-
-    Used by `display: action_grid` regions on dashboards. Each card has a
-    label and a tone that maps to the design palette (positive → success
-    surface, warning → warning surface, destructive → destructive surface,
-    accent → primary tint, neutral → muted/default).
-
-    `count = None` means "no badge"; `count = 0` renders a badge with "0".
-    `url = ""` makes a static `<div>` card; a non-empty url wraps the card
-    in an anchor.
-    """
-
-    label: str
-    icon: str = ""
-    count: int | None = None
-    tone: Literal["neutral", "positive", "warning", "destructive", "accent"] = "neutral"
-    url: str = ""
-
-    def __post_init__(self) -> None:
-        if not self.label:
-            raise ValueError("ActionCard requires a non-empty label")
-        if self.tone not in _ACTION_CARD_TONES:
-            raise ValueError(f"invalid tone {self.tone!r}; must be one of {_ACTION_CARD_TONES}")
-
-
-@dataclass(frozen=True, slots=True)
 class Radar:
     """Polar/radar profile shape — value per named axis.
 
@@ -1435,56 +1032,6 @@ class Radar:
                 f"Radar requires at least 3 axes (got {len(self.axes)}); "
                 f"fewer collapses to a line and is not visually a radar"
             )
-
-
-@dataclass(frozen=True, slots=True)
-class BoxPlot:
-    """Per-group quartile distribution — min, q1, median, q3, max.
-
-    Each `groups` entry is `(group_label, min, q1, median, q3, max)`.
-    Strict invariant: `min <= q1 <= median <= q3 <= max` per group, so
-    callers can't pass a malformed quartile spread.
-    """
-
-    label: str
-    groups: tuple[tuple[str, float, float, float, float, float], ...]
-    reference_lines: tuple[ReferenceLine, ...] = ()
-    reference_bands: tuple[ReferenceBand, ...] = ()
-    # Per-group sample counts — Phase 4B.4 wave 2. When supplied, the
-    # renderer adds `n=N` to the box tooltip matching the legacy
-    # template's `n={{ s.n }}` suffix. When empty (default), the suffix
-    # is omitted so existing 6-tuple-only callers keep the prior
-    # behaviour. Length must match `groups` if non-empty.
-    samples: tuple[int, ...] = ()
-    unit_suffix: str = ""
-
-    def __post_init__(self) -> None:
-        if not self.groups:
-            raise ValueError("BoxPlot requires at least one group")
-        for i, group in enumerate(self.groups):
-            if len(group) != 6:
-                raise ValueError(
-                    f"BoxPlot group {i} arity mismatch: "
-                    f"expected (label, min, q1, median, q3, max), got {group!r}"
-                )
-            _label, mn, q1, med, q3, mx = group
-            if not (mn <= q1 <= med <= q3 <= mx):
-                raise ValueError(
-                    f"BoxPlot group {i} quartiles not monotonic: "
-                    f"min={mn} q1={q1} median={med} q3={q3} max={mx}; "
-                    f"required min <= q1 <= median <= q3 <= max"
-                )
-        if self.samples and len(self.samples) != len(self.groups):
-            raise ValueError(
-                f"BoxPlot samples length {len(self.samples)} must match "
-                f"groups length {len(self.groups)} (or be empty)"
-            )
-            _label, mn, q1, med, q3, mx = group
-            if not (mn <= q1 <= med <= q3 <= mx):
-                raise ValueError(
-                    f"BoxPlot group {i} ({_label!r}) quartiles not monotonic: "
-                    f"min={mn}, q1={q1}, median={med}, q3={q3}, max={mx}"
-                )
 
 
 @dataclass(frozen=True, slots=True)

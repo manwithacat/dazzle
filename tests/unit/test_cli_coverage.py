@@ -200,11 +200,11 @@ class TestExtraApps:
         proj = tmp_path / "consumer_x"
         (proj / "dsl").mkdir(parents=True)
         (proj / "dazzle.toml").write_text("[project]\nname = 'x'\n")
-        (proj / "dsl" / "app.dsl").write_text("ledger Cash:\n  display: sparkline\n")
+        (proj / "dsl" / "app.dsl").write_text("ledger Cash:\n  display: radar\n")
         result = runner.invoke(app, ["coverage", "--app", str(proj)])
         assert result.exit_code == 0, result.stdout
         assert "Scanned:" in result.stdout and "consumer_x" in result.stdout
-        assert "     - sparkline: consumer_x" in result.stdout
+        assert "     - radar: consumer_x" in result.stdout
         assert "     - ledger: consumer_x" in result.stdout
 
     def test_app_option_rejects_non_project(self, tmp_path: Path) -> None:

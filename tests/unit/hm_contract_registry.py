@@ -39,12 +39,6 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "SearchSelectShell",
     ),
     (
-        "contracts/action_grid.py",
-        "ActionCard",
-        "dazzle.render.fragment.ingest",
-        "ActionCard",
-    ),
-    (
         "contracts/status_list.py",
         "StatusListEntry",
         "dazzle.render.fragment.ingest",
@@ -81,30 +75,6 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "TimelineEvent",
     ),
     (
-        "contracts/profile_card.py",
-        "ProfileCard",
-        "dazzle.render.fragment.ingest",
-        "ProfileCard",
-    ),
-    (
-        "contracts/sparkline.py",
-        "Sparkline",
-        "dazzle.render.fragment.ingest",
-        "Sparkline",
-    ),
-    (
-        "contracts/funnel.py",
-        "Funnel",
-        "dazzle.render.fragment.ingest",
-        "Funnel",
-    ),
-    (
-        "contracts/funnel.py",
-        "FunnelStage",
-        "dazzle.render.fragment.ingest",
-        "FunnelStage",
-    ),
-    (
         "contracts/bar_chart.py",
         "BarChart",
         "dazzle.render.fragment.ingest",
@@ -117,36 +87,6 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "BarChartRow",
     ),
     (
-        "contracts/heatmap.py",
-        "Heatmap",
-        "dazzle.render.fragment.ingest",
-        "Heatmap",
-    ),
-    (
-        "contracts/heatmap.py",
-        "HeatmapRow",
-        "dazzle.render.fragment.ingest",
-        "HeatmapRow",
-    ),
-    (
-        "contracts/bullet.py",
-        "Bullet",
-        "dazzle.render.fragment.ingest",
-        "Bullet",
-    ),
-    (
-        "contracts/bullet.py",
-        "BulletRow",
-        "dazzle.render.fragment.ingest",
-        "BulletRow",
-    ),
-    (
-        "contracts/bullet.py",
-        "BulletBand",
-        "dazzle.render.fragment.ingest",
-        "BulletBand",
-    ),
-    (
         "contracts/bar_track.py",
         "BarTrack",
         "dazzle.render.fragment.ingest",
@@ -157,54 +97,12 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "BarTrackRow",
         "dazzle.render.fragment.ingest",
         "BarTrackRow",
-    ),
-    (
-        "contracts/histogram.py",
-        "Histogram",
-        "dazzle.render.fragment.ingest",
-        "Histogram",
-    ),
-    (
-        "contracts/histogram.py",
-        "HistogramBin",
-        "dazzle.render.fragment.ingest",
-        "HistogramBin",
     ),
     (
         "contracts/pivot.py",
         "PivotTable",
         "dazzle.render.fragment.ingest",
         "PivotTable",
-    ),
-    (
-        "contracts/box_plot.py",
-        "BoxPlot",
-        "dazzle.render.fragment.ingest",
-        "BoxPlot",
-    ),
-    (
-        "contracts/box_plot.py",
-        "BoxPlotGroup",
-        "dazzle.render.fragment.ingest",
-        "BoxPlotGroup",
-    ),
-    (
-        "contracts/progress.py",
-        "Progress",
-        "dazzle.render.fragment.ingest",
-        "Progress",
-    ),
-    (
-        "contracts/progress.py",
-        "ProgressStage",
-        "dazzle.render.fragment.ingest",
-        "ProgressStage",
-    ),
-    (
-        "contracts/progress_bar.py",
-        "ProgressBarModel",
-        "dazzle.render.fragment.ingest",
-        "ProgressBarModel",
     ),
     (
         "contracts/radar.py",
@@ -283,12 +181,6 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "TaskInbox",
         "dazzle.render.fragment.ingest",
         "TaskInbox",
-    ),
-    (
-        "contracts/tree.py",
-        "Tree",
-        "dazzle.render.fragment.ingest",
-        "Tree",
     ),
     (
         "contracts/calendar.py",
@@ -544,11 +436,6 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         True,
     ),  # FragmentRenderer._emit_detail_grid
     (
-        "contracts/action_grid_region.py",
-        "action_grid_region",
-        True,
-    ),  # FragmentRenderer._emit_action_grid packing shell
-    (
         "contracts/pivot_table.py",
         "pivot_table",
         True,
@@ -754,6 +641,57 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
 # Keep as inventory so the drain is greppable; add a DOM_ONLY_CONTRACTS row
 # when a stable emission site exists.
 DOM_ONLY_DEFERRED: list[tuple[str, str]] = [
+    # Workspace display modes retired by ADR-0057 ship G (no consumer app):
+    # the Hyperparts stay in HM (standalone audience + gallery contract
+    # surface); Dazzle no longer emits them.
+    (
+        "contracts/action_grid.py",
+        "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
+    (
+        "contracts/action_grid_region.py",
+        "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
+    (
+        "contracts/box_plot.py",
+        "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
+    (
+        "contracts/bullet.py",
+        "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
+    (
+        "contracts/funnel.py",
+        "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
+    (
+        "contracts/heatmap.py",
+        "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
+    (
+        "contracts/histogram.py",
+        "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
+    (
+        "contracts/profile_card.py",
+        "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
+    (
+        "contracts/progress.py",
+        "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
+    (
+        "contracts/progress_bar.py",
+        "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
+    (
+        "contracts/sparkline.py",
+        "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
+    (
+        "contracts/tree.py",
+        "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
     # Gallery + build-site highlighter (site/highlight.py); fleet-exempt as
     # "HM gallery + agent-pack snippets". Promote to DOM_ONLY_CONTRACTS only
     # when Dazzle gains a stable fenced-code emitter (not invent a fixture).

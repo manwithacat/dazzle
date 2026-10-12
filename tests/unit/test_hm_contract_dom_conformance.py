@@ -250,40 +250,6 @@ def test_search_result_row_conforms_to_result_contract() -> None:
     assert "Aurora Energy Ltd" in html
 
 
-def test_action_card_emission_conforms_to_action_grid_contract() -> None:
-    """Real FragmentRenderer ActionCard path satisfies contracts/action_grid.py."""
-    pytest.importorskip("fastapi")
-    from dazzle.render.fragment.primitives.data import ActionCard as ActionCardFrag
-    from dazzle.render.fragment.primitives.data import ActionGrid
-    from dazzle.render.fragment.renderer import FragmentRenderer
-
-    ag_mod = load_hm_module("contracts/action_grid.py")
-    kit = load_hm_module("contracts/_kit.py")
-    html = FragmentRenderer().render(
-        ActionGrid(
-            cards=(
-                ActionCardFrag(
-                    label="Overdue invoices",
-                    tone="warning",
-                    url="/app/invoices?status=overdue",
-                    count=3,
-                    icon="triangle-alert",
-                ),
-                ActionCardFrag(label="Nothing else today", tone="neutral"),
-            )
-        )
-    )
-    # Grid furniture wraps cards — validate each card root in fragment mode
-    # and assert the dual-lock marker is present on every card.
-    violations = kit.validate_dom(html, ag_mod.DOM_CONTRACT, require_root=True)
-    assert not violations, violations
-    assert html.count("data-dz-action-card") == 2
-    assert 'data-dz-tone="warning"' in html
-    assert 'data-dz-tone="neutral"' in html
-    assert "dz-action-card-icon-spacer" in html
-    assert "Overdue invoices" in html
-
-
 def test_status_list_emission_conforms_to_status_list_contract() -> None:
     """Real FragmentRenderer StatusList path satisfies contracts/status_list.py."""
     pytest.importorskip("fastapi")
@@ -462,71 +428,6 @@ def test_timeline_emission_conforms_to_timeline_contract() -> None:
     assert "dz-timeline-field" in html
 
 
-def test_profile_card_emission_conforms_to_profile_card_contract() -> None:
-    """Real FragmentRenderer ProfileCard path satisfies contracts/profile_card.py."""
-    pytest.importorskip("fastapi")
-    from dazzle.render.fragment.primitives.data import ProfileCard as CardFrag
-    from dazzle.render.fragment.renderer import FragmentRenderer
-
-    pc_mod = load_hm_module("contracts/profile_card.py")
-    kit = load_hm_module("contracts/_kit.py")
-    html = FragmentRenderer().render(
-        CardFrag(
-            primary="Maya Reyes",
-            secondary="Operations lead",
-            initials="MR",
-            stats=(("Open work orders", "7"), ("On call", "")),
-            facts=("Certified for HV switching",),
-        )
-    )
-    violations = kit.validate_dom(html, pc_mod.DOM_CONTRACT, require_root=True)
-    assert not violations, violations
-    assert "data-dz-profile-card" in html
-    assert "Maya Reyes" in html
-    assert "dz-profile-stat-value" in html
-
-
-def test_sparkline_emission_conforms_to_sparkline_contract() -> None:
-    """Real FragmentRenderer Sparkline path satisfies contracts/sparkline.py."""
-    pytest.importorskip("fastapi")
-    from dazzle.render.fragment.primitives.data import Sparkline as SparkFrag
-    from dazzle.render.fragment.renderer import FragmentRenderer
-
-    sp_mod = load_hm_module("contracts/sparkline.py")
-    kit = load_hm_module("contracts/_kit.py")
-    html = FragmentRenderer().render(SparkFrag(points=(("a", 10.0), ("b", 20.0), ("c", 15.0))))
-    violations = kit.validate_dom(html, sp_mod.DOM_CONTRACT, require_root=True)
-    assert not violations, violations
-    assert "data-dz-sparkline" in html
-    assert "dz-sparkline-svg" in html
-    assert "dz-sparkline-value" in html
-
-
-def test_funnel_emission_conforms_to_funnel_contract() -> None:
-    """Real FragmentRenderer Funnel path satisfies contracts/funnel.py."""
-    pytest.importorskip("fastapi")
-    from dazzle.render.fragment.primitives.data import Funnel as FunnelFrag
-    from dazzle.render.fragment.primitives.data import FunnelStage as StageFrag
-    from dazzle.render.fragment.renderer import FragmentRenderer
-
-    fn_mod = load_hm_module("contracts/funnel.py")
-    kit = load_hm_module("contracts/_kit.py")
-    html = FragmentRenderer().render(
-        FunnelFrag(
-            stages=(
-                StageFrag(label="Visited", count=100),
-                StageFrag(label="Signed up", count=40),
-            ),
-            total=100,
-        )
-    )
-    violations = kit.validate_dom(html, fn_mod.DOM_CONTRACT, require_root=True)
-    assert not violations, violations
-    assert "data-dz-funnel" in html
-    assert 'data-dz-funnel-step="0"' in html
-    assert "Visited" in html
-
-
 def test_bar_chart_emission_conforms_to_bar_chart_contract() -> None:
     """Real FragmentRenderer BarChart path satisfies contracts/bar_chart.py."""
     pytest.importorskip("fastapi")
@@ -543,55 +444,6 @@ def test_bar_chart_emission_conforms_to_bar_chart_contract() -> None:
     assert "data-dz-bar-chart" in html
     assert "dz-bar-chart-fill" in html
     assert "126" in html
-
-
-def test_heatmap_emission_conforms_to_heatmap_contract() -> None:
-    """Real FragmentRenderer Heatmap path satisfies contracts/heatmap.py."""
-    pytest.importorskip("fastapi")
-    from dazzle.render.fragment.primitives.data import Heatmap as HeatFrag
-    from dazzle.render.fragment.primitives.data import HeatmapRow as RowFrag
-    from dazzle.render.fragment.renderer import FragmentRenderer
-
-    hm_mod = load_hm_module("contracts/heatmap.py")
-    kit = load_hm_module("contracts/_kit.py")
-    html = FragmentRenderer().render(
-        HeatFrag(
-            columns=("Mon", "Tue"),
-            rows=(RowFrag(label="API", cells=(99.9, 97.2)),),
-            thresholds=(90.0, 98.0),
-        )
-    )
-    violations = kit.validate_dom(html, hm_mod.DOM_CONTRACT, require_root=True)
-    assert not violations, violations
-    assert "data-dz-heatmap" in html
-    assert "data-dz-heatmap-tone=" in html
-    assert "API" in html
-
-
-def test_bullet_emission_conforms_to_bullet_contract() -> None:
-    """Real FragmentRenderer Bullet path satisfies contracts/bullet.py."""
-    pytest.importorskip("fastapi")
-    from dazzle.render.fragment.primitives.data import Bullet as BulletFrag
-    from dazzle.render.fragment.primitives.data import BulletRow as RowFrag
-    from dazzle.render.fragment.primitives.data import ReferenceBand
-    from dazzle.render.fragment.renderer import FragmentRenderer
-
-    bl_mod = load_hm_module("contracts/bullet.py")
-    kit = load_hm_module("contracts/_kit.py")
-    html = FragmentRenderer().render(
-        BulletFrag(
-            max_value=100.0,
-            rows=(RowFrag(label="Revenue", actual=72.0, target=80.0),),
-            reference_bands=(
-                ReferenceBand(from_value=0, to_value=60, label="Poor", color="destructive"),
-            ),
-        )
-    )
-    violations = kit.validate_dom(html, bl_mod.DOM_CONTRACT, require_root=True)
-    assert not violations, violations
-    assert "data-dz-bullet" in html
-    assert "Revenue" in html
-    assert "dz-bullet-actual" in html
 
 
 def test_bar_track_emission_conforms_to_bar_track_contract() -> None:
@@ -613,32 +465,6 @@ def test_bar_track_emission_conforms_to_bar_track_contract() -> None:
     assert "data-dz-bar-track" in html
     assert 'role="progressbar"' in html
     assert "Storage" in html
-
-
-def test_histogram_emission_conforms_to_histogram_contract() -> None:
-    """Real FragmentRenderer Histogram path satisfies contracts/histogram.py."""
-    pytest.importorskip("fastapi")
-    from dazzle.render.fragment.primitives.data import Histogram as HistFrag
-    from dazzle.render.fragment.primitives.data import HistogramBin as BinFrag
-    from dazzle.render.fragment.renderer import FragmentRenderer
-
-    hist_mod = load_hm_module("contracts/histogram.py")
-    kit = load_hm_module("contracts/_kit.py")
-    html = FragmentRenderer().render(
-        HistFrag(
-            label="Latency",
-            bins=(
-                BinFrag(label="0-10", count=12, low=0.0, high=10.0),
-                BinFrag(label="10-20", count=30, low=10.0, high=20.0),
-                BinFrag(label="20-30", count=42, low=20.0, high=30.0),
-            ),
-        )
-    )
-    violations = kit.validate_dom(html, hist_mod.DOM_CONTRACT, require_root=True)
-    assert not violations, violations
-    assert "data-dz-histogram" in html
-    assert "dz-histogram-summary" in html
-    assert "<svg" in html
 
 
 def test_pivot_emission_conforms_to_pivot_contract() -> None:
@@ -670,81 +496,6 @@ def test_pivot_emission_conforms_to_pivot_contract() -> None:
     assert "System" in html  # dim header
     assert "Api" in html  # non-FK dim cell → status badge (humanized)
     assert "is-measure" in html
-
-
-def test_box_plot_emission_conforms_to_box_plot_contract() -> None:
-    """Real FragmentRenderer BoxPlot path satisfies contracts/box_plot.py."""
-    pytest.importorskip("fastapi")
-    from dazzle.render.fragment.primitives.data import BoxPlot as BoxFrag
-    from dazzle.render.fragment.renderer import FragmentRenderer
-
-    bp_mod = load_hm_module("contracts/box_plot.py")
-    kit = load_hm_module("contracts/_kit.py")
-    html = FragmentRenderer().render(
-        BoxFrag(
-            label="Latency",
-            groups=(
-                ("API", 10.0, 20.0, 30.0, 45.0, 80.0),
-                ("Web", 5.0, 15.0, 25.0, 40.0, 70.0),
-            ),
-            samples=(40, 30),
-        )
-    )
-    violations = kit.validate_dom(html, bp_mod.DOM_CONTRACT, require_root=True)
-    assert not violations, violations
-    assert "data-dz-box-plot" in html
-    assert "dz-box-plot-summary" in html
-    assert "<svg" in html
-    assert "2 groups · 70 samples" in html
-
-
-def test_progress_emission_conforms_to_progress_contract() -> None:
-    """Real FragmentRenderer StageBar path satisfies contracts/progress.py."""
-    pytest.importorskip("fastapi")
-    from dazzle.render.fragment.primitives.data import StageBar
-    from dazzle.render.fragment.renderer import FragmentRenderer
-
-    prog_mod = load_hm_module("contracts/progress.py")
-    kit = load_hm_module("contracts/_kit.py")
-    html = FragmentRenderer().render(
-        StageBar(
-            stages=(
-                ("Draft", 4, True),
-                ("Review", 2, False),
-                ("Published", 0, False),
-            ),
-            complete_pct=33.0,
-            complete_count=1,
-            total=3,
-        )
-    )
-    violations = kit.validate_dom(html, prog_mod.DOM_CONTRACT, require_root=True)
-    assert not violations, violations
-    assert "data-dz-progress-region" in html
-    assert 'data-dz-progress value="33"' in html
-    assert 'data-dz-stage-tone="complete"' in html
-    assert 'data-dz-stage-tone="active"' in html
-    assert 'data-dz-stage-tone="empty"' in html
-    assert "1 of 3 complete" in html
-
-
-def test_progress_bar_emission_conforms_to_progress_bar_contract() -> None:
-    """Real FragmentRenderer ProgressBar path satisfies contracts/progress_bar.py."""
-    pytest.importorskip("fastapi")
-    from dazzle.render.fragment.primitives.data import ProgressBar
-    from dazzle.render.fragment.renderer import FragmentRenderer
-
-    bar_mod = load_hm_module("contracts/progress_bar.py")
-    kit = load_hm_module("contracts/_kit.py")
-    html = FragmentRenderer().render(ProgressBar(value=62, label="Storage used", tone="success"))
-    violations = kit.validate_dom(html, bar_mod.DOM_CONTRACT, require_root=True)
-    assert not violations, violations
-    assert 'class="dz-progress"' in html
-    assert 'role="progressbar"' in html
-    assert 'aria-label="Storage used"' in html
-    assert 'aria-valuenow="62"' in html
-    assert 'data-dz-tone="success"' in html
-    assert "--dz-progress-value:62%" in html
 
 
 def test_pagination_emission_conforms_to_pagination_contract() -> None:
@@ -936,31 +687,6 @@ def test_task_inbox_emission_conforms_to_task_inbox_contract() -> None:
     assert "data-dz-task-inbox" in html
     assert "Approve refund" in html
     assert 'data-dz-urgency="overdue"' in html
-
-
-def test_tree_emission_conforms_to_tree_contract() -> None:
-    """Real FragmentRenderer Tree path satisfies contracts/tree.py."""
-    pytest.importorskip("fastapi")
-    from dazzle.render.fragment.primitives.data import Tree, TreeNode
-    from dazzle.render.fragment.renderer import FragmentRenderer
-
-    tr_mod = load_hm_module("contracts/tree.py")
-    kit = load_hm_module("contracts/_kit.py")
-    html = FragmentRenderer().render(
-        Tree(
-            nodes=(
-                TreeNode(
-                    label="Engineering",
-                    children=(TreeNode(label="Platform"),),
-                ),
-            )
-        )
-    )
-    violations = kit.validate_dom(html, tr_mod.DOM_CONTRACT, require_root=True)
-    assert not violations, violations
-    assert "data-dz-tree" in html
-    assert "Engineering" in html
-    assert "dz-tree-node" in html
 
 
 def test_calendar_emission_conforms_to_calendar_contract() -> None:
@@ -1620,15 +1346,6 @@ def _emit_root_only_html(part_id: str) -> str:
                     ("Name", Text(body="Ada")),
                     ("Status", Text(body="Open")),
                 )
-            )
-        )
-    if part_id == "action_grid_region":
-        from dazzle.render.fragment.primitives.data import ActionCard, ActionGrid
-
-        return r.render(
-            ActionGrid(
-                cards=(ActionCard(label="New", url="/create", tone="neutral", icon="plus"),),
-                empty_message="No actions",
             )
         )
     if part_id == "pivot_table":

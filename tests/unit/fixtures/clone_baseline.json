@@ -1479,14 +1479,6 @@
     ]
   },
   {
-    "signature": "exact:e9a046b4fba405f3156174926992f68b",
-    "count": 2,
-    "names": [
-      "dazzle/render/audit_history_cell.py::clerk_audit_op_display",
-      "dazzle/render/filters.py::clerk_carousel_chip_label"
-    ]
-  },
-  {
     "signature": "acea8d62df86d72b07a763c22162a83e",
     "count": 2,
     "names": [

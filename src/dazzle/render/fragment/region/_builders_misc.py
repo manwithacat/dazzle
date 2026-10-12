@@ -1,16 +1,11 @@
 """Misc-family region builders.
 
-Houses the 5 builders that don't slot into cards, tables, charts,
+Houses the builders that don't slot into cards, tables, charts,
 metrics, or timeline families:
 
   - _build_grid                  CSS-driven responsive card grid
-  - _build_detail                single-item DetailGrid (badge / bool / date / etc.)
-  - _build_tree                  recursive nested <details> hierarchy
   - _build_confirm_action_panel  three-state consent panel (ConfirmGate)
   - _build_search_box            HTMX FTS input + lazy results
-
-`_pick_label` migrates with this family because its only caller is
-`_build_tree`. The accompanying `_LABEL_CANDIDATES` constant follows.
 
 See issue #1065 for the full decomposition plan.
 """
@@ -23,26 +18,19 @@ from dazzle.render.fragment import (
     URL,
     ConfirmCheckItem,
     ConfirmGate,
-    DetailGrid,
-    EmptyState,
     Fragment,
     GridCell,
     GridRegion,
     SearchBox,
     Surface,
-    Tree,
-    TreeNode,
 )
 from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
     _region_title,
     _render_typed_value,
-    _tree_empty_title,
     _wrap_surface,
 )
-
-_LABEL_CANDIDATES: tuple[str, ...] = ("title", "name", "id")
 
 
 def _search_box_placeholder(ctx: RegionContext, region: Any, empty_msg: Any) -> str:
@@ -65,28 +53,8 @@ def _search_box_placeholder(ctx: RegionContext, region: Any, empty_msg: Any) -> 
     return "Search…"
 
 
-def _pick_label(
-    item: dict[str, Any],
-    field_hint: str = "",
-    candidates: tuple[str, ...] = _LABEL_CANDIDATES,
-) -> str:
-    """Pick a display label from a dict item.
-
-    `field_hint` wins if provided and present; otherwise the first
-    matching candidate field is returned. Only caller is `_build_tree`
-    in this family; if a future builder needs the same logic, hoist
-    this to `_shared`.
-    """
-    if field_hint and field_hint in item:
-        return str(item.get(field_hint) or "")
-    for cand in candidates:
-        if cand in item:
-            return str(item.get(cand) or "")
-    return ""
-
-
 class _BuildersMiscMixin:
-    """Mixin adding the 5 misc-family `_build_*` methods to
+    """Mixin adding the misc-family `_build_*` methods to
     `WorkspaceRegionAdapter`. Same pattern as other family mixins.
     """
 
@@ -216,125 +184,6 @@ class _BuildersMiscMixin:
             label=label,
         )
         return _wrap_surface(title, "form", body)
-
-    def _build_tree(self, region: Any, ctx: RegionContext) -> Surface:
-        """`display: tree` regions render a recursive hierarchy as
-        nested `<details>` nodes. Phase 4B.4 wave 2: dedicated
-        `Tree` primitive replacing prior Stack-of-Text composition for
-        byte-equivalence with `workspace/regions/tree.html`.
-
-        ctx shape (primary):
-            tree_items: list of nested dicts with `_children` (legacy
-                key) or `children` (typed-path) lists holding child
-                nodes with the same shape; each node carries a label
-                under `display_key`, `name`, or `title`.
-            display_key: optional field name to pull label from
-                (defaults to "name"/"title" auto-pick)
-            (legacy) `items` flat list as fallback
-        """
-        title = _region_title(region)
-        raw = ctx.get("tree_items") or ctx.get("items") or []
-        label_field = str(ctx.get("display_key") or ctx.get("label_field") or "")
-        # #1303: per-node hub drill (same template contract as LIST/GRID).
-        detail_url_template = str(ctx.get("detail_url_template") or "")
-        fallback_tmpl = str(ctx.get("detail_url_fallback_template") or "")
-        raw_cands = ctx.get("detail_url_candidates")
-        candidate_tmpls: tuple[str, ...] = (
-            tuple(str(c) for c in raw_cands) if isinstance(raw_cands, (list, tuple)) else ()
-        )
-
-        def _node_drill(node: dict[str, Any]) -> str:
-            # Scalar group folders are not rows — do not invent a device hub.
-            if node.get("_group"):
-                return ""
-            if not (detail_url_template or candidate_tmpls or fallback_tmpl):
-                return ""
-            links = _resolve_row_links(
-                [node],
-                detail_url_template,
-                fallback_template=fallback_tmpl,
-                candidate_templates=candidate_tmpls,
-            )
-            if not links:
-                return ""
-            return str(links[0] or "")
-
-        def _walk(node_list: list[Any]) -> tuple[TreeNode, ...]:
-            out: list[TreeNode] = []
-            for node in node_list:
-                if not isinstance(node, dict):
-                    continue
-                label = _pick_label(node, label_field) or "(no label)"
-                # Accept both legacy `_children` and typed `children`.
-                children_raw = node.get("_children") or node.get("children") or []
-                children = _walk(children_raw) if isinstance(children_raw, list) else ()
-                out.append(
-                    TreeNode(
-                        label=label,
-                        children=children,
-                        drill_url=_node_drill(node),
-                    )
-                )
-            return tuple(out)
-
-        nodes = _walk(raw) if isinstance(raw, list) else ()
-
-        body: Fragment
-        if not nodes:
-            body = EmptyState(
-                title=_tree_empty_title(region, ctx),
-                description=getattr(region, "empty_message", None) or "No data in this region.",
-            )
-        else:
-            body = Tree(nodes=nodes)
-
-        return _wrap_surface(title, "list", body)
-
-    def _build_detail(self, region: Any, ctx: RegionContext) -> Surface:
-        """`display: detail` regions render a single item's fields as a
-        labelled Card. One Stack child per (label, value) pair, with
-        type-aware value rendering matching the legacy template:
-        Badge for `type=badge`, ✓/✗ for `type=bool`, formatted strings
-        for `type=date`/`type=currency`, Link for `type=ref` (when
-        `ref_route` is supplied), Text otherwise.
-
-        ctx shape:
-            item: dict (single record)
-            fields: list of {"key": str, "label": str (optional),
-                "type": str (optional — one of "badge"/"bool"/"date"/
-                "currency"/"ref"), "ref_route": str (optional, for ref)}
-                — declared field order from the region's `fields:` clause
-            (legacy) `columns` is accepted as alias for `fields`
-        """
-        title = _region_title(region)
-        item = ctx.get("item")
-
-        # Single linear path — no conditional reassignment of `fields`.
-        if not isinstance(item, dict) or not item:
-            body: Fragment = EmptyState(
-                title="No item",
-                description=getattr(region, "empty_message", None) or "No item to display.",
-            )
-            return _wrap_surface(title, "dashboard", body)
-
-        # `fields` is materialised once: explicit list, legacy `columns`,
-        # or fallback to all keys of the item in declared order (no type info).
-        fields = ctx.get("fields") or ctx.get("columns") or [{"key": k} for k in item.keys()]
-        rows: list[tuple[str, object]] = []
-        for f in fields:
-            if not isinstance(f, dict):
-                continue
-            key = str(f.get("key") or "")
-            if not key:
-                continue
-            label = str(f.get("label") or key.replace("_", " ").title())
-            # DETAIL renders badges with `bordered=true` per legacy macro call.
-            rows.append((label, _render_typed_value(item, f, badge_bordered=True)))
-
-        body = (
-            DetailGrid(rows=tuple(rows)) if rows else EmptyState(title="No fields", description="")
-        )
-        return _wrap_surface(title, "dashboard", body)
 
     def _build_grid(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: grid` regions render items as cards in a CSS-driven

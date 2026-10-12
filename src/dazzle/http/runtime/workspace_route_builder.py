@@ -397,8 +397,8 @@ class WorkspaceRouteBuilder:
                         continue
 
                     # v0.61.75 (#907): bodyless authored display modes
-                    # — action_grid (#891), pipeline_steps (#890),
-                    # status_list (#3), confirm_action_panel (#6) —
+                    # — pipeline_steps (#890), status_list (#3),
+                    # confirm_action_panel (#6) —
                     # render entirely from the IR's authored config and
                     # don't require a source. The route still needs to
                     # be registered so the HTMX endpoint serves the
@@ -416,20 +416,10 @@ class WorkspaceRouteBuilder:
                     # `/api/workspaces/_platform_admin/regions/app_map`
                     # which 404'd on every page including the region.
                     _BODYLESS_DISPLAYS = (
-                        "ACTION_GRID",
                         "PIPELINE_STEPS",
                         "STATUS_LIST",
                         "CONFIRM_ACTION_PANEL",
                         "DIAGRAM",
-                        # oral #167 — sourceless display: map (entries: pins)
-                        # 404'd the HTMX region while HQ/Depot existed.
-                        "MAP",
-                        # oral #168 — sourceless accordion / carousel /
-                        # progress_bar (FAQ / gallery / capacity entries)
-                        # 404'd while authored panels existed.
-                        "ACCORDION",
-                        "CAROUSEL",
-                        "PROGRESS_BAR",
                     )
                     if not ctx_region.source and ctx_region.display not in _BODYLESS_DISPLAYS:
                         continue

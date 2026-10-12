@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import Any, Literal, cast
+from typing import Any
 
 from dazzle.render.fragment import (
     Fragment,
@@ -45,7 +45,6 @@ from dazzle.render.fragment.region._builders_tables import (
 from dazzle.render.fragment.region._builders_timeline import (
     _BuildersTimelineMixin,
 )
-from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._shared import (  # noqa: F401
     _region_title,
     _render_status_badge_html,
@@ -67,15 +66,13 @@ class WorkspaceRegionAdapter(
     """Translate a WorkspaceRegion + ctx into a Fragment tree.
 
     Dispatch is table-driven: `_BUILDERS` maps display values to
-    methods, `_ALIASES` redirects shared shapes (e.g. `histogram`
-    renders the same as `bar_chart`). `_TIMESERIES_VIEWS` is the
-    one special case — line/area/sparkline share `_build_time_series`
-    but pass a `view` argument that the others don't.
+    methods, `_ALIASES` redirects shared shapes (e.g. `summary`
+    renders the same as `metrics`).
 
     Every `_build_*` method lives in a family mixin (`_BuildersCardsMixin`,
     `_BuildersChartsMixin`, `_BuildersMetricsMixin`, `_BuildersMiscMixin`,
     `_BuildersTablesMixin`, `_BuildersTimelineMixin`). The dispatcher only
-    owns the dispatch tables (`_BUILDERS`, `_ALIASES`, `_TIMESERIES_VIEWS`)
+    owns the dispatch tables (`_BUILDERS`, `_ALIASES`)
     and the `build()` method that threads them. Family extraction landed
     across #1065 PRs 3–8; Python's MRO + `getattr(self, method_name)`
     dispatch ties it all back together transparently to external callers.
@@ -85,6 +82,7 @@ class WorkspaceRegionAdapter(
     _BUILDERS: dict[str, str] = {
         "": "_build_list",  # default for missing display
         "list": "_build_list",
+        "line_chart": "_build_line_chart",
         "kanban": "_build_kanban",
         "timeline": "_build_timeline",
         "grid": "_build_grid",
@@ -92,32 +90,17 @@ class WorkspaceRegionAdapter(
         "bar_chart": "_build_bar_chart",
         "pivot_table": "_build_pivot_table",
         "tabbed_list": "_build_tabbed_list",
-        "detail": "_build_detail",
-        "funnel_chart": "_build_funnel_chart",
         "status_list": "_build_status_list",
-        "accordion": "_build_accordion",
-        "carousel": "_build_carousel",
-        "map": "_build_map",  # marker pin board (vendor-free plan canvas)
-        "tree": "_build_tree",
         "pipeline_steps": "_build_pipeline_steps",
-        "progress": "_build_progress",
-        "progress_bar": "_build_progress_bar",  # HM progress hyperpart (determinate bar)
         "confirm_action_panel": "_build_confirm_action_panel",
         "search_box": "_build_search_box",
-        "bar_track": "_build_bar_track",
         "comparison": "_build_comparison",  # #1470 ranked league
         "insight_summary": "_build_insight_summary",  # #1470 deterministic narrative
-        "bullet": "_build_bullet",
         "diagram": "_build_diagram",
         "radar": "_build_radar",
-        "box_plot": "_build_box_plot",
-        "action_grid": "_build_action_grid",
-        "profile_card": "_build_profile_card",
         "queue": "_build_queue",
         "activity_feed": "_build_activity_feed",
         "conversation": "_build_conversation",  # bubble hyperpart stack
-        "histogram": "_build_histogram",
-        "heatmap": "_build_heatmap",
         "cohort_strip": "_build_cohort_strip",  # #1018 (v0.67.7)
         "day_timeline": "_build_day_timeline",  # #1016 (v0.67.8)
         "task_inbox": "_build_task_inbox",  # #1015 (v0.67.8)
@@ -129,15 +112,6 @@ class WorkspaceRegionAdapter(
     # duplicating dispatch code.
     _ALIASES: dict[str, str] = {
         "summary": "metrics",
-    }
-
-    # TimeSeries variants — share `_build_time_series` but each passes
-    # a different `view` argument. Kept separate from `_BUILDERS` so
-    # the table-lookup signature stays uniform.
-    _TIMESERIES_VIEWS: dict[str, Literal["line", "area", "sparkline"]] = {
-        "line_chart": "line",
-        "area_chart": "area",
-        "sparkline": "sparkline",
     }
 
     def build(
@@ -167,11 +141,6 @@ class WorkspaceRegionAdapter(
             if raw_display is None:
                 raw_display = "" if display_obj is None else str(display_obj)
             display_value = raw_display.strip()
-
-        # TimeSeries family — same builder, different view argument.
-        view = self._TIMESERIES_VIEWS.get(display_value)
-        if view is not None:
-            return self._build_time_series(region, cast(RegionContext, ctx), view)
 
         # Resolve any alias to its canonical display value.
         canonical = self._ALIASES.get(display_value, display_value)

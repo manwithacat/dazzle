@@ -13,7 +13,7 @@ Contents:
 - `_build_cohort_cells`: cohort_strip cell list.
 - `_build_day_timeline_slots`: day_timeline slot list with overlap layout.
 - `_build_task_inbox_payload`: (items, chips) tuple for task_inbox display.
-- `_items_from_template`: profile_card item template interpolation.
+- `_items_from_template`: card item template interpolation.
 """
 
 import datetime as _dt
@@ -30,7 +30,7 @@ from dazzle.render.fragment.renderer._render_interactive import leftover_honest_
 
 logger = logging.getLogger(__name__)
 
-# v0.61.55 (#892): profile_card template-string interpolation. Matches
+# v0.61.55 (#892): card template-string interpolation. Matches
 # `{{ field }}` and `{{ field.path.with.dots }}` — and (#1145 part 1)
 # an optional ``| transform`` suffix that runs the resolved value
 # through a registered helper (see ``_TIME_TRANSFORMS``). No
@@ -187,7 +187,7 @@ _TIME_TRANSFORMS: dict[str, Any] = {
 def _resolve_path(item: Any, path: str) -> Any:
     """Walk a dotted path against an item dict (#892).
 
-    Used by profile_card to resolve `{{ tutor.full_name }}` against the
+    Used by card templates to resolve `{{ tutor.full_name }}` against the
     fetched item. Returns ``None`` for any segment that's missing or
     not a dict. FK fields are dicts (with `__display__`/`name`/etc.) so
     a single-segment path on an FK column returns the dict; the caller
@@ -221,8 +221,8 @@ def _initials_from(name: str) -> str:
 def _apply_format_spec(value: Any, format_spec: str, *, context: str = "") -> str:
     """Apply a Python format spec (or ``str.format`` template) to a value.
 
-    Shared (#1300) by bar_track's ``track_format`` and cohort_strip aggregate
-    lenses' ``primary_aggregate.format``. Empty spec → ``str(value)``. A spec
+    Used (#1300) by cohort_strip aggregate lenses'
+    ``primary_aggregate.format``. Empty spec → ``str(value)``. A spec
     containing ``{`` is treated as a ``str.format`` template (``"{:.1f}"``);
     otherwise as a ``format()`` spec (``".1f"``). An invalid spec warns and
     falls back to the raw value — never raises into the render path.
@@ -384,8 +384,7 @@ def _build_cohort_cells(
             if primary_raw is None:
                 primary_value = ""
             else:
-                # #1300: honour the lens's `format:` knob (mirrors bar_track's
-                # track_format); with no knob, default-round so an `avg` lens
+                # #1300: honour the lens's `format:` knob; with no knob, default-round so an `avg` lens
                 # stops rendering raw floats like '7.7500000000000000'.
                 agg_format = str(getattr(aggregate_primary, "format", "") or "")
                 primary_value = (
@@ -489,7 +488,7 @@ def _build_day_timeline_slots(
     for time-bucketed display. Slot body is the
     ``_interpolate_card_template`` expansion of ``config.card`` against
     the row dict — same ``{{ field }}`` / ``{{ field.path }}`` grammar
-    as ``profile_card`` / ``task_inbox`` use (#1146 part 1). Empty
+    as ``task_inbox`` uses (#1146 part 1). Empty
     ``config.card`` keeps the body empty (minimal slot rendering).
 
     #1303 / cycle 1416: ``detail_url_template`` (e.g. ``/app/alert/{id}`` or
@@ -608,8 +607,7 @@ def _build_day_timeline_slots(
         label_raw = item.get("name") or item.get("title") or item.get("message") or ""
         label = str(label_raw) if label_raw else f"{starts.isoformat() if starts else ''}"
         # #1146 part 1: composite-card body interpolation. `config.card`
-        # is a `{{ field }}` template (same grammar as profile_card,
-        # task_inbox). Empty template → empty body (no regression for
+        # is a `{{ field }}` template (same grammar as task_inbox). Empty template → empty body (no regression for
         # configs that don't set `card:`).
         card_template = str(getattr(config, "card", "") or "")
         body = _interpolate_card_template(card_template, item) if card_template else ""
@@ -816,7 +814,7 @@ def _interpolate_card_template(template: str, item: dict[str, Any]) -> str:
 
     The grammar is intentionally minimal — see ``_CARD_TEMPLATE_RE``.
     Unresolved paths render as empty string (graceful degradation —
-    profile_card cards with one missing field still render the rest).
+    cards with one missing field still render the rest).
     The output is a plain string emitted by the typed renderer's body
     slot after the caller has html-escaped it — no template injection
     surface.

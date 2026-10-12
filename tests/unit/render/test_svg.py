@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from dazzle.render.svg import box_plot_svg, radar_svg, time_series_svg
+from dazzle.render.svg import radar_svg, time_series_svg
 
 
 @dataclass
@@ -169,49 +169,6 @@ def test_multi_series_aria_label_reports_series_count() -> None:
 # === box_plot_svg ===
 
 
-def test_box_plot_empty_groups_renders_nothing() -> None:
-    assert box_plot_svg("x", ()) == ""
-
-
-def test_box_plot_emits_svg_with_box_and_whiskers() -> None:
-    svg = box_plot_svg(
-        "Latency",
-        (("p50", 0.0, 1.0, 2.0, 3.0, 4.0), ("p99", 5.0, 6.0, 7.0, 8.0, 9.0)),
-    )
-    assert svg.startswith("<svg ")
-    assert "<rect " in svg  # box bodies
-    assert svg.count('class="dz-box-plot-whisker"') == 4
-    assert svg.count('class="dz-box-plot-whisker-cap"') == 4
-    assert svg.count('class="dz-box-plot-median"') == 2
-    assert svg.count('class="dz-box-plot-mark"') == 10
-    assert 'data-dz-box-mark="median"' in svg
-    assert ">p50<" in svg and ">p99<" in svg
-    assert "<title>p50: Q1 1.0, median 2.0, Q3 3.0</title>" in svg
-    assert "<title>p50 median: 2</title>" in svg
-    assert svg.endswith("</svg>")
-
-
-def test_box_plot_width_caps_at_460() -> None:
-    """Many groups → width caps at 460 (legacy contract)."""
-    groups = tuple((f"g{i}", 0.0, 1.0, 2.0, 3.0, 4.0) for i in range(20))
-    svg = box_plot_svg("x", groups)
-    assert 'viewBox="0 0 460 200"' in svg
-
-
-def test_box_plot_width_scales_below_cap() -> None:
-    """Few groups → 56*count + 64 px wide."""
-    svg = box_plot_svg("x", (("a", 0.0, 1.0, 2.0, 3.0, 4.0),))
-    assert 'viewBox="0 0 120 200"' in svg  # 56*1 + 64 = 120
-
-
-def test_box_plot_aria_label_includes_range() -> None:
-    svg = box_plot_svg(
-        "Latency",
-        (("p50", 0.0, 1.0, 2.0, 3.0, 4.0), ("p99", 5.0, 6.0, 7.0, 8.0, 9.0)),
-    )
-    assert 'aria-label="Latency box plot — 2 groups, range 0.0–9.0"' in svg
-
-
 # === radar_svg ===
 
 
@@ -256,17 +213,3 @@ def test_radar_first_spoke_at_top_clockwise() -> None:
     # Spoke 0 (top) endpoint: cx=160, cy = 160 - 128 = 32. The full-ring
     # 100% polygon should contain "160.0,32.0" as its first vertex.
     assert "160.0,32.0" in svg
-
-
-def test_box_plot_reference_line_clipped_to_y_range() -> None:
-    """Reference lines outside [y_min, y_max] are dropped (legacy behaviour)."""
-    svg = box_plot_svg(
-        "x",
-        (("a", 0.0, 1.0, 2.0, 3.0, 4.0),),
-        reference_lines=(
-            _Ref("InRange", 2.5, style="dashed"),
-            _Ref("OutOfRange", 100.0, style="solid"),
-        ),
-    )
-    assert "InRange" in svg
-    assert "OutOfRange" not in svg

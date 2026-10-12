@@ -119,7 +119,7 @@ def _render_references(
     list when a chart primitive carries reference_lines or reference_bands.
     Returns empty string when both tuples are empty.
 
-    Used by TimeSeries, BarChart, BarTrack, BoxPlot. Future SVG-rendering
+    Used by TimeSeries, BarChart, BarTrack. Future SVG-rendering
     ship will overlay references on the visual chart instead.
     """
     if not reference_lines and not reference_bands:

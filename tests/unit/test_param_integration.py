@@ -7,10 +7,7 @@ Covers:
 - Static heatmap thresholds (no ParamRef) still work in workspace rendering
 """
 
-from typing import Any
 from unittest.mock import MagicMock
-
-import pytest
 
 from dazzle.core.ir.params import ParamRef, ParamSpec
 from dazzle.http.runtime.param_store import ParamResolver, resolve_value
@@ -94,84 +91,3 @@ class TestEnsureDazzleParamsTable:
         assert "scope TEXT NOT NULL" in sql
         assert "value_json" in sql
         assert "PRIMARY KEY" in sql
-
-
-# ---------------------------------------------------------------------------
-# Workspace rendering: static heatmap_thresholds (no ParamRef) still work
-# ---------------------------------------------------------------------------
-
-
-class TestWorkspaceHeatmapThresholdsStatic:
-    """Static heatmap_thresholds pass through without ParamRef resolution."""
-
-    def test_static_list_unchanged(self) -> None:
-        """When heatmap_thresholds is a plain list, it should be used as-is."""
-
-        region = MagicMock()
-        region.heatmap_thresholds = [0.25, 0.5, 0.75]
-
-        # Verify the field doesn't have 'key' attr (not a ParamRef)
-        raw = region.heatmap_thresholds
-        assert not hasattr(raw, "key")
-        # Simulate the rendering logic
-        if hasattr(raw, "key"):
-            result = list(resolve_value(raw, None) or [])
-        else:
-            result = list(raw or [])
-        assert result == [0.25, 0.5, 0.75]
-
-    def test_param_ref_resolves_default(self) -> None:
-        """When heatmap_thresholds is a ParamRef, it resolves to the default."""
-        ref = ParamRef(key="heat_thresholds", param_type="list[float]", default=[0.3, 0.6])
-        assert hasattr(ref, "key")
-        result = list(resolve_value(ref, None) or [])
-        assert result == [0.3, 0.6]
-
-    def test_workspace_region_context_has_param_fields(self) -> None:
-        """WorkspaceRegionContext accepts param_resolver and tenant_id."""
-        from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
-
-        ctx = WorkspaceRegionContext(
-            ctx_region=MagicMock(),
-            ir_region=MagicMock(),
-            source="test",
-            entity_spec=MagicMock(),
-            attention_signals=[],
-            ws_access=None,
-            repositories={},
-            require_auth=False,
-            auth_middleware=None,
-            param_resolver=None,
-            tenant_id=None,
-        )
-        assert ctx.param_resolver is None
-        assert ctx.tenant_id is None
-
-
-class TestParamRefInRegionContext:
-    """Regression test for #575 — ParamRef must not crash RegionContext validation."""
-
-    @pytest.mark.parametrize(
-        ("input_factory", "expected"),
-        [
-            (
-                lambda: ParamRef(
-                    key="heatmap.rag.thresholds", param_type="list[float]", default=[40, 60]
-                ),
-                [40.0, 60.0],
-            ),
-            (lambda: [30, 70], [30.0, 70.0]),
-            (lambda: None, []),
-            (lambda: ParamRef(key="x.y", param_type="list[float]", default=[]), []),
-        ],
-        ids=[
-            "test_resolve_thresholds_with_param_ref",
-            "test_resolve_thresholds_with_list",
-            "test_resolve_thresholds_with_none",
-            "test_resolve_thresholds_with_empty_default",
-        ],
-    )
-    def test_resolve_thresholds(self, input_factory: Any, expected: list[float]) -> None:
-        from dazzle.page.runtime.workspace_renderer import _resolve_thresholds
-
-        assert _resolve_thresholds(input_factory()) == expected

@@ -89,7 +89,6 @@
   "exact:e22015c4402a494ba0964eca0b0706ce": "dataclass-and-store-boilerplate",
   "exact:e6798a8f4da5296e1c89b34ff055bc08": "parser-keyword-error-helpers",
   "exact:e8a2a0c5fd3948e87b90fd1c77b90bbe": "per-class-constant-accessors",
-  "exact:e9a046b4fba405f3156174926992f68b": "cell-and-label-formatters",
   "exact:ec00a39c9ed1d718762badad6d120644": "queue-and-plugin-registries",
   "exact:ecf46dae9a54e32eb73dc032d28c818c": "module-singleton-resolvers",
   "exact:eeb37885742ccc7003e87b645950b3e9": "dataclass-and-store-boilerplate",

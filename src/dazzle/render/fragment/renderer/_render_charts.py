@@ -1,14 +1,12 @@
 """Charts-family render mixin.
 
-Houses the 16 chart primitives + the dedicated tree-node helper.
-All SVG and special-purpose visualisations live here.
+Houses the chart primitives. All SVG and special-purpose
+visualisations live here.
 
 Also houses `_DIAGRAM_MERMAID_SCRIPT` — the inline Mermaid CDN loader
 embedded by `_emit_diagram` when rendering ER diagrams.
 
-All methods only call `self._emit(child, ctx)` for recursion (plus
-`self._emit_tree_node` for the tree case — which lives in this mixin
-too, so it's intra-family).
+All methods only call `self._emit(child, ctx)` for recursion.
 
 See issue #1064 for the full decomposition plan.
 """
@@ -22,68 +20,39 @@ from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.ingest import BarChart as BarChartSeam
 from dazzle.render.fragment.ingest import BarChartRow as BarChartRowSeam
-from dazzle.render.fragment.ingest import BoxPlot as BoxPlotSeam
-from dazzle.render.fragment.ingest import BoxPlotGroup as BoxPlotGroupSeam
-from dazzle.render.fragment.ingest import Bullet as BulletSeam
-from dazzle.render.fragment.ingest import BulletBand as BulletBandSeam
-from dazzle.render.fragment.ingest import BulletRow as BulletRowSeam
 from dazzle.render.fragment.ingest import Calendar as CalendarSeam
 from dazzle.render.fragment.ingest import CalendarEvent as CalendarEventSeam
 from dazzle.render.fragment.ingest import Diagram as DiagramSeam
-from dazzle.render.fragment.ingest import Funnel as FunnelSeam
-from dazzle.render.fragment.ingest import FunnelStage as FunnelStageSeam
-from dazzle.render.fragment.ingest import Heatmap as HeatmapSeam
-from dazzle.render.fragment.ingest import HeatmapRow as HeatmapRowSeam
-from dazzle.render.fragment.ingest import Histogram as HistogramSeam
-from dazzle.render.fragment.ingest import HistogramBin as HistogramBinSeam
 from dazzle.render.fragment.ingest import KanbanCard as KanbanCardSeam
 from dazzle.render.fragment.ingest import Pipeline as PipelineSeam
 from dazzle.render.fragment.ingest import Radar as RadarSeam
 from dazzle.render.fragment.ingest import RadarAxis as RadarAxisSeam
-from dazzle.render.fragment.ingest import Sparkline as SparklineSeam
 from dazzle.render.fragment.ingest import TimelineEvent as TimelineEventSeam
 from dazzle.render.fragment.ingest import TimeSeries as TimeSeriesSeam
 from dazzle.render.fragment.ingest import TimeSeriesLayer as TimeSeriesLayerSeam
 from dazzle.render.fragment.ingest import TimeSeriesPoint as TimeSeriesPointSeam
-from dazzle.render.fragment.ingest import Tree as TreeSeam
 from dazzle.render.fragment.ingest import (
     render_bar_chart,
-    render_box_plot,
-    render_bullet,
     render_calendar,
     render_diagram,
-    render_funnel,
-    render_heatmap,
-    render_histogram,
     render_kanban_card,
     render_pipeline,
     render_radar,
-    render_sparkline,
     render_time_series,
     render_timeline_event,
-    render_tree,
-    render_tree_node_label,
 )
 from dazzle.render.fragment.primitives import (
     BarChart,
-    BoxPlot,
-    Bullet,
     CalendarGrid,
     Diagram,
-    Funnel,
-    Heatmap,
-    Histogram,
     KanbanBoard,
     KanbanCard,
     KanbanRegion,
     PipelineSteps,
     Radar,
-    Sparkline,
     Timeline,
     TimelineEvent,
     TimeSeries,
-    Tree,
-    TreeNode,
 )
 from dazzle.render.fragment.renderer._render_interactive import (
     _with_leftover_honest_temporal,
@@ -121,9 +90,8 @@ _DIAGRAM_MERMAID_SCRIPT = (
 
 
 class _RenderChartsMixin:
-    """Mixin adding the 16 charts-family `_emit_*` methods (and the
-    private `_emit_tree_node` helper) to `FragmentRenderer`. Same
-    pattern as the other render mixins.
+    """Mixin adding the charts-family `_emit_*` methods to
+    `FragmentRenderer`. Same pattern as the other render mixins.
     """
 
     if TYPE_CHECKING:
@@ -273,9 +241,7 @@ class _RenderChartsMixin:
         """
         from dazzle.render.svg import _series_color, time_series_svg
 
-        # Sparkline view is dual-locked via the Sparkline primitive; this
-        # path still accepts view="sparkline" for legacy TimeSeries callers
-        # and maps it to the line wrapper class (pre-existing behaviour).
+        # Unknown views (e.g. "sparkline") map to the line wrapper class.
         view = t.view if t.view in ("line", "area") else "line"
 
         if t.series:
@@ -364,118 +330,6 @@ class _RenderChartsMixin:
                 svg_html=svg,
                 peak_display=max_val_str,
             )
-        )
-
-    def _emit_box_plot(self, b: BoxPlot, ctx: RenderContext) -> str:
-        """Render a BoxPlot via HM dual-lock BoxPlot seam.
-
-        SVG geometry stays in ``dazzle.render.svg.box_plot_svg``; the seam
-        carries the trusted SVG plus group stats for the summary line.
-        Group labels use clerk_chart_axis_label so ``api`` dumps
-        ``Api``, not the schema token (oral #188).
-        """
-        from dazzle.render.svg import box_plot_svg
-
-        if not b.groups:
-            return render_box_plot(BoxPlotSeam(label=b.label, groups=[]))
-
-        groups = tuple(
-            (clerk_chart_axis_label(label) or str(label), mn, q1, med, q3, mx)
-            for label, mn, q1, med, q3, mx in b.groups
-        )
-        svg = box_plot_svg(
-            b.label,
-            groups,
-            reference_lines=b.reference_lines,
-            samples=b.samples,
-            unit_suffix=b.unit_suffix,
-        )
-        samples = b.samples if b.samples else (0,) * len(groups)
-        return render_box_plot(
-            BoxPlotSeam(
-                label=b.label,
-                groups=[
-                    BoxPlotGroupSeam(
-                        label=label,
-                        min=mn,
-                        q1=q1,
-                        median=med,
-                        q3=q3,
-                        max=mx,
-                        samples=samples[i] if i < len(samples) else 0,
-                    )
-                    for i, (label, mn, q1, med, q3, mx) in enumerate(groups)
-                ],
-                svg_html=svg,
-            )
-        )
-
-    def _emit_bullet(self, b: Bullet, ctx: RenderContext) -> str:
-        """Render a Bullet via HM dual-lock Bullet seam."""
-        return render_bullet(
-            BulletSeam(
-                rows=[
-                    BulletRowSeam(label=r.label, actual=r.actual, target=r.target) for r in b.rows
-                ],
-                max_value=b.max_value,
-                unit_suffix=b.unit_suffix,
-                bands=[
-                    BulletBandSeam(
-                        from_value=band.from_value,
-                        to_value=band.to_value,
-                        label=band.label,
-                        color=band.color,
-                    )
-                    for band in b.reference_bands
-                ],
-                empty_message=b.empty_message,
-            )
-        )
-
-    def _emit_sparkline(self, s: Sparkline, ctx: RenderContext) -> str:
-        """Render a Sparkline via HM dual-lock Sparkline seam."""
-        return render_sparkline(SparklineSeam(points=list(s.points), empty_message=s.empty_message))
-
-    def _emit_tree(self, t: Tree, ctx: RenderContext) -> str:
-        """Render a Tree via HM dual-lock tree seam.
-
-        Host builds recursive details/summary nodes; dual-lock roots
-        ``data-dz-tree`` on ``dz-tree``.
-        """
-        if not t.nodes:
-            return ""
-        body = "".join(self._emit_tree_node(n, depth=0, ctx=ctx) for n in t.nodes)
-        return render_tree(TreeSeam(body_html=body))
-
-    def _emit_tree_node(self, node: TreeNode, *, depth: int, ctx: RenderContext) -> str:
-        """Emit one tree node.
-
-        Branch nodes are ``<details>`` with label (+ count) only — the
-        rotating chevron is CSS ``::before`` on
-        ``.dz-tree-node:has(> .dz-tree-children)``, not content SVG.
-        Leaves are ``.dz-tree-leaf`` (no disclosure chrome / no open).
-
-        #1303: optional ``drill_url`` wraps the label via ingest
-        ``render_tree_node_label`` (sole-emitter for ``data-dz-tree-drill``).
-        """
-        label_html = render_tree_node_label(node.label, getattr(node, "drill_url", "") or "")
-        if not node.children:
-            # Leaf: content only — no details, no chevron, no expand hint.
-            return f'<div class="dz-tree-leaf">{label_html}</div>'
-        # #1626 S4: open all branch levels so stills show nested labels
-        # (indent + chevron alone still OCR-flattens closed children).
-        open_attr = " open"
-        count_html = f'<span class="dz-tree-count">{len(node.children)}</span>'
-        # Summary holds content (label + count). Disclosure affordance is CSS.
-        summary = f'<summary class="dz-tree-summary">{label_html}{count_html}</summary>'
-        children_html = "".join(
-            self._emit_tree_node(c, depth=depth + 1, ctx=ctx) for c in node.children
-        )
-        return (
-            f'<details class="dz-tree-node"{open_attr}>'
-            f"{summary}"
-            f'<div class="dz-tree-children">{children_html}</div>'
-            f"</details>"
         )
 
     def _emit_pipeline_steps(self, p: PipelineSteps, ctx: RenderContext) -> str:
@@ -693,69 +547,3 @@ class _RenderChartsMixin:
         )
         board_attrs = self._kanban_board_root_attrs(k, ctx)
         return f"<div {board_attrs}>{announce}{''.join(column_html)}</div>{overflow_html}"
-
-    def _emit_funnel(self, f: Funnel, ctx: RenderContext) -> str:
-        """Render a Funnel via HM dual-lock Funnel seam."""
-        return render_funnel(
-            FunnelSeam(
-                stages=[
-                    FunnelStageSeam(label=stage.label, count=stage.count) for stage in f.stages
-                ],
-                total=f.total,
-                empty_message=f.empty_message,
-            )
-        )
-
-    def _emit_heatmap(self, h: Heatmap, ctx: RenderContext) -> str:
-        """Render a Heatmap via HM dual-lock Heatmap seam.
-
-        Axis tokens use clerk_chart_axis_label so group_by dumps
-        ``Critical``, not schema ``critical`` (oral #188).
-        """
-        return render_heatmap(
-            HeatmapSeam(
-                columns=[clerk_chart_axis_label(c) or str(c) for c in h.columns],
-                rows=[
-                    HeatmapRowSeam(
-                        label=clerk_chart_axis_label(r.label) or r.label,
-                        cells=list(r.cells),
-                    )
-                    for r in h.rows
-                ],
-                thresholds=list(h.thresholds),
-                total=h.total,
-                empty_message=h.empty_message,
-            )
-        )
-
-    def _emit_histogram(self, h: Histogram, ctx: RenderContext) -> str:
-        """Render a Histogram via HM dual-lock Histogram seam.
-
-        SVG geometry stays in ``dazzle.render.svg.histogram_svg``; the seam
-        carries the trusted SVG plus bin stats for the summary line.
-        """
-        from dazzle.render.svg import histogram_svg
-
-        if not h.bins:
-            return render_histogram(
-                HistogramSeam(label=h.label, bins=[], empty_message=h.empty_message)
-            )
-
-        svg_bins = tuple((b.label, b.count, b.low, b.high) for b in h.bins)
-        svg = histogram_svg(
-            h.label,
-            svg_bins,
-            reference_lines=h.reference_lines,
-            unit_suffix=h.unit_suffix,
-        )
-        return render_histogram(
-            HistogramSeam(
-                label=h.label,
-                bins=[
-                    HistogramBinSeam(label=b.label, count=b.count, low=b.low, high=b.high)
-                    for b in h.bins
-                ],
-                svg_html=svg,
-                empty_message=h.empty_message,
-            )
-        )

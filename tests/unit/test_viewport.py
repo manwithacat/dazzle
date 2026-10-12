@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from dazzle.testing.viewport import (
-    ACTION_GRID_PATTERN,
     ALL_PATTERNS,
     DRAWER_PATTERN,
     GRID_PATTERN,
@@ -91,7 +90,7 @@ class TestComponentPatterns:
         # #1295 — region grids assert the synthetic `grid-column-count`, not
         # raw `grid-template-columns` (which getComputedStyle resolves to px
         # tracks, never the authored value — a guaranteed false negative).
-        for pattern in (GRID_PATTERN, METRICS_PATTERN, ACTION_GRID_PATTERN):
+        for pattern in (GRID_PATTERN, METRICS_PATTERN):
             for a in pattern.assertions:
                 assert a.property == "grid-column-count", (
                     f"{pattern.name} assertion uses {a.property!r}, expected grid-column-count"
@@ -106,7 +105,6 @@ class TestComponentPatterns:
         expected = {
             "grid": ".dz-grid-list",
             "metrics": ".dz-metrics-grid",
-            "action_grid": ".dz-action-grid",
         }
         for name, sel in expected.items():
             assert {a.selector for a in ALL_PATTERNS[name].assertions} == {sel}
@@ -120,10 +118,9 @@ class TestComponentPatterns:
 
         assert counts(GRID_PATTERN) == {"mobile": "1", "tablet": "2", "desktop": "3"}
         assert counts(METRICS_PATTERN) == {"mobile": "1", "tablet": "2", "desktop": "4"}
-        assert counts(ACTION_GRID_PATTERN) == {"mobile": "1", "tablet": "2", "desktop": "3"}
 
     def test_all_patterns_dict_complete(self) -> None:
-        assert set(ALL_PATTERNS) == {"drawer", "grid", "metrics", "action_grid"}
+        assert set(ALL_PATTERNS) == {"drawer", "grid", "metrics"}
 
     def test_all_patterns_have_assertions(self) -> None:
         for name, pattern in ALL_PATTERNS.items():
@@ -354,17 +351,6 @@ class TestDerivePatterns:
                 "/app/workspaces/summ",
                 {"drawer", "metrics"},
             ),
-            (
-                {"name": "acts", "stage": "focus_metric", "regions": [{"display": "ACTION_GRID"}]},
-                "/app/workspaces/acts",
-                {"drawer", "action_grid"},
-            ),
-            (
-                # DETAIL is container-query driven → no viewport pattern (#1295).
-                {"name": "detail", "stage": "focus_metric", "regions": [{"display": "DETAIL"}]},
-                "/app/workspaces/detail",
-                {"drawer"},
-            ),
         ],
         ids=[
             "test_dual_pane_flow_stage",
@@ -372,8 +358,6 @@ class TestDerivePatterns:
             "test_region_grid_display",
             "test_region_metrics_display",
             "test_region_summary_display",
-            "test_region_action_grid_display",
-            "test_region_detail_display_dropped",
         ],
     )
     def test_workspace_pattern(self, workspace, path, expected_patterns) -> None:
@@ -443,7 +427,7 @@ class TestGridColumnCounts:
     assertion per viewport, matching the CSS breakpoints."""
 
     def test_grid_one_assertion_per_viewport(self) -> None:
-        for pattern in (GRID_PATTERN, METRICS_PATTERN, ACTION_GRID_PATTERN):
+        for pattern in (GRID_PATTERN, METRICS_PATTERN):
             viewports = [a.viewport for a in pattern.assertions]
             assert viewports == ["mobile", "tablet", "desktop"]
 
@@ -642,8 +626,6 @@ def test_drawer_pattern_selectors_match_current_markup() -> None:
 # that let #1294 through.
 
 from dazzle.render.fragment.primitives.data import (  # noqa: E402
-    ActionCard,
-    ActionGrid,
     GridCell,
     GridRegion,
     MetricsGrid,
@@ -658,7 +640,6 @@ def _class_present(cls: str, html: str) -> bool:
 _REGION_FRESHNESS_CASES = [
     (GRID_PATTERN, GridRegion(cells=(GridCell(title="x"),))),
     (METRICS_PATTERN, MetricsGrid(tiles=(MetricTile(label="x", value="1"),))),
-    (ACTION_GRID_PATTERN, ActionGrid(cards=(ActionCard(label="x"),))),
 ]
 
 

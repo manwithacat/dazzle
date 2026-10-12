@@ -808,34 +808,6 @@ def test_bar_chart_renders_with_reference_overlays_supplied() -> None:
     assert "dz-bar-chart-region" in html
 
 
-def test_box_plot_carries_reference_overlays() -> None:
-    """v0.66.107: BOX_PLOT chrome stripped to byte-match legacy
-    template — the `<dl class="dz-box-plot__references">` block was
-    a Phase 4B-only addition with no legacy counterpart, dropped to
-    align. Reference lines now overlay inside the SVG (legacy parity)
-    rather than rendering as a separate dl/dt/dd block."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "groups": [("p50", 0, 1, 2, 3, 4)],
-        "reference_lines": [{"value": 3.5, "label": "Threshold"}],
-    }
-    html = _render(adapter.build(_FakeRegion("b", display="box_plot"), ctx))
-    # Reference line renders inside the SVG as a <line> with <title>.
-    assert "<title>Threshold: 3.5</title>" in html
-
-
-def test_bar_track_carries_reference_overlays() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "bar_track_rows": [{"label": "CPU", "value": 80, "formatted_value": "80%", "fill_pct": 80}],
-        "bar_track_max": 100,
-        "reference_lines": [{"value": 90, "label": "Critical", "style": "dotted"}],
-    }
-    html = _render(adapter.build(_FakeRegion("b", display="bar_track"), ctx))
-    assert "dz-bar-track__references" in html
-    assert 'data-style="dotted"' in html
-
-
 # ───────────────── Pivot table ─────────────────────
 
 
@@ -1052,203 +1024,6 @@ def test_tabbed_list_eager_flag_overrides_position_default() -> None:
 # ───────────────── Detail ─────────────────────────
 
 
-def test_detail_renders_explicit_field_list_in_declared_order() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"name": "Alice", "email": "a@b.com", "role": "admin"},
-        "fields": [
-            {"key": "name", "label": "Name"},
-            {"key": "email", "label": "Email"},
-            # role omitted — adapter should respect declared list
-        ],
-    }
-    fragment = adapter.build(_FakeRegion("d", display="detail"), ctx)
-    html = _render(fragment)
-    assert "Name" in html and "Alice" in html
-    assert "Email" in html and "a@b.com" in html
-    assert "admin" not in html  # role wasn't in fields list
-
-
-def test_detail_falls_back_to_all_keys_when_no_fields() -> None:
-    """Without an explicit fields list, adapter shows every dict key
-    in declared order — useful for early-prototype DSL where the
-    field list isn't wired yet."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {"item": {"name": "Bob", "city": "Paris"}}
-    fragment = adapter.build(_FakeRegion("d", display="detail"), ctx)
-    html = _render(fragment)
-    assert "Bob" in html and "Paris" in html
-
-
-def test_detail_renders_em_dash_for_missing_values() -> None:
-    """Empty / None values render as em-dash placeholder so the layout
-    doesn't collapse on missing data."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"name": "Alice", "phone": None},
-        "fields": [{"key": "name"}, {"key": "phone"}],
-    }
-    fragment = adapter.build(_FakeRegion("d", display="detail"), ctx)
-    html = _render(fragment)
-    assert "Alice" in html
-    assert "—" in html
-
-
-def test_detail_type_aware_badge_renders_status_tone() -> None:
-    """Phase 4B.1.a: `type: badge` columns use the Badge primitive with
-    a variant computed from `_badge_tone_filter` (mirrors the legacy
-    `render_status_badge` macro behaviour)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"status": "resolved"},
-        "fields": [{"key": "status", "label": "Status", "type": "badge"}],
-    }
-    fragment = adapter.build(_FakeRegion("d", display="detail"), ctx)
-    html = _render(fragment)
-    # v0.66.108: badge cells now route through `render_status_badge`-
-    # equivalent RawHTML for byte-equivalence with the legacy macro.
-    # DETAIL passes `bordered=True`. The class scheme is `dz-badge` +
-    # `bordered` + `data-dz-tone="<tone>"`.
-    assert 'class="dz-badge  bordered"' in html
-    assert 'data-dz-tone="success"' in html  # resolved → success tone
-    assert ">Resolved<" in html  # humanize filter title-cases
-
-
-def test_detail_type_aware_bool_renders_check_or_cross() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"a": True, "b": False, "c": None},
-        "fields": [
-            {"key": "a", "type": "bool"},
-            {"key": "b", "type": "bool"},
-            {"key": "c", "type": "bool"},
-        ],
-    }
-    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
-    # v0.66.102: bool now uses the legacy `bool_icon` filter directly
-    # (HTML entities + tinted span) for byte-equivalence with the
-    # legacy template. Check for the entity codes.
-    assert "&#10003;" in html  # ✓ (true)
-    assert "&#10005;" in html  # ✗ (false)
-
-
-def test_detail_type_aware_date_uses_dateformat_filter() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"created": "2026-05-01T12:00:00"},
-        "fields": [{"key": "created", "type": "date"}],
-    }
-    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
-    # _date_filter uses DisplayLocaleProfile (product default D MMM YYYY)
-    assert "May 2026" in html
-    assert "1 May" in html or "01 May" in html
-
-
-def test_detail_type_aware_currency_formats_minor_units() -> None:
-    """`type: currency` uses _currency_filter with `minor=True` default
-    — so 12345 GBP minor → £123.45."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"price": 12345},
-        "fields": [{"key": "price", "type": "currency"}],
-    }
-    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
-    assert "£123.45" in html
-
-
-def test_currency_column_uses_record_companion_currency() -> None:
-    """A `type: currency` cell resolves the row's companion `_currency`
-    field, so workspace regions agree with entity tables."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"price": 12345, "price_currency": "USD"},
-        "fields": [{"key": "price", "type": "currency"}],
-    }
-    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
-    assert "$123.45" in html
-
-
-def test_currency_column_falls_back_to_row_level_currency() -> None:
-    """A row-level `currency` field applies when there is no
-    field-specific companion."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"price": 12345, "currency": "EUR"},
-        "fields": [{"key": "price", "type": "currency"}],
-    }
-    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
-    assert "123.45" in html
-    assert "€" in html
-
-
-def test_currency_column_record_beats_column_default() -> None:
-    """Precedence matches the entity-table path — the row's companion
-    currency wins, with the column `currency_code` acting as the fallback."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"price": 12345, "price_currency": "USD"},
-        "fields": [{"key": "price", "type": "currency", "currency_code": "GBP"}],
-    }
-    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
-    assert "$123.45" in html
-
-
-def test_detail_type_aware_ref_renders_link_with_display() -> None:
-    """`type: ref` columns produce a Link primitive when ref_route is
-    set; the link text uses `<key>_display` from the item dict."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"team_id": 7, "team_id_display": "Engineering"},
-        "fields": [{"key": "team_id", "type": "ref", "ref_route": "/teams"}],
-    }
-    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
-    assert 'href="/teams/7"' in html
-    assert "Engineering" in html
-
-
-def test_detail_type_aware_ref_resolves_fk_dict_display_not_uuid() -> None:
-    """A FK column that arrives as a dict (id + __display__) renders the
-    referenced entity's display name as link text — never the raw dict repr
-    or a bare UUID (#1389)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"contact": {"id": "abc-123", "__display__": "Ada Lovelace"}},
-        "fields": [{"key": "contact", "type": "ref", "ref_route": "/contacts/{id}"}],
-    }
-    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
-    assert 'href="/contacts/abc-123"' in html
-    assert "Ada Lovelace" in html
-    assert "__display__" not in html
-    assert "'id'" not in html  # no dict repr leaked as link text
-
-
-def test_detail_type_aware_ref_without_route_falls_back_to_text() -> None:
-    """When `ref_route` is empty, the ref renders as plain Text using
-    the display value — no broken link."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"team_id": 7, "team_id_display": "Engineering"},
-        "fields": [{"key": "team_id", "type": "ref"}],
-    }
-    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
-    assert "Engineering" in html
-    assert "dz-link" not in html
-
-
-def test_detail_default_type_renders_em_dash_for_none() -> None:
-    """Untyped columns with None values fall back to em-dash (not the
-    string 'None')."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "item": {"x": None, "y": "OK"},
-        "fields": [{"key": "x"}, {"key": "y"}],
-    }
-    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
-    assert "—" in html
-    assert "OK" in html
-    assert "None" not in html
-
-
 # ───────────────── Activity feed ──────────────────
 
 
@@ -1261,35 +1036,6 @@ def test_radar_with_fewer_than_three_axes_degrades_to_empty_state() -> None:
         {"axes": [("A", 1), ("B", 2)]},
     )
     assert "Need 3+ axes." in _render(fragment)
-
-
-def test_box_plot_silently_drops_non_monotonic_groups() -> None:
-    """The adapter pre-filters groups whose quartiles aren't monotonic
-    rather than crashing the BoxPlot primitive's invariant."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "groups": [
-            ("good", 0, 1, 2, 3, 4),
-            ("bad", 5, 4, 3, 2, 1),  # reversed
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("b", display="box_plot"), ctx)
-    html = _render(fragment)
-    assert "Good" in html
-    assert "bad" not in html
-    assert "Bad" not in html
-
-
-def test_sparkline_renders_dedicated_primitive() -> None:
-    """v0.66.106: SPARKLINE split from TimeSeries into a dedicated
-    `Sparkline` primitive matching the legacy `dz-sparkline-region`
-    structure (180×32 viewBox, headline + tiny SVG)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {"points": [("a", 1), ("b", 2), ("c", 3)]}
-    html = _render(adapter.build(_FakeRegion("s", display="sparkline"), ctx))
-    assert 'class="dz-sparkline-region"' in html
-    assert 'class="dz-sparkline-svg"' in html
-    assert 'viewBox="0 0 180 32"' in html
 
 
 def test_time_series_skips_malformed_points() -> None:
@@ -1383,43 +1129,6 @@ def test_diagram_empty_renders_legacy_hardcoded_message() -> None:
     assert "dz-diagram-empty" in html
     assert "No entity relationships to display." in html
     assert "ignored" not in html  # region.empty_message is intentionally ignored
-
-
-def test_heatmap_renders_dedicated_primitive() -> None:
-    """v0.66.115: HEATMAP now uses dedicated `Heatmap` primitive
-    matching `dz-heatmap-region` byte-for-byte. Threshold-banded
-    cell tones via data-dz-heatmap-tone."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "heatmap_matrix": [
-            {
-                "row": "mon",
-                "row_id": "1",
-                "cells": [
-                    {"col": "9am", "value": 5.0},
-                    {"col": "10am", "value": 0.0},
-                ],
-            },
-            {
-                "row": "tue",
-                "row_id": "2",
-                "cells": [
-                    {"col": "9am", "value": 0.0},
-                    {"col": "10am", "value": 3.0},
-                ],
-            },
-        ],
-        "heatmap_col_values": ["9am", "10am"],
-        "heatmap_thresholds": [2.0, 4.0],
-    }
-    fragment = adapter.build(_FakeRegion("h", display="heatmap"), ctx)
-    html = _render(fragment)
-    assert "dz-heatmap-region" in html
-    assert "Mon" in html and "Tue" in html
-    assert "9am" in html and "10am" in html
-    assert "5.0" in html and "3.0" in html
-    assert 'data-dz-heatmap-tone="good"' in html  # 5.0 > 4.0
-    assert 'data-dz-heatmap-tone="bad"' in html  # 0.0 < 2.0
 
 
 def test_confirm_action_panel_legacy_prompt_ctx_renders_synthetic_checklist() -> None:
@@ -1613,144 +1322,6 @@ def test_search_box_results_div_uses_unique_dom_id_per_region() -> None:
     assert "dz-search-results-search_b" in html_b
 
 
-def test_bar_track_renders_typed_primitive_with_aria() -> None:
-    """Phase 4B.1.b — `bar_track` now produces the typed BarTrack
-    primitive directly (replaced the prior alias to _build_progress).
-    HTML matches the legacy bar_track.html template: aria-progressbar
-    semantics, fill width, summary line."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "bar_track_rows": [
-            {"label": "CPU", "value": 80, "formatted_value": "80%", "fill_pct": 80},
-            {"label": "RAM", "value": 45, "formatted_value": "45%", "fill_pct": 45},
-        ],
-        "bar_track_max": 100,
-    }
-    html = _render(adapter.build(_FakeRegion("b", display="bar_track"), ctx))
-    assert 'class="dz-bar-track-region"' in html  # v0.66.98 — legacy outer wrapper
-    assert "dz-bar-track-rows" in html
-    assert 'role="progressbar"' in html
-    # v0.66.110: int-narrowing — whole-valued floats render without `.0`
-    # to match Jinja's `{{ value }}` rendering.
-    assert 'aria-valuemax="100"' in html
-    assert 'aria-valuenow="80"' in html
-    assert "width: 80%" in html
-    # v0.108: summary is grid-aligned meta + scale spans (not one middot line)
-    assert "2 rows" in html
-    assert "0–100" in html
-    assert "dz-bar-track-summary-meta" in html
-    assert "dz-bar-track-summary-scale" in html
-
-
-def test_bar_track_legacy_items_fallback() -> None:
-    """Pre-Phase-4B.1.b ctx shape `{items: [{label, percent}]}` is still
-    accepted — the runtime currently still passes this shape, and the
-    Phase 4B.2 translator will switch it to bar_track_rows. Until then
-    the adapter handles both."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {"items": [{"label": "X", "percent": 25}, {"label": "Y", "percent": 75}]}
-    html = _render(adapter.build(_FakeRegion("b", display="bar_track"), ctx))
-    assert "X" in html and "25%" in html
-    assert "Y" in html and "75%" in html
-
-
-def test_bar_track_clamps_out_of_range_fill_pct() -> None:
-    """fill_pct > 100 or < 0 is silently clamped to [0, 100] before
-    construction so the strict BarTrack invariant doesn't reject."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "bar_track_rows": [
-            {"label": "Over", "value": 999, "formatted_value": "999", "fill_pct": 250},
-            {"label": "Under", "value": -10, "formatted_value": "-10", "fill_pct": -50},
-        ],
-        "bar_track_max": 100,
-    }
-    html = _render(adapter.build(_FakeRegion("b", display="bar_track"), ctx))
-    assert "width: 100" in html  # clamped to 100
-    assert "width: 0" in html  # clamped to 0
-
-
-def test_bar_track_drops_malformed_rows() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "bar_track_rows": [
-            None,
-            42,
-            {"label": ""},  # empty label
-            {"label": "OK", "value": "bad", "fill_pct": 50},  # bad value
-            {"label": "Good", "value": 50, "formatted_value": "50", "fill_pct": 50},
-        ]
-    }
-    html = _render(adapter.build(_FakeRegion("b", display="bar_track"), ctx))
-    assert "Good" in html
-    assert "OK" not in html  # bad value caused drop
-
-
-def test_bullet_renders_track_with_actual_target_tick() -> None:
-    """Phase 4B.4 wave 2 (v0.66.105): adapter consumes the authored
-    `bullet_rows` shape directly with `bullet_max_value` for the
-    percentage scale. Emits the legacy `dz-bullet-region` shape with
-    per-row label + track + actual bar + target tick + value."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "bullet_rows": [
-            {"label": "Q1", "actual": 100, "target": 100},
-            {"label": "Q2", "actual": 70, "target": 100},
-            {"label": "Q3", "actual": 30, "target": None},
-        ],
-        "bullet_max_value": 100,
-    }
-    fragment = adapter.build(_FakeRegion("b", display="bullet"), ctx)
-    html = _render(fragment)
-    assert "Q1" in html and "Q2" in html and "Q3" in html
-    assert 'class="dz-bullet-region"' in html
-    assert 'class="dz-bullet-actual"' in html
-    # Q1 + Q2 have target ticks; Q3 doesn't.
-    assert html.count('class="dz-bullet-target"') == 2
-    assert "3 rows · scale 0–100" in html
-
-
-def test_bullet_drops_non_numeric_values() -> None:
-    """Rows with non-coercible `actual`/`target` silently drop —
-    matches the adapter's permissive parsing convention."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "bullet_rows": [
-            {"label": "X", "actual": "n/a", "target": "n/a"},  # drops
-            {"label": "Y", "actual": 50, "target": 100},
-        ],
-        "bullet_max_value": 100,
-    }
-    fragment = adapter.build(_FakeRegion("b", display="bullet"), ctx)
-    html = _render(fragment)
-    assert "Y" in html
-    assert "n/a" not in html
-    assert "1 rows · scale 0–100" in html
-
-
-def test_tree_renders_indented_labels_recursively() -> None:
-    """`display: tree` flattens nested children into a Stack of Text
-    rows, with each level of nesting prefixed by two spaces."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {
-                "name": "Root",
-                "children": [
-                    {"name": "Child1"},
-                    {"name": "Child2", "children": [{"name": "Grand"}]},
-                ],
-            }
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("t", display="tree"), ctx)
-    html = _render(fragment)
-    assert "Root" in html
-    assert "Child1" in html
-    assert "Child2" in html
-    assert "Grand" in html
-
-
 def test_pipeline_steps_renders_row_of_cards() -> None:
     """Each step becomes a Card with a Heading and optional Text
     description, arranged in a horizontal Row."""
@@ -1775,260 +1346,6 @@ def test_pipeline_steps_renders_row_of_cards() -> None:
     assert "—" in html
     # 3 stages → 2 connector pairs (last omits).
     assert html.count('class="dz-pipeline-connector"') == 2
-
-
-def test_action_grid_renders_cta_cards_with_tone_and_count() -> None:
-    """`display: action_grid` builds typed ActionCard primitives — tone
-    tinting, optional Lucide icon, optional count badge, optional URL.
-    Phase 4B.1.b replaced the prior `_build_grid` alias with a dedicated
-    builder."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "action_cards": [
-            {
-                "label": "Open tickets",
-                "icon": "ticket",
-                "count": 12,
-                "tone": "warning",
-                "url": "/tickets",
-            },
-            {"label": "New issue", "icon": "plus", "tone": "accent", "url": "/issues/new"},
-            {"label": "Static", "tone": "neutral"},
-        ],
-        "columns": 3,
-    }
-    fragment = adapter.build(_FakeRegion("a", display="action_grid"), ctx)
-    html = _render(fragment)
-    assert "dz-action-card" in html
-    assert "Open tickets" in html and "New issue" in html and "Static" in html
-    assert 'data-dz-tone="warning"' in html
-    assert 'data-dz-tone="accent"' in html
-    # "ticket" is in the vendored registry -> server-side inline SVG (TASTE-6)
-    assert '<span class="dz-action-card-icon" aria-hidden="true"><svg' in html
-    assert "/tickets" in html
-    assert ">12<" in html  # count badge
-
-
-def test_action_grid_accepts_legacy_action_card_data_alias() -> None:
-    """ctx['action_card_data'] is accepted as alias for ctx['action_cards']
-    so the legacy ctx shape from workspace_rendering.py works during
-    Phase 4B.2's translator wiring without two ctx payloads."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "action_card_data": [
-            {"label": "Restart", "tone": "destructive", "url": "/admin/restart"},
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("a", display="action_grid"), ctx)
-    html = _render(fragment)
-    assert "Restart" in html
-    assert 'data-dz-tone="destructive"' in html
-
-
-def test_action_grid_drops_invalid_entries() -> None:
-    """Cards with empty labels, non-dict entries, or unknown tones are
-    silently dropped — the strict ActionCard primitive would raise."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "action_cards": [
-            None,
-            42,
-            {"label": ""},  # empty label
-            {"label": "OK", "tone": "purple"},  # unknown tone falls back to neutral
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("a", display="action_grid"), ctx)
-    html = _render(fragment)
-    assert "OK" in html
-    assert 'data-dz-tone="neutral"' in html  # purple fell back
-
-
-def test_action_grid_count_zero_renders_badge() -> None:
-    """`count = 0` renders a badge with "0"; `count = None` (or omitted)
-    renders no badge."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "action_cards": [
-            {"label": "Zero", "count": 0, "tone": "positive"},
-            {"label": "None", "tone": "neutral"},
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("a", display="action_grid"), ctx)
-    html = _render(fragment)
-    assert ">0<" in html  # zero badge rendered
-    # The "None" card has no count badge — verify by checking only one badge appears
-    assert html.count("dz-action-card-count") == 1
-
-
-def test_profile_card_renders_full_identity_panel() -> None:
-    """`display: profile_card` builds a typed ProfileCard with
-    avatar/initials + name + meta + stats grid + facts list. Phase
-    4B.1.b replaced the prior `_build_detail` alias with a dedicated
-    builder so the legacy `profile_card_data` shape lands intact."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "profile_card_data": {
-            "primary": "Alice Adams",
-            "secondary": "Senior Engineer",
-            "avatar_url": "/avatars/alice.png",
-            "stats": [
-                {"label": "Tickets", "value": 23},
-                {"label": "Closed", "value": 18},
-                {"label": "SLA", "value": None},
-            ],
-            "facts": ["Joined 2024", "Lead reviewer"],
-        }
-    }
-    fragment = adapter.build(_FakeRegion("p", display="profile_card"), ctx)
-    html = _render(fragment)
-    assert "dz-profile-card" in html
-    assert "Alice Adams" in html and "Senior Engineer" in html
-    assert "Tickets" in html and "23" in html
-    assert "Joined 2024" in html and "Lead reviewer" in html
-    assert "—" in html  # empty SLA stat falls back to em-dash
-    assert "/avatars/alice.png" in html
-
-
-def test_profile_card_initials_when_no_avatar() -> None:
-    """Initials path is used when avatar_url is empty."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "profile_card_data": {
-            "primary": "Bob Brown",
-            "initials": "BB",
-        }
-    }
-    fragment = adapter.build(_FakeRegion("p", display="profile_card"), ctx)
-    html = _render(fragment)
-    assert "dz-profile-initials" in html
-    assert ">BB<" in html
-
-
-def test_profile_card_drops_malformed_stats_and_facts() -> None:
-    """Stats with missing labels and non-string facts are silently
-    dropped to keep the strict ProfileCard primitive happy."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "profile_card_data": {
-            "primary": "X",
-            "stats": [
-                None,  # not a dict
-                {"value": 5},  # missing label
-                {"label": "OK", "value": 9},
-            ],
-            "facts": [None, "", "real fact"],
-        }
-    }
-    fragment = adapter.build(_FakeRegion("p", display="profile_card"), ctx)
-    html = _render(fragment)
-    assert "OK" in html and "9" in html
-    assert "real fact" in html
-
-
-def test_profile_card_empty_data_renders_empty_state() -> None:
-    """When none of primary/avatar_url/initials are populated the
-    adapter degrades to EmptyState rather than raising ValueError."""
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("p", display="profile_card", empty_message="No profile."),
-        {"profile_card_data": {"secondary": "just meta"}},
-    )
-    assert "No profile." in _render(fragment)
-
-
-def test_profile_card_no_data_uses_default_empty_message() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(_FakeRegion("p", display="profile_card"), {})
-    html = _render(fragment)
-    assert "dz-empty-state__title" in html
-    assert "No profile data" in html
-
-
-def test_progress_renders_typed_stage_bar_with_progress_element() -> None:
-    """Phase 4B.1.b: `_build_progress` produces the typed StageBar
-    primitive — `<progress>` header + chip list + summary line.
-    Replaced the prior Stack-of-Row(Text, Badge) shape."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "stage_counts": [
-            {"name": "Backlog", "count": 12, "complete": False},
-            {"name": "In Progress", "count": 5, "complete": False},
-            {"name": "Done", "count": 23, "complete": True},
-        ],
-        "complete_pct": 57.5,
-        "complete_count": 23,
-        "progress_total": 40,
-    }
-    html = _render(adapter.build(_FakeRegion("p", display="progress"), ctx))
-    assert "dz-progress-header" in html
-    assert "<progress data-dz-progress" in html
-    assert "57.5%" in html
-    assert "Backlog (12)" in html
-    assert 'data-dz-stage-tone="complete"' in html
-    assert "23 of 40 complete" in html
-
-
-def test_progress_chip_tone_maps_from_complete_and_count() -> None:
-    """tone: complete > active (count>0) > empty (count==0)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "stage_counts": [
-            {"name": "Empty", "count": 0, "complete": False},  # empty
-            {"name": "Active", "count": 5, "complete": False},  # active
-            {"name": "Complete", "count": 8, "complete": True},  # complete
-        ]
-    }
-    html = _render(adapter.build(_FakeRegion("p", display="progress"), ctx))
-    assert 'data-dz-stage-tone="empty"' in html
-    assert 'data-dz-stage-tone="active"' in html
-    assert 'data-dz-stage-tone="complete"' in html
-
-
-def test_progress_legacy_items_fallback_treats_100_pct_as_complete() -> None:
-    """Pre-Phase-4B.1.b ctx shape `{items: [{label, percent}]}` is still
-    accepted — each row becomes a synthetic stage with `complete=True`
-    when percent==100. The Phase 4B.2 translator will switch the
-    runtime to stage_counts."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {"label": "Build", "percent": 75},
-            {"label": "Test", "percent": 100},
-        ]
-    }
-    html = _render(adapter.build(_FakeRegion("p", display="progress"), ctx))
-    assert "Build (75%)" in html
-    assert "Test (100%)" in html
-    # Test stage at 100% is marked complete
-    assert 'data-dz-stage-tone="complete"' in html
-
-
-def test_progress_clamps_out_of_range_complete_pct() -> None:
-    """complete_pct outside [0, 100] is clamped before constructing
-    the StageBar (which would raise)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "stage_counts": [{"name": "X", "count": 1, "complete": False}],
-        "complete_pct": 250,
-    }
-    html = _render(adapter.build(_FakeRegion("p", display="progress"), ctx))
-    # v0.66.105: emit narrows whole values to int repr for byte-equivalence
-    # with the legacy Jinja `{{ complete_pct }}` rendering — `100.0` becomes
-    # `100`. Fractional values still render with the trailing decimal.
-    assert "100%" in html  # clamped to 100, integer repr
-    assert "250" not in html
-
-
-def test_progress_omits_summary_when_total_is_zero() -> None:
-    """The 'N of M complete' summary only renders when progress_total > 0."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "stage_counts": [{"name": "X", "count": 1, "complete": False}],
-        "complete_count": 0,
-        "progress_total": 0,
-    }
-    html = _render(adapter.build(_FakeRegion("p", display="progress"), ctx))
-    assert "dz-progress-summary" not in html
 
 
 def test_status_list_renders_authored_entries() -> None:
@@ -2072,38 +1389,6 @@ def test_status_list_unknown_state_falls_back_to_neutral() -> None:
     # Coerced to neutral → no pill, spacer icon column.
     assert 'data-dz-state="neutral"' in html
     assert "dz-status-list-pill" not in html
-
-
-def test_funnel_chart_renders_dedicated_primitive() -> None:
-    """v0.66.111: FUNNEL_CHART now uses a dedicated `Funnel` primitive
-    matching `dz-funnel-chart-region` byte-for-byte. Stages render in
-    declared order (kanban_columns), with width relative to the first
-    stage's count and a 20% minimum."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "kanban_columns": ["signed_up", "verified", "paid"],
-        "group_by": "status",
-        "items": (
-            [{"status": "signed_up"}] * 100
-            + [{"status": "verified"}] * 50
-            + [{"status": "paid"}] * 25
-        ),
-        "total": 175,
-    }
-    fragment = adapter.build(_FakeRegion("f", display="funnel_chart"), ctx)
-    html = _render(fragment)
-    assert "dz-funnel-chart-region" in html
-    # Stages preserved in declared order; clerk labels (oral #144).
-    pos_signed = html.find("Signed Up")
-    pos_verified = html.find("Verified")
-    pos_paid = html.find("Paid")
-    assert pos_signed < pos_verified < pos_paid
-    assert "signed_up" not in html
-    # Width relative to first stage: 100% / 50% / 25%.
-    assert "width: 100%" in html
-    assert "width: 50%" in html
-    # 25% < 20% min → clamped to 20%.
-    assert "width: 25%" in html or "width: 20%" in html
 
 
 def test_queue_renders_minimal_items() -> None:
@@ -2316,26 +1601,6 @@ def test_queue_transition_to_current_state_silently_skipped() -> None:
     html = _render(adapter.build(_FakeRegion("q", display="queue"), ctx))
     assert "Close" in html
     assert "Reopen" not in html
-
-
-def test_histogram_renders_dedicated_primitive() -> None:
-    """v0.66.111: HISTOGRAM now uses a dedicated `Histogram` primitive
-    + `histogram_svg` helper matching `dz-histogram-region` byte-for-
-    byte. Bins carry `low`/`high` for continuous-axis positioning."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "histogram_bins": [
-            {"label": "0-10", "count": 5, "low": 0, "high": 10},
-            {"label": "10-20", "count": 15, "low": 10, "high": 20},
-            {"label": "20-30", "count": 8, "low": 20, "high": 30},
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("h", display="histogram"), ctx)
-    html = _render(fragment)
-    assert "dz-histogram-region" in html
-    assert "dz-histogram-svg" in html
-    assert "<title>0-10: 5</title>" in html
-    assert "3 bins · 28 samples · peak 15" in html
 
 
 def test_activity_feed_dispatches_through_timeline() -> None:
@@ -3067,8 +2332,7 @@ def test_entity_card_skips_sections_with_missing_id() -> None:
 # (role="tablist"). Also kept named: metrics scope-denial (#1425 non-leak),
 # the kanban either-of-three-outputs test, the radar <3-axes degrade test,
 # the diagram legacy hardcoded-message test (v0.66.118 — empty_message is
-# intentionally *ignored* there), profile_card degrade/default-message
-# contracts, and any smoke test that pins structure (isinstance, viewBox,
+# intentionally *ignored* there), and any smoke test that pins structure (isinstance, viewBox,
 # counts) rather than substrings.
 
 
@@ -3083,17 +2347,9 @@ _EMPTY_STATE_CASES: list[tuple[str, dict, str]] = [
     ("bar_chart", {"buckets": []}, "None."),
     ("pivot_table", {"rows": [], "columns": ["x"]}, "No data."),
     ("tabbed_list", {}, "No tabs."),
-    ("detail", {"item": None}, "No item."),
-    ("box_plot", {"groups": []}, "No distribution."),
-    ("bar_track", {"bar_track_rows": []}, "No tracks."),
-    ("bullet", {"items": []}, "No bullets."),
-    ("tree", {"items": []}, "Empty tree."),
     ("pipeline_steps", {"pipeline_stage_data": []}, "No steps."),
-    ("action_grid", {"action_cards": []}, "No quick actions."),
     ("status_list", {"items": []}, "All clear."),
-    ("funnel_chart", {"buckets": []}, "No funnel."),
     ("queue", {"items": []}, "Queue is empty."),
-    ("progress", {"stage_counts": []}, "No progress."),
 ]
 
 
@@ -3115,8 +2371,6 @@ def test_empty_data_with_empty_message_renders_empty_state(
 # - bar_chart: buckets as {label, value} or {key, count} dicts; labels
 #   humanized via render_status_badge (v0.66.110) — "open" → "Open".
 # - radar: axes as {axis, value} or {label, value} dicts.
-# - box_plot: groups as {label, min, q1, median, q3, max} dicts;
-#   labels humanized via clerk_chart_axis_label — "g1" → "G1".
 # - line_chart (TimeSeries): points as {x, y} or {label, value} dicts.
 # - diagram: edges as {from, to} (or {source, target}) dicts.
 _ALT_DICT_SHAPE_CASES: list[tuple[str, dict, tuple[str, ...]]] = [
@@ -3135,11 +2389,6 @@ _ALT_DICT_SHAPE_CASES: list[tuple[str, dict, tuple[str, ...]]] = [
             ]
         },
         ("X", "Y", "Z"),
-    ),
-    (
-        "box_plot",
-        {"groups": [{"label": "g1", "min": 0, "q1": 1, "median": 2, "q3": 3, "max": 4}]},
-        ("G1",),
     ),
     (
         "line_chart",
@@ -3174,12 +2423,8 @@ def test_alternative_dict_item_shape_normalizes_to_same_render(
 # - kanban: `dz-kanban` CSS hook so workspace layout CSS can target the
 #   column structure; title + card content render.
 # - radar: polar axes labels render inside dz-radar.
-# - box_plot: quartile groups render inside dz-box-plot;
-#   labels humanized via clerk_chart_axis_label — "p50" → "P50".
 # - line_chart: v0.66.110 — legacy region wrapper class is
 #   `dz-line-chart-region` (chrome stripping).
-# - area_chart: v0.66.110 — wrapper is `dz-area-chart-region` (legacy
-#   class scheme — was BEM `dz-timeseries--view-area`).
 # - diagram: nodes + edges render as paired UL lists with the → arrow.
 _RENDER_SMOKE_CASES: list[tuple[str, str | None, dict, tuple[str, ...]]] = [
     (
@@ -3199,22 +2444,10 @@ _RENDER_SMOKE_CASES: list[tuple[str, str | None, dict, tuple[str, ...]]] = [
         ("dz-radar", "Python", "Go", "Rust"),
     ),
     (
-        "box_plot",
-        None,
-        {"groups": [("p50", 0, 1, 2, 3, 4), ("p99", 5, 6, 7, 8, 9)]},
-        ("dz-box-plot", "P50", "P99"),
-    ),
-    (
         "line_chart",
         None,
         {"points": [("Jan", 5), ("Feb", 8), ("Mar", 12)]},
         ("dz-line-chart-region", "Jan", "Feb", "Mar"),
-    ),
-    (
-        "area_chart",
-        None,
-        {"points": [("Q1", 100), ("Q2", 150)]},
-        ("dz-area-chart-region",),
     ),
     (
         "diagram",

@@ -15,7 +15,6 @@ Workspaces aggregate related surfaces and data for specific user needs.
 Region types:
   - Data region: has source + optional filter/sort/limit → renders entity rows
   - Aggregate-only region: has only aggregate: block → renders KPI metric cards
-  - Detail region: display: detail with source → renders a single record view
 
 Key features:
   - filter: applies a ConditionExpr so regions only show matching rows (e.g. status = open)
@@ -37,7 +36,7 @@ workspace <workspace_name> "<Display Name>":
     [filter: <condition>]
     [sort: <field> [asc|desc], ...]
     [limit: <number>]
-    [display: <list|grid|detail|summary|metrics>]
+    [display: <list|grid|summary|metrics>]
     [action: <surface_name>]
     [empty: "<message>"]
     [group_by: <field>]
@@ -119,7 +118,7 @@ Regions support date-range filtering (v0.34.0) with date_field + date_range flag
     [<EntityName>: <condition>]
   [sort: <field> [asc|desc], ...]            # Sort order
   [limit: <1-1000>]                          # Max records
-  [display: <list|grid|timeline|map|detail|summary|metrics|kanban|bar_chart|funnel_chart|queue|tabbed_list>]
+  [display: <list|grid|timeline|summary|metrics|kanban|bar_chart|queue|tabbed_list>]
   [action: <surface_name>]                   # Click-through surface
   [empty: "<message>"]                       # Empty state message
   [group_by: <field>]                        # Group data by field
@@ -151,11 +150,6 @@ workspace ops_dashboard "Operations Dashboard":
       total_tickets: count(Ticket)
       open_count: count(Ticket where status = open)
     display: metrics
-
-  # Detail region (single record view)
-  current_user_profile:
-    source: UserProfile
-    display: detail
 
   # Multi-source tabbed region
   activity:
@@ -266,8 +260,7 @@ debugger.
 Fast path (recommended — one SQL query, scope evaluated once):
 - ``count(<source_entity>)`` with ``group_by: <field>`` — bar_chart
 - ``count(<source_entity>)`` with ``group_by: [<a>, <b>]`` — pivot_table
-- ``count(<source_entity>)`` with ``group_by: bucket(<ts>, day|week|month|quarter|year)`` — time-series (line_chart, sparkline) — v0.60.0
-- ``count(<source_entity>)`` with ``group_by: [bucket(<ts>, week), severity]`` — stacked area_chart — v0.60.0
+- ``count(<source_entity>)`` with ``group_by: bucket(<ts>, day|week|month|quarter|year)`` — time-series (line_chart) — v0.60.0
 - ``sum:<col>``, ``avg:<col>``, ``min:<col>``, ``max:<col>`` — numeric measures
 
 Slow path (N+1 — avoid when the fast path applies):
@@ -294,17 +287,14 @@ aggregate:
 Visualization modes for workspace regions. Each display consumes a
 specific IR shape:
 
-- ``list`` / ``grid`` / ``timeline`` / ``map`` — row-per-item views
+- ``list`` / ``grid`` / ``timeline`` — row-per-item views
 - ``metrics`` / ``summary`` — KPI tiles from an aggregate: block
-- ``bar_chart`` / ``funnel_chart`` — single-dim count/measure distribution
+- ``bar_chart`` — single-dim count/measure distribution
   (uses ``group_by: <field>``)
 - ``kanban`` — single-dim grouping with column-per-value layout
-- ``heatmap`` — 2-dim matrix (``heatmap_rows:`` + ``heatmap_columns:``)
 - ``pivot_table`` — N-dim cross-tab (``group_by: [field, field]``) — v0.59.3
 - ``line_chart`` — single-dim time series (``group_by: bucket(ts, day)``) — v0.60.0
-- ``area_chart`` — stacked time series (``group_by: [bucket(ts, week), series]``) — v0.60.0
-- ``sparkline`` — compact time-series tile — v0.60.0
-- ``tree`` / ``activity_feed`` / ``queue`` / ``progress`` — specialised
+- ``activity_feed`` / ``queue`` — specialised
 
 **New in v0.59: Strategy C aggregate primitive.** Chart regions now run
 one scope-aware GROUP BY SQL query via Repository.aggregate — no more
@@ -314,7 +304,7 @@ point when writing any chart region.
 ### Syntax
 
 ```dsl
-display: <list|grid|timeline|map|metrics|bar_chart|funnel_chart|pivot_table|heatmap|kanban|tree|queue|tabbed_list|activity_feed|progress>
+display: <list|grid|timeline|metrics|bar_chart|pivot_table|kanban|queue|tabbed_list|activity_feed>
 ```
 
 **Related:** [Regions](workspaces.md#regions), [Workspace](workspaces.md#workspace), [Aggregates](workspaces.md#aggregates)

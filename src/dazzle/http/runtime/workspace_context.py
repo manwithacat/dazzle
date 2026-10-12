@@ -40,9 +40,6 @@ class WorkspaceRegionContext:
     # via repo.list LIKE search and list chrome emits a filter input so
     # dual-pane directories filter in place (agent_acceptance find-by-name).
     search_fields: list[str] = field(default_factory=list)
-    # Runtime parameter resolution (#572)
-    param_resolver: Any = None  # ParamResolver | None
-    tenant_id: str | None = None
     # Entity access spec for scope predicate enforcement (#574)
     cedar_access_spec: Any = None
     fk_graph: Any = None

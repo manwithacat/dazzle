@@ -17,9 +17,9 @@ never zero. The non-DSL scanners are text matches: they over-count rather than m
 
 | Measure | Value |
 |---|---:|
-| Framework source lines (`src/dazzle`) | 424,709 |
-| Test lines (`tests/`) | 388,762 |
-| Documentation lines (`docs/**/*.md`) | 49,123 |
+| Framework source lines (`src/dazzle`) | 418,956 |
+| Test lines (`tests/`) | 383,129 |
+| Documentation lines (`docs/**/*.md`) | 48,964 |
 | Top-level DSL constructs | 47 |
 | Constructs with zero consumer use | 17 |
 
@@ -93,22 +93,22 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 
 | Subpackage | Source lines | Test lines (name-matched) |
 |---|---:|---:|
-| `http` | 130,464 | 649 |
-| `core` | 89,644 | 2,097 |
+| `http` | 129,232 | 649 |
+| `core` | 89,034 | 2,097 |
 | `mcp` | 39,038 | 6,368 |
-| `render` | 32,978 | 6,130 |
-| `cli` | 31,757 | 9,704 |
-| `testing` | 27,704 | 68 |
-| `page` | 14,209 | 2,501 |
+| `cli` | 31,839 | 9,737 |
+| `render` | 29,264 | 6,130 |
+| `testing` | 27,609 | 68 |
+| `page` | 14,041 | 2,501 |
 | `agent` | 10,845 | 8,975 |
-| `qa` | 7,501 | 3,214 |
+| `qa` | 7,485 | 3,214 |
 | `sentinel` | 6,659 | 563 |
 | `db` | 4,404 | 3,779 |
 | `compliance` | 4,286 | 1,417 |
-| `rbac` | 4,243 | 7,241 |
+| `rbac` | 4,243 | 7,176 |
 | `signing` | 2,143 | 1,969 |
 | `demo_data` | 2,127 | 814 |
-| `conformance` | 1,760 | 4,567 |
+| `conformance` | 1,760 | 4,284 |
 | `llm` | 1,718 | 3,046 |
 | `services` | 1,632 | 274 |
 | `agent_loop` | 1,542 | 154 |
@@ -330,6 +330,7 @@ Files the framework reads from a project (`*spec.yaml` literals in `src/dazzle`,
 |---|---:|---:|---:|---:|
 | `brandspec.yaml` | 1 | 0 | 0 | 0 |
 | `dazzle.toml` | 1 | 1 | 1 | 4 |
+| `flense_consumers.toml` | 0 | 0 | 0 | 0 |
 | `sitespec.yaml` | 1 | 1 | 0 | 4 |
 | `test_personas.toml` | 0 | 0 | 0 | 0 |
 | `themespec.yaml` | 1 | 1 | 0 | 1 |
@@ -420,7 +421,7 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 
 | Directory | Markdown lines |
 |---|---:|
-| `docs/reference/` | 18,774 |
+| `docs/reference/` | 18,615 |
 | `docs/adr/` | 5,978 |
 | `docs/proposals/` | 4,679 |
 | `docs/plans/` | 4,183 |

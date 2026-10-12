@@ -890,7 +890,7 @@ workspace manager_ops "Manager Ops":
   # fetch (recommend=unclear, ownership=harness). Peer manager homes (Zendesk /
   # Intercom) keep pressure panels above the fold — not status funnel theater
   # or a second ticket trail after live_conversation. Lifecycle kanban stays
-  # on agent_dashboard; funnel_chart coverage lives on agent_console.
+  # on agent_dashboard.
 
 
 workspace agent_dashboard "Agent Dashboard":
@@ -1124,17 +1124,6 @@ workspace agent_console "Agent Console":
     action: ticket_edit
     empty: "No open tickets for this agent"
 
-  # Framework artefact coverage dogfood (cycle 1813): display: progress +
-  # activity_feed live under context_selector scope — not on agent_dashboard
-  # hero (empty_region honesty). Proves GROUP BY / feed re-scope with
-  # current_context like the #1305 bar charts above.
-  agent_lifecycle_progress:
-    source: Ticket
-    filter: assigned_to = current_context
-    display: progress
-    group_by: status
-    empty: "No tickets for this agent"
-
   agent_comment_activity:
     source: Comment
     filter: ticket.assigned_to = current_context
@@ -1143,36 +1132,24 @@ workspace agent_console "Agent Console":
     limit: 15
     empty: "No comments for this agent"
 
-  # Cycle 1850: host display: funnel_chart here after pruning Manager Ops
-  # status-funnel theater (empty_region honesty + pilot resource storm).
-  # Same current_context re-scope pattern as progress / bar charts above.
-  agent_status_funnel:
-    source: Ticket
-    filter: assigned_to = current_context
-    display: funnel_chart
-    group_by: status
-    aggregate:
-      count: count(Ticket)
-    empty: "No tickets for this agent"
-
   # Goal B empty_region_honesty (cycle 2067): recipe agent_console_twin_queue_prune
   # — drop twin open-ticket cards + twin comment timeline (agent_ticket_cards /
   # agent_comment_trail). Peer Zendesk/Front agent inspectors show one open
   # plate + one trail under the people selector, not triple ticket dumps or
   # dual timelines that scroll as empty theater. #1304/#1305 keep agent_tickets
-  # + agent_ticket_comments + bar/progress/funnel coverage below fold.
+  # + agent_ticket_comments + bar-chart coverage below fold.
   # Cycle 2086 agent_only_selector: L1 + not External so the default first
   # option is a frontline plate (not Trial parent / Admin voids).
   ux:
     as manager:
       purpose: "One open plate + one comment trail under agent selector — no twin dumps"
-      focus: agent_priority_queue, agent_ticket_comments, agent_lifecycle_progress, agent_category_chart
+      focus: agent_priority_queue, agent_ticket_comments, agent_category_chart
     as agent:
       purpose: "One open plate + one comment trail under agent selector — no twin dumps"
-      focus: agent_priority_queue, agent_ticket_comments, agent_lifecycle_progress, agent_category_chart
+      focus: agent_priority_queue, agent_ticket_comments, agent_category_chart
     as admin:
       purpose: "One open plate + one comment trail under agent selector — no twin dumps"
-      focus: agent_priority_queue, agent_ticket_comments, agent_lifecycle_progress, agent_category_chart
+      focus: agent_priority_queue, agent_ticket_comments, agent_category_chart
 
 # Goal B org_structure (cycle 1847 + 2056): peer support tools (Zendesk /
 # Front / Intercom) show L1 frontline vs L2 escalation people density for

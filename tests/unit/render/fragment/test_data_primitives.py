@@ -8,10 +8,8 @@ import pytest
 from dazzle.render.fragment.htmx import URL
 from dazzle.render.fragment.primitives.data import (
     KPI,
-    ActionCard,
     BarChart,
     BarTrack,
-    BoxPlot,
     CalendarGrid,
     ConfirmCheckItem,
     ConfirmGate,
@@ -26,13 +24,11 @@ from dazzle.render.fragment.primitives.data import (
     MetricTile,
     Pagination,
     PivotTable,
-    ProfileCard,
     Radar,
     ReferenceBand,
     ReferenceLine,
     SearchBox,
     SortHeader,
-    StageBar,
     Table,
     Timeline,
     TimeSeries,
@@ -47,11 +43,6 @@ from dazzle.render.fragment.primitives.data import (
 @pytest.mark.parametrize(
     ("ctor", "match"),
     [
-        pytest.param(
-            lambda: ActionCard(label=""),
-            "non-empty label",
-            id="action_card.label",
-        ),
         pytest.param(
             lambda: MetricTile(label="", value="0"),
             "non-empty label",
@@ -163,19 +154,9 @@ def test_rejects_empty_required_field(ctor: Callable[[], object], match: str) ->
             id="radar.axes",
         ),
         pytest.param(
-            lambda: BoxPlot(label="x", groups=()),
-            "at least one group",
-            id="box_plot.groups",
-        ),
-        pytest.param(
             lambda: BarTrack(rows=(), max_value=100.0),
             "at least one row",
             id="bar_track.rows",
-        ),
-        pytest.param(
-            lambda: StageBar(stages=()),
-            "at least one stage",
-            id="stage_bar.stages",
         ),
         pytest.param(
             lambda: LazyTabPanel(region_name="r", tabs=()),
@@ -207,11 +188,6 @@ def test_rejects_empty_collection(ctor: Callable[[], object], match: str) -> Non
             lambda: TimeSeries(label="x", points=(("a", 1.0),), view="pie"),  # type: ignore[arg-type]
             "invalid view",
             id="time_series.view",
-        ),
-        pytest.param(
-            lambda: ActionCard(label="X", tone="purple"),  # type: ignore[arg-type]
-            "invalid tone",
-            id="action_card.tone",
         ),
         pytest.param(
             lambda: MetricTile(label="X", value="0", tone="purple"),  # type: ignore[arg-type]
@@ -417,87 +393,6 @@ def test_radar_three_axes_minimum() -> None:
     assert len(r.axes) == 3
 
 
-# === BoxPlot ===
-
-
-def test_box_plot_rejects_non_monotonic_quartiles() -> None:
-    with pytest.raises(ValueError, match="quartiles not monotonic"):
-        BoxPlot(label="x", groups=(("g1", 5.0, 4.0, 3.0, 2.0, 1.0),))
-
-
-def test_box_plot_accepts_equal_quartiles() -> None:
-    """Degenerate distributions (all values equal) are still valid —
-    the constraint is `<=`, not strict `<`."""
-    b = BoxPlot(label="x", groups=(("g1", 0.0, 0.0, 0.0, 0.0, 0.0),))
-    assert b.groups[0] == ("g1", 0.0, 0.0, 0.0, 0.0, 0.0)
-
-
-def test_box_plot_rejects_wrong_arity_group() -> None:
-    with pytest.raises(ValueError, match="arity mismatch"):
-        BoxPlot(label="x", groups=(("g1", 1.0, 2.0, 3.0),))  # type: ignore[arg-type]
-
-
-# === ActionCard ===
-
-
-def test_action_card_count_zero_distinct_from_none() -> None:
-    """`count = 0` should render a badge with "0"; `count = None` is no badge."""
-    a = ActionCard(label="Zero", count=0)
-    b = ActionCard(label="Empty")
-    assert a.count == 0 and b.count is None
-
-
-def test_action_card_static_when_url_empty() -> None:
-    a = ActionCard(label="X", url="")
-    assert a.url == ""
-
-
-def test_action_card_all_tones_accepted() -> None:
-    for tone in ("neutral", "positive", "warning", "destructive", "accent"):
-        c = ActionCard(label="X", tone=tone)  # type: ignore[arg-type]
-        assert c.tone == tone
-
-
-# === ProfileCard ===
-
-
-def test_profile_card_requires_at_least_one_identity_element() -> None:
-    """The card needs primary, avatar_url, or initials — anything else
-    would render an empty shell. The adapter degrades to EmptyState
-    rather than letting an invalid card through."""
-    with pytest.raises(ValueError, match="at least one of primary"):
-        ProfileCard()
-    with pytest.raises(ValueError, match="at least one of primary"):
-        ProfileCard(secondary="Just a meta line, no name")
-
-
-def test_profile_card_primary_alone_is_valid() -> None:
-    p = ProfileCard(primary="Alice")
-    assert p.primary == "Alice"
-
-
-def test_profile_card_avatar_alone_is_valid() -> None:
-    p = ProfileCard(avatar_url="/avatars/x.png")
-    assert p.avatar_url == "/avatars/x.png"
-
-
-def test_profile_card_initials_alone_is_valid() -> None:
-    p = ProfileCard(initials="AB")
-    assert p.initials == "AB"
-
-
-def test_profile_card_holds_stats_and_facts_immutably() -> None:
-    """`stats` is tuple[tuple[str, str], ...] and `facts` is
-    tuple[str, ...] so the dataclass stays frozen."""
-    p = ProfileCard(
-        primary="X",
-        stats=(("Cases", "5"), ("Open", "2")),
-        facts=("Lead", "Mentor"),
-    )
-    assert p.stats == (("Cases", "5"), ("Open", "2"))
-    assert p.facts == ("Lead", "Mentor")
-
-
 # === MetricTile ===
 
 
@@ -549,35 +444,6 @@ def test_bar_track_accepts_zero_and_hundred_fill_pct() -> None:
         max_value=100.0,
     )
     assert len(b.rows) == 2
-
-
-# === StageBar ===
-
-
-def test_stage_bar_rejects_complete_pct_above_100() -> None:
-    with pytest.raises(ValueError, match=r"complete_pct=150"):
-        StageBar(stages=(("X", 1, False),), complete_pct=150)
-
-
-def test_stage_bar_rejects_negative_complete_pct() -> None:
-    with pytest.raises(ValueError, match=r"complete_pct=-1"):
-        StageBar(stages=(("X", 1, False),), complete_pct=-1)
-
-
-def test_stage_bar_minimal() -> None:
-    s = StageBar(stages=(("Backlog", 5, False),))
-    assert s.complete_pct == 0.0
-    assert s.total == 0
-
-
-def test_stage_bar_full_progress_state() -> None:
-    s = StageBar(
-        stages=(("Done", 10, True),),
-        complete_pct=100.0,
-        complete_count=10,
-        total=10,
-    )
-    assert s.complete_pct == 100.0
 
 
 # === ReferenceLine / ReferenceBand ===
@@ -640,24 +506,13 @@ def test_bar_track_carries_optional_references() -> None:
     assert bt.reference_bands == ()
 
 
-def test_box_plot_carries_optional_references() -> None:
-    bp = BoxPlot(
-        label="x",
-        groups=(("g", 0.0, 1.0, 2.0, 3.0, 4.0),),
-        reference_bands=(ReferenceBand(from_value=1, to_value=3, label="iqr"),),
-    )
-    assert len(bp.reference_bands) == 1
-
-
 def test_chart_primitives_default_references_empty() -> None:
     """Backward compat — pre-Phase-4B.1.b primitives without references
     keep the empty-tuple default."""
     bc = BarChart(label="x", buckets=(("a", 1),))
     bt = BarTrack(rows=(("X", 1.0, "1", 50.0),), max_value=100.0)
-    bp = BoxPlot(label="x", groups=(("g", 0.0, 1.0, 2.0, 3.0, 4.0),))
     assert bc.reference_lines == () and bc.reference_bands == ()
     assert bt.reference_lines == () and bt.reference_bands == ()
-    assert bp.reference_lines == () and bp.reference_bands == ()
 
 
 # === LazyTab / LazyTabPanel ===

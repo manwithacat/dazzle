@@ -2,8 +2,8 @@
 
 One entry per region in the ``ux_catalogue`` workspace of
 ``fixtures/component_showcase``. ``sample_items`` feed item-based modes
-(list/bullet/kanban); ``canned_buckets`` feed aggregate modes (bar_chart/
-comparison/heatmap/pivot/metrics) via the fake repository in the harness.
+(list/kanban); ``canned_buckets`` feed aggregate modes (bar_chart/
+comparison/pivot/metrics) via the fake repository in the harness.
 This is the single place catalogue sample data lives.
 """
 
@@ -62,7 +62,7 @@ _BOXES: list[dict[str, Any]] = [
     },
 ]
 
-# Time-bucket aggregate rows for the time-series modes (line/sparkline).
+# Time-bucket aggregate rows for the time-series mode (line_chart).
 # The fast-path GROUP BY shaping keys the bucket on the field name
 # (`opened_at`) + emits a formatted `<field>_label`; the measure is `count`.
 _TIME_BUCKETS: list[dict[str, Any]] = [
@@ -71,16 +71,6 @@ _TIME_BUCKETS: list[dict[str, Any]] = [
     {"dimensions": {"opened_at": "2026-06-23"}, "measures": {"count": 4}},
     {"dimensions": {"opened_at": "2026-06-24"}, "measures": {"count": 8}},
     {"dimensions": {"opened_at": "2026-06-25"}, "measures": {"count": 6}},
-]
-
-# Multi-dim time × team aggregate rows for the stacked area mode (#1473).
-# Two series (platform/payments) over two weekly buckets — the pivot path
-# keys each cell on `opened_at` (time bucket) + `team` (series dim).
-_TIME_TEAM_BUCKETS: list[dict[str, Any]] = [
-    {"dimensions": {"opened_at": "2026-W23", "team": "platform"}, "measures": {"count": 4}},
-    {"dimensions": {"opened_at": "2026-W23", "team": "payments"}, "measures": {"count": 2}},
-    {"dimensions": {"opened_at": "2026-W24", "team": "platform"}, "measures": {"count": 6}},
-    {"dimensions": {"opened_at": "2026-W24", "team": "payments"}, "measures": {"count": 3}},
 ]
 
 CatalogueEntry = dict[str, Any]
@@ -138,12 +128,6 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
             {"dimensions": {"team": "ml", "team_label": "ml"}, "measures": {"total": 1}},
         ],
     },
-    "cat_heatmap": {
-        "description": "Matrix density — latency shaded across team × status.",
-        "marker": "dz-heatmap-region",
-        "sample_items": _BOXES,
-        "canned_buckets": None,
-    },
     "cat_pivot": {
         "description": "Cross-tab — counts across two dimensions (team × status).",
         "marker": "dz-pivot-region",
@@ -154,12 +138,6 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
             {"dimensions": {"team": "payments", "status": "healthy"}, "measures": {"count": 6}},
             {"dimensions": {"team": "payments", "status": "degraded"}, "measures": {"count": 2}},
         ],
-    },
-    "cat_bullet": {
-        "description": "Actual-vs-target rows — each box's latency against its target.",
-        "marker": "dz-bullet-region",
-        "sample_items": _BOXES,
-        "canned_buckets": None,
     },
     "cat_kanban": {
         "description": "Board view — boxes grouped into status columns.",
@@ -200,35 +178,9 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
             {"dimensions": {"team": "ml", "team_label": "ml"}, "measures": {"count": 1}},
         ],
     },
-    "cat_histogram": {
-        "description": "Continuous-axis distribution — `latency_ms` binned (Sturges' rule).",
-        "marker": "dz-histogram-region",
-        "sample_items": _BOXES,
-        "canned_buckets": None,
-    },
-    "cat_box_plot": {
-        "description": (
-            "Quartile spread per team — Q1/median/Q3 + Tukey whiskers over `latency_ms`."
-        ),
-        "marker": "dz-box-plot-region",
-        "sample_items": _BOXES,
-        "canned_buckets": None,
-    },
-    "cat_funnel": {
-        "description": "Stage funnel — boxes counted through the status lifecycle.",
-        "marker": "dz-funnel-chart-region",
-        "sample_items": _BOXES,
-        "canned_buckets": None,
-    },
     "cat_line": {
         "description": "Time series — daily box volume. One `date_trunc('day')` GROUP BY.",
         "marker": "dz-line-chart-region",
-        "sample_items": [],
-        "canned_buckets": _TIME_BUCKETS,
-    },
-    "cat_sparkline": {
-        "description": "Compact trend tile — the same daily series as a headline + tiny SVG.",
-        "marker": "dz-sparkline-region",
         "sample_items": [],
         "canned_buckets": _TIME_BUCKETS,
     },
@@ -248,18 +200,5 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
             {"dimensions": {"team": "growth", "team_label": "growth"}, "measures": {"count": 4}},
             {"dimensions": {"team": "data", "team_label": "data"}, "measures": {"count": 9}},
         ],
-    },
-    "cat_area": {
-        "description": "Filled area — daily box volume under a single series.",
-        "marker": "dz-area-chart-region",
-        "sample_items": [],
-        "canned_buckets": _TIME_BUCKETS,
-    },
-    "cat_area_stacked": {
-        "description": "Stacked area — weekly box volume split by team. "
-        "Multi-dim time bucket (#1473): overlaid series, one per team, with a legend.",
-        "marker": "dz-chart-legend",
-        "sample_items": [],
-        "canned_buckets": _TIME_TEAM_BUCKETS,
     },
 }

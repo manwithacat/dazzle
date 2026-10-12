@@ -1,12 +1,10 @@
 """Cards-family region builders.
 
-Houses the 5 card-shaped builders. All produce a Surface with card-style
-content (kanban columns of cards, single profile card, action-CTA grid,
-composite multi-section card, horizontal member skim):
+Houses the card-shaped builders. All produce a Surface with card-style
+content (kanban columns of cards, composite multi-section card,
+horizontal member skim):
 
   - _build_kanban         KanbanRegion of KanbanColumns × KanbanCards
-  - _build_profile_card   single ProfileCard with avatar/stats/facts
-  - _build_action_grid    ActionGrid of ActionCard CTAs
   - _build_entity_card    EntityCardRegion (composite 360°) (#1017)
   - _build_cohort_strip   horizontal CohortStripRegion (#1018)
 
@@ -20,13 +18,11 @@ See issue #1065 for the full decomposition plan.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from dazzle.render.display_names import compute_kanban_item_columns, group_field_key
 from dazzle.render.fragment import (
     URL,
-    ActionCard,
-    ActionGrid,
     CohortStripCell,
     CohortStripLensTab,
     CohortStripRegion,
@@ -37,7 +33,6 @@ from dazzle.render.fragment import (
     KanbanCard,
     KanbanColumn,
     KanbanRegion,
-    ProfileCard,
     RawHTML,
     Surface,
 )
@@ -46,7 +41,6 @@ from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
     _cohort_empty_message,
     _kanban_lane_empty_message,
-    _profile_empty_message,
     _region_title,
     _render_typed_value,
     _wrap_surface,
@@ -105,7 +99,7 @@ def _kanban_column_plan(
 
 
 class _BuildersCardsMixin:
-    """Mixin adding the 5 cards-family `_build_*` methods to
+    """Mixin adding the cards-family `_build_*` methods to
     `WorkspaceRegionAdapter`. Same pattern as other family mixins.
     """
 
@@ -328,140 +322,6 @@ class _BuildersCardsMixin:
             lane_empty_message=_kanban_lane_empty_message(region, ctx),
         )
         return _wrap_surface(title, "kanban", body)
-
-    def _build_profile_card(self, region: Any, ctx: RegionContext) -> Surface:
-        """`display: profile_card` regions render single-record identity
-        panels.
-
-        Phase 4B.1.b — replaces the prior alias to `_build_detail`, which
-        rendered a generic key/value Card. The legacy template uses a
-        pre-assembled `profile_card_data` dict with avatar/initials/
-        primary/secondary/stats/facts; this builder consumes the same
-        shape and produces the typed `ProfileCard` primitive.
-
-        ctx shape:
-            profile_card_data: dict {
-                primary: str (name)
-                secondary: str (meta line)
-                avatar_url: str
-                initials: str
-                stats: list[{label, value}]
-                facts: list[str]
-            }
-
-        Degrades to EmptyState when none of primary/avatar_url/initials
-        are populated — matches the legacy template's else branch and
-        avoids tripping the strict ProfileCard primitive's invariant.
-        """
-        title = _region_title(region)
-        data = ctx.get("profile_card_data") or {}
-        if not isinstance(data, dict):
-            data = {}
-
-        primary = str(data.get("primary") or "")
-        secondary = str(data.get("secondary") or "")
-        avatar_url = str(data.get("avatar_url") or "")
-        initials = str(data.get("initials") or "")
-
-        body: Fragment
-        if not (primary or avatar_url or initials):
-            empty_title = _profile_empty_message(region, ctx)
-            description = "No profile data available." if empty_title == "No profile data" else ""
-            body = EmptyState(
-                title=empty_title,
-                description=description,
-            )
-            return _wrap_surface(title, "dashboard", body)
-
-        # Stats: each entry should be a dict with label + value;
-        # silently drop malformed entries so a single bad row doesn't
-        # take down the whole panel.
-        stats: list[tuple[str, str]] = []
-        for entry in data.get("stats") or []:
-            if not isinstance(entry, dict):
-                continue
-            label = str(entry.get("label") or "")
-            value = entry.get("value")
-            value_str = "" if value is None else str(value)
-            if label:
-                stats.append((label, value_str))
-
-        # Facts: each entry should be a string.
-        facts: list[str] = []
-        for entry in data.get("facts") or []:
-            text = str(entry or "")
-            if text:
-                facts.append(text)
-
-        body = ProfileCard(
-            primary=primary,
-            secondary=secondary,
-            avatar_url=avatar_url,
-            initials=initials,
-            stats=tuple(stats),
-            facts=tuple(facts),
-        )
-        return _wrap_surface(title, "dashboard", body)
-
-    def _build_action_grid(self, region: Any, ctx: RegionContext) -> Surface:
-        """`display: action_grid` regions render dashboard CTA cards.
-
-        Phase 4B.1.b — replaces the prior alias to `_build_grid`, which
-        rendered plain Card(Text(label)) tiles with no icons, counts,
-        tones, or URLs. This builder uses the typed `ActionCard`
-        primitive so each card carries the full design contract from the
-        legacy template.
-
-        ctx shape:
-            action_cards: list of dicts {"label": str, "icon": str (optional),
-                "count": int | None, "tone": str (default "neutral"),
-                "url": str (optional)}
-            (legacy alias: `action_card_data` accepted as alias)
-            columns: int (default 3, max 12) for the surrounding Grid
-
-        Cards with empty labels or unknown tones silently drop rather
-        than crashing the strict ActionCard primitive.
-        """
-        title = _region_title(region)
-        raw_cards = ctx.get("action_cards") or ctx.get("action_card_data") or []
-        columns = int(ctx.get("columns") or 3)
-        columns = max(1, min(12, columns))
-
-        cards: list[object] = []
-        for entry in raw_cards:
-            if not isinstance(entry, dict):
-                continue
-            label = str(entry.get("label") or "")
-            if not label:
-                continue
-            tone_raw = str(entry.get("tone") or "neutral")
-            tone: Literal["neutral", "positive", "warning", "destructive", "accent"] = (
-                tone_raw  # type: ignore[assignment]
-                if tone_raw in ("neutral", "positive", "warning", "destructive", "accent")
-                else "neutral"
-            )
-            count_raw = entry.get("count")
-            count: int | None
-            if count_raw is None:
-                count = None
-            else:
-                try:
-                    count = int(count_raw)
-                except (TypeError, ValueError):
-                    count = None
-            cards.append(
-                ActionCard(
-                    label=label,
-                    icon=str(entry.get("icon") or ""),
-                    count=count,
-                    tone=tone,
-                    url=str(entry.get("url") or ""),
-                )
-            )
-
-        empty_msg = getattr(region, "empty_message", None) or "No actions available."
-        body: Fragment = ActionGrid(cards=tuple(cards), empty_message=str(empty_msg))
-        return _wrap_surface(title, "dashboard", body)
 
     def _build_cohort_strip(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: cohort_strip` regions render as a horizontal

@@ -30,13 +30,10 @@
 # - [x] display: list
 # - [x] display: grid
 # - [x] display: timeline
-# - [x] display: map
-# - [x] display: detail
 # - [x] display: summary
 # - [x] display: metrics
 # - [x] display: kanban
 # - [x] display: bar_chart
-# - [x] display: funnel_chart
 #
 # UX BLOCK:
 # - [x] ux: block (workspace-level)
@@ -114,10 +111,6 @@ workspace admin_console "Admin Console":
     source: Employee
     display: list
     action: employee_edit
-
-  system_settings:
-    source: SystemSettings
-    display: detail
 
 # =============================================================================
 # STAGE HINTS
@@ -200,11 +193,6 @@ workspace display_modes "Display Mode Showcase":
     source: EmployeeAddress
     display: grid
 
-  # Detail view (single item)
-  detail_region:
-    source: Company
-    display: detail
-
   # Summary view (metrics/KPIs)
   summary_region:
     source: Invoice
@@ -234,14 +222,6 @@ workspace display_modes "Display Mode Showcase":
     group_by: status
     aggregate:
       total: sum(total)
-
-  # Funnel chart view
-  funnel_chart_region:
-    source: LeadQualification
-    display: funnel_chart
-    group_by: status
-    aggregate:
-      count: count(LeadQualification)
 
 # =============================================================================
 # REGION WITH FILTER
@@ -508,14 +488,6 @@ workspace operations_center "Operations Center":
     sort: occurred_at desc
     limit: 50
     empty: "No recent activity"
-
-  # Order funnel
-  order_funnel:
-    source: OrderWithTotals
-    display: funnel_chart
-    group_by: status
-    aggregate:
-      order_count: count(OrderWithTotals)
 
   ux:
     purpose: "Unified operations view for support and management"

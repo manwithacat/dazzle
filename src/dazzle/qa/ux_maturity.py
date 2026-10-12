@@ -94,12 +94,10 @@ PRINCIPLES = {
 
 
 def _display_kinds() -> tuple[dict[str, str], set[str]]:
-    """The full set of region display kinds (builders + aliases + timeseries
-    views) and the raw `_BUILDERS` map."""
+    """The full set of region display kinds (builders + aliases) and the raw
+    `_BUILDERS` map."""
     builders = dict(WorkspaceRegionAdapter._BUILDERS)
-    kinds = set(builders)
-    for attr in ("_ALIASES", "_TIMESERIES_VIEWS"):
-        kinds |= set(getattr(WorkspaceRegionAdapter, attr, {}) or {})
+    kinds = set(builders) | set(WorkspaceRegionAdapter._ALIASES)
     return builders, kinds
 
 
@@ -163,7 +161,7 @@ def _probe_1c() -> ProbeResult:
         is None
     )
     _, kinds = _display_kinds()
-    have = kinds & {"comparison", "radar", "box_plot", "bullet", "sparkline", "heatmap"}
+    have = kinds & {"comparison", "radar"}
     ok = unset_is_kpi and scalar_unset_is_kpi and bool(have)
     return ProbeResult(
         ok,

@@ -29,7 +29,7 @@ Group `stories.dsl` (or product jobs) by `persona:`. Flag:
 | Counts, SLA, team health | `display: metrics` (+ `tones:`) |
 | Readiness / checklist / policy strip | `display: status_list` |
 | Move through states on a board | `display: kanban` |
-| Lifecycle pressure | `funnel_chart` / `progress` |
+| Lifecycle pressure | `bar_chart` grouped by state / `pipeline_steps` |
 | “What needs me” multi-source | `task_inbox` |
 | My scoped history | filtered `list` or `queue` |
 

@@ -653,8 +653,8 @@ def validate_workspace_region_actions(appspec: ir.AppSpec) -> tuple[list[str], l
                 # #1412: an `action:` referencing a non-existent surface was
                 # silently ignored (the old comment claimed it was "caught
                 # elsewhere" — it wasn't, so a typo'd ref shipped a runtime
-                # row-click to a dead URL). A path-style action (an action_grid
-                # CTA, which starts with "/") is legitimately not a surface
+                # row-click to a dead URL). A path-style action (one that
+                # starts with "/") is legitimately not a surface
                 # name, so only flag identifier-shaped dangling refs.
                 if "/" not in region.action:
                     region_label = getattr(region, "name", None) or region.source or "?"

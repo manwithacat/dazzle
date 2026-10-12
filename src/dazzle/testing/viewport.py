@@ -254,35 +254,6 @@ METRICS_PATTERN = ComponentPattern(
     ],
 )
 
-# ACTION_GRID display → `.dz-action-grid`: 1 → 2 → 3 cols (40rem / 64rem).
-ACTION_GRID_PATTERN = ComponentPattern(
-    name="action_grid",
-    skip_if_absent=True,  # region-body grid — absent when the region is empty/collapsed (#1494)
-    assertions=[
-        ViewportAssertion(
-            selector=".dz-action-grid",
-            property="grid-column-count",
-            expected="1",
-            viewport="mobile",
-            description="Action cards single-column on mobile (<40rem)",
-        ),
-        ViewportAssertion(
-            selector=".dz-action-grid",
-            property="grid-column-count",
-            expected="2",
-            viewport="tablet",
-            description="Action cards two-column on tablet (≥40rem, <64rem)",
-        ),
-        ViewportAssertion(
-            selector=".dz-action-grid",
-            property="grid-column-count",
-            expected="3",
-            viewport="desktop",
-            description="Action cards three-column on desktop (≥64rem)",
-        ),
-    ],
-)
-
 # NOTE — NO dashboard-grid pattern (#1295, removed after the live CI run caught
 # it). `.dz-dashboard-grid` is a uniform **12-track** grid at EVERY viewport
 # (verified live: `grid-template-columns` resolves to 12 tracks at 375px AND
@@ -293,14 +264,13 @@ ACTION_GRID_PATTERN = ComponentPattern(
 # grid_1_2/grid_2_3 patterns and the container-query DETAIL view: not
 # viewport-column-count-assertable, so deliberately excluded. The freshness
 # guard still pins that `.dz-dashboard-grid` is emitted; the real
-# viewport-responsive grids below (.dz-grid-list / .dz-metrics-grid /
-# .dz-action-grid) DO change track count by breakpoint and are asserted.
+# viewport-responsive grids below (.dz-grid-list / .dz-metrics-grid) DO
+# change track count by breakpoint and are asserted.
 
 ALL_PATTERNS: dict[str, ComponentPattern] = {
     "drawer": DRAWER_PATTERN,
     "grid": GRID_PATTERN,
     "metrics": METRICS_PATTERN,
-    "action_grid": ACTION_GRID_PATTERN,
 }
 
 # ---------------------------------------------------------------------------
@@ -310,15 +280,11 @@ ALL_PATTERNS: dict[str, ComponentPattern] = {
 # Keyed by the UPPER-cased DisplayMode value (region.display.upper()). Only
 # modes whose region primitive emits a viewport-media-query-driven responsive
 # grid are listed — these are the ones a viewport-width harness can assert
-# deterministically. Notable omission: DETAIL (`.dz-detail-row`) switches via
-# an `@container (width > 32rem)` query, NOT a viewport media query, so a
-# viewport-width assertion can't express it without becoming a false signal —
-# it's deliberately excluded (#1295).
+# deterministically (#1295).
 _DISPLAY_PATTERN_MAP: dict[str, list[str]] = {
     "GRID": ["grid"],
     "METRICS": ["metrics"],
     "SUMMARY": ["metrics"],
-    "ACTION_GRID": ["action_grid"],
 }
 
 
@@ -336,8 +302,8 @@ def derive_patterns_from_appspec(
 
     * Workspace pages (``/app/workspaces/<name>``) get :data:`DRAWER_PATTERN`
       (app-shell chrome) + one region pattern per region ``display`` mode that
-      maps to a viewport-responsive grid (GRID / METRICS / SUMMARY /
-      ACTION_GRID). The ``.dz-dashboard-grid`` container itself is NOT asserted
+      maps to a viewport-responsive grid (GRID / METRICS / SUMMARY).
+      The ``.dz-dashboard-grid`` container itself is NOT asserted
       — it's a uniform 12-track grid at every viewport (responsiveness is
       card-span based, not column-count), so it isn't viewport-assertable (#1295).
     * List surfaces (``/app/<entity>``) get :data:`DRAWER_PATTERN` only — a

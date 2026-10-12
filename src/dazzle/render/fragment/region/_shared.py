@@ -25,16 +25,12 @@ from typing import Any
 
 from dazzle.i18n.display_locale import get_display_locale
 from dazzle.render.breadcrumbs import (
-    clerk_empty_carousel_title,
     clerk_empty_chart_title,
     clerk_empty_cohort_title,
     clerk_empty_kanban_lane,
-    clerk_empty_map_title,
     clerk_empty_pivot_title,
-    clerk_empty_profile_title,
     clerk_empty_queue_title,
     clerk_empty_timeline_title,
-    clerk_empty_tree_title,
 )
 from dazzle.render.cell_chrome import (
     _render_color_swatch_html,
@@ -226,16 +222,6 @@ def _kanban_lane_empty_message(region: Any, ctx: Any) -> str:
     return clerk_empty_kanban_lane(name, catalog)
 
 
-def _tree_empty_title(region: Any, ctx: Any) -> str:
-    """Clerk-facing EmptyState title for vacant trees (oral #224).
-
-    Generic ``No items`` hid the entity noun while empty lists already
-    say ``No devices found``. Leftover junk invents no collection.
-    """
-    name, catalog = _region_entity_catalog(region, ctx)
-    return clerk_empty_tree_title(name, catalog)
-
-
 def _queue_empty_message(region: Any, ctx: Any) -> str:
     """Clerk-facing empty speech for vacant queues (oral #225).
 
@@ -254,36 +240,6 @@ def _cohort_empty_message(region: Any, ctx: Any) -> str:
     wins. Leftover junk invents no collection.
     """
     return _authored_or_clerk_empty(region, ctx, clerk_empty_cohort_title)
-
-
-def _profile_empty_message(region: Any, ctx: Any) -> str:
-    """Clerk-facing empty speech for vacant profile cards (oral #227).
-
-    Generic ``No profile data`` hid the entity noun while empty lists
-    already say ``No systems found``. Authored ``empty:`` still wins.
-    Leftover junk invents no collection.
-    """
-    return _authored_or_clerk_empty(region, ctx, clerk_empty_profile_title)
-
-
-def _map_empty_message(region: Any, ctx: Any) -> str:
-    """Clerk-facing empty speech for vacant maps (oral #228).
-
-    Generic ``No locations.`` hid the entity noun while empty lists
-    already say ``No devices found``. Authored ``empty:`` still wins.
-    Leftover junk invents no collection.
-    """
-    return _authored_or_clerk_empty(region, ctx, clerk_empty_map_title)
-
-
-def _carousel_empty_message(region: Any, ctx: Any) -> str:
-    """Clerk-facing empty speech for vacant carousels (oral #229).
-
-    Generic ``No slides.`` hid the entity noun while empty lists already
-    say ``No assets found``. Authored ``empty:`` still wins. Leftover
-    junk invents no collection.
-    """
-    return _authored_or_clerk_empty(region, ctx, clerk_empty_carousel_title)
 
 
 def _pivot_empty_message(region: Any, ctx: Any) -> str:

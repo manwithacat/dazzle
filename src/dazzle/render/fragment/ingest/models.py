@@ -154,40 +154,6 @@ class SearchSelectShell(BaseModel):
     confirm_hold_ms: int = 1500
 
 
-# ── Action-grid seam copy (contracts/action_grid.py) ─────────────────
-# Schema-parity gated. Product API stays the frozen dataclass in
-# primitives/data.py; emission maps through this model then render.
-
-
-ActionCardTone = Literal["neutral", "positive", "warning", "destructive", "accent"]
-
-
-class ActionCard(BaseModel):
-    """One CTA tile the action-grid region emits.
-
-    Map dashboard action specs into this shape:
-
-    - ``label`` → primary line (required)
-    - ``tone`` → surface tint via ``data-dz-tone``
-    - ``url`` → non-empty makes the card an ``<a>``; empty → static ``<div>``
-    - ``count`` → ``None`` omits badge; ``0`` still renders a badge
-    - ``icon_html`` → trusted HTML for the icon slot; empty → spacer
-    """
-
-    label: str
-    tone: ActionCardTone = "neutral"
-    url: str = ""
-    count: int | None = None
-    icon_html: str = ""
-
-    @field_validator("label")
-    @classmethod
-    def _label_nonempty(cls, v: str) -> str:
-        if not (v or "").strip():
-            raise ValueError("ActionCard requires a non-empty label")
-        return v
-
-
 # ── Status-list seam copy (contracts/status_list.py) ─────────────────
 
 
@@ -338,63 +304,6 @@ class TimelineEvent(BaseModel):
         return v
 
 
-# ── Profile-card seam copy (contracts/profile_card.py) ───────────────
-
-
-class ProfileCard(BaseModel):
-    """Identity panel — dual-lock unit for profile-card."""
-
-    primary: str = ""
-    secondary: str = ""
-    avatar_url: str = ""
-    initials: str = ""
-    stats: list[tuple[str, str]] = Field(default_factory=list)
-    facts: list[str] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def _identity_required(self) -> ProfileCard:
-        if not (self.primary or self.avatar_url or self.initials):
-            raise ValueError(
-                "ProfileCard requires at least one of primary, avatar_url, or initials"
-            )
-        return self
-
-
-# ── Sparkline seam copy (contracts/sparkline.py) ─────────────────────
-
-
-class Sparkline(BaseModel):
-    """Compact time-series — dual-lock unit for sparkline."""
-
-    points: list[tuple[str, float]] = Field(default_factory=list)
-    empty_message: str = "—"
-
-
-# ── Funnel seam copy (contracts/funnel.py) ───────────────────────────
-
-
-class FunnelStage(BaseModel):
-    """One funnel stage — dual-lock nested unit."""
-
-    label: str
-    count: int = 0
-
-    @field_validator("label")
-    @classmethod
-    def _label_nonempty(cls, v: str) -> str:
-        if not (v or "").strip():
-            raise ValueError("FunnelStage requires a non-empty label")
-        return v
-
-
-class Funnel(BaseModel):
-    """Conversion funnel — dual-lock unit for funnel Hyperpart."""
-
-    stages: list[FunnelStage] = Field(default_factory=list)
-    total: int = 0
-    empty_message: str = "No data available."
-
-
 # ── Bar-chart seam copy (contracts/bar_chart.py) ─────────────────────
 
 
@@ -418,59 +327,6 @@ class BarChart(BaseModel):
     """Bar chart — dual-lock unit for bar-chart Hyperpart."""
 
     rows: list[BarChartRow] = Field(default_factory=list)
-
-
-# ── Heatmap seam copy (contracts/heatmap.py) ─────────────────────────
-
-
-class HeatmapRow(BaseModel):
-    """One heatmap matrix row."""
-
-    label: str
-    cells: list[float] = Field(default_factory=list)
-
-
-class Heatmap(BaseModel):
-    """Threshold-toned matrix — dual-lock unit for heatmap."""
-
-    columns: list[str] = Field(default_factory=list)
-    rows: list[HeatmapRow] = Field(default_factory=list)
-    thresholds: list[float] = Field(default_factory=list)
-    total: int = 0
-    empty_message: str = "No data available."
-
-
-# ── Bullet seam copy (contracts/bullet.py) ───────────────────────────
-
-
-BulletBandColor = Literal["target", "positive", "warning", "destructive", "muted"]
-
-
-class BulletBand(BaseModel):
-    """Qualitative range band behind the actual bar."""
-
-    from_value: float
-    to_value: float
-    label: str = ""
-    color: BulletBandColor = "target"
-
-
-class BulletRow(BaseModel):
-    """One bullet chart row."""
-
-    label: str
-    actual: float
-    target: float | None = None
-
-
-class Bullet(BaseModel):
-    """Stephen Few bullet chart — dual-lock unit for bullet."""
-
-    rows: list[BulletRow] = Field(default_factory=list)
-    max_value: float = 100.0
-    bands: list[BulletBand] = Field(default_factory=list)
-    empty_message: str = "No data available."
-    unit_suffix: str = ""
 
 
 # ── Bar-track seam copy (contracts/bar_track.py) ─────────────────────
@@ -499,27 +355,6 @@ class BarTrack(BaseModel):
     max_value: float = 100.0
 
 
-# ── Histogram seam copy (contracts/histogram.py) ─────────────────────
-
-
-class HistogramBin(BaseModel):
-    """One continuous histogram bin."""
-
-    label: str
-    count: int = 0
-    low: float = 0.0
-    high: float = 0.0
-
-
-class Histogram(BaseModel):
-    """Distribution histogram — dual-lock unit for histogram."""
-
-    label: str = ""
-    bins: list[HistogramBin] = Field(default_factory=list)
-    svg_html: str = ""
-    empty_message: str = "No data available."
-
-
 # ── Pivot seam copy (contracts/pivot.py) ─────────────────────────────
 
 
@@ -530,65 +365,6 @@ class PivotTable(BaseModel):
     measure_headers: list[str] = Field(default_factory=list)
     rows: list[list[str]] = Field(default_factory=list)
     empty_message: str = "No data to pivot."
-
-
-# ── Box-plot seam copy (contracts/box_plot.py) ───────────────────────
-
-
-class BoxPlotGroup(BaseModel):
-    """One box-plot group five-number summary."""
-
-    label: str
-    min: float = 0.0
-    q1: float = 0.0
-    median: float = 0.0
-    q3: float = 0.0
-    max: float = 0.0
-    samples: int = 0
-
-
-class BoxPlot(BaseModel):
-    """Distribution box-plot — dual-lock unit for box-plot."""
-
-    label: str = ""
-    groups: list[BoxPlotGroup] = Field(default_factory=list)
-    svg_html: str = ""
-    empty_message: str = "No data available."
-
-
-# ── Progress seam copy (contracts/progress.py) ───────────────────────
-
-
-class ProgressStage(BaseModel):
-    """One workflow stage chip."""
-
-    name: str
-    count: int = 0
-    complete: bool = False
-
-
-class Progress(BaseModel):
-    """Progress region — dual-lock unit for progress-region."""
-
-    stages: list[ProgressStage] = Field(default_factory=list)
-    complete_pct: float = 0.0
-    complete_count: int = 0
-    total: int = 0
-
-
-# ── Progress bar seam copy (contracts/progress_bar.py) ────────────────
-
-
-ProgressBarTone = Literal["", "success", "warning", "destructive"]
-
-
-class ProgressBarModel(BaseModel):
-    """Toned determinate progress track — dual-lock unit for progress_bar."""
-
-    value: float = 0.0
-    label: str = "Progress"
-    tone: ProgressBarTone = ""
-    max_value: float = Field(default=100.0, gt=0)
 
 
 # ── Pagination seam copy (contracts/pagination.py) ───────────────────
@@ -683,15 +459,6 @@ class TaskInbox(BaseModel):
     """Task inbox shell — dual-lock unit for task-inbox."""
 
     region_name: str = ""
-    body_html: str = ""
-
-
-# ── Tree seam copy (contracts/tree.py) ───────────────────────────────
-
-
-class Tree(BaseModel):
-    """Tree region shell — dual-lock unit for tree."""
-
     body_html: str = ""
 
 

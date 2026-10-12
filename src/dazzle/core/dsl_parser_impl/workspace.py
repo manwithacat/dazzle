@@ -568,216 +568,6 @@ class WorkspaceParserMixin:
             parts.append(self.advance().value)
         return " ".join(parts)
 
-    def _parse_profile_stats_block(self) -> list[ir.ProfileCardStatSpec]:
-        """Parse the indented body of a profile_card ``stats:`` block (#892).
-
-        Same dash-list shape as ``actions:``. Each entry leads with
-        ``label:`` and carries one ``value:`` field reference::
-
-            stats:
-              - label: "Target"
-                value: target_grade
-              - label: "Projected"
-                value: projected_grade
-        """
-        stats: list[ir.ProfileCardStatSpec] = []
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-            if not self.match(TokenType.MINUS):
-                tok = self.current_token()
-                raise make_parse_error(
-                    'stats entries must start with `- label: "..."`',
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.advance()
-            label_kw = self.expect_identifier_or_keyword().value
-            if label_kw != "label":
-                tok = self.current_token()
-                raise make_parse_error(
-                    f"stats entry must start with `label:`, got {label_kw!r}",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.expect(TokenType.COLON)
-            label_str = self.expect(TokenType.STRING).value
-            self.skip_newlines()
-
-            value_str = ""
-            if self.match(TokenType.INDENT):
-                self.advance()
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    key_tok = self.current_token()
-                    key = key_tok.value
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    if key == "value":
-                        # Value is a field name or dotted path —
-                        # capture as joined identifier-stream.
-                        parts: list[str] = []
-                        while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
-                            parts.append(self.advance().value)
-                        value_str = "".join(parts)
-                        self.skip_newlines()
-                    else:
-                        raise make_parse_error(
-                            f"Unknown stats key {key!r}. Expected: value.",
-                            self.file,
-                            key_tok.line,
-                            key_tok.column,
-                        )
-                self.expect(TokenType.DEDENT)
-            stats.append(ir.ProfileCardStatSpec(label=label_str, value=value_str))
-        return stats
-
-    def _parse_facts_block(self) -> list[str]:
-        """Parse the indented body of a profile_card ``facts:`` block (#892).
-
-        Each entry is a single quoted string supporting `{{ field }}`
-        interpolation (resolved at runtime, not here)::
-
-            facts:
-              - "Tutor: {{ tutor.full_name }}"
-              - "EAL: {{ eal_status }}"
-        """
-        facts: list[str] = []
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-            if not self.match(TokenType.MINUS):
-                tok = self.current_token()
-                raise make_parse_error(
-                    "facts entries must be quoted strings led by `- `",
-                    self.file,
-                    tok.line,
-                    tok.column,
-                )
-            self.advance()
-            facts.append(self.expect(TokenType.STRING).value)
-            self.skip_newlines()
-        return facts
-
-    def _parse_action_cards_block(self) -> list[ir.ActionCardSpec]:
-        """Parse the indented body of an ``actions:`` block (#891).
-
-        Refactored to per-entry helper extraction. Outer loop drives the
-        dash-list; ``_parse_action_card_entry`` consumes one entry.
-
-        Syntax (each entry uses the same dash-list shape as
-        ``overlay_series:`` — leading dash carries the inline ``label:``,
-        then an INDENT block holds icon/count_aggregate/action/tone)::
-
-            actions:
-              - label: "Generate notes"
-                icon: "file-text"
-                count_aggregate: count(StudentProfile where pending = true)
-                action: notes_create
-                tone: positive
-
-        Only ``label:`` is required. ``tone:`` defaults to ``neutral``.
-        """
-        cards: list[ir.ActionCardSpec] = []
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-            cards.append(self._parse_action_card_entry())
-        return cards
-
-    def _parse_action_card_entry(self) -> ir.ActionCardSpec:
-        """Parse one ``- label: "..."`` action-card entry + its kv block."""
-        if not self.match(TokenType.MINUS):
-            tok = self.current_token()
-            raise make_parse_error(
-                'actions entries must start with `- label: "..."`',
-                self.file,
-                tok.line,
-                tok.column,
-            )
-        self.advance()  # consume MINUS
-        label_str = self._parse_dash_required_label("actions")
-        icon_str, count_ref, action_str, tone_str = self._parse_action_card_kv_block(label_str)
-        return ir.ActionCardSpec(
-            label=label_str,
-            icon=icon_str,
-            count=count_ref,
-            action=action_str,
-            tone=tone_str,
-        )
-
-    def _parse_action_card_kv_block(
-        self, label_str: str
-    ) -> tuple[str, ir.AggregateRef | None, str, str]:
-        """Consume the optional indented icon/count_aggregate/action/tone block.
-
-        Returns ``(icon, count_ref, action, tone)`` — empty strings
-        (or ``"neutral"`` for tone, ``None`` for count) when omitted.
-        The ``count_aggregate:`` DSL key parses through
-        :meth:`parse_aggregate_ref` (ADR-0024) into a typed
-        :class:`AggregateRef`.
-        """
-        valid_tones = {"positive", "warning", "destructive", "neutral", "accent"}
-        valid_keys = {"label", "icon", "count_aggregate", "action", "tone"}
-
-        icon_str = ""
-        count_ref: ir.AggregateRef | None = None
-        action_str = ""
-        tone_str = "neutral"
-
-        if not self.match(TokenType.INDENT):
-            return icon_str, count_ref, action_str, tone_str
-        self.advance()  # consume INDENT
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-            key_tok = self.current_token()
-            key = key_tok.value
-            self.advance()
-            self.expect(TokenType.COLON)
-            if key == "icon":
-                icon_str = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-            elif key == "count_aggregate":
-                count_ref = self.parse_aggregate_ref()
-                self.skip_newlines()
-            elif key == "action":
-                # STRING (URL with `/`, `?`, `=`) OR IDENT (bare surface name).
-                if self.match(TokenType.STRING):
-                    action_str = self.advance().value
-                else:
-                    action_str = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-            elif key == "tone":
-                tone_val = self.expect_identifier_or_keyword().value
-                if tone_val not in valid_tones:
-                    raise make_parse_error(
-                        f"actions entry {label_str!r}: tone must be one of "
-                        f"{sorted(valid_tones)}; got {tone_val!r}",
-                        self.file,
-                        key_tok.line,
-                        key_tok.column,
-                    )
-                tone_str = tone_val
-                self.skip_newlines()
-            else:
-                raise make_parse_error(
-                    f"Unknown actions key {key!r}. Expected one of: {sorted(valid_keys)}.",
-                    self.file,
-                    key_tok.line,
-                    key_tok.column,
-                )
-        self.expect(TokenType.DEDENT)
-        return icon_str, count_ref, action_str, tone_str
-
     def _parse_dash_required_label(self, block_name: str) -> str:
         """Common helper: consume the required ``label: "<str>"`` first key.
 
@@ -938,7 +728,7 @@ class WorkspaceParserMixin:
                 self.skip_newlines()
             elif key == "format":
                 # #1300: per-lens render format for the aggregate value
-                # (mirrors bar_track's `track_format:`). String literal.
+                # (Python format spec). String literal.
                 format_spec = str(self.expect(TokenType.STRING).value)
                 self.skip_newlines()
             elif key == "share":
@@ -1916,7 +1706,7 @@ class WorkspaceParserMixin:
                 icon: "check-circle"
                 state: positive
 
-        ``state`` reuses the action_grid + metrics + notice tone
+        ``state`` reuses the metrics + notice tone
         vocabulary (positive / warning / destructive / accent / neutral).
         """
         entries: list[ir.StatusListEntrySpec] = []
@@ -1990,7 +1780,7 @@ class WorkspaceParserMixin:
                 caption_str = self.expect(TokenType.STRING).value
                 self.skip_newlines()
             elif key == "body":
-                # Accordion panel body (alias of caption for display: accordion)
+                # `body:` — alias of `caption:`
                 caption_str = self.expect(TokenType.STRING).value
                 self.skip_newlines()
             elif key == "icon":
@@ -2852,20 +2642,9 @@ class _WorkspaceRegionState:
     aggregates: dict[str, ir.AggregateRef | ir.DerivedMetric] = field(default_factory=dict)
     date_field: str | None = None
     date_range: bool = False
-    heatmap_rows: str | None = None
-    heatmap_columns: str | None = None
-    heatmap_value: str | None = None
-    heatmap_thresholds: list[float] | ir.ParamRef = field(default_factory=list)
-    progress_stages: list[str] = field(default_factory=list)
-    progress_complete_at: str | None = None
     delta: ir.DeltaSpec | None = None
     reference_lines: list[ir.ReferenceLine] = field(default_factory=list)
     reference_bands: list[ir.ReferenceBand] = field(default_factory=list)
-    bin_count: int | None = None
-    show_outliers: bool = True
-    bullet_label: str | None = None
-    bullet_actual: str | None = None
-    bullet_target: str | None = None
     overlay_series: list[ir.OverlaySeriesSpec] = field(default_factory=list)
     css_class: str | None = None
     eyebrow: str | None = None
@@ -2873,20 +2652,12 @@ class _WorkspaceRegionState:
     width: int | None = None
     tones: dict[str, str] = field(default_factory=dict)
     notice: ir.NoticeSpec | None = None
-    track_max: float | None = None
-    track_format: str | None = None
-    action_cards: list[ir.ActionCardSpec] = field(default_factory=list)
     status_entries: list[ir.StatusListEntrySpec] = field(default_factory=list)
     confirmations: list[ir.ConfirmationItemSpec] = field(default_factory=list)
     state_field: str | None = None
     revoke: str | None = None
     primary_action: str | None = None
     secondary_action: str | None = None
-    avatar_field: str | None = None
-    primary: str | None = None
-    secondary: str | None = None
-    profile_stats: list[ir.ProfileCardStatSpec] = field(default_factory=list)
-    facts: list[str] = field(default_factory=list)
     pipeline_stages: list[ir.PipelineStageSpec] = field(default_factory=list)
     cohort_strip_config: ir.CohortStripConfig | None = None
     day_timeline_config: ir.DayTimelineConfig | None = None
@@ -3068,99 +2839,14 @@ def _kw_aggregate(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.expect(TokenType.DEDENT)
 
 
-def _kw_rows(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    rows = parser.expect_identifier_or_keyword().value
-    while parser.match(TokenType.DOT):
-        parser.advance()
-        rows += "." + parser.expect_identifier_or_keyword().value
-    state.heatmap_rows = rows
-    parser.skip_newlines()
-
-
-def _kw_columns(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    cols = parser.expect_identifier_or_keyword().value
-    while parser.match(TokenType.DOT):
-        parser.advance()
-        cols += "." + parser.expect_identifier_or_keyword().value
-    state.heatmap_columns = cols
-    parser.skip_newlines()
-
-
-def _kw_value(parser: Any, state: _WorkspaceRegionState) -> None:
-    """``value: <expression>`` — captured as a raw string until newline."""
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    value_parts: list[str] = []
-    while not parser.match(TokenType.NEWLINE, TokenType.DEDENT):
-        value_parts.append(parser.advance().value)
-    state.heatmap_value = " ".join(value_parts)
-    parser.skip_newlines()
-
-
-def _kw_thresholds(parser: Any, state: _WorkspaceRegionState) -> None:
-    """``thresholds: param("k")`` OR ``thresholds: [0.4, 0.6]``."""
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    if parser.match(TokenType.PARAM):
-        parser.advance()  # consume 'param'
-        parser.expect(TokenType.LPAREN)
-        ref_key = parser.expect(TokenType.STRING).value
-        parser.expect(TokenType.RPAREN)
-        state.heatmap_thresholds = ir.ParamRef(key=ref_key, param_type="list[float]", default=[])
-    else:
-        thresh_list: list[float] = []
-        parser.expect(TokenType.LBRACKET)
-        while not parser.match(TokenType.RBRACKET):
-            parser.skip_newlines()
-            if parser.match(TokenType.RBRACKET):
-                break
-            num_token = parser.expect(TokenType.NUMBER)
-            num_str = num_token.value
-            if parser.match(TokenType.DOT):
-                parser.advance()
-                frac = parser.expect(TokenType.NUMBER).value
-                num_str = num_str + "." + frac
-            thresh_list.append(float(num_str))
-            if parser.match(TokenType.COMMA):
-                parser.advance()
-            parser.skip_newlines()
-        parser.expect(TokenType.RBRACKET)
-        state.heatmap_thresholds = thresh_list
-    parser.skip_newlines()
-
-
 def _kw_stages(parser: Any, state: _WorkspaceRegionState) -> None:
-    """``stages: [a, b]`` → progress (legacy); indented dash-list → pipeline_steps (#890)."""
+    """``stages:`` indented dash-list → pipeline_steps (#890)."""
     parser.advance()
     parser.expect(TokenType.COLON)
-    if parser.match(TokenType.LBRACKET):
-        parser.advance()  # consume [
-        while not parser.match(TokenType.RBRACKET):
-            parser.skip_newlines()
-            if parser.match(TokenType.RBRACKET):
-                break
-            state.progress_stages.append(parser.expect_identifier_or_keyword().value)
-            if parser.match(TokenType.COMMA):
-                parser.advance()
-            parser.skip_newlines()
-        parser.expect(TokenType.RBRACKET)
-        parser.skip_newlines()
-    else:
-        parser.skip_newlines()
-        parser.expect(TokenType.INDENT)
-        state.pipeline_stages = parser._parse_pipeline_stages_block()
-        parser.expect(TokenType.DEDENT)
-
-
-def _kw_complete_at(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.progress_complete_at = parser.expect_identifier_or_keyword().value
     parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    state.pipeline_stages = parser._parse_pipeline_stages_block()
+    parser.expect(TokenType.DEDENT)
 
 
 def _kw_delta(parser: Any, state: _WorkspaceRegionState) -> None:
@@ -3188,27 +2874,6 @@ def _kw_reference_bands(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.expect(TokenType.INDENT)
     state.reference_bands = parser._parse_reference_bands_block()
     parser.expect(TokenType.DEDENT)
-
-
-def _kw_bullet_label(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.bullet_label = parser.expect_identifier_or_keyword().value
-    parser.skip_newlines()
-
-
-def _kw_bullet_actual(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.bullet_actual = parser.expect_identifier_or_keyword().value
-    parser.skip_newlines()
-
-
-def _kw_bullet_target(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.bullet_target = parser.expect_identifier_or_keyword().value
-    parser.skip_newlines()
 
 
 def _kw_css_class(parser: Any, state: _WorkspaceRegionState) -> None:
@@ -3311,29 +2976,6 @@ def _kw_notice(parser: Any, state: _WorkspaceRegionState) -> None:
             tok.column,
         )
     state.notice = ir.NoticeSpec(title=n_title, body=n_body, tone=n_tone)
-
-
-def _kw_track_max(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.track_max = float(parser.expect(TokenType.NUMBER).value)
-    parser.skip_newlines()
-
-
-def _kw_track_format(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.track_format = parser.expect(TokenType.STRING).value
-    parser.skip_newlines()
-
-
-def _kw_actions(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    parser.skip_newlines()
-    parser.expect(TokenType.INDENT)
-    state.action_cards = parser._parse_action_cards_block()
-    parser.expect(TokenType.DEDENT)
 
 
 def _kw_entries(parser: Any, state: _WorkspaceRegionState) -> None:
@@ -3563,46 +3205,6 @@ def _kw_revoke(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.skip_newlines()
 
 
-def _kw_avatar_field(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.avatar_field = parser.expect_identifier_or_keyword().value
-    parser.skip_newlines()
-
-
-def _kw_primary(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.primary = parser.expect_identifier_or_keyword().value
-    parser.skip_newlines()
-
-
-def _kw_secondary(parser: Any, state: _WorkspaceRegionState) -> None:
-    """``secondary: "<template>"`` — quoted only ({{ field }} interpolation)."""
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.secondary = parser.expect(TokenType.STRING).value
-    parser.skip_newlines()
-
-
-def _kw_stats(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    parser.skip_newlines()
-    parser.expect(TokenType.INDENT)
-    state.profile_stats = parser._parse_profile_stats_block()
-    parser.expect(TokenType.DEDENT)
-
-
-def _kw_facts(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    parser.skip_newlines()
-    parser.expect(TokenType.INDENT)
-    state.facts = parser._parse_facts_block()
-    parser.expect(TokenType.DEDENT)
-
-
 def _kw_overlay_series(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
@@ -3612,61 +3214,12 @@ def _kw_overlay_series(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.expect(TokenType.DEDENT)
 
 
-def _kw_show_outliers(parser: Any, state: _WorkspaceRegionState) -> None:
-    """``show_outliers: true|false`` — box plot toggle (#881)."""
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    if parser.match(TokenType.TRUE):
-        parser.advance()
-        state.show_outliers = True
-    elif parser.match(TokenType.FALSE):
-        parser.advance()
-        state.show_outliers = False
-    else:
-        token = parser.current_token()
-        raise make_parse_error(
-            f"show_outliers must be true or false; got {token.value!r}",
-            parser.file,
-            token.line,
-            token.column,
-        )
-    parser.skip_newlines()
-
-
-def _kw_bins(parser: Any, state: _WorkspaceRegionState) -> None:
-    """``bins: auto`` or ``bins: <positive int>`` — histogram (#882)."""
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    if parser.match(TokenType.NUMBER):
-        bin_count = int(parser.advance().value)
-        if bin_count < 1:
-            token = parser.current_token()
-            raise make_parse_error(
-                f"bins must be a positive integer or 'auto'; got {bin_count}",
-                parser.file,
-                token.line,
-                token.column,
-            )
-        state.bin_count = bin_count
-    else:
-        word_tok = parser.expect_identifier_or_keyword()
-        if word_tok.value != "auto":
-            raise make_parse_error(
-                f"bins must be 'auto' or a positive integer; got {word_tok.value!r}",
-                parser.file,
-                word_tok.line,
-                word_tok.column,
-            )
-        state.bin_count = None  # auto via Sturges
-    parser.skip_newlines()
-
-
 # ---------- IDENT-text-matched branches ---------- #
 #
 # These keywords are intentionally not lexer tokens — they share a name
 # with bare identifiers used elsewhere in the grammar (`title` as an
-# identifier in flow/demo blocks; `primary` / `secondary` as field
-# names in profile_card; the `*_config` blocks as domain identifiers).
+# identifier in flow/demo blocks; the `*_config` blocks as domain
+# identifiers).
 # Dispatched on IDENTIFIER value via _WORKSPACE_REGION_IDENT_KEYWORDS.
 
 
@@ -3753,38 +3306,20 @@ _WORKSPACE_REGION_KEYWORDS: dict[TokenType, KeywordParser[_WorkspaceRegionState]
     TokenType.DATE_FIELD: _kw_date_field,
     TokenType.DATE_RANGE: _kw_date_range,
     TokenType.AGGREGATE: _kw_aggregate,
-    TokenType.ROWS: _kw_rows,
-    TokenType.COLUMNS: _kw_columns,
-    TokenType.VALUE: _kw_value,
-    TokenType.THRESHOLDS: _kw_thresholds,
     TokenType.STAGES: _kw_stages,
-    TokenType.COMPLETE_AT: _kw_complete_at,
     TokenType.DELTA: _kw_delta,
     TokenType.REFERENCE_LINES: _kw_reference_lines,
     TokenType.REFERENCE_BANDS: _kw_reference_bands,
-    TokenType.BULLET_LABEL: _kw_bullet_label,
-    TokenType.BULLET_ACTUAL: _kw_bullet_actual,
-    TokenType.BULLET_TARGET: _kw_bullet_target,
     TokenType.CSS_CLASS: _kw_css_class,
     TokenType.EYEBROW: _kw_eyebrow,
     TokenType.WIDTH: _kw_width,
     TokenType.TONES: _kw_tones,
     TokenType.NOTICE: _kw_notice,
-    TokenType.TRACK_MAX: _kw_track_max,
-    TokenType.TRACK_FORMAT: _kw_track_format,
-    TokenType.ACTIONS: _kw_actions,
     TokenType.ENTRIES: _kw_entries,
     TokenType.CONFIRMATIONS: _kw_confirmations,
     TokenType.STATE_FIELD: _kw_state_field,
     TokenType.REVOKE: _kw_revoke,
-    TokenType.AVATAR_FIELD: _kw_avatar_field,
-    TokenType.PRIMARY: _kw_primary,
-    TokenType.SECONDARY: _kw_secondary,
-    TokenType.STATS: _kw_stats,
-    TokenType.FACTS: _kw_facts,
     TokenType.OVERLAY_SERIES: _kw_overlay_series,
-    TokenType.SHOW_OUTLIERS: _kw_show_outliers,
-    TokenType.BINS: _kw_bins,
     TokenType.TRANSITIONS: _kw_region_transitions,  # #1663
     TokenType.AFTER: _kw_region_after,  # #1664
 }
@@ -3840,7 +3375,7 @@ def _build_workspace_region(
 
     Replicates the post-loop invariants of the legacy monolith:
       - Reject regions without ``source:`` AND any body-shape (aggregates,
-        action_cards, pipeline_stages, status_entries, confirmations).
+        pipeline_stages, status_entries, confirmations).
       - Reject combined single ``source:`` + multi-source list.
       - Auto-bump multi-source LIST display → TABBED_LIST.
       - Empty ``title`` string normalised to ``None`` (#903 fallback).
@@ -3849,7 +3384,6 @@ def _build_workspace_region(
         state.source is None
         and not state.sources
         and not state.aggregates
-        and not state.action_cards
         and not state.pipeline_stages
         and not state.status_entries
         and not state.confirmations
@@ -3893,30 +3427,11 @@ def _build_workspace_region(
         aggregates=state.aggregates,
         date_field=state.date_field,
         date_range=state.date_range,
-        heatmap_rows=state.heatmap_rows,
-        heatmap_columns=state.heatmap_columns,
-        heatmap_value=state.heatmap_value,
-        heatmap_thresholds=state.heatmap_thresholds,
-        progress_stages=state.progress_stages,
-        progress_complete_at=state.progress_complete_at,
         delta=state.delta,
         reference_lines=state.reference_lines,
         reference_bands=state.reference_bands,
-        bin_count=state.bin_count,
-        show_outliers=state.show_outliers,
-        bullet_label=state.bullet_label,
-        bullet_actual=state.bullet_actual,
-        bullet_target=state.bullet_target,
         overlay_series=state.overlay_series,
         css_class=state.css_class,
-        track_max=state.track_max,
-        track_format=state.track_format,
-        action_cards=state.action_cards,
-        avatar_field=state.avatar_field,
-        primary=state.primary,
-        secondary=state.secondary,
-        profile_stats=state.profile_stats,
-        facts=state.facts,
         pipeline_stages=state.pipeline_stages,
         eyebrow=state.eyebrow,
         title=state.title_override or None,

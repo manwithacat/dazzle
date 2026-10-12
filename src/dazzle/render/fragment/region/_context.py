@@ -49,7 +49,6 @@ class RegionContext(TypedDict, total=False):
 
     # --- actions / CTAs ---
     action_cards: Any
-    action_card_data: Any
     action_label: str
     primary_label: str
     secondary_label: str
@@ -73,20 +72,14 @@ class RegionContext(TypedDict, total=False):
     metrics: Any
     total: Any
     aggregates: Any
-    complete_count: Any
-    complete_pct: Any
-    progress_total: Any
-    stage_counts: Any
     coaching_message: str
     audit_enabled: bool
 
-    # --- charts (bar / bullet / histogram / heatmap / cohort / pivot) ---
+    # --- charts (bar / line / radar / comparison / cohort / pivot) ---
     axes: Any
     buckets: Any
     cells: Any
     chart_label: str
-    bar_track_rows: Any
-    bar_track_max: Any
     # #1470 display: comparison — ranked-league rows + shared bar scale.
     comparison_rows: Any
     comparison_max: Any
@@ -100,12 +93,6 @@ class RegionContext(TypedDict, total=False):
     # #1470 rag_on — list-column RAG decorator.
     rag_tones: Any
     rag_on: Any
-    bullet_rows: Any
-    bullet_max_value: Any
-    histogram_bins: Any
-    heatmap_matrix: Any
-    heatmap_col_values: Any
-    heatmap_thresholds: Any
     cohort_cells: Any
     cohort_active_lens: Any
     cohort_endpoint: str
@@ -122,11 +109,10 @@ class RegionContext(TypedDict, total=False):
     group_keys: Any
     groups: Any
 
-    # --- graph / diagram / tree ---
+    # --- graph / diagram ---
     nodes: Any
     edges: Any
     diagram_data: Any
-    tree_items: Any
     source_entity: str
 
     # --- timeline / pipeline / kanban / queue ---
@@ -146,7 +132,6 @@ class RegionContext(TypedDict, total=False):
     status_entries: Any
 
     # --- cards (profile / entity / task-inbox) ---
-    profile_card_data: Any
     entity_card_sections: Any
     entity_card_record_label: str
     task_inbox_items: Any

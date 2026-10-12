@@ -77,24 +77,6 @@ cat_comparison:
   empty: "No boxes"
 ```
 
-## Heatmap
-
-Matrix density — latency shaded across team × status.
-
-<div class="dz-catalogue-preview" markdown="0">
-<div data-dz-region data-dz-region-name="cat_heatmap" id="region-cat_heatmap"><div class="dz-heatmap-region" data-dz-heatmap><div class="dz-heatmap-scroll"><table class="dz-heatmap-grid"><thead><tr><th></th><th>Critical</th><th>Degraded</th><th>Healthy</th></tr></thead><tbody><tr><td class="dz-heatmap-row-label">Data</td><td class="dz-heatmap-cell"> 380.0 </td><td class="dz-heatmap-cell"> 0.0 </td><td class="dz-heatmap-cell"> 0.0 </td></tr><tr><td class="dz-heatmap-row-label">Growth</td><td class="dz-heatmap-cell"> 0.0 </td><td class="dz-heatmap-cell"> 0.0 </td><td class="dz-heatmap-cell"> 46.0 </td></tr><tr><td class="dz-heatmap-row-label">Payments</td><td class="dz-heatmap-cell"> 0.0 </td><td class="dz-heatmap-cell"> 44.0 </td><td class="dz-heatmap-cell"> 40.0 </td></tr><tr><td class="dz-heatmap-row-label">Platform</td><td class="dz-heatmap-cell"> 0.0 </td><td class="dz-heatmap-cell"> 0.0 </td><td class="dz-heatmap-cell"> 38.0 </td></tr></tbody></table></div><p class="dz-heatmap-overflow">Showing 4 of 6</p></div></div>
-</div>
-
-```dsl
-cat_heatmap:
-  source: Box
-  display: heatmap
-  rows: team
-  columns: status
-  value: latency_ms
-  empty: "No boxes"
-```
-
 ## Pivot Table
 
 Cross-tab — counts across two dimensions (team × status).
@@ -110,24 +92,6 @@ cat_pivot:
   group_by: [team, status]
   aggregate:
     count: count(Box)
-  empty: "No boxes"
-```
-
-## Bullet
-
-Actual-vs-target rows — each box's latency against its target.
-
-<div class="dz-catalogue-preview" markdown="0">
-<div data-dz-region data-dz-region-name="cat_bullet" id="region-cat_bullet"><div class="dz-bullet-region" data-dz-bullet><div class="dz-bullet-rows"><div class="dz-bullet-row"><span class="dz-bullet-label">alpha</span><div class="dz-bullet-track"><span class="dz-bullet-actual" style="width: 11.05%;" title="alpha actual: 42ms"></span><span class="dz-bullet-target" style="left: 13.16%;" title="alpha target: 50ms"></span></div><span class="dz-bullet-value">42ms / 50ms</span></div><div class="dz-bullet-row"><span class="dz-bullet-label">bravo</span><div class="dz-bullet-track"><span class="dz-bullet-actual" style="width: 10.0%;" title="bravo actual: 38ms"></span><span class="dz-bullet-target" style="left: 13.16%;" title="bravo target: 50ms"></span></div><span class="dz-bullet-value">38ms / 50ms</span></div><div class="dz-bullet-row"><span class="dz-bullet-label">charlie</span><div class="dz-bullet-track"><span class="dz-bullet-actual" style="width: 11.58%;" title="charlie actual: 44ms"></span><span class="dz-bullet-target" style="left: 13.16%;" title="charlie target: 50ms"></span></div><span class="dz-bullet-value">44ms / 50ms</span></div><div class="dz-bullet-row"><span class="dz-bullet-label">delta</span><div class="dz-bullet-track"><span class="dz-bullet-actual" style="width: 10.53%;" title="delta actual: 40ms"></span><span class="dz-bullet-target" style="left: 13.16%;" title="delta target: 50ms"></span></div><span class="dz-bullet-value">40ms / 50ms</span></div><div class="dz-bullet-row"><span class="dz-bullet-label">echo</span><div class="dz-bullet-track"><span class="dz-bullet-actual" style="width: 12.11%;" title="echo actual: 46ms"></span><span class="dz-bullet-target" style="left: 13.16%;" title="echo target: 50ms"></span></div><span class="dz-bullet-value">46ms / 50ms</span></div><div class="dz-bullet-row"><span class="dz-bullet-label">foxtrot</span><div class="dz-bullet-track"><span class="dz-bullet-actual" style="width: 100.0%;" title="foxtrot actual: 380ms"></span><span class="dz-bullet-target" style="left: 13.16%;" title="foxtrot target: 50ms"></span></div><span class="dz-bullet-value">380ms / 50ms</span></div></div><p class="dz-bullet-summary">6 rows · scale 0–380ms</p></div></div>
-</div>
-
-```dsl
-cat_bullet:
-  source: Box
-  display: bullet
-  bullet_label: name
-  bullet_actual: latency_ms
-  bullet_target: target_ms
   empty: "No boxes"
 ```
 
@@ -186,59 +150,6 @@ cat_rag:
       tone: positive
 ```
 
-## Histogram
-
-Continuous-axis distribution — `latency_ms` binned (Sturges' rule).
-
-<div class="dz-catalogue-preview" markdown="0">
-<div data-dz-region data-dz-region-name="cat_histogram" id="region-cat_histogram"><div class="dz-histogram-region" data-dz-histogram><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 140" class="dz-histogram-svg" role="img" aria-label="Cat Histogram histogram — 4 bins, 6 samples, peak 5"><line x1="8" y1="112" x2="392" y2="112" stroke="var(--colour-border)" stroke-width="1"/><rect x="8.0" y="8.0" width="95.0" height="104.0" fill="var(--colour-brand)" fill-opacity="0.6"><title>38–123.5: 5</title></rect><rect x="104.0" y="112.0" width="95.0" height="0.0" fill="var(--colour-brand)" fill-opacity="0.6"><title>123.5–209: 0</title></rect><rect x="200.0" y="112.0" width="95.0" height="0.0" fill="var(--colour-brand)" fill-opacity="0.6"><title>209–294.5: 0</title></rect><rect x="296.0" y="91.2" width="95.0" height="20.8" fill="var(--colour-brand)" fill-opacity="0.6"><title>294.5–380: 1</title></rect><text x="56.0" y="132" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">38ms</text><text x="152.0" y="132" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">123.5ms</text><text x="248.0" y="132" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">209ms</text><text x="344.0" y="132" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">294.5ms</text></svg><p class="dz-histogram-summary">4 bins · 6 samples · peak 5</p></div></div>
-</div>
-
-```dsl
-cat_histogram:
-  source: Box
-  display: histogram
-  value: latency_ms
-  bins: auto
-  empty: "No boxes"
-```
-
-## Box Plot
-
-Quartile spread per team — Q1/median/Q3 + Tukey whiskers over `latency_ms`.
-
-<div class="dz-catalogue-preview" markdown="0">
-<div data-dz-region data-dz-region-name="cat_box_plot" id="region-cat_box_plot"><div class="dz-box-plot-region" data-dz-box-plot><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 288 200" class="dz-box-plot-svg" role="img" aria-label="Cat Box Plot box plot — 4 groups, range 38.0ms–380.0ms"><line x1="32" y1="168" x2="280" y2="168" stroke="var(--colour-border)" stroke-width="1"/><line x1="32" y1="8" x2="32" y2="168" stroke="var(--colour-border)" stroke-width="1"/><text x="28" y="172" text-anchor="end" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">38.0ms</text><text x="28" y="12" text-anchor="end" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">380.0ms</text><line class="dz-box-plot-whisker" x1="63.0" y1="168.0" x2="63.0" y2="167.53" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker" x1="63.0" y1="166.6" x2="63.0" y2="166.13" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="54.0" y1="168.0" x2="72.0" y2="168.0" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="54.0" y1="166.13" x2="72.0" y2="166.13" stroke="var(--colour-text-muted)" stroke-width="1"/><rect class="dz-box-plot-box" x="45.0" y="166.6" width="36" height="0.94" fill="var(--colour-brand)" fill-opacity="0.18" stroke="var(--colour-brand)" stroke-width="1"><title>Platform: Q1 39.0ms, median 40.0ms, Q3 41.0ms, n=2</title></rect><line class="dz-box-plot-median" x1="45.0" y1="167.06" x2="81.0" y2="167.06" stroke="var(--colour-brand)" stroke-width="1"/><g class="dz-box-plot-mark" data-dz-box-mark="max"><circle class="dz-box-plot-mark-hit" cx="63.0" cy="166.13" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="63.0" cy="166.13" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="87.0" y="169.13" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">42ms</text><title>Platform max: 42ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q3"><circle class="dz-box-plot-mark-hit" cx="63.0" cy="166.6" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="63.0" cy="166.6" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="87.0" y="169.6" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">41ms</text><title>Platform q3: 41ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="median"><circle class="dz-box-plot-mark-hit" cx="63.0" cy="167.06" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="63.0" cy="167.06" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="87.0" y="170.06" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">40ms</text><title>Platform median: 40ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q1"><circle class="dz-box-plot-mark-hit" cx="63.0" cy="167.53" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="63.0" cy="167.53" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="87.0" y="170.53" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">39ms</text><title>Platform q1: 39ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="min"><circle class="dz-box-plot-mark-hit" cx="63.0" cy="168.0" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="63.0" cy="168.0" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="87.0" y="171.0" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">38ms</text><title>Platform min: 38ms</title></g><text x="63.0" y="192" text-anchor="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">Platform</text><line class="dz-box-plot-whisker" x1="125.0" y1="167.06" x2="125.0" y2="166.6" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker" x1="125.0" y1="165.66" x2="125.0" y2="165.19" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="116.0" y1="167.06" x2="134.0" y2="167.06" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="116.0" y1="165.19" x2="134.0" y2="165.19" stroke="var(--colour-text-muted)" stroke-width="1"/><rect class="dz-box-plot-box" x="107.0" y="165.66" width="36" height="0.94" fill="var(--colour-brand)" fill-opacity="0.18" stroke="var(--colour-brand)" stroke-width="1"><title>Payments: Q1 41.0ms, median 42.0ms, Q3 43.0ms, n=2</title></rect><line class="dz-box-plot-median" x1="107.0" y1="166.13" x2="143.0" y2="166.13" stroke="var(--colour-brand)" stroke-width="1"/><g class="dz-box-plot-mark" data-dz-box-mark="max"><circle class="dz-box-plot-mark-hit" cx="125.0" cy="165.19" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="125.0" cy="165.19" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="149.0" y="168.19" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">44ms</text><title>Payments max: 44ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q3"><circle class="dz-box-plot-mark-hit" cx="125.0" cy="165.66" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="125.0" cy="165.66" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="149.0" y="168.66" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">43ms</text><title>Payments q3: 43ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="median"><circle class="dz-box-plot-mark-hit" cx="125.0" cy="166.13" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="125.0" cy="166.13" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="149.0" y="169.13" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">42ms</text><title>Payments median: 42ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q1"><circle class="dz-box-plot-mark-hit" cx="125.0" cy="166.6" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="125.0" cy="166.6" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="149.0" y="169.6" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">41ms</text><title>Payments q1: 41ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="min"><circle class="dz-box-plot-mark-hit" cx="125.0" cy="167.06" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="125.0" cy="167.06" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="149.0" y="170.06" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">40ms</text><title>Payments min: 40ms</title></g><text x="125.0" y="192" text-anchor="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">Payments</text><line class="dz-box-plot-whisker" x1="187.0" y1="164.26" x2="187.0" y2="164.26" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker" x1="187.0" y1="164.26" x2="187.0" y2="164.26" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="178.0" y1="164.26" x2="196.0" y2="164.26" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="178.0" y1="164.26" x2="196.0" y2="164.26" stroke="var(--colour-text-muted)" stroke-width="1"/><rect class="dz-box-plot-box" x="169.0" y="164.26" width="36" height="0.0" fill="var(--colour-brand)" fill-opacity="0.18" stroke="var(--colour-brand)" stroke-width="1"><title>Growth: Q1 46.0ms, median 46.0ms, Q3 46.0ms, n=1</title></rect><line class="dz-box-plot-median" x1="169.0" y1="164.26" x2="205.0" y2="164.26" stroke="var(--colour-brand)" stroke-width="1"/><g class="dz-box-plot-mark" data-dz-box-mark="max"><circle class="dz-box-plot-mark-hit" cx="187.0" cy="164.26" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="187.0" cy="164.26" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="211.0" y="167.26" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">46ms</text><title>Growth max: 46ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q3"><circle class="dz-box-plot-mark-hit" cx="187.0" cy="164.26" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="187.0" cy="164.26" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="211.0" y="167.26" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">46ms</text><title>Growth q3: 46ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="median"><circle class="dz-box-plot-mark-hit" cx="187.0" cy="164.26" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="187.0" cy="164.26" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="211.0" y="167.26" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">46ms</text><title>Growth median: 46ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q1"><circle class="dz-box-plot-mark-hit" cx="187.0" cy="164.26" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="187.0" cy="164.26" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="211.0" y="167.26" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">46ms</text><title>Growth q1: 46ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="min"><circle class="dz-box-plot-mark-hit" cx="187.0" cy="164.26" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="187.0" cy="164.26" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="211.0" y="167.26" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">46ms</text><title>Growth min: 46ms</title></g><text x="187.0" y="192" text-anchor="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">Growth</text><line class="dz-box-plot-whisker" x1="249.0" y1="8.0" x2="249.0" y2="8.0" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker" x1="249.0" y1="8.0" x2="249.0" y2="8.0" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="240.0" y1="8.0" x2="258.0" y2="8.0" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="240.0" y1="8.0" x2="258.0" y2="8.0" stroke="var(--colour-text-muted)" stroke-width="1"/><rect class="dz-box-plot-box" x="231.0" y="8.0" width="36" height="0.0" fill="var(--colour-brand)" fill-opacity="0.18" stroke="var(--colour-brand)" stroke-width="1"><title>Data: Q1 380.0ms, median 380.0ms, Q3 380.0ms, n=1</title></rect><line class="dz-box-plot-median" x1="231.0" y1="8.0" x2="267.0" y2="8.0" stroke="var(--colour-brand)" stroke-width="1"/><g class="dz-box-plot-mark" data-dz-box-mark="max"><circle class="dz-box-plot-mark-hit" cx="249.0" cy="8.0" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="249.0" cy="8.0" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="273.0" y="11.0" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">380ms</text><title>Data max: 380ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q3"><circle class="dz-box-plot-mark-hit" cx="249.0" cy="8.0" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="249.0" cy="8.0" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="273.0" y="11.0" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">380ms</text><title>Data q3: 380ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="median"><circle class="dz-box-plot-mark-hit" cx="249.0" cy="8.0" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="249.0" cy="8.0" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="273.0" y="11.0" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">380ms</text><title>Data median: 380ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q1"><circle class="dz-box-plot-mark-hit" cx="249.0" cy="8.0" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="249.0" cy="8.0" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="273.0" y="11.0" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">380ms</text><title>Data q1: 380ms</title></g><g class="dz-box-plot-mark" data-dz-box-mark="min"><circle class="dz-box-plot-mark-hit" cx="249.0" cy="8.0" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="249.0" cy="8.0" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="273.0" y="11.0" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">380ms</text><title>Data min: 380ms</title></g><text x="249.0" y="192" text-anchor="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">Data</text></svg><p class="dz-box-plot-summary">4 groups · 6 samples</p></div></div>
-</div>
-
-```dsl
-cat_box_plot:
-  source: Box
-  display: box_plot
-  group_by: team
-  value: latency_ms
-  show_outliers: true
-  empty: "No boxes"
-```
-
-## Funnel Chart
-
-Stage funnel — boxes counted through the status lifecycle.
-
-<div class="dz-catalogue-preview" markdown="0">
-<div data-dz-region data-dz-region-name="cat_funnel" id="region-cat_funnel"><div class="dz-funnel-chart-region" data-dz-funnel><div class="dz-funnel-stages"><div class="dz-funnel-stage-row"><div class="dz-funnel-stage" data-dz-funnel-step="0" style="width: 100%;"><span class="dz-funnel-stage-label">Healthy</span> <span class="dz-funnel-stage-count">(4)</span></div></div><div class="dz-funnel-stage-row"><div class="dz-funnel-stage" data-dz-funnel-step="1" style="width: 25%;"><span class="dz-funnel-stage-label">Degraded</span> <span class="dz-funnel-stage-count">(1)</span></div></div><div class="dz-funnel-stage-row"><div class="dz-funnel-stage" data-dz-funnel-step="2" style="width: 25%;"><span class="dz-funnel-stage-label">Critical</span> <span class="dz-funnel-stage-count">(1)</span></div></div></div><p class="dz-funnel-summary">6 total</p></div></div>
-</div>
-
-```dsl
-cat_funnel:
-  source: Box
-  display: funnel_chart
-  group_by: status
-  aggregate:
-    count: count(Box)
-  empty: "No boxes"
-```
-
 ## Line Chart
 
 Time series — daily box volume. One `date_trunc('day')` GROUP BY.
@@ -257,24 +168,6 @@ cat_line:
   empty: "No boxes"
 ```
 
-## Sparkline
-
-Compact trend tile — the same daily series as a headline + tiny SVG.
-
-<div class="dz-catalogue-preview" markdown="0">
-<div data-dz-region data-dz-region-name="cat_sparkline" id="region-cat_sparkline"><div class="dz-sparkline-region" data-dz-sparkline><div class="dz-sparkline-headline"><span class="dz-sparkline-value">6</span><span class="dz-sparkline-bucket-label">2026-06-25</span></div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 32" preserveAspectRatio="none" class="dz-sparkline-svg" role="img" aria-label="Sparkline — 5 points, latest 6, peak 8"><polygon points="0,32 0.0,19.5 45.0,12.5 90.0,16.0 135.0,2.0 180.0,9.0 180,32" fill="var(--colour-brand)" fill-opacity="0.15" stroke="none" /><polyline points="0.0,19.5 45.0,12.5 90.0,16.0 135.0,2.0 180.0,9.0" fill="none" stroke="var(--colour-brand)" stroke-width="1.25" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" /></svg></div></div>
-</div>
-
-```dsl
-cat_sparkline:
-  source: Box
-  display: sparkline
-  group_by: bucket(opened_at, day)
-  aggregate:
-    count: count(Box)
-  empty: "—"
-```
-
 ## Radar
 
 Polar profile — one spoke per team, value = box count for that team.
@@ -288,42 +181,6 @@ cat_radar:
   source: Box
   display: radar
   group_by: team
-  aggregate:
-    count: count(Box)
-  empty: "No boxes"
-```
-
-## Area Chart
-
-Filled area — daily box volume under a single series.
-
-<div class="dz-catalogue-preview" markdown="0">
-<div data-dz-region data-dz-region-name="cat_area" id="region-cat_area"><div class="dz-area-chart-region" data-dz-time-series><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" class="dz-line-chart-svg dz-chart-svg" role="img" aria-label="Cat Area time series — 5 buckets, peak 8"><line x1="8" y1="92" x2="392" y2="92" stroke="var(--colour-border)" stroke-width="1"/><polygon points="8,92 8.0,60.5 104.0,39.5 200.0,50.0 296.0,8.0 392.0,29.0 392,92" fill="var(--colour-brand)" fill-opacity="0.12" stroke="none"/><polyline points="8.0,60.5 104.0,39.5 200.0,50.0 296.0,8.0 392.0,29.0" fill="none" stroke="var(--colour-brand)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="8.0" cy="60.5" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>2026-06-21: 3</title></circle><circle cx="104.0" cy="39.5" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>2026-06-22: 5</title></circle><circle cx="200.0" cy="50.0" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>2026-06-23: 4</title></circle><circle cx="296.0" cy="8.0" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>2026-06-24: 8</title></circle><circle cx="392.0" cy="29.0" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>2026-06-25: 6</title></circle><text x="8.0" y="112" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">2026-06-21</text><text x="104.0" y="112" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">2026-06-22</text><text x="200.0" y="112" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">2026-06-23</text><text x="296.0" y="112" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">2026-06-24</text><text x="392.0" y="112" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">2026-06-25</text></svg><p class="dz-chart-summary">5 buckets · peak 8</p></div></div>
-</div>
-
-```dsl
-cat_area:
-  source: Box
-  display: area_chart
-  group_by: bucket(opened_at, day)
-  aggregate:
-    count: count(Box)
-  empty: "No boxes"
-```
-
-## Area Chart
-
-Stacked area — weekly box volume split by team. Multi-dim time bucket (#1473): overlaid series, one per team, with a legend.
-
-<div class="dz-catalogue-preview" markdown="0">
-<div data-dz-region data-dz-region-name="cat_area_stacked" id="region-cat_area_stacked"><div class="dz-area-chart-region" data-dz-time-series><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" class="dz-line-chart-svg dz-chart-svg" role="img" aria-label="Cat Area Stacked time series — 2 series, 2 buckets, peak 6"><line x1="8" y1="92" x2="392" y2="92" stroke="var(--colour-border)" stroke-width="1"/><polygon points="8,92 8.0,36.0 392.0,8.0 392,92" fill="var(--colour-brand)" fill-opacity="0.12" stroke="none"/><polyline points="8.0,36.0 392.0,8.0" fill="none" stroke="var(--colour-brand)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="8.0" cy="36.0" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>Platform · 2026-W23: 4</title></circle><circle cx="392.0" cy="8.0" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>Platform · 2026-W24: 6</title></circle><polygon points="8,92 8.0,64.0 392.0,50.0 392,92" fill="var(--colour-info)" fill-opacity="0.12" stroke="none"/><polyline points="8.0,64.0 392.0,50.0" fill="none" stroke="var(--colour-info)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="8.0" cy="64.0" r="2.5" fill="var(--colour-info)" stroke="var(--colour-surface)" stroke-width="1"><title>Payments · 2026-W23: 2</title></circle><circle cx="392.0" cy="50.0" r="2.5" fill="var(--colour-info)" stroke="var(--colour-surface)" stroke-width="1"><title>Payments · 2026-W24: 3</title></circle><text x="8.0" y="112" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">2026-W23</text><text x="392.0" y="112" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">2026-W24</text></svg><ul class="dz-chart-legend"><li class="dz-chart-legend-item"><span class="dz-chart-legend-swatch" style="background:var(--colour-brand)"></span><span class="dz-chart-legend-name">Platform</span></li><li class="dz-chart-legend-item"><span class="dz-chart-legend-swatch" style="background:var(--colour-info)"></span><span class="dz-chart-legend-name">Payments</span></li></ul><p class="dz-chart-summary">2 buckets · 2 series · peak 6</p></div></div>
-</div>
-
-```dsl
-cat_area_stacked:
-  source: Box
-  display: area_chart
-  group_by: [bucket(opened_at, week), team]
   aggregate:
     count: count(Box)
   empty: "No boxes"

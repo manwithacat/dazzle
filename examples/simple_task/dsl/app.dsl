@@ -925,58 +925,6 @@ workspace admin_dashboard "Admin Dashboard":
         body: "Thursday 14:00 works — I'll send a calendar hold."
         caption: "You"
 
-  # Hyperpart emitter dogfood: display: accordion (exclusive FAQ disclosure).
-  task_faq:
-    display: accordion
-    title: "Task board FAQ"
-    entries:
-      - title: "How does priority work?"
-        body: "Priority is a closed enum (low / medium / high / urgent). Create and edit use the toggle-group control so leads pick urgency without a long select."
-      - title: "What does review status mean?"
-        body: "Tasks in review wait for a lead before they can close. Clear review before assigning more WIP."
-      - title: "Who appears on the board?"
-        body: "Kanban columns are assignees — each person owns a column of work in progress."
-
-  # Hyperpart emitter dogfood: display: carousel (media stage strip).
-  sample_gallery:
-    display: carousel
-    title: "Sample gallery"
-    entries:
-      - title: "Priority board sketch"
-        body: "https://placehold.co/640x360/0F172A/38BDF8/png?text=Priority"
-      - title: "Review lane mock"
-        body: "https://placehold.co/640x360/1E293B/F59E0B/png?text=Review"
-      - title: "Assignee columns"
-        body: "https://placehold.co/640x360/334155/A3E635/png?text=Assignees"
-
-  # Hyperpart emitter dogfood: display: map → Marker pin board (.dz-marker).
-  sample_map:
-    display: map
-    title: "Sample sites"
-    entries:
-      - title: "HQ"
-        body: "success"
-      - title: "Depot"
-        body: "warning"
-        icon: "lg"
-      - title: "Alert"
-        body: "danger"
-
-  # Hyperpart emitter dogfood: display: progress_bar → ProgressBar (.dz-progress).
-  # Distinct from display: progress (StageBar / progress-region stage chips).
-  sample_progress:
-    display: progress_bar
-    title: "Capacity signals"
-    entries:
-      - title: "Board fill"
-        body: "62"
-      - title: "Review lane"
-        body: "100"
-        icon: "success"
-      - title: "Urgent queue"
-        body: "38"
-        icon: "warning"
-
   # Gallery / display coverage (cycle 1916): status + priority bars live here
   # under-fold — not on Discussion/People secondary desks (empty_region honesty).
   # Not in admin focus spine (pressure queues remain above fold).

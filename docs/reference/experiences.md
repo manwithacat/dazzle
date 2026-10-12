@@ -173,10 +173,6 @@ workspace contacts "Contact Manager":
     source: Contact
     display: list
     limit: 20
-
-  contact_detail:
-    source: Contact
-    display: detail
 ```
 
 ### Best Practices

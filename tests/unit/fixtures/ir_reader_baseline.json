@@ -97,6 +97,8 @@
   "sitespec.ComparisonRow.feature",
   "sitespec.FAQItem.answer",
   "sitespec.LayoutSpec.section_backgrounds",
+  "sitespec.LogoSpec.alt",
+  "sitespec.MediaSpec.alt",
   "sitespec.PricingTier.highlighted",
   "sitespec.PricingTier.period",
   "sitespec.PricingTier.price",

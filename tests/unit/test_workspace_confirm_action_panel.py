@@ -178,34 +178,6 @@ class TestConfirmationItemSpec:
         assert c.required is False
 
 
-# ───────────────────────── primary_action / secondary_action keys ──────────
-
-
-class TestActionKeysDontClashWithProfileCard:
-    """`primary:` and `secondary:` are profile_card keys (entity field
-    names there). The confirm_action_panel uses `primary_action:` /
-    `secondary_action:` instead — same DSL file, different keys, no
-    parser ambiguity."""
-
-    def test_primary_action_distinct_from_profile_card_primary(self) -> None:
-        src = """module t
-app t "Test"
-entity Person:
-  id: uuid pk
-  name: str(100)
-workspace dash "Dash":
-  card:
-    source: Person
-    display: profile_card
-    primary: name
-"""
-        region = _parse(src).workspaces[0].regions[0]
-        # Profile card's primary is still parsed correctly
-        assert region.primary == "name"
-        # confirm_action_panel-specific fields stay None on a non-panel region
-        assert region.primary_action is None
-
-
 # ───────────────────────── runtime + template wiring ──────────────────────────
 
 

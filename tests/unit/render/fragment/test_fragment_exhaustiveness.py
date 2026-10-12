@@ -11,10 +11,6 @@ import pytest
 from dazzle.render.fragment import (
     KPI,
     URL,
-    Accordion,
-    AccordionItem,
-    ActionCard,
-    ActionGrid,
     ActivityFeed,
     AddCardRow,
     AppShell,
@@ -22,20 +18,15 @@ from dazzle.render.fragment import (
     Badge,
     BarChart,
     BarTrack,
-    BoxPlot,
     Breadcrumb,
     BreadcrumbItem,
     Bubble,
     BulkActionToolbar,
-    Bullet,
-    BulletRow,
     Button,
     CalendarGrid,
     Card,
     CardPicker,
     CardPickerEntry,
-    Carousel,
-    CarouselSlide,
     CohortStripCell,
     CohortStripLensTab,
     CohortStripRegion,
@@ -67,16 +58,10 @@ from dazzle.render.fragment import (
     FormStack,
     FormStepper,
     Fragment,
-    Funnel,
-    FunnelStage,
     Grid,
     GridCell,
     GridRegion,
     Heading,
-    Heatmap,
-    HeatmapRow,
-    Histogram,
-    HistogramBin,
     HoverCard,
     Icon,
     InlineEdit,
@@ -91,8 +76,6 @@ from dazzle.render.fragment import (
     ListColumn,
     ListFilterBar,
     ListRegion,
-    MapBoard,
-    Marker,
     Menubar,
     MenubarAction,
     MenubarMenu,
@@ -116,8 +99,6 @@ from dazzle.render.fragment import (
     PivotTable,
     PivotTableRegion,
     Popover,
-    ProfileCard,
-    ProgressBar,
     QueueBadgeColumn,
     QueueDateColumn,
     QueueMetric,
@@ -143,10 +124,8 @@ from dazzle.render.fragment import (
     SliderField,
     Slot,
     SortHeader,
-    Sparkline,
     Split,
     Stack,
-    StageBar,
     StatusList,
     StatusListEntry,
     Stylesheet,
@@ -169,8 +148,6 @@ from dazzle.render.fragment import (
     ToggleGroupField,
     Toolbar,
     Topbar,
-    Tree,
-    TreeNode,
     WidgetCombobox,
     WorkspaceContextSelector,
     WorkspaceDrawer,
@@ -299,28 +276,10 @@ def _sample_for(primitive_type: type) -> object:
         return TimeSeries(label="x", points=(("a", 1.0),))
     if primitive_type is Radar:
         return Radar(label="x", axes=(("a", 1.0), ("b", 2.0), ("c", 3.0)))
-    if primitive_type is BoxPlot:
-        return BoxPlot(label="x", groups=(("g", 0.0, 1.0, 2.0, 3.0, 4.0),))
-    if primitive_type is Bullet:
-        return Bullet(rows=(BulletRow(label="X", actual=50.0),), max_value=100.0)
-    if primitive_type is BulletRow:
-        return BulletRow(label="X", actual=50.0)
-    if primitive_type is Sparkline:
-        return Sparkline(points=(("a", 1.0), ("b", 2.0)))
     if primitive_type is PipelineSteps:
         return PipelineSteps(stages=(PipelineStage(label="Step"),))
     if primitive_type is PipelineStage:
         return PipelineStage(label="Step")
-    if primitive_type is Tree:
-        return Tree(nodes=(TreeNode(label="root"),))
-    if primitive_type is TreeNode:
-        return TreeNode(label="node")
-    if primitive_type is ActionCard:
-        return ActionCard(label="X")
-    if primitive_type is ActionGrid:
-        return ActionGrid(cards=(ActionCard(label="X"),))
-    if primitive_type is ProfileCard:
-        return ProfileCard(primary="Alice")
     if primitive_type is MetricTile:
         return MetricTile(label="X", value="0")
     if primitive_type is MetricsGrid:
@@ -338,20 +297,6 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is ListColumn:
         return ListColumn(key="k", label="K")
-    if primitive_type is Histogram:
-        return Histogram(
-            label="x",
-            bins=(HistogramBin(label="0-10", count=4, low=0.0, high=10.0),),
-        )
-    if primitive_type is HistogramBin:
-        return HistogramBin(label="0-10", count=4, low=0.0, high=10.0)
-    if primitive_type is Heatmap:
-        return Heatmap(
-            columns=("X",),
-            rows=(HeatmapRow(label="A", cells=(1.0,)),),
-        )
-    if primitive_type is HeatmapRow:
-        return HeatmapRow(label="A", cells=(1.0,))
     if primitive_type is PivotTableRegion:
         return PivotTableRegion(
             dim_specs=(PivotDimSpec(name="x", label="X"),),
@@ -372,10 +317,6 @@ def _sample_for(primitive_type: type) -> object:
         return QueueBadgeColumn(key="severity", value="high")
     if primitive_type is QueueDateColumn:
         return QueueDateColumn(label="Due", timeago_str="just now")
-    if primitive_type is Funnel:
-        return Funnel(stages=(FunnelStage(label="lead", count=10),))
-    if primitive_type is FunnelStage:
-        return FunnelStage(label="lead", count=10)
     if primitive_type is KanbanRegion:
         return KanbanRegion(columns=(KanbanColumn(label="todo", cards=()),))
     if primitive_type is KanbanColumn:
@@ -384,10 +325,6 @@ def _sample_for(primitive_type: type) -> object:
         return KanbanCard(title="Task")
     if primitive_type is ActivityFeed:
         return ActivityFeed(items=(("now", "Alice", "did the thing"),))
-    if primitive_type is Accordion:
-        return Accordion(items=(AccordionItem(title="Q", body="A", open=True),))
-    if primitive_type is AccordionItem:
-        return AccordionItem(title="Q", body="A")
     if primitive_type is AspectRatio:
         return AspectRatio(child=Text("frame"), ratio="16/9", width="10rem")
     if primitive_type is Menubar:
@@ -454,29 +391,12 @@ def _sample_for(primitive_type: type) -> object:
         return HoverCard(trigger="@maya", title="Maya Reyes", description="Ops lead")
     if primitive_type is Popover:
         return Popover(trigger="Details", title="Dimensions", body="Filters and previews.")
-    if primitive_type is Marker:
-        return Marker(label="HQ", tone="success", x_pct=40.0, y_pct=55.0)
-    if primitive_type is MapBoard:
-        return MapBoard(markers=(Marker(label="HQ"), Marker(label="Depot", tone="danger")))
-    if primitive_type is Carousel:
-        return Carousel(
-            slides=(
-                CarouselSlide(src="https://placehold.co/1.png", alt="A"),
-                CarouselSlide(src="https://placehold.co/2.png", alt="B"),
-            )
-        )
-    if primitive_type is CarouselSlide:
-        return CarouselSlide(src="https://placehold.co/1.png", alt="A")
     if primitive_type is StatusList:
         return StatusList(entries=(StatusListEntry(title="OK", state="positive"),))
     if primitive_type is StatusListEntry:
         return StatusListEntry(title="OK")
     if primitive_type is BarTrack:
         return BarTrack(rows=(("X", 1.0, "1", 50.0),), max_value=100.0)
-    if primitive_type is ProgressBar:
-        return ProgressBar(value=62, label="Storage used", tone="success")
-    if primitive_type is StageBar:
-        return StageBar(stages=(("X", 1, False),))
     if primitive_type is LazyTabPanel:
         return LazyTabPanel(
             region_name="t",

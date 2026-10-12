@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 350 BaseModels, 140 Enums, 24 other (functions / typealiases / constants)
+# Counts: 348 BaseModels, 140 Enums, 24 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -36,15 +36,6 @@ ir_class: AccessSpec
     - permissions: list[PermissionRule] = []
     - scopes: list[ScopeRule] = []
     - visibility: list[VisibilityRule] = []
-
-ir_class: ActionCardSpec
-  required:
-    - label: str
-  optional:
-    - action: str = ''
-    - count: AggregateRef | None = None
-    - icon: str = ''
-    - tone: str = 'neutral'
 
 ir_class: ActionTriple
   required:
@@ -2141,12 +2132,6 @@ ir_class: ProcessTriggerSpec
     - timezone: str = 'UTC'
     - to_status: str | None = None
 
-ir_class: ProfileCardStatSpec
-  required:
-    - label: str
-    - value: str
-  optional: (none)
-
 ir_class: ProjectionHandlerSpec
   required:
     - action: ProjectionAction
@@ -3160,14 +3145,8 @@ ir_class: WorkspaceRegion
     - name: str
   optional:
     - action: str | None = None
-    - action_cards: list[ActionCardSpec] = []
     - after: str | None = None
     - aggregates: dict[str, AggregateRef | DerivedMetric] = {}
-    - avatar_field: str | None = None
-    - bin_count: int | None = None
-    - bullet_actual: str | None = None
-    - bullet_label: str | None = None
-    - bullet_target: str | None = None
     - cohort_strip_config: CohortStripConfig | None = None
     - confirmations: list[ConfirmationItemSpec] = []
     - css_class: str | None = None
@@ -3181,14 +3160,9 @@ ir_class: WorkspaceRegion
     - empty_message: str | None = None
     - entity_card_config: EntityCardConfig | None = None
     - eyebrow: str | None = None
-    - facts: list[str] = []
     - filter: ConditionExpr | None = None
     - group_by: str | BucketRef | None = None
     - group_by_dims: list[str | BucketRef] | None = None
-    - heatmap_columns: str | None = None
-    - heatmap_rows: str | None = None
-    - heatmap_thresholds: list[float] | ParamRef = []
-    - heatmap_value: str | None = None
     - limit: int | None = None
     - notice: NoticeSpec | None = None
     - order: Literal[asc, desc] = 'desc'
@@ -3196,11 +3170,7 @@ ir_class: WorkspaceRegion
     - outlier_on: str | None = None
     - overlay_series: list[OverlaySeriesSpec] = []
     - pipeline_stages: list[PipelineStageSpec] = []
-    - primary: str | None = None
     - primary_action: str | None = None
-    - profile_stats: list[ProfileCardStatSpec] = []
-    - progress_complete_at: str | None = None
-    - progress_stages: list[str] = []
     - rag_on: str | None = None
     - rank_by: str | None = None
     - reference_bands: list[ReferenceBand] = []
@@ -3209,9 +3179,7 @@ ir_class: WorkspaceRegion
     - render: str | None = None
     - revoke: str | None = None
     - row_action: RowActionSpec | None = None
-    - secondary: str | None = None
     - secondary_action: str | None = None
-    - show_outliers: bool = True
     - sort: list[SortSpec] = []
     - source: str | None = None
     - source_filters: dict[str, ConditionExpr] = {}
@@ -3222,8 +3190,6 @@ ir_class: WorkspaceRegion
     - title: str | None = None
     - tone_bands: list[ToneBandSpec] = []
     - tones: dict[str, str] = {}
-    - track_format: str | None = None
-    - track_max: float | None = None
     - transitions: str | None = None
     - when_empty: WhenEmpty | None = None
     - width: int | None = None
@@ -3489,49 +3455,32 @@ enum: DerivationType
 
 enum: DisplayMode
   members:
-    - ACCORDION = 'accordion'
-    - ACTION_GRID = 'action_grid'
     - ACTIVITY_FEED = 'activity_feed'
-    - AREA_CHART = 'area_chart'
     - AUTO = 'auto'
     - BAR_CHART = 'bar_chart'
-    - BAR_TRACK = 'bar_track'
-    - BOX_PLOT = 'box_plot'
-    - BULLET = 'bullet'
-    - CAROUSEL = 'carousel'
     - COHORT_STRIP = 'cohort_strip'
     - COMPARISON = 'comparison'
     - CONFIRM_ACTION_PANEL = 'confirm_action_panel'
     - CONVERSATION = 'conversation'
     - DAY_TIMELINE = 'day_timeline'
-    - DETAIL = 'detail'
     - DIAGRAM = 'diagram'
     - ENTITY_CARD = 'entity_card'
-    - FUNNEL_CHART = 'funnel_chart'
     - GRID = 'grid'
-    - HEATMAP = 'heatmap'
-    - HISTOGRAM = 'histogram'
     - INSIGHT_SUMMARY = 'insight_summary'
     - KANBAN = 'kanban'
     - LINE_CHART = 'line_chart'
     - LIST = 'list'
-    - MAP = 'map'
     - METRICS = 'metrics'
     - PIPELINE_STEPS = 'pipeline_steps'
     - PIVOT_TABLE = 'pivot_table'
-    - PROFILE_CARD = 'profile_card'
-    - PROGRESS = 'progress'
-    - PROGRESS_BAR = 'progress_bar'
     - QUEUE = 'queue'
     - RADAR = 'radar'
     - SEARCH_BOX = 'search_box'
-    - SPARKLINE = 'sparkline'
     - STATUS_LIST = 'status_list'
     - SUMMARY = 'summary'
     - TABBED_LIST = 'tabbed_list'
     - TASK_INBOX = 'task_inbox'
     - TIMELINE = 'timeline'
-    - TREE = 'tree'
 
 enum: DocumentFormat
   members:

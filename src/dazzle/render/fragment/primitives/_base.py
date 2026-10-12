@@ -24,8 +24,6 @@ from dazzle.render.fragment.primitives.content import (
     Heading,
     HoverCard,
     Icon,
-    MapBoard,
-    Marker,
     Message,
     MessageScroller,
     Popover,
@@ -34,19 +32,13 @@ from dazzle.render.fragment.primitives.content import (
 )
 from dazzle.render.fragment.primitives.data import (
     KPI,
-    Accordion,
-    ActionCard,
-    ActionGrid,
     ActivityFeed,
     AddCardRow,
     BarChart,
     BarTrack,
-    BoxPlot,
     BulkActionToolbar,
-    Bullet,
     CalendarGrid,
     CardPicker,
-    Carousel,
     CohortStripRegion,
     ColumnVisibilityMenu,
     ConfirmGate,
@@ -61,10 +53,7 @@ from dazzle.render.fragment.primitives.data import (
     Diagram,
     EntityCardRegion,
     FilterBar,
-    Funnel,
     GridRegion,
-    Heatmap,
-    Histogram,
     KanbanBoard,
     KanbanRegion,
     LazyTabPanel,
@@ -76,8 +65,6 @@ from dazzle.render.fragment.primitives.data import (
     PipelineSteps,
     PivotTable,
     PivotTableRegion,
-    ProfileCard,
-    ProgressBar,
     QueueRegion,
     Radar,
     RelatedGroup,
@@ -85,14 +72,11 @@ from dazzle.render.fragment.primitives.data import (
     Sequence,
     SlideOver,
     SortHeader,
-    Sparkline,
-    StageBar,
     StatusList,
     Table,
     TaskInboxRegion,
     Timeline,
     TimeSeries,
-    Tree,
     WorkspaceContextSelector,
     WorkspaceDrawer,
     WorkspaceShell,
@@ -174,8 +158,6 @@ Fragment = (
     | MessageScroller
     | HoverCard
     | Popover
-    | Marker
-    | MapBoard
     | EmptyState
     | Skeleton
     # Interactive
@@ -194,33 +176,19 @@ Fragment = (
     | Diagram
     | TimeSeries
     | Radar
-    | BoxPlot
-    | Bullet
-    | ActionCard
-    | ProfileCard
     | MetricTile
     | MetricsGrid
     | DetailGrid
     | GridRegion
     | ListRegion
-    | Histogram
-    | Heatmap
-    | Funnel
     | KanbanRegion
     | PivotTableRegion
     | QueueRegion
     | RelatedGroup
-    | Accordion
-    | Carousel
-    | ActionGrid
     | ActivityFeed
     | StatusList
     | PipelineSteps
-    | Sparkline
-    | Tree
     | BarTrack
-    | ProgressBar
-    | StageBar
     | LazyTabPanel
     | SearchBox
     | ConfirmGate

@@ -38,41 +38,27 @@ _DISPLAY_ALIASES: dict[str, str] = {
     "pdf_viewer": "list",  # document surface — not a work board; treat as list residual-free
 }
 
-# Charts / chrome / detail embeds are not work boards — skip in scan.
+# Charts / chrome embeds are not work boards — skip in scan.
 _CHROME_DISPLAYS: frozenset[str] = frozenset(
     {
         "metrics",
         "summary",
         "bar_chart",
         "line_chart",
-        "area_chart",
-        "sparkline",
-        "heatmap",
-        "histogram",
-        "box_plot",
         "funnel",
-        "funnel_chart",
         "pivot",
         "pivot_table",
         "comparison",
         "cohort_strip",
         "entity_card",
-        "profile_card",
-        "map",
         "search_box",
         "pdf_viewer",
         "diagram",
-        "tree",
         "tabbed_list",
         "insight_summary",
         "radar",
-        "bullet",
-        "bar_track",
-        "action_grid",
         "pipeline_steps",
         "confirm_action_panel",
-        "progress",
-        "detail",  # embedded detail region, not a board
     }
 )
 

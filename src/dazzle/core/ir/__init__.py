@@ -761,7 +761,6 @@ from .views import (
 
 # Workspaces
 from .workspaces import (
-    ActionCardSpec,
     BucketRef,
     CohortStripConfig,
     CohortStripLens,
@@ -783,7 +782,6 @@ from .workspaces import (
     NoticeSpec,
     OverlaySeriesSpec,
     PipelineStageSpec,
-    ProfileCardStatSpec,
     ReferenceBand,
     ReferenceLine,
     RowActionSpec,
@@ -912,7 +910,6 @@ __all__ = [
     "WorkspaceAccessLevel",
     "WorkspaceAccessSpec",
     "DeltaSpec",
-    "ActionCardSpec",
     "CohortStripConfig",
     "CohortStripLens",
     "ComparisonOutlierSpec",
@@ -930,7 +927,6 @@ __all__ = [
     "NoticeSpec",
     "OverlaySeriesSpec",
     "PipelineStageSpec",
-    "ProfileCardStatSpec",
     "ReferenceBand",
     "ReferenceLine",
     "RowActionSpec",

@@ -75,40 +75,38 @@ SIGNALS: dict[str, object] = {
     "toggle-group": r"widget\s*[:=]\s*toggle[_-]?group",
     # shell trail → Breadcrumb → .dz-breadcrumb (2026-08-08)
     "breadcrumb": "always",
-    # display: accordion → Accordion → .dz-accordion (2026-08-08)
-    "accordion": r"display:\s*accordion",
+    "accordion": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     "tabs": r"display:\s*tabbed_list",
-    "avatar": r"display:\s*profile_card",
-    # display: progress_bar → ProgressBar → .dz-progress (2026-08-09)
-    "progress": r"display:\s*progress_bar",
+    "avatar": r"ref\s+User",  # person chip (.dz-user-chip wraps .dz-avatar)
+    "progress": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     "sidebar-layout": "always",
     "auto-grid": "always",
     "center": "exempt:no Dazzle emitter yet (gallery/HM-site layout primitive)",
     "status-list": r"display:\s*status_list",
-    "action-grid": r"display:\s*action_grid",
+    "action-grid": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     "queue": r"display:\s*queue",
     "kanban": r"display:\s*kanban",
     "timeline": r"display:\s*(day_)?timeline",
     "activity-feed": r"display:\s*activity_feed",
     "related-tables": r"mode:\s*view",  # detail views with reverse FKs
     "metrics": r"display:\s*metrics",
-    "sparkline": r"display:\s*sparkline",
-    "funnel": r"display:\s*funnel_chart",
+    "sparkline": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
+    "funnel": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     "bar-chart": r"display:\s*bar_chart",
-    "chart-legend": r"display:\s*(pie|area|line)_chart|overlay_series",
-    "heatmap": r"display:\s*heatmap",
-    "bullet": r"display:\s*bullet",
+    "chart-legend": r"display:\s*line_chart|overlay_series",
+    "heatmap": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
+    "bullet": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     "pivot": r"display:\s*pivot_table",
     "bar-track": r"display:\s*bar_track",
-    "histogram": r"display:\s*histogram",
-    "box-plot": r"display:\s*box_plot",
+    "histogram": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
+    "box-plot": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     # Dual-lock chart fleet (ops_dashboard regions)
     "radar": r"display:\s*radar",
-    "time-series": r"display:\s*(line|area)_chart",
-    "progress-region": r"display:\s*progress",
-    "profile-card": r"display:\s*profile_card",
+    "time-series": r"display:\s*line_chart",
+    "progress-region": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
+    "profile-card": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     "task-inbox": r"display:\s*task_inbox",
-    "tree": r"display:\s*tree",
+    "tree": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     "diagram": r"display:\s*diagram",
     "separator": "exempt:visual primitive, no DSL surface",
     "icon": "always",  # via command-palette results (lazy /command fetch) — thin anchor
@@ -130,8 +128,7 @@ SIGNALS: dict[str, object] = {
     "item": "exempt:no Dazzle emitter yet (gallery list-row anatomy)",
     # person chip compose guest → .dz-hover-card (2026-08-09)
     "hover-card": r"ref\s+User",
-    # display: carousel → Carousel → .dz-carousel (2026-08-08)
-    "carousel": r"display:\s*carousel",
+    "carousel": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     # menubar: true → shell Menubar → .dz-menubar (2026-08-09)
     "menubar": r"menubar:\s*true",
     # display: conversation → MessageScroller(.dz-message-scroller) of Message+Bubble (2026-08-09)
@@ -141,8 +138,7 @@ SIGNALS: dict[str, object] = {
     # sitespec layout.nav → NavigationMenu → .dz-navigation-menu (2026-08-09)
     # Framework always emits for site chrome when nav items present (all examples).
     "navigation-menu": "always",
-    # display: map → MapBoard of Marker pins → .dz-marker (2026-08-09)
-    "marker": r"display:\s*map",
+    "marker": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     "kbd": "exempt:presentation chip (hm-core .dz-kbd; command palette already uses it)",
 }
 
@@ -159,14 +155,11 @@ SIGNALS: dict[str, object] = {
 # debt: close each by a kept example or fixture adopting it, or by retiring the
 # Hyperpart when no consumer app uses it.
 KNOWN_GAPS: set[str] = {
-    "action-grid",
-    "avatar",
     "bar-track",
     "confirm-panel",
     "diagram",
     "menubar",
     "pdf",
-    "profile-card",
     "search-box",
     "search-select",
     "tabs",

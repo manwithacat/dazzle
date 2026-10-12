@@ -158,22 +158,16 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_conversation_clock_title.py",
     # cycle 2275: timeline must rail datetime when, not hide logged_at (oral #143)
     "tests/unit/test_timeline_datetime_rail.py",
-    # cycle 2276: funnel/progress must not dump snake_case stage tokens (oral #144)
-    "tests/unit/test_funnel_stage_label.py",
-    "tests/unit/test_region_adapter.py::test_funnel_chart_renders_dedicated_primitive",
+    # cycle 2276: stage labels must not dump snake_case stage tokens (oral #144)
+    "tests/unit/test_stage_label_speech.py",
     # cycle 2277: related queue must not title severity/environment (oral #145)
     "tests/unit/test_related_queue_risk_title.py",
     # cycle 2278: workspace bool FilterBar must not dump true/false (oral #146)
     "tests/unit/test_bool_filter_label.py",
     # cycle 2279: workspace enum FilterBar must not dump snake_case (oral #147)
     "tests/unit/test_enum_filter_label.py",
-    # cycle 2280: stacked area legend must not dump snake_case (oral #148)
-    "tests/unit/test_area_chart_series_label.py",
-    "tests/unit/test_timeseries_series_shaping.py::test_pivot_to_series_groups_by_second_dimension",
     # cycle 2282: chart day buckets must not dump ISO storage dates (oral #150)
     "tests/unit/test_chart_day_bucket_label.py",
-    # cycle 2283: heatmap group_by must not dump an empty/zero matrix (oral #151)
-    "tests/unit/test_heatmap_group_by.py",
     # cycle 2284: insight_summary must not dump aggregate key ``count`` (oral #152)
     "tests/unit/test_insight_measure_noun.py",
     # cycle 2285: comparison league must not dump integer counts as 12.00 (oral #153)
@@ -194,18 +188,10 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_pivot_measure_leak.py",
     # cycle 2295: pipeline_steps literal values must not become emdash (oral #161)
     "tests/unit/test_pipeline_literal_value.py",
-    # cycle 2297: tree group_by scalar must nest folders, not a flat list (oral #163)
-    "tests/unit/test_tree_group_by_scalar.py",
     # cycle 2298: tabbed_list group_by must slice status tabs, not dump empty (oral #164)
     "tests/unit/test_tabbed_list_group_by.py",
-    # cycle 2299: progress group_by must slice status chips, not dump empty (oral #165)
-    "tests/unit/test_progress_group_by.py",
     # cycle 2300: diagram must emit AppSpec ER, not dump empty relationships (oral #166)
     "tests/unit/test_diagram_er.py",
-    # cycle 2301: display: map must pin devices, not dump empty locations (oral #167)
-    "tests/unit/test_map_empty_dump.py",
-    # cycle 2302: display: accordion must emit FAQ panels, not dump empty (oral #168)
-    "tests/unit/test_accordion_empty_dump.py",
     # cycle 2303: kanban group_by FK must emit people columns, not dump empty (oral #169)
     "tests/unit/test_kanban_fk_group_by.py",
     # cycle 2304: workspace file cells must not dump storage UUIDs (oral #170)
@@ -232,15 +218,13 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_list_search_field_dump.py",
     # cycle 2317: related-tab FK disambiguation must not dump assigned to (oral #183)
     "tests/unit/test_related_tab_fk_dump.py",
-    # cycle 2318: carousel aspect chip must not dump icon_glyph (oral #184)
-    "tests/unit/test_carousel_chip_dump.py",
     # cycle 2319: bar-chart bool group_by must not dump True/False (oral #185)
     "tests/unit/test_bar_chart_bool_dump.py",
     # cycle 2320: bar-chart / badge level tokens must not dump Ic1 (oral #186)
     "tests/unit/test_bar_chart_level_acronym.py",
     # cycle 2321: kanban / badge / FilterBar region tokens must not dump Emea (oral #187)
     "tests/unit/test_region_acronym_dump.py",
-    # cycle 2322: radar / box-plot / heatmap axes must not dump api/critical (oral #188)
+    # cycle 2322: radar axes must not dump api/critical (oral #188)
     "tests/unit/test_chart_axis_dump.py",
     # cycle 2324: temporal workspace as-of snapshot must not be silent (oral #190)
     "tests/unit/test_as_of_snapshot_chrome.py",
@@ -295,18 +279,10 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_empty_timeline_entity_dump.py",
     # cycle 2391: kanban lane empty must not dump generic No items (oral #223)
     "tests/unit/test_empty_kanban_lane_dump.py",
-    # cycle 2392: tree empty must not dump generic No items (oral #224)
-    "tests/unit/test_empty_tree_entity_dump.py",
     # cycle 2393: queue empty must not dump generic Queue is empty (oral #225)
     "tests/unit/test_empty_queue_entity_dump.py",
     # cycle 2394: cohort-strip empty must not dump generic No members (oral #226)
     "tests/unit/test_empty_cohort_entity_dump.py",
-    # cycle 2395: profile-card empty must not dump generic No profile data (oral #227)
-    "tests/unit/test_empty_profile_entity_dump.py",
-    # cycle 2396: map empty must not dump generic No locations (oral #228)
-    "tests/unit/test_empty_map_entity_dump.py",
-    # cycle 2397: carousel empty must not dump generic No slides (oral #229)
-    "tests/unit/test_empty_carousel_entity_dump.py",
     # cycle 2398: pivot empty must not dump generic No data to pivot (oral #230)
     "tests/unit/test_empty_pivot_entity_dump.py",
     # cycle 2399: open-via hop phrases must not dump assigned to (oral #231)
@@ -331,10 +307,6 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_invariant_evaluator.py::TestViolationError::test_check_update_threads_entity",
     # cycle 2334 cimonitor: all_true checklist 422 still pinned snake_case keys
     "tests/unit/test_composite_guards.py::TestAllTrueGuard::test_all_true_transition_blocked_with_clear_message",
-    # cycle 2323 cimonitor: region-adapter smokes still pinned mon/g1/p50 after #188
-    "tests/unit/test_region_adapter.py::test_heatmap_renders_dedicated_primitive",
-    "tests/unit/test_region_adapter.py::test_alternative_dict_item_shape_normalizes_to_same_render[box_plot]",
-    "tests/unit/test_region_adapter.py::test_display_renders_dz_marker_and_item_content[box_plot]",
     # cycle 2289: typed percentage cells must keep % (CI red after 2288 pct→42)
     "tests/unit/test_data_row_characterization_1505.py::TestRenderDataRowParity::test_render_data_row_matches_fixture",
     "tests/unit/test_list_handler_substrate_parity_1505.py::test_build_data_table_rows_match_fixture",

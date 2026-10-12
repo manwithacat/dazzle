@@ -1,18 +1,14 @@
 """Chart-family region builders.
 
-Houses the 10 chart builders that share the `_parse_reference_lines` /
+Houses the chart builders that share the `_parse_reference_lines` /
 `_parse_reference_bands` helpers and the same Surface-wrapping pattern:
 
-  - _build_radar        radar polar profile (≥3 axes)
-  - _build_box_plot     quartile boxplot
-  - _build_time_series  line / area / sparkline
-  - _build_diagram      Mermaid ER diagram (with structural fallback)
-  - _build_bar_track    labelled ARIA progressbars
-  - _build_bullet       Stephen Few bullet rows
-  - _build_funnel_chart funnel stages
-  - _build_histogram    continuous-axis bars
-  - _build_heatmap      threshold-tinted matrix
-  - _build_bar_chart    classic categorical bars
+  - _build_radar           radar polar profile (≥3 axes)
+  - _build_line_chart      time-series line (single or overlaid series)
+  - _build_diagram         Mermaid ER diagram (with structural fallback)
+  - _build_comparison      ranked league (bar-track rows + outlier flags)
+  - _build_insight_summary deterministic grounded narrative
+  - _build_bar_chart       classic categorical bars
 
 The dispatch tables stay in `_dispatcher.py`; this module only exposes
 the mixin (consumed via class inheritance) and the two parsers (used
@@ -31,29 +27,18 @@ from typing import Any, Literal
 
 from dazzle.render.filters import (
     clerk_chart_axis_label,
-    clerk_measure_suffix,
     clerk_stage_label,
 )
 from dazzle.render.fragment import (
     BarChart,
     BarTrack,
-    BoxPlot,
-    Bullet,
-    BulletRow,
     Diagram,
     EmptyState,
     Fragment,
-    Funnel,
-    FunnelStage,
-    Heatmap,
-    HeatmapRow,
-    Histogram,
-    HistogramBin,
     Radar,
     RawHTML,
     ReferenceBand,
     ReferenceLine,
-    Sparkline,
     Stack,
     Surface,
     Text,
@@ -66,15 +51,6 @@ from dazzle.render.fragment.region._shared import (
     _region_title,
     _wrap_surface,
 )
-
-
-def _region_measure_suffix(region: Any, *field_attrs: str) -> str:
-    """Unit suffix from a region's measure field (``value:`` / ``bullet_actual:``)."""
-    for attr in field_attrs:
-        key = getattr(region, attr, None) or ""
-        if key:
-            return clerk_measure_suffix(key)
-    return ""
 
 
 def _parse_reference_lines(raw: Any) -> tuple[ReferenceLine, ...]:
@@ -250,7 +226,7 @@ def _comparison_track_rows(raw_rows: Any) -> list[tuple[str, float, str, float]]
 
 
 class _BuildersChartsMixin:
-    """Mixin adding the 10 chart-family `_build_*` methods to
+    """Mixin adding the chart-family `_build_*` methods to
     `WorkspaceRegionAdapter`.
 
     Mixin-not-subclass so the public class (`WorkspaceRegionAdapter`)
@@ -302,89 +278,8 @@ class _BuildersChartsMixin:
 
         return _wrap_surface(title, "report", body)
 
-    def _build_box_plot(self, region: Any, ctx: RegionContext) -> Surface:
-        """`display: box_plot` regions render as a BoxPlot quartile table.
-
-        ctx shape:
-            groups: list of dicts {"label": str, "min": float, "q1": float,
-                                   "median": float, "q3": float, "max": float}
-                or 6-tuples (label, min, q1, median, q3, max)
-            chart_label: optional override
-        """
-        title = _region_title(region)
-        chart_label = str(ctx.get("chart_label") or title or "Distribution")
-        raw_groups = ctx.get("groups") or []
-        groups: list[tuple[str, float, float, float, float, float]] = []
-        # Phase 4B.4 wave 2: thread per-group sample counts through to
-        # the primitive when supplied (legacy `box_plot_stats[i].n`),
-        # so the renderer can match the legacy `n=N` tooltip suffix.
-        samples: list[int] = []
-        any_sample = False
-        for entry in raw_groups:
-            label = ""
-            mn = q1 = med = q3 = mx = 0.0
-            n_value = 0
-            n_present = False
-            if isinstance(entry, (list, tuple)) and len(entry) == 6:
-                try:
-                    raw_label = entry[0]
-                    label = clerk_chart_axis_label(raw_label) or str(raw_label)
-                    mn, q1, med, q3, mx = (float(v) for v in entry[1:6])
-                except (TypeError, ValueError):
-                    continue
-            elif isinstance(entry, dict):
-                raw_label = entry.get("label") or ""
-                label = clerk_chart_axis_label(raw_label) or str(raw_label)
-                try:
-                    mn = float(entry.get("min") or 0)
-                    q1 = float(entry.get("q1") or 0)
-                    med = float(entry.get("median") or 0)
-                    q3 = float(entry.get("q3") or 0)
-                    mx = float(entry.get("max") or 0)
-                except (TypeError, ValueError):
-                    continue
-                if "n" in entry:
-                    try:
-                        n_value = int(entry.get("n") or 0)
-                        n_present = True
-                    except (TypeError, ValueError):
-                        n_present = False
-            else:
-                continue
-            # Drop groups with non-monotonic quartiles — BoxPlot's
-            # __post_init__ would raise; the adapter is permissive.
-            if label and mn <= q1 <= med <= q3 <= mx:
-                groups.append((label, mn, q1, med, q3, mx))
-                samples.append(n_value if n_present else 0)
-                if n_present:
-                    any_sample = True
-
-        body: Fragment
-        if not groups:
-            body = EmptyState(
-                title=_chart_empty_title(region, ctx),
-                description=getattr(region, "empty_message", None)
-                or "No box-plot groups to render.",
-            )
-        else:
-            body = BoxPlot(
-                label=chart_label,
-                groups=tuple(groups),
-                samples=tuple(samples) if any_sample else (),
-                reference_lines=_parse_reference_lines(ctx.get("reference_lines")),
-                reference_bands=_parse_reference_bands(ctx.get("reference_bands")),
-                unit_suffix=_region_measure_suffix(region, "heatmap_value"),
-            )
-
-        return _wrap_surface(title, "report", body)
-
-    def _build_time_series(
-        self,
-        region: Any,
-        ctx: RegionContext,
-        view: Literal["line", "area", "sparkline"],
-    ) -> Surface:
-        """Render a TimeSeries primitive (line / area / sparkline).
+    def _build_line_chart(self, region: Any, ctx: RegionContext) -> Surface:
+        """Render a TimeSeries primitive as a line chart.
 
         ctx shape:
             points: list of (label, value) tuples or {label, value} /
@@ -399,16 +294,14 @@ class _BuildersChartsMixin:
                 from > to silently drop.
         """
         title = _region_title(region)
-        chart_label = str(ctx.get("chart_label") or title or view.title())
+        chart_label = str(ctx.get("chart_label") or title or "Line")
 
         body: Fragment
 
-        # Multi-series path (#1473): `series` is a list of {name, points}
-        # shaped by the adapter from pivot_buckets (stacked area_chart) or
-        # bucketed_metrics + overlay_series_data (line overlays). Sparkline
-        # stays single-series — its compact tile has no room for layers.
+        # Multi-series path (#883): `series` is a list of {name, points}
+        # shaped by the adapter from bucketed_metrics + overlay_series_data.
         raw_series: Any = ctx.get("series") or []
-        if raw_series and view != "sparkline":
+        if raw_series:
             series: list[TimeSeriesSeries] = []
             for s in raw_series:
                 if not isinstance(s, dict):
@@ -421,7 +314,7 @@ class _BuildersChartsMixin:
             if series:
                 body = TimeSeries(
                     label=chart_label,
-                    view=view,
+                    view="line",
                     series=tuple(series),
                     reference_lines=_parse_reference_lines(ctx.get("reference_lines")),
                     reference_bands=_parse_reference_bands(ctx.get("reference_bands")),
@@ -429,15 +322,6 @@ class _BuildersChartsMixin:
                 return _wrap_surface(title, "report", body)
 
         points = _coerce_series_points(ctx.get("points") or [])
-
-        # Sparkline is a structurally distinct shape (180×32 viewBox,
-        # headline + tiny SVG, no axis labels, no reference overlays);
-        # Phase 4B.4 wave 2 routes it to a dedicated `Sparkline`
-        # primitive rather than overloading TimeSeries' SVG output.
-        if view == "sparkline":
-            empty_msg = ctx.get("empty_message") or getattr(region, "empty_message", None) or "—"
-            body = Sparkline(points=tuple(points), empty_message=str(empty_msg))
-            return _wrap_surface(title, "report", body)
 
         if not points:
             body = EmptyState(
@@ -452,7 +336,7 @@ class _BuildersChartsMixin:
         body = TimeSeries(
             label=chart_label,
             points=tuple(points),
-            view=view,
+            view="line",
             reference_lines=ref_lines,
             reference_bands=ref_bands,
         )
@@ -506,87 +390,6 @@ class _BuildersChartsMixin:
                 edges.append((src, dst))
 
         return _wrap_surface(title, "report", Diagram(nodes=nodes, edges=tuple(edges)))
-
-    def _build_bar_track(self, region: Any, ctx: RegionContext) -> Surface:
-        """`display: bar_track` renders one labelled, filled track per
-        row with ARIA progressbar semantics + a summary line. Phase
-        4B.1.b — uses the typed `BarTrack` primitive (replaced the
-        prior alias to `_build_progress` which produced the simpler
-        Stack-of-Row(Text, Badge) shape).
-
-        ctx shape:
-            bar_track_rows: list of dicts {"label": str, "value": float,
-                "formatted_value": str, "fill_pct": float (0..100)}
-                — pre-computed by the runtime per `track_format` Python
-                format spec
-            bar_track_max: float — scale endpoint for aria-valuemax
-                + summary line
-            (legacy fallback) `items` with `{label, percent}` shape from
-                Phase 4A is still accepted; `formatted_value` is filled
-                in as `"<percent>%"`, `value` mirrors `percent`,
-                `bar_track_max` defaults to 100.
-
-        Empty rows degrade to EmptyState; rows with malformed shapes or
-        out-of-range fill_pct silently drop rather than tripping the
-        BarTrack primitive's invariants.
-        """
-        title = _region_title(region)
-        raw_rows = ctx.get("bar_track_rows") or []
-        max_value: float
-        try:
-            max_value = float(ctx.get("bar_track_max") or 100.0)
-        except (TypeError, ValueError):
-            max_value = 100.0
-        if max_value <= 0:
-            max_value = 100.0
-
-        rows: list[tuple[str, float, str, float]] = []
-        # Primary path — pre-computed bar_track_rows from the runtime
-        for entry in raw_rows:
-            if not isinstance(entry, dict):
-                continue
-            label = str(entry.get("label") or "")
-            if not label:
-                continue
-            try:
-                value = float(entry.get("value") or 0)
-                fill_pct = float(entry.get("fill_pct") or 0)
-            except (TypeError, ValueError):
-                continue
-            fill_pct = max(0.0, min(100.0, fill_pct))
-            formatted = str(entry.get("formatted_value") or value)
-            rows.append((label, value, formatted, fill_pct))
-
-        # Legacy fallback — Phase 4A `items` with `{label, percent}` shape
-        if not rows:
-            for entry in ctx.get("items") or []:
-                if not isinstance(entry, dict):
-                    continue
-                label = str(entry.get("label") or entry.get("name") or "")
-                if not label:
-                    continue
-                try:
-                    percent = float(entry.get("percent") or entry.get("value") or 0)
-                except (TypeError, ValueError):
-                    percent = 0.0
-                percent = max(0.0, min(100.0, percent))
-                rows.append((label, percent, f"{percent:g}%", percent))
-
-        body: Fragment
-        if not rows:
-            body = EmptyState(
-                title=_chart_empty_title(region, ctx),
-                description=getattr(region, "empty_message", None) or "No data available.",
-            )
-        else:
-            body = BarTrack(
-                rows=tuple(rows),
-                max_value=max_value,
-                reference_lines=_parse_reference_lines(ctx.get("reference_lines")),
-                reference_bands=_parse_reference_bands(ctx.get("reference_bands")),
-            )
-
-        return _wrap_surface(title, "report", body)
 
     def _build_comparison(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: comparison` renders a ranked league as labelled ARIA
@@ -657,259 +460,6 @@ class _BuildersChartsMixin:
         footer = f"{getattr(nar, 'scope', '')} · {getattr(nar, 'badge', '')}".strip(" ·")
         children.append(Text(body=footer, tone="muted"))
         return _wrap_surface(title, "report", Stack(children=tuple(children), gap="sm"))
-
-    def _build_bullet(self, region: Any, ctx: RegionContext) -> Surface:
-        """`display: bullet` renders Stephen Few bullet rows — label +
-        track (bands behind, actual bar, optional target tick) +
-        formatted value. Phase 4B.4 wave 2: dedicated `Bullet` primitive
-        replaces prior Stack+Row+Badge composition for byte-equivalence
-        with `workspace/regions/bullet.html`.
-
-        ctx shape (primary):
-            bullet_rows: list of dicts {label, actual, target}
-            bullet_max_value: float — denominator for percentage scale
-            reference_bands: optional list[dict] for comparative zones
-            empty_message: optional empty-state fallback
-        """
-        title = _region_title(region)
-        raw_rows = ctx.get("bullet_rows") or []
-        try:
-            max_value = float(ctx.get("bullet_max_value") or 0)
-        except (TypeError, ValueError):
-            max_value = 0.0
-
-        rows: list[BulletRow] = []
-        if isinstance(raw_rows, list):
-            for entry in raw_rows:
-                if not isinstance(entry, dict):
-                    continue
-                label = str(entry.get("label") or entry.get("name") or "")
-                if not label:
-                    continue
-                try:
-                    actual = float(entry.get("actual", 0))
-                except (TypeError, ValueError):
-                    continue
-                target_raw = entry.get("target")
-                target: float | None = None
-                if target_raw is not None:
-                    try:
-                        target = float(target_raw)
-                    except (TypeError, ValueError):
-                        target = None
-                rows.append(BulletRow(label=label, actual=actual, target=target))
-
-        empty_msg = (
-            ctx.get("empty_message")
-            or getattr(region, "empty_message", None)
-            or "No data available."
-        )
-        body: Fragment = Bullet(
-            rows=tuple(rows),
-            max_value=max_value if rows else 1.0,  # invariant guard for empty
-            reference_bands=_parse_reference_bands(ctx.get("reference_bands")),
-            empty_message=str(empty_msg),
-            unit_suffix=_region_measure_suffix(region, "bullet_actual"),
-        )
-        return _wrap_surface(title, "report", body)
-
-    def _build_funnel_chart(self, region: Any, ctx: RegionContext) -> Surface:
-        """`display: funnel_chart` regions render as a `Funnel` primitive.
-
-        Phase 4B.4 wave 3: dedicated builder (replaces prior bar_chart
-        routing) for byte-equivalence with `workspace/regions/funnel_chart.html`.
-        Width is calculated relative to the FIRST stage's count (not max),
-        and clamped to a 20% minimum. Stages are ordered as supplied —
-        funnel rendering preserves the declared kanban_columns order.
-
-        ctx shape (production runtime):
-            kanban_columns: ordered list of stage keys
-            items: source rows (counted per stage via group_by)
-            group_by: field name on each item carrying the stage value
-            total: pre-computed total item count
-            (legacy alt) buckets: pre-sorted [(label, count)] tuples
-            (legacy alt) metrics: list[{label, value}] fallback
-            empty_message: optional empty-state fallback
-        """
-        title = _region_title(region)
-        items = ctx.get("items") or []
-        kanban_columns = ctx.get("kanban_columns") or []
-        group_by = ctx.get("group_by")
-        try:
-            total = int(ctx.get("total") or 0)
-        except (TypeError, ValueError):
-            total = 0
-
-        stages: list[FunnelStage] = []
-        if kanban_columns and items and group_by:
-            counts: dict[str, int] = {str(s): 0 for s in kanban_columns}
-            for item in items:
-                if isinstance(item, dict):
-                    key = str(item.get(group_by) or "Unknown")
-                    if key in counts:
-                        counts[key] += 1
-            for stage in kanban_columns:
-                key = str(stage)
-                label = clerk_stage_label(key)
-                stages.append(FunnelStage(label=label or key, count=counts.get(key, 0)))
-        else:
-            # Legacy fallbacks: pre-sorted buckets, or metrics list.
-            for entry in ctx.get("buckets") or []:
-                if isinstance(entry, (list, tuple)) and len(entry) >= 2:
-                    try:
-                        raw_label = str(entry[0])
-                        stages.append(
-                            FunnelStage(
-                                label=clerk_stage_label(raw_label) or raw_label,
-                                count=int(entry[1]),
-                            )
-                        )
-                    except (TypeError, ValueError):
-                        continue
-            if not stages:
-                for m in ctx.get("metrics") or []:
-                    if isinstance(m, dict):
-                        try:
-                            raw_label = str(m.get("label") or "")
-                            stages.append(
-                                FunnelStage(
-                                    label=clerk_stage_label(raw_label) or raw_label,
-                                    count=int(m.get("value") or 0),
-                                )
-                            )
-                        except (TypeError, ValueError):
-                            continue
-
-        empty_msg = (
-            ctx.get("empty_message")
-            or getattr(region, "empty_message", None)
-            or "No data available."
-        )
-        body: Fragment = Funnel(
-            stages=tuple(stages),
-            total=total,
-            empty_message=str(empty_msg),
-        )
-        return _wrap_surface(title, "report", body)
-
-    def _build_histogram(self, region: Any, ctx: RegionContext) -> Surface:
-        """`display: histogram` regions render as a `Histogram` primitive
-        — continuous-axis SVG bar chart with optional vertical reference
-        lines. Phase 4B.4 wave 3: dedicated builder (replaces prior alias
-        to `_build_bar_chart`) for byte-equivalence with
-        `workspace/regions/histogram.html`.
-
-        ctx shape:
-            histogram_bins: list of `{label, count, low, high}` dicts —
-                pre-computed by the runtime's `_compute_histogram_bins`
-                from the already-fetched items
-            reference_lines: optional list of `{value, label, style}`
-                dicts (vertical overlays at x-position)
-            empty_message: optional empty-state fallback
-        """
-        title = _region_title(region)
-        chart_label = str(ctx.get("chart_label") or title or "Histogram")
-        raw_bins = ctx.get("histogram_bins") or []
-
-        bins: list[HistogramBin] = []
-        for entry in raw_bins:
-            if not isinstance(entry, dict):
-                continue
-            label = str(entry.get("label") or "")
-            if not label:
-                continue
-            try:
-                count = int(entry.get("count") or 0)
-                low = float(entry.get("low", 0))
-                high = float(entry.get("high", 0))
-            except (TypeError, ValueError):
-                continue
-            bins.append(HistogramBin(label=label, count=count, low=low, high=high))
-
-        empty_msg = (
-            ctx.get("empty_message")
-            or getattr(region, "empty_message", None)
-            or "No data available."
-        )
-        body: Fragment = Histogram(
-            label=chart_label,
-            bins=tuple(bins),
-            reference_lines=_parse_reference_lines(ctx.get("reference_lines")),
-            empty_message=str(empty_msg),
-            unit_suffix=_region_measure_suffix(region, "heatmap_value"),
-        )
-        return _wrap_surface(title, "report", body)
-
-    def _build_heatmap(self, region: Any, ctx: RegionContext) -> Surface:
-        """`display: heatmap` regions render as a `Heatmap` primitive
-        — threshold-tinted matrix matching `workspace/regions/heatmap.html`
-        byte-for-byte. Phase 4B.4 wave 4: dedicated builder (replaces
-        alias to pivot_table).
-
-        ctx shape (production runtime):
-            heatmap_matrix: list of dicts {row, row_id, cells:[{col, value}]}
-            heatmap_col_values: ordered list of column labels
-            heatmap_thresholds: 0/1/2 ascending floats for tone bands
-            total: int — overflow indicator denominator
-            items: list — for total > items.length overflow check
-            empty_message: optional empty-state fallback
-        """
-        title = _region_title(region)
-        matrix = ctx.get("heatmap_matrix") or []
-        col_values = ctx.get("heatmap_col_values") or []
-        thresholds_raw = ctx.get("heatmap_thresholds") or []
-        try:
-            total = int(ctx.get("total") or 0)
-        except (TypeError, ValueError):
-            total = 0
-        # Legacy template's overflow check is `total > items|length`,
-        # not `total > rows|length` — but typically items==rows count.
-        items = ctx.get("items") or []
-        if total < len(items):
-            total = len(items)
-
-        thresholds: list[float] = []
-        for t in thresholds_raw:
-            try:
-                thresholds.append(float(t))
-            except (TypeError, ValueError):
-                continue
-
-        rows: list[HeatmapRow] = []
-        for row_dict in matrix:
-            if not isinstance(row_dict, dict):
-                continue
-            raw_row = row_dict.get("row") or ""
-            row_label = clerk_chart_axis_label(raw_row) or str(raw_row)
-            cells_raw = row_dict.get("cells") or []
-            cell_values: list[float] = []
-            for cell in cells_raw:
-                if isinstance(cell, dict):
-                    try:
-                        cell_values.append(float(cell.get("value") or 0))
-                    except (TypeError, ValueError):
-                        cell_values.append(0.0)
-            rows.append(
-                HeatmapRow(
-                    label=row_label,
-                    cells=tuple(cell_values),
-                    row_id=str(row_dict.get("row_id") or ""),
-                )
-            )
-
-        empty_msg = (
-            ctx.get("empty_message")
-            or getattr(region, "empty_message", None)
-            or "No data available."
-        )
-        body: Fragment = Heatmap(
-            columns=tuple(clerk_chart_axis_label(c) or str(c) for c in col_values),
-            rows=tuple(rows),
-            thresholds=tuple(thresholds),
-            total=total,
-            empty_message=str(empty_msg),
-        )
-        return _wrap_surface(title, "report", body)
 
     def _build_bar_chart(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: bar_chart` regions render as a BarChart primitive

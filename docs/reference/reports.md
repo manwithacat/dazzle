@@ -31,15 +31,13 @@ Before you write DSL, pick the cardinality × visualisation:
 | **Inferred** | **`auto`** | — | **let the framework pick the form from the data shape (#1492)** |
 | KPI tile | `metrics` / `summary` | 0 | "42 open tickets" |
 | Bar chart | `bar_chart` | 1 | Tickets by status |
-| Funnel | `funnel_chart` | 1 (ordered) | Pipeline by stage |
-| Heatmap | `heatmap` | 2 | Week × hour traffic |
 | Pivot table | `pivot_table` | 1..N | Alerts by (system, severity) with counts |
 | Kanban | `kanban` | 1 | Tickets by status as columns |
 | Line chart | `line_chart` | 1 (time) | Alerts per day |
-| Area chart | `area_chart` | 2 (time + series) | Alerts per week, stacked by severity |
-| Sparkline | `sparkline` | 1 (time) | Compact "latest" tile with trend |
+| Radar | `radar` | 1 (≥3 values) | Profile shape across categories |
+| Comparison | `comparison` | 1 | Ranked league with outlier flags |
 
-Each consumes a different IR shape. `bar_chart` reads `group_by: <field>`. `pivot_table` reads `group_by: [<field>, <field>]`. `heatmap` reads `heatmap_rows:` + `heatmap_columns:`. `metrics` reads only `aggregate:`.
+Each consumes a different IR shape. `bar_chart` reads `group_by: <field>`. `pivot_table` reads `group_by: [<field>, <field>]`. `line_chart` reads `group_by: bucket(<ts>, <unit>)`. `metrics` reads only `aggregate:`.
 
 ## Single-dimension (most common)
 
@@ -77,7 +75,7 @@ One row per `(system, severity)` combination. FK columns LEFT JOIN with indexed 
 Wrap any timestamp field in `bucket(<field>, <unit>)` to group by calendar unit instead of distinct value. The runtime emits `date_trunc('<unit>', <field>)` in the SQL. Valid units: `day`, `week`, `month`, `quarter`, `year` (whitelist enforced at parse time).
 
 ```dsl
-# Single-dim time series → line_chart / sparkline
+# Single-dim time series → line_chart
 alerts_timeseries:
   source: Alert
   display: line_chart
@@ -85,10 +83,10 @@ alerts_timeseries:
   aggregate:
     count: count(Alert)
 
-# Two-dim (time + categorical) → area_chart stacked by series
-alerts_weekly_stacked:
+# Two-dim (time + categorical) → pivot_table cross-tab
+alerts_weekly_by_severity:
   source: Alert
-  display: area_chart
+  display: pivot_table
   group_by: [bucket(triggered_at, week), severity]
   aggregate:
     count: count(Alert)
@@ -96,9 +94,9 @@ alerts_weekly_stacked:
 
 Time buckets are chronologically ordered (ASC), not alphabetical. Labels format per unit: `2026-04-23` (day), `2026-W17` (week), `Apr 2026` (month), `Q2 2026` (quarter), `2026` (year). The raw ISO timestamp survives as `bucket` for the bar click / filter downstream.
 
-Time-bucketed dims are **mutually exclusive with FK joins** — a timestamp column cannot be a foreign key. Combining `bucket(...)` with a scalar or FK dim in the same `group_by_dims` list is fine (and common for area_chart).
+Time-bucketed dims are **mutually exclusive with FK joins** — a timestamp column cannot be a foreign key. Combining `bucket(...)` with a scalar or FK dim in the same `group_by_dims` list is fine (and common for `pivot_table`).
 
-No gap-filling in v0.60.0 — days with zero rows don't appear in the result. Line/area charts handle the gap visually (straight segment between adjacent buckets); sparklines show the present buckets only.
+No gap-filling in v0.60.0 — days with zero rows don't appear in the result. Line charts handle the gap visually (straight segment between adjacent buckets).
 
 ## Supported measures
 
