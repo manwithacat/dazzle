@@ -1,7 +1,6 @@
 """Backlog ingestion for Tier 2 visual-QA subagent runs.
 
-Sibling to :mod:`subagent_ingest` (framework-ux's PROP/EX rows). This
-module owns the example-apps lane's ``visual_quality`` rows: parses a
+This module owns the example-apps lane's ``visual_quality`` rows: parses a
 subagent ``findings.json`` (the JSON the CC subagent writes during the
 ``visual_tier2_subagent`` strategy), allocates numeric row IDs, dedups
 against existing rows, sorts by severity (high → medium → low), and
@@ -12,11 +11,9 @@ The lane's normal OBSERVE → ENHANCE → BUILD → VERIFY cycle then drains
 the rows one per cycle. Dedup means re-runs of the same drift reinforce
 an existing row (``seen=K`` increments) instead of cloning it.
 
-Why this lives in ``ux_cycle_impl`` alongside ``subagent_ingest``: same
-substrate (CC subagent), same lifecycle (called by an `/improve` lane
-playbook after the subagent finishes), same backlog file. Keeping the
-two ingest helpers next to each other makes the patterns easy to
-compare and evolve.
+It lives in ``ux_cycle_impl`` because it shares that substrate (CC
+subagent) and lifecycle (called by an `/improve` lane playbook after the
+subagent finishes).
 """
 
 from __future__ import annotations

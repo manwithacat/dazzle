@@ -141,29 +141,29 @@ pytest tests/integration/test_serve_validation.py -v
 
 ### 4. Runtime Tests
 
-#### Backend Tests (`src/dazzle/http/tests/`)
+#### Backend Tests (`tests/unit/http_runtime/`)
+
+Runtime tests live under `tests/`; the wheel ships no tests (ADR-0057, flense ship H).
 
 | File | Description |
 |------|-------------|
 | `test_runtime.py` | FastAPI initialization, routing |
-| `test_repository.py` | Data access layer |
 | `test_query_builder.py` | Query construction |
-| `test_access_control.py` | Authorization |
 | `test_state_machine.py` | State transitions |
-| `test_computed_evaluator.py` | Computed fields |
-| `test_invariant_evaluator.py` | Invariant checking |
 | `test_websocket_manager.py` | WebSocket connectivity |
 | `test_file_storage.py` | File uploads |
 | `test_fts.py` | Full-text search |
+| `test_auth.py` | Auth store, sessions, middleware, routes |
 
-#### UI Tests (`src/dazzle/page/tests/`)
+Access control, computed fields, invariants and rich text are covered by
+`tests/unit/test_access_control.py`, `test_computed_evaluator.py`,
+`test_invariant_evaluator.py` and `test_richtext_processor.py`.
+
+#### UI Tests (`tests/unit/page/`)
 
 | File | Description |
 |------|-------------|
-| `test_runtime.py` | UI runtime |
 | `test_ui_spec.py` | UI spec generation |
-| `test_behaviour_layer.py` | Behavioral components |
-| `test_js_loader.py` | JavaScript loading |
 
 ### 5. JavaScript Tests
 
@@ -482,8 +482,8 @@ carry an `xdist_group` pin naming that directory's cohort.
 | Integration | `tests/integration/` | ✅ | ❌ | ✅ |
 | E2E (Playwright) | `tests/e2e/` | ✅ | ❌ | ❌ (local only) |
 | E2E (Semantic) | `tests/e2e/test_semantic_dom_contract.py` | ✅ | ❌ | ✅ |
-| Backend runtime | `src/dazzle/http/tests/` | ✅ | ❌ | ✅ |
-| UI runtime | `src/dazzle/page/tests/` | ✅ | ❌ | ✅ |
+| Backend runtime | `tests/unit/http_runtime/` | ✅ | ✅ (fast) | ✅ |
+| UI runtime | `tests/unit/page/` | ✅ | ✅ (fast) | ✅ |
 | JavaScript | `*.test.js` | ✅ | ✅ | ✅ |
 | Example E2E (P0) | `examples/*/tests/e2e/` | ✅ | ❌ | ✅ |
 | Example E2E (P1/P2) | `examples/*/tests/e2e/` | ✅ | ❌ | ⚠️ (main only) |

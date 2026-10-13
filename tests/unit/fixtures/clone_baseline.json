@@ -9,11 +9,10 @@
   },
   {
     "signature": "exact:4b0924ea9f27f8df6da9e6db7be157b6",
-    "count": 3,
+    "count": 2,
     "names": [
       "dazzle/agent/missions/entity_completeness.py::gap_count",
-      "dazzle/agent/missions/workflow_coherence.py::gap_count",
-      "dazzle/testing/stress_test.py::gap_count"
+      "dazzle/agent/missions/workflow_coherence.py::gap_count"
     ]
   },
   {

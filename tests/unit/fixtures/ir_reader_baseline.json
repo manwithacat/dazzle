@@ -25,6 +25,7 @@
   "integrations.MatchRule.foreign_field",
   "islands.IslandEventSpec.detail_fields",
   "islands.IslandSpec.fallback",
+  "islands.IslandSpec.props",
   "llm.ArtifactRefSpec.artifact_id",
   "llm.ArtifactRefSpec.byte_size",
   "llm.ArtifactRefSpec.content_hash",

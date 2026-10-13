@@ -157,7 +157,7 @@ async def my_endpoint(data: MyRequest) -> MyResponse:
 
 ### 3. Add Tests
 
-Create `src/dazzle/http/tests/test_my_service.py`:
+Create `tests/unit/http_runtime/test_my_service.py`:
 
 ```python
 import pytest

@@ -1,6 +1,6 @@
 {
-  "src_lines": 394547,
-  "test_lines": 363407,
+  "src_lines": 381875,
+  "test_lines": 369731,
   "docs_lines": 48483,
   "construct_count": 31,
   "written": "2026-10-13",
@@ -73,6 +73,13 @@
         "docs_lines"
       ],
       "reason": "v0.116.0 release: 0022 drop DDL after operator sign-off (+src), plan \u00a78 decisions and Phase 4 baseline table (+docs)"
+    },
+    {
+      "date": "2026-10-13",
+      "rose": [
+        "test_lines"
+      ],
+      "reason": "ship H: in-package http/page tests moved to tests/ (src -12,672, tests +6,324; net -6,348)"
     }
   ]
 }
