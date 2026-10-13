@@ -281,23 +281,3 @@ def evaluate_computed_fields(
         result[cf.name] = value
 
     return result
-
-
-def enrich_record_with_computed_fields(
-    record: dict[str, Any],
-    computed_fields: list[ComputedFieldSpec],
-    related_data: dict[str, list[dict[str, Any]]] | None = None,
-) -> dict[str, Any]:
-    """
-    Add computed field values to a record.
-
-    Args:
-        record: The record data (as a dict)
-        computed_fields: List of computed field specifications
-        related_data: Optional dict of relation_name -> list of related records
-
-    Returns:
-        Record dict with computed fields added
-    """
-    computed_values = evaluate_computed_fields(record, computed_fields, related_data)
-    return {**record, **computed_values}

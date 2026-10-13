@@ -45,7 +45,6 @@ from dazzle.http.events.inbox import CREATE_INBOX_INDEXES, CREATE_INBOX_TABLE
 from dazzle.http.events.outbox import CREATE_OUTBOX_INDEXES, CREATE_OUTBOX_TABLE
 from dazzle.http.runtime.audit_log import ensure_audit_log_table
 from dazzle.http.runtime.auth.store import ensure_auth_core_tables
-from dazzle.http.runtime.device_registry import ensure_device_tables
 from dazzle.http.runtime.file_storage import ensure_file_storage_tables
 from dazzle.http.runtime.grant_store import ensure_grant_tables
 from dazzle.http.runtime.otp_store import ensure_otp_tables
@@ -185,10 +184,6 @@ def _ensure_framework_schema_ddl(cur: Any) -> None:  # cur: psycopg.Cursor
     # ── REFRESH TOKENS ────────────────────────────────────────────────────
     # Delegated to ensure_refresh_token_tables (token_store.py).
     ensure_refresh_token_tables(cur)
-
-    # ── DEVICES ───────────────────────────────────────────────────────────
-    # Delegated to ensure_device_tables (device_registry.py).
-    ensure_device_tables(cur)
 
     # ── GRANTS (_grants, _grant_events) ──────────────────────────────────
     # Delegated to ensure_grant_tables (grant_store.py).

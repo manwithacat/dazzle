@@ -451,34 +451,6 @@ class TestFileMetadataStore:
         files = metadata_store.get_by_entity("Task", "task-123", "attachment")
         assert len(files) == 3
 
-    def test_update_entity_association(self, metadata_store: Any) -> None:
-        """Test updating entity association."""
-
-        metadata = FileMetadata(
-            id=uuid4(),
-            filename="test.txt",
-            content_type="text/plain",
-            size=100,
-            storage_key="test.txt",
-            storage_backend="local",
-            created_at=datetime.now(UTC),
-            url="/files/test.txt",
-        )
-        metadata_store.save(metadata)
-
-        # Update association
-        updated = metadata_store.update_entity_association(
-            metadata.id, "Task", "task-123", "attachment"
-        )
-
-        assert updated is True
-
-        # Verify
-        retrieved = metadata_store.get(metadata.id)
-        assert retrieved.entity_name == "Task"
-        assert retrieved.entity_id == "task-123"
-        assert retrieved.field_name == "attachment"
-
 
 # =============================================================================
 # FileService Tests
@@ -592,28 +564,6 @@ class TestFileService:
 
         files = file_service.get_entity_files("Task", "task-123")
         assert len(files) == 3
-
-    @pytest.mark.asyncio
-    async def test_associate_with_entity(self, file_service: Any, sample_file: Any) -> None:
-        """Test associating uploaded file with entity."""
-        # Upload without entity
-        metadata = await file_service.upload(
-            sample_file,
-            "test.txt",
-            "text/plain",
-        )
-
-        # Associate later
-        associated = await file_service.associate_with_entity(
-            metadata.id, "Task", "task-123", "attachment"
-        )
-
-        assert associated is True
-
-        # Verify
-        files = file_service.get_entity_files("Task", "task-123", "attachment")
-        assert len(files) == 1
-        assert files[0].id == metadata.id
 
 
 # =============================================================================

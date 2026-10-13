@@ -17,9 +17,8 @@ Pipeline (per region request):
    (``region_filters``, #1773) are captured separately so downstream
    aggregate paths stay tenant-bounded and count the same rows the
    region shows, without re-mixing in request query-param filters.
-5. Pick the page-size for grouped displays (KANBAN/BAR_CHART/
-   FUNNEL_CHART/BOX_PLOT — #889) so paginated defaults surface all
-   buckets.
+5. Pick the page-size for grouped displays (KANBAN/BAR_CHART — #889)
+   so paginated defaults surface all buckets.
 6. Default-deny: if scope rules didn't match, short-circuit to an
    empty result without firing the query.
 7. Query the repo. Inject FK display names (#571). Use the item
@@ -300,10 +299,7 @@ async def fetch_region_items(
 
         # Step 5: page-size for grouped displays (#889).
         include_rels = ctx.auto_include
-        if (
-            ctx.ctx_region.display in ("KANBAN", "BAR_CHART", "FUNNEL_CHART", "BOX_PLOT")
-            and not ctx.ctx_region.limit
-        ):
+        if ctx.ctx_region.display in ("KANBAN", "BAR_CHART") and not ctx.ctx_region.limit:
             limit = min(page_size, 200) if page_size > 20 else 50
         else:
             limit = ctx.ctx_region.limit or page_size

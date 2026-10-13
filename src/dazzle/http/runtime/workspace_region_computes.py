@@ -1357,7 +1357,7 @@ def compute_kanban_columns(
     group_by_field: str,
 ) -> list[str]:
     """Resolve the bucket column list for a grouped view (KANBAN /
-    BAR_CHART / FUNNEL_CHART).
+    BAR_CHART).
 
     First checks the field's enum values, then falls back to the
     entity's state-machine states (only when the state machine's

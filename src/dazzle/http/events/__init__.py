@@ -28,10 +28,6 @@ from dazzle.http.events.bus import (
 )
 from dazzle.http.events.envelope import EventEnvelope
 from dazzle.http.events.null import EVENTS_AVAILABLE, NullBus, NullEventFramework
-from dazzle.http.events.service_mixin import (
-    EventEmittingCRUDService,
-    EventEmittingMixin,
-)
 
 # --- Heavy imports (require psycopg and other extras) ---
 if EVENTS_AVAILABLE:
@@ -100,9 +96,6 @@ __all__ = [
     "NullBus",
     "NullEventFramework",
     "EVENTS_AVAILABLE",
-    # Service mixin (zero-dep)
-    "EventEmittingMixin",
-    "EventEmittingCRUDService",
     # Exceptions
     "EventBusError",
     "TopicNotFoundError",

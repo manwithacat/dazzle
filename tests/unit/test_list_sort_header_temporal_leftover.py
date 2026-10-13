@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dazzle.http.runtime.renderers.fragment_adapter import _build_column_header
 from dazzle.render.fragment import URL, FragmentRenderer, SortHeader
 
 _PAGE_ROUTES = (
@@ -84,21 +83,6 @@ def test_sort_header_empty_temporal_omits() -> None:
     assert "include_closed" not in html
     assert "as_of" not in html
     assert "sort=name" in html and "dir=asc" in html
-
-
-def test_build_column_header_threads_leftover_honest_temporal() -> None:
-    h = _build_column_header(
-        col={"key": "name", "label": "Name", "sortable": True},
-        endpoint="/app/x",
-        region_name="r",
-        current_sort="",
-        current_direction="asc",
-        include_closed="true",
-        as_of="2026-01-15",
-    )
-    assert isinstance(h, SortHeader)
-    assert h.include_closed == "true"
-    assert h.as_of == "2026-01-15"
 
 
 def test_emit_sort_header_source_pins_leftover_honest_echo() -> None:

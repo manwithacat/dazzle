@@ -13,8 +13,6 @@ from dazzle.http.runtime.query_builder import (
     FilterOperator,
     QueryBuilder,
     SortField,
-    parse_filter_string,
-    parse_sort_string,
 )
 
 # =============================================================================
@@ -390,84 +388,6 @@ class TestQueryBuilder:
 # =============================================================================
 # Parse Functions Tests
 # =============================================================================
-
-
-class TestParseFunctions:
-    """Tests for filter and sort parsing functions."""
-
-    def test_parse_filter_string_simple(self) -> None:
-        """Test parsing simple filter string."""
-        filters = parse_filter_string("status=active")
-
-        assert filters == {"status": "active"}
-
-    def test_parse_filter_string_multiple(self) -> None:
-        """Test parsing multiple filters."""
-        filters = parse_filter_string("status=active,priority=5")
-
-        assert filters["status"] == "active"
-        assert filters["priority"] == 5
-
-    def test_parse_filter_string_with_operators(self) -> None:
-        """Test parsing filters with operators."""
-        filters = parse_filter_string("priority__gte=5,status__ne=deleted")
-
-        assert filters["priority__gte"] == 5
-        assert filters["status__ne"] == "deleted"
-
-    def test_parse_filter_string_boolean(self) -> None:
-        """Test parsing boolean values."""
-        filters = parse_filter_string("active=true,deleted=false")
-
-        assert filters["active"] is True
-        assert filters["deleted"] is False
-
-    def test_parse_filter_string_null(self) -> None:
-        """Test parsing null values."""
-        filters = parse_filter_string("deleted_at=null")
-
-        assert filters["deleted_at"] is None
-
-    def test_parse_filter_string_list(self) -> None:
-        """Test parsing list values."""
-        # Note: Current implementation splits on comma first, so list parsing
-        # is limited. For complex lists, use the API directly.
-        # This tests what the current simple parser can handle.
-        from dazzle.http.runtime.query_builder import _parse_value
-
-        # Direct value parsing works
-        result = _parse_value("[active,pending,review]")
-        assert result == ["active", "pending", "review"]
-
-    def test_parse_filter_string_uuid(self) -> None:
-        """Test parsing UUID values."""
-        filters = parse_filter_string("id=12345678-1234-5678-1234-567812345678")
-
-        assert isinstance(filters["id"], UUID)
-
-    def test_parse_filter_string_empty(self) -> None:
-        """Test parsing empty string."""
-        filters = parse_filter_string("")
-
-        assert filters == {}
-
-    def test_parse_sort_string_simple(self) -> None:
-        """Test parsing simple sort string."""
-        sorts = parse_sort_string("created_at")
-
-        assert sorts == ["created_at"]
-
-    def test_parse_sort_string_multiple(self) -> None:
-        """Test parsing multiple sorts."""
-        sorts = parse_sort_string("priority,-created_at")
-
-        assert sorts == ["priority", "-created_at"]
-
-    def test_parse_sort_string_empty(self) -> None:
-        """Test parsing empty sort string."""
-        sorts = parse_sort_string("")
-
-        assert sorts == []
 
 
 # =============================================================================

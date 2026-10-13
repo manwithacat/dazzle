@@ -493,11 +493,6 @@ CARD_LIKE_DISPLAYS: frozenset[str] = frozenset(
 )
 
 
-def prefer_fitness_repr_for_display(display: str | None) -> bool:
-    """True when workspace region display is card/gallery (not queue/list)."""
-    return str(display or "").lower().strip() in CARD_LIKE_DISPLAYS
-
-
 def _fitness_repr_field_names(entity_spec: Any) -> list[str]:
     """Author ``fitness.repr_fields`` when present — domain-essential card/list projection.
 

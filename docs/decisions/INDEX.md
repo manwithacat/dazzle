@@ -76,6 +76,7 @@ below, link from the issue body (not only a comment).
 | [DD-007](DD-007-messaging-dsl.md) | Messaging DSL (`message`/`channel`/`notification`/`asset`/`document`/`template`) | PARKED | #952 | Email kernel kept; reopen on cyfuture SLA `on_breach: notify` or AegisMark safeguarding alerts |
 | [DD-008](DD-008-background-jobs.md) | `job` construct + `dazzle worker` | PARKED | #953 | `schedule` kept; reopen when AegisMark replaces Heroku Scheduler (`cohort_analysis`) |
 | [DD-009](DD-009-verified-domain-join.md) | Verified-domain self-service join | PARKED | #1424 | SSO domain verification kept; reopen when AegisMark school email domains need it |
+| [DD-010](DD-010-process-step-ai-executor.md) | Process-step AI executor (`llm_intent` steps in a `process`) | PARKED | #1454, #1457 | Never mounted (ADR-0043); removed in flense ship O; reopen when a consumer runs an `llm_intent` step inside a process |
 
 ## Related
 

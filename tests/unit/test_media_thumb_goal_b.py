@@ -192,16 +192,6 @@ def test_fitness_repr_fields_skip_column_economy_truncation() -> None:
     assert len(keys) >= 7
 
 
-def test_prefer_fitness_repr_helper_documents_card_like_displays() -> None:
-    """CARD_LIKE helper remains for shape docs; fitness is authoritative when set (1928)."""
-    from dazzle.http.runtime.workspace_columns import prefer_fitness_repr_for_display
-
-    assert prefer_fitness_repr_for_display("grid") is True
-    assert prefer_fitness_repr_for_display("media_shelf") is True
-    # Helper still classifies queue as non-card; route_builder uses fitness for queues too.
-    assert prefer_fitness_repr_for_display("queue") is False
-
-
 def test_support_tickets_ticket_repr_includes_ticket_number() -> None:
     """#1304 agent_tickets queues must keep AAA-001 identity in fitness projection."""
 

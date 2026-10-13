@@ -6,7 +6,6 @@ from decimal import Decimal
 import pytest
 
 from dazzle.http.runtime.computed_evaluator import (
-    enrich_record_with_computed_fields,
     evaluate_computed_fields,
     evaluate_expression,
 )
@@ -359,15 +358,3 @@ class TestComputedFieldEvaluation:
         ]
         result = evaluate_computed_fields({"subtotal": 200}, fields)
         assert abs(result["tax"] - 20.0) < 0.001
-
-    def test_enrich_record(self) -> None:
-        fields = [
-            ComputedFieldSpec(
-                name="total",
-                expression=ComputedExprSpec(kind="field_ref", path=["amount"]),
-            ),
-        ]
-        enriched = enrich_record_with_computed_fields({"id": "1", "amount": 50}, fields)
-        assert enriched["id"] == "1"
-        assert enriched["amount"] == 50
-        assert enriched["total"] == 50

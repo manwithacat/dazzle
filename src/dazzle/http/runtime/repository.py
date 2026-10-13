@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import logging
 import re
-import time
 from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
@@ -558,7 +557,6 @@ def _safe_text_field_names(entity_spec: Any, search_spec: Any) -> _list[str]:
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from dazzle.http.metrics.system_collector import SystemMetricsCollector
     from dazzle.http.runtime.relation_loader import RelationLoader
 
 
@@ -623,7 +621,6 @@ class Repository[T: BaseModel]:
 
     Provides CRUD operations against PostgreSQL database.
     Supports advanced filtering, sorting, and relation loading.
-    Optionally collects query metrics for observability.
     """
 
     def __init__(
@@ -632,7 +629,6 @@ class Repository[T: BaseModel]:
         entity_spec: EntitySpec,
         model_class: type[T],
         relation_loader: RelationLoader | None = None,
-        metrics_collector: SystemMetricsCollector | None = None,
         base_entity_spec: EntitySpec | None = None,
     ):
         """
@@ -643,7 +639,6 @@ class Repository[T: BaseModel]:
             entity_spec: Entity specification
             model_class: Pydantic model class for the entity
             relation_loader: Optional relation loader for nested data fetching
-            metrics_collector: Optional system metrics collector for query timing
             base_entity_spec: For polymorphic-child entities (``subtype_of: <base>``),
                 the back-layer EntitySpec for the base entity. Repository.list
                 uses this to inject a JOIN that pulls shared base columns into
@@ -654,7 +649,6 @@ class Repository[T: BaseModel]:
         self.model_class = model_class
         self.table_name = entity_spec.name
         self._relation_loader = relation_loader
-        self._metrics = metrics_collector
 
         # Build field type lookup for conversions
         self._field_types: dict[str, FieldType] = {f.name: f.type for f in entity_spec.fields}
@@ -688,16 +682,6 @@ class Repository[T: BaseModel]:
                 # this the JOINed columns are returned as raw DB values
                 # rather than coerced Python types.
                 self._field_types.setdefault(f.name, f.type)
-
-    def _record_query(self, query_type: str, latency_ms: float, rows: int = 0) -> None:
-        """Record a database query metric."""
-        if self._metrics:
-            self._metrics.record_db_query(
-                query_type=query_type,
-                table=self.table_name,
-                latency_ms=latency_ms,
-                rows_affected=rows,
-            )
 
     def _python_to_db(self, value: Any, field_type: FieldType | None = None) -> Any:
         """Convert a Python value for PostgreSQL storage."""
@@ -798,7 +782,6 @@ class Repository[T: BaseModel]:
             returning = " RETURNING " + ", ".join(quote_identifier(c) for c in omitted)
         sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders}){returning}"
 
-        start = time.perf_counter()
         try:
             with self.db.connection() as conn:
                 cursor = conn.cursor()
@@ -817,8 +800,6 @@ class Repository[T: BaseModel]:
                         }
         except _INTEGRITY_ERRORS as exc:
             raise _translate_integrity_error(exc, self.table_name) from exc
-        latency_ms = (time.perf_counter() - start) * 1000
-        self._record_query("insert", latency_ms, rows=1)
 
         # auth Plan 1d: a server-filled required column (the partition key) that
         # we expected to RETURNING but didn't get back must NOT be masked by the
@@ -963,13 +944,10 @@ class Repository[T: BaseModel]:
             sql = f'SELECT * FROM {table} WHERE "id" = {ph}{soft_delete_clause}{temporal_clause}'
         params: tuple[Any, ...] = (str(id), *extra_params)
 
-        start = time.perf_counter()
         with self.db.connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql, params)  # nosemgrep
             row = cursor.fetchone()
-        latency_ms = (time.perf_counter() - start) * 1000
-        self._record_query("select", latency_ms, rows=1 if row else 0)
 
         if not row:
             return None
@@ -1092,7 +1070,6 @@ class Repository[T: BaseModel]:
         table = quote_identifier(self.table_name)
         sql = f'UPDATE {table} SET {set_clause} WHERE "id" = {ph}'
 
-        start = time.perf_counter()
         try:
             if conn is not None:
                 # #1319 Slice B — join the caller's transaction; the caller commits.
@@ -1106,8 +1083,6 @@ class Repository[T: BaseModel]:
                     rowcount = cursor.rowcount
         except _INTEGRITY_ERRORS as exc:
             raise _translate_integrity_error(exc, self.table_name) from exc
-        latency_ms = (time.perf_counter() - start) * 1000
-        self._record_query("update", latency_ms, rows=rowcount)
 
         if rowcount == 0:
             return None
@@ -1149,7 +1124,6 @@ class Repository[T: BaseModel]:
         ph = self.db.placeholder
         sql = f'DELETE FROM {table} WHERE "id" = {ph}'
 
-        start = time.perf_counter()
         try:
             with self.db.connection() as conn:
                 cursor = conn.cursor()
@@ -1165,8 +1139,6 @@ class Repository[T: BaseModel]:
                     "referenced by other records"
                 ) from exc
             raise
-        latency_ms = (time.perf_counter() - start) * 1000
-        self._record_query("delete", latency_ms, rows=rowcount)
 
         return bool(rowcount and rowcount > 0)
 
@@ -1300,25 +1272,19 @@ class Repository[T: BaseModel]:
         # Get total count
         count_sql, count_params = builder.build_count()
 
-        start = time.perf_counter()
         with self.db.connection() as conn:
             cursor = conn.cursor()
             cursor.execute(count_sql, count_params)
             row = cursor.fetchone()
             total = row[0] if isinstance(row, (tuple, list)) else next(iter(row.values()))
-        latency_ms = (time.perf_counter() - start) * 1000
-        self._record_query("count", latency_ms)
 
         # Get paginated items
         items_sql, items_params = builder.build_select()
 
-        start = time.perf_counter()
         with self.db.connection() as conn:
             cursor = conn.cursor()
             cursor.execute(items_sql, items_params)
             rows = cursor.fetchall()
-        latency_ms = (time.perf_counter() - start) * 1000
-        self._record_query("select", latency_ms, rows=len(rows))
 
         # Convert to dicts first for relation loading
         row_dicts = [dict(row) for row in rows]
@@ -1519,7 +1485,6 @@ class Repository[T: BaseModel]:
             if not sql:
                 return []
 
-            start = time.perf_counter()
             with self.db.connection() as conn:
                 cursor = conn.cursor()
                 # build_aggregate_sql composes identifiers via quote_identifier
@@ -1529,8 +1494,6 @@ class Repository[T: BaseModel]:
                     sql, params
                 )  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query
                 rows = cursor.fetchall()
-            latency_ms = (time.perf_counter() - start) * 1000
-            self._record_query("aggregate", latency_ms, rows=len(rows))
 
             return rows_to_buckets(
                 [dict(r) if hasattr(r, "keys") else r for r in rows],
@@ -1538,48 +1501,6 @@ class Repository[T: BaseModel]:
                 measures=measures,
                 measure_expressions=measure_expressions,
             )
-
-    def explain_aggregate(
-        self,
-        *,
-        dimensions: _list[Any],
-        measures: dict[str, str],
-        filters: dict[str, Any] | None = None,
-        limit: int = 200,
-        measure_expressions: dict[str, tuple[str, _list[Any]]] | None = None,
-        measure_windows: dict[str, Any] | None = None,
-    ) -> tuple[str, _list[Any]]:
-        """Return the ``(sql, params)`` ``aggregate(...)`` would execute.
-
-        Debug-velocity tool. When a chart renders wrong values or no
-        buckets, the answer to "why?" should be "here's the exact SQL
-        the framework runs" — not "read the source". Pair with
-        ``dazzle db explain-aggregate`` on the CLI for operators, or
-        call directly from tests / notebooks to inspect compilation.
-
-        No side effects: does not hit the database. Uses the same
-        :func:`dazzle.http.runtime.aggregate.build_aggregate_sql` the
-        live path uses, so what this returns is byte-for-byte what
-        :meth:`aggregate` would ``cursor.execute``.
-
-        Args are identical to :meth:`aggregate` — kept in sync so any
-        agg call can be copy-pasted into explain without edits.
-
-        Returns ``("", [])`` when no supported measures are present
-        (same short-circuit ``aggregate`` applies).
-        """
-        from dazzle.http.runtime.aggregate import build_aggregate_sql
-
-        return build_aggregate_sql(
-            table_name=self.table_name,
-            placeholder_style=self.db.placeholder,
-            dimensions=dimensions,
-            measures=measures,
-            filters=filters,
-            limit=limit,
-            measure_expressions=measure_expressions,
-            measure_windows=measure_windows,
-        )
 
     def _convert_row_dict(
         self,
@@ -1756,13 +1677,10 @@ class Repository[T: BaseModel]:
         ph = self.db.placeholder
         sql = f'SELECT 1 FROM {table} WHERE "id" = {ph} LIMIT 1'  # nosemgrep
 
-        start = time.perf_counter()
         with self.db.connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql, (str(id),))  # nosemgrep
             result = cursor.fetchone()
-        latency_ms = (time.perf_counter() - start) * 1000
-        self._record_query("select", latency_ms, rows=1 if result else 0)
 
         return result is not None
 
@@ -1782,7 +1700,6 @@ class RepositoryFactory:
         db_manager: Any,
         models: dict[str, type[BaseModel]],
         relation_loader: RelationLoader | None = None,
-        metrics_collector: SystemMetricsCollector | None = None,
     ):
         """
         Initialize the factory.
@@ -1791,12 +1708,10 @@ class RepositoryFactory:
             db_manager: Database backend (PostgresBackend)
             models: Dictionary mapping entity names to Pydantic models
             relation_loader: Optional relation loader for nested data fetching
-            metrics_collector: Optional system metrics collector for query timing
         """
         self.db = db_manager
         self.models = models
         self._relation_loader = relation_loader
-        self._metrics = metrics_collector
         self._repositories: dict[str, Repository[Any]] = {}
 
     def create_repository(
@@ -1824,7 +1739,6 @@ class RepositoryFactory:
             entity_spec=entity,
             model_class=model,
             relation_loader=self._relation_loader,
-            metrics_collector=self._metrics,
             base_entity_spec=base_entity_spec,
         )
         self._repositories[entity.name] = repo
@@ -1847,10 +1761,6 @@ class RepositoryFactory:
             base = by_name.get(entity.subtype_of) if entity.subtype_of else None
             self.create_repository(entity, base_entity_spec=base)
         return self._repositories
-
-    def get_repository(self, entity_name: str) -> Repository[Any] | None:
-        """Get a repository by entity name."""
-        return self._repositories.get(entity_name)
 
 
 # =============================================================================

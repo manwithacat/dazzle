@@ -48,7 +48,6 @@ IN_SCOPE_TABLES: list[str] = [
     "_dazzle_atomic_audit",
     "dazzle_files",
     "refresh_tokens",
-    "devices",
     "_grants",
     "_grant_events",
     "_dazzle_otp_codes",

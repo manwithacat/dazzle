@@ -14,9 +14,10 @@ parent: flense-programme
 
 No consumer app declares an event construct. Flense ship F (ADR-0057) removes
 the event *vocabulary* of the DSL and the Kafka bus adapter, and keeps the
-event *core* every consumer already runs: `EventsSubsystem`,
-`EventEmittingMixin` on every CRUD service, the transactional outbox and
-publisher, the inbox, and the Postgres, Redis and in-memory buses.
+event *core* every consumer already runs: `EventsSubsystem`, the
+transactional outbox and publisher, the inbox, and the Postgres, Redis and
+in-memory buses. (Flense ship O corrected this list: `EventEmittingMixin`
+was never mixed into a CRUD service and was removed — see *Already shipped*.)
 
 ## Plan (what we already concluded)
 
@@ -67,10 +68,34 @@ When a force lands:
 
 ## Already shipped (do not re-litigate)
 
-- The event core stays and is live for every consumer: CRUD lifecycle
-  events go through `EventEmittingMixin` into the outbox and on to the bus;
-  `/_dazzle/events/*` inspection remains (the `dazzle events` / `dlq` /
-  `outbox` CLI groups were retired in flense ship J — no consumer ran them).
+- The event core stays and starts for every consumer: `EventsSubsystem`
+  builds the `EventFramework` (bus tier, outbox publisher, inbox, consumer
+  groups) and `/_dazzle/events/*` inspection remains (the `dazzle events` /
+  `dlq` / `outbox` CLI groups were retired in flense ship J — no consumer ran
+  them). What actually travels on it today:
+  - **CRUD lifecycle events do not use the bus or the outbox.** `CRUDService`
+    lifecycle callbacks feed the in-process `EntityEventBus`
+    (`SystemRoutesSubsystem._wire_entity_events_to_bus`), whose handlers are
+    integration mappings, LLM triggers, SLA timers and app handlers (cyfuture
+    registers `add_sync_handler` for lifecycle and HMRC work). For workspaces
+    with `live: on`, `sse_wiring` also publishes a non-transactional nudge
+    envelope straight to the bus for the SSE stream.
+  - **Auth events** (`auth.user.registered` and siblings) are published
+    straight to the bus by `auth/events.py`; cyfuture consumes them through
+    `EventFramework.register_handler`.
+  - **The process event-bus adapter** publishes its own envelopes to the bus.
+  - **The transactional outbox has no framework writer.** Its only writer
+    was `EventEmittingMixin`, which no CRUD service ever inherited (the
+    `set_event_framework` wiring in `EventsSubsystem` never matched a
+    service); flense ship O removed the mixin and that wiring. The outbox
+    table, `EventFramework.emit_event` (the public append API) and the
+    publisher that drains it stay as event core. A forcing consumer that
+    needs transactional CRUD events needs the append inside the repository
+    write transaction — the `CRUDService` lifecycle callbacks fire after the
+    write, and the removed mixin handed `emit_event` the repository's backend
+    object rather than the open transaction, so neither was transactional
+    (mixin restore point: `src/dazzle/http/events/service_mixin.py` at
+    `7879465836d4c38ded550e9c564f1a7d7d29d9e8`).
 - AegisMark's production boot log confirms the **Redis Streams** bus
   (`REDIS_URL` set), so the Redis tier is core, not parked.
 
@@ -83,3 +108,4 @@ When a force lands:
 | Date | Event |
 |------|--------|
 | 2026-10-12 | Parked (this DD); events DSL and Kafka bus removed in flense ship F |
+| 2026-10-13 | Flense ship O: *Already shipped* corrected — CRUD events never reached the outbox; unused `EventEmittingMixin` removed |

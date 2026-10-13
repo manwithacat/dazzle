@@ -4,7 +4,7 @@
 > Do not edit; rerun the script. This table is the only admissible evidence for a keep or a
 > removal under [ADR-0057](../adr/0057-consumer-forced-growth-and-mass-ratchet.md).
 
-Snapshot: 2026-10-13. Consumers absent on this machine: none (absent means *unknown*, never *unused*).
+Snapshot: 2026-10-14. Consumers absent on this machine: none (absent means *unknown*, never *unused*).
 
 **How to read.** DSL declarations are one signal among seven. Consumers also reach the
 framework through CLI calls in scripts and docs, Python imports, `dazzle.toml` sections,
@@ -17,9 +17,9 @@ never zero. The non-DSL scanners are text matches: they over-count rather than m
 
 | Measure | Value |
 |---|---:|
-| Framework source lines (`src/dazzle`) | 363,695 |
-| Test lines (`tests/`) | 362,537 |
-| Documentation lines (`docs/**/*.md`) | 47,368 |
+| Framework source lines (`src/dazzle`) | 355,016 |
+| Test lines (`tests/`) | 357,479 |
+| Documentation lines (`docs/**/*.md`) | 47,283 |
 | Top-level DSL constructs | 31 |
 | Constructs with zero consumer use | 1 |
 
@@ -38,10 +38,10 @@ Counts are top-level declarations in `.dsl` files.
 | Construct | AegisMark | cyfuture | pennydreadful | examples | Disposition hint |
 |---|---:|---:|---:|---:|---|
 | `analytics` | 1 | 1 | 0 | 0 | consumer-used |
-| `app` | 1 | 1 | 1 | 4 | consumer-used |
+| `app` | 1 | 1 | 1 | 5 | consumer-used |
 | `archetype` | 3 | 0 | 0 | 2 | consumer-used |
 | `audit` | 0 | 0 | 0 | 2 | examples only |
-| `entity` | 68 | 64 | 41 | 25 | consumer-used |
+| `entity` | 68 | 64 | 41 | 28 | consumer-used |
 | `experience` | 0 | 2 | 3 | 0 | consumer-used |
 | `feedback_widget` | 0 | 1 | 0 | 2 | consumer-used |
 | `foreign_model` | 0 | 34 | 0 | 0 | consumer-used |
@@ -49,25 +49,25 @@ Counts are top-level declarations in `.dsl` files.
 | `guide` | 0 | 2 | 2 | 13 | consumer-used |
 | `integration` | 0 | 2 | 0 | 0 | consumer-used |
 | `island` | 0 | 2 | 0 | 1 | consumer-used |
-| `llm_config` | 1 | 0 | 1 | 1 | consumer-used |
-| `llm_intent` | 5 | 0 | 6 | 4 | consumer-used |
-| `llm_model` | 2 | 0 | 3 | 2 | consumer-used |
+| `llm_config` | 1 | 0 | 1 | 2 | consumer-used |
+| `llm_intent` | 5 | 0 | 6 | 8 | consumer-used |
+| `llm_model` | 2 | 0 | 3 | 4 | consumer-used |
 | `nav` | 10 | 6 | 5 | 17 | consumer-used |
 | `param` | 5 | 32 | 0 | 0 | consumer-used |
-| `persona` | 10 | 6 | 5 | 17 | consumer-used |
+| `persona` | 10 | 6 | 5 | 20 | consumer-used |
 | `policies` | 1 | 0 | 0 | 0 | consumer-used |
-| `process` | 0 | 1 | 0 | 6 | consumer-used |
+| `process` | 0 | 1 | 0 | 9 | consumer-used |
 | `rhythm` | 3 | 2 | 0 | 1 | consumer-used |
-| `scenario` | 26 | 3 | 0 | 6 | consumer-used |
-| `schedule` | 0 | 8 | 0 | 2 | consumer-used |
+| `scenario` | 26 | 3 | 0 | 9 | consumer-used |
+| `schedule` | 0 | 8 | 0 | 4 | consumer-used |
 | `search` | 1 | 0 | 0 | 0 | consumer-used |
-| `service` | 0 | 11 | 0 | 8 | consumer-used |
+| `service` | 0 | 11 | 0 | 15 | consumer-used |
 | `sla` | 0 | 8 | 0 | 1 | consumer-used |
 | `story` | 62 | 214 | 16 | 45 | consumer-used |
 | `subprocessor` | 4 | 0 | 0 | 0 | consumer-used |
-| `surface` | 234 | 231 | 46 | 92 | consumer-used |
+| `surface` | 234 | 231 | 46 | 98 | consumer-used |
 | `tenancy` | 1 | 1 | 0 | 2 | consumer-used |
-| `workspace` | 32 | 7 | 4 | 31 | consumer-used |
+| `workspace` | 32 | 7 | 4 | 35 | consumer-used |
 
 **Zero consumer use:** `audit`
 
@@ -77,23 +77,23 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 
 | Subpackage | Source lines | Test lines (name-matched) |
 |---|---:|---:|
-| `http` | 108,276 | 649 |
-| `core` | 76,959 | 2,097 |
+| `http` | 101,012 | 649 |
+| `core` | 76,488 | 2,097 |
 | `render` | 29,168 | 5,984 |
 | `mcp` | 28,039 | 5,499 |
-| `testing` | 26,230 | 68 |
+| `testing` | 26,019 | 68 |
 | `cli` | 25,298 | 8,544 |
-| `page` | 13,599 | 2,501 |
-| `agent` | 10,676 | 8,212 |
-| `qa` | 7,390 | 3,129 |
+| `page` | 13,186 | 2,501 |
+| `agent` | 10,383 | 8,212 |
+| `qa` | 7,368 | 3,129 |
 | `sentinel` | 6,191 | 563 |
-| `db` | 4,389 | 3,730 |
+| `db` | 4,384 | 3,729 |
 | `compliance` | 4,286 | 1,417 |
 | `rbac` | 3,876 | 6,860 |
 | `signing` | 2,143 | 1,969 |
 | `demo_data` | 2,127 | 365 |
 | `conformance` | 1,650 | 4,107 |
-| `services` | 1,632 | 105 |
+| `services` | 1,632 | 98 |
 | `agent_loop` | 1,541 | 154 |
 | `llm` | 1,528 | 2,615 |
 | `perf` | 1,217 | 2,203 |
@@ -107,6 +107,19 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `fitness` | 490 | 186 |
 | `deploy` | 181 | 342 |
 | `seed` | 126 | 1,357 |
+| `docs_update` | 0 | 0 |
+| `documents` | 0 | 0 |
+| `domain_brief` | 0 | 0 |
+| `layout` | 0 | 1,659 |
+| `lsp` | 0 | 0 |
+| `notifications` | 0 | 0 |
+| `pitch` | 0 | 0 |
+| `product_quality` | 0 | 0 |
+| `quality` | 0 | 80 |
+| `risk` | 0 | 171 |
+| `spec_narrative` | 0 | 0 |
+| `specs` | 0 | 144 |
+| `stubs` | 0 | 0 |
 | `templates` | 0 | 598 |
 
 ## MCP tools
@@ -174,7 +187,7 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 | `scaffold` | 1 | 1 | 0 | 1 |  |
 | `search` | 0 | 0 | 0 | 0 |  |
 | `sentinel` | 2 | 3 | 0 | 0 | `scan` |
-| `serve` | 101 | 11 | 44 | 20 |  |
+| `serve` | 100 | 11 | 44 | 20 |  |
 | `signing` | 1 | 0 | 0 | 0 | `init` |
 | `spec` | 0 | 0 | 0 | 0 |  |
 | `story` | 0 | 2 | 0 | 0 | `list` |
@@ -276,27 +289,26 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 | `_dz` | 0 | 0 | 0 | 0 |
 | `_ops` | 0 | 0 | 0 | 0 |
 | `_site` | 0 | 0 | 0 | 0 |
-| `api` | 201 | 94 | 1240 | 6 |
+| `api` | 201 | 94 | 1240 | 21 |
 | `app` | 2216 | 5967 | 74 | 1 |
 | `auth` | 129 | 135 | 71 | 0 |
 | `banner` | 0 | 0 | 0 | 0 |
-| `data` | 1 | 1 | 0 | 0 |
+| `data` | 1 | 1 | 0 | 6 |
 | `dazzle` | 0 | 0 | 3 | 0 |
-| `devices` | 0 | 0 | 0 | 0 |
 | `field` | 0 | 0 | 0 | 0 |
 | `files` | 7 | 21 | 0 | 0 |
 | `forgot-password` | 0 | 1 | 0 | 0 |
 | `intents` | 0 | 0 | 0 | 0 |
 | `jobs` | 0 | 0 | 0 | 0 |
 | `locale` | 0 | 0 | 0 | 0 |
-| `login` | 84 | 145 | 6 | 0 |
+| `login` | 84 | 145 | 6 | 29 |
 | `logs` | 0 | 4 | 0 | 0 |
 | `models` | 0 | 0 | 0 | 0 |
 | `pending` | 0 | 0 | 0 | 0 |
 | `qa` | 113 | 14 | 0 | 0 |
 | `reset-password` | 0 | 0 | 0 | 0 |
 | `search` | 1 | 2 | 0 | 0 |
-| `select` | 141 | 8 | 11 | 0 |
+| `select` | 141 | 8 | 11 | 4 |
 | `sign` | 28 | 12 | 1 | 0 |
 | `signup` | 236 | 101 | 0 | 2 |
 | `site.js` | 0 | 0 | 0 | 0 |
@@ -323,7 +335,7 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 | `policy` | 5 | 0 | 0 | 0 |
 | `rhythm` | 3 | 0 | 0 | 0 |
 | `semantics` | 1 | 4 | 0 | 0 |
-| `sentinel` | 2 | 6 | 0 | 0 |
+| `sentinel` | 4 | 6 | 0 | 0 |
 | `sitespec` | 16 | 0 | 0 | 0 |
 | `spec_analyze` | 0 | 0 | 0 | 0 |
 | `status` | 3 | 1 | 0 | 0 |
@@ -333,21 +345,23 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 
 | Directory | Markdown lines |
 |---|---:|
-| `docs/reference/` | 17,400 |
+| `docs/reference/` | 17,401 |
 | `docs/adr/` | 5,978 |
 | `docs/proposals/` | 4,679 |
-| `docs/plans/` | 4,227 |
-| `docs/guides/` | 3,470 |
+| `docs/plans/` | 4,047 |
+| `docs/guides/` | 3,458 |
 | `docs/counter-priors/` | 3,095 |
-| `docs/architecture/` | 1,956 |
+| `docs/architecture/` | 1,955 |
 | `docs/evaluation/` | 1,660 |
-| `docs/contributing/` | 1,374 |
-| `docs/decisions/` | 938 |
+| `docs/contributing/` | 1,372 |
+| `docs/decisions/` | 1,047 |
 | `docs/getting-started/` | 663 |
 | `docs/recipes/` | 457 |
 | `docs/examples/` | 343 |
 | `docs/harness/` | 47 |
 | `docs/agent-loop/` | 25 |
+| `docs/api-reference/` | 0 |
 | `docs/api-surface/` | 0 |
 | `docs/assets/` | 0 |
+| `docs/superpowers/` | 0 |
 | `docs/ux-architect/` | 0 |

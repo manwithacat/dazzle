@@ -35,7 +35,6 @@
   "exact:80d81c206dc465d8a2b945a4acfadd1c": "similarity-and-scoring",
   "exact:83ea3dd010b7e3aa67aa6b2a667add43": "naming-and-slug-helpers",
   "exact:9019995c79e9b03f6010f8db15b37c10": "naming-and-slug-helpers",
-  "exact:9606fef27dee2ecc44bcb01264301f98": "per-module-sql-and-connection-helpers",
   "exact:9c015c0dc1d0335634c39fa1598d3d63": "dataclass-and-store-boilerplate",
   "exact:9fed46369caf6cca1b8be96f01aa84fa": "auth-domain-and-connection-helpers",
   "exact:a0b61b5525770e33703711db0c73ed03": "cli-entrypoint-scaffolding",

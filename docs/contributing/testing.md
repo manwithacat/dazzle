@@ -150,7 +150,6 @@ Runtime tests live under `tests/`; the wheel ships no tests (ADR-0057, flense sh
 | `test_runtime.py` | FastAPI initialization, routing |
 | `test_query_builder.py` | Query construction |
 | `test_state_machine.py` | State transitions |
-| `test_websocket_manager.py` | WebSocket connectivity |
 | `test_file_storage.py` | File uploads |
 | `test_auth.py` | Auth store, sessions, middleware, routes |
 

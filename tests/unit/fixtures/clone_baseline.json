@@ -60,11 +60,10 @@
   },
   {
     "signature": "exact:c401f08efd6a7dae7009649c0c6f3ccc",
-    "count": 10,
+    "count": 9,
     "names": [
       "dazzle/cli/runtime_impl/ux_cycle_impl/subagent_explore.py::to_dict",
       "dazzle/core/state.py::to_dict",
-      "dazzle/http/metrics/reporter.py::to_dict",
       "dazzle/http/runtime/retry_accumulator.py::to_dict",
       "dazzle/qa/hyperpart_types.py::to_json",
       "dazzle/qa/smoke_dig.py::to_json",
@@ -871,10 +870,9 @@
   },
   {
     "signature": "exact:44ae1bace7e4a7e63c050b08b65e2fa9",
-    "count": 3,
+    "count": 2,
     "names": [
       "dazzle/http/runtime/auth/store.py::_get_connection",
-      "dazzle/http/runtime/device_registry.py::_get_connection",
       "dazzle/http/runtime/token_store.py::_get_connection"
     ]
   },
@@ -896,35 +894,24 @@
   },
   {
     "signature": "c2ee12dae8dbe790209aa6dddbdad7c6",
-    "count": 3,
+    "count": 2,
     "names": [
       "dazzle/http/runtime/auth/store.py::ensure_initialized",
-      "dazzle/http/runtime/device_registry.py::ensure_initialized",
       "dazzle/http/runtime/token_store.py::ensure_initialized"
     ]
   },
   {
     "signature": "exact:b39e87aceb4e7a9aea08e91b64f4d98f",
-    "count": 3,
+    "count": 2,
     "names": [
-      "dazzle/http/runtime/device_registry.py::_connect_raw",
       "dazzle/http/runtime/otp_store.py::_get_connection",
       "dazzle/http/runtime/recovery_codes.py::_get_connection"
     ]
   },
   {
-    "signature": "74b3ac67c66c3dfcc11f52f975c57a4f",
+    "signature": "5d4130261ee3008b68e9fddfe088586a",
     "count": 2,
     "names": [
-      "dazzle/http/runtime/device_registry.py::_init_db",
-      "dazzle/http/runtime/token_store.py::_init_db"
-    ]
-  },
-  {
-    "signature": "5d4130261ee3008b68e9fddfe088586a",
-    "count": 3,
-    "names": [
-      "dazzle/http/runtime/device_registry.py::ensure_device_tables",
       "dazzle/http/runtime/file_storage.py::ensure_file_storage_tables",
       "dazzle/http/runtime/token_store.py::ensure_refresh_token_tables"
     ]
@@ -935,14 +922,6 @@
     "names": [
       "dazzle/http/runtime/dispatch_ctx.py::_ref_route_for_entity",
       "dazzle/http/runtime/workspace_columns.py::_ref_detail_route"
-    ]
-  },
-  {
-    "signature": "exact:9606fef27dee2ecc44bcb01264301f98",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/event_bus.py::set_websocket_manager",
-      "dazzle/http/runtime/presence_tracker.py::set_websocket_manager"
     ]
   },
   {

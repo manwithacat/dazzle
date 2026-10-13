@@ -12,10 +12,7 @@ from __future__ import annotations
 
 from dazzle.core.ir.surfaces import SurfaceMode
 from dazzle.http.runtime.page_routes import _build_dispatch_ctx
-from dazzle.http.runtime.renderers.fragment_adapter import (
-    FragmentSurfaceAdapter,
-    _build_column_header,
-)
+from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.render.context import ColumnContext, TableContext
 from dazzle.render.fragment import (
     URL,
@@ -78,67 +75,6 @@ def test_dispatch_ctx_defaults_sort_dir_to_asc() -> None:
     convention."""
     ctx = _build_dispatch_ctx(_RC(_table()), object())
     assert ctx["sort_dir"] == "asc"
-
-
-# ── _build_column_header helper ──
-
-
-def test_build_column_header_returns_sort_header_for_sortable_col() -> None:
-    """Sortable column with endpoint + region_name → SortHeader."""
-    col = {"key": "name", "label": "Name", "sortable": True}
-    h = _build_column_header(
-        col=col,
-        endpoint="/api/x",
-        region_name="r",
-        current_sort="",
-        current_direction="asc",
-    )
-    assert isinstance(h, SortHeader)
-    assert h.label == "Name"
-    assert h.column_key == "name"
-
-
-def test_build_column_header_returns_string_for_non_sortable_col() -> None:
-    """`sortable=False` → plain string label."""
-    col = {"key": "name", "label": "Name", "sortable": False}
-    h = _build_column_header(
-        col=col,
-        endpoint="/api/x",
-        region_name="r",
-        current_sort="",
-        current_direction="asc",
-    )
-    assert h == "Name"
-
-
-def test_build_column_header_falls_back_when_endpoint_missing() -> None:
-    """Without endpoint we can't build hx-get URLs — defensive
-    fallback to plain string."""
-    col = {"key": "name", "label": "Name", "sortable": True}
-    h = _build_column_header(
-        col=col,
-        endpoint="",
-        region_name="r",
-        current_sort="",
-        current_direction="asc",
-    )
-    assert h == "Name"
-
-
-def test_build_column_header_threads_current_sort_state() -> None:
-    """When the column is the active sort, `current_sort` matches
-    its key and `current_direction` reflects state."""
-    col = {"key": "name", "label": "Name", "sortable": True}
-    h = _build_column_header(
-        col=col,
-        endpoint="/api/x",
-        region_name="r",
-        current_sort="name",
-        current_direction="desc",
-    )
-    assert isinstance(h, SortHeader)
-    assert h.current_sort == "name"
-    assert h.current_direction == "desc"
 
 
 # ── Table primitive accepts mixed columns ──

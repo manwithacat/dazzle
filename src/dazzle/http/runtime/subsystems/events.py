@@ -1,8 +1,11 @@
 """Event framework subsystem.
 
-Initialises the Dazzle event framework (pub/sub) and wires ``EventEmittingMixin``
-on CRUD services.  Falls back to ``NullEventFramework`` when the optional
-``dazzle.http.events`` package is unavailable.
+Initialises the Dazzle event framework (pub/sub: bus, outbox publisher,
+consumers) and registers its lifespan hooks.  Falls back to
+``NullEventFramework`` when the optional ``dazzle.http.events`` package is
+unavailable.  CRUD lifecycle events do not pass through here: they reach the
+in-process ``EntityEventBus`` (``SystemRoutesSubsystem._wire_entity_events_to_bus``)
+and, for ``live: on`` workspaces, the bus as SSE nudges (``sse_wiring``).
 """
 
 import logging
@@ -63,11 +66,6 @@ class EventsSubsystem:
             await framework.stop()
 
         register_lifespan_hook(ctx.app, startup=_start_events, shutdown=_stop_events)
-
-        # Wire EventEmittingMixin on services
-        for service in ctx.services.values():
-            if hasattr(service, "set_event_framework"):
-                service.set_event_framework(self._framework)
 
     def shutdown(self) -> None:
         pass  # teardown runs via the registered lifespan shutdown hook

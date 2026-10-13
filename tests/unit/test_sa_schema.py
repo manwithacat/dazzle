@@ -12,8 +12,6 @@ from dazzle.http.runtime.sa_schema import (
     _find_circular_refs,
     _scalar_type_to_sa,
     build_metadata,
-    get_circular_ref_edges,
-    get_sorted_table_names,
 )
 from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
@@ -494,26 +492,6 @@ class TestCircularFKDetection:
         ]
         assert _find_circular_refs(entities) == set()
 
-    def test_public_api_matches_internal(self):
-        """get_circular_ref_edges() returns same result as _find_circular_refs()."""
-        entities = [
-            _entity(
-                "Department",
-                [
-                    _field("id", scalar_type=ScalarType.UUID),
-                    _field("head", kind="ref", ref_entity="User"),
-                ],
-            ),
-            _entity(
-                "User",
-                [
-                    _field("id", scalar_type=ScalarType.UUID),
-                    _field("department", kind="ref", ref_entity="Department"),
-                ],
-            ),
-        ]
-        assert get_circular_ref_edges(entities) == _find_circular_refs(entities)
-
 
 class TestCircularFKMetadata:
     """Test that circular FKs produce correct SQLAlchemy metadata."""
@@ -587,7 +565,7 @@ class TestCircularFKMetadata:
             ),
         ]
         # Should not raise — use_alter breaks the cycle for sorting
-        names = get_sorted_table_names(entities)
+        names = [t.name for t in build_metadata(entities).sorted_tables]
         assert set(names) == {"Department", "User"}
 
     def test_mixed_circular_and_linear_refs(self):

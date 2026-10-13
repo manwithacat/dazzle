@@ -763,28 +763,3 @@ def ensure_missing_entity_columns(
                         exc,
                     )
     return added
-
-
-def get_sorted_table_names(entities: list[EntitySpec]) -> list[str]:
-    """Return entity/table names in topological (FK-dependency) order.
-
-    Tables that are depended upon come first.
-
-    Args:
-        entities: DSL entity specifications.
-
-    Returns:
-        List of table names sorted so that referenced tables precede
-        referencing tables.
-    """
-    metadata = build_metadata(entities)
-    return [t.name for t in metadata.sorted_tables]
-
-
-def get_circular_ref_edges(entities: list[EntitySpec]) -> set[tuple[str, str]]:
-    """Return the set of (entity, ref_entity) edges involved in FK cycles.
-
-    Used by the migration planner to emit deferred ALTER TABLE ADD CONSTRAINT
-    statements for circular references.
-    """
-    return _find_circular_refs(entities)

@@ -7,10 +7,7 @@ from dazzle.http.runtime.auth.auth_views import (
     build_login_password_view,
 )
 from dazzle.http.runtime.auth.sso_config import SsoProviderConfig
-from dazzle.http.runtime.auth.sso_views import (
-    build_sso_button_row,
-    render_sso_section,
-)
+from dazzle.http.runtime.auth.sso_views import build_sso_button_row
 from dazzle.render.fragment.renderer import FragmentRenderer
 
 
@@ -72,17 +69,6 @@ def test_next_url_omitted_when_default() -> None:
     children = build_sso_button_row(providers=[_google()])
     link = children[1]
     assert "?next=" not in str(link.href)
-
-
-def test_render_sso_section_returns_none_when_empty() -> None:
-    assert render_sso_section(providers=()) is None
-
-
-def test_render_sso_section_returns_stack_when_populated() -> None:
-    section = render_sso_section(providers=[_google()])
-    assert section is not None
-    # Stack carries the same children tuple.
-    assert len(section.children) == 2
 
 
 # ───────────────── login view integration ─────────────────

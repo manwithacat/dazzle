@@ -108,20 +108,37 @@ def test_fragment_explicit_label_override_still_wins() -> None:
 # `test_fragment_search_placeholder_uses_declared_title` above.
 
 
-def test_fragment_search_placeholder_uses_declared_title() -> None:
+def _render_list_with_search(entity_title: str) -> str:
+    """Render the live list surface (dispatch ctx -> `_build_list`) with FTS on."""
+    from dazzle.http.runtime.page_routes import _build_dispatch_ctx
     from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
+    from dazzle.render.context import ColumnContext, TableContext
 
-    toolbar = FragmentSurfaceAdapter()._build_list_toolbar(
+    class _RC:
+        def __init__(self, table: TableContext) -> None:
+            self.table = table
+            self.form = None
+            self.detail = None
+
+    table = TableContext(
+        entity_name="CurriculumPlan",
+        entity_title=entity_title,
+        title="Curriculum Plans",
+        columns=[ColumnContext(key="name", label="Name")],
+        api_endpoint="/api/curriculumplan",
+        rows=[],
+        total=0,
+        table_id="curriculumplan_table",
         search_enabled=True,
         search_fields=["name"],
-        filter_values={},
-        columns=[],
-        entity_name="CurriculumPlan",
-        entity_title="Curriculum Plan",
-        endpoint="/api/curriculumplan",
-        region_name="curriculumplan",
     )
-    html = "".join(FragmentRenderer().render(f) for f in toolbar)
+    ctx = _build_dispatch_ctx(_RC(table), object())
+    fragment = FragmentSurfaceAdapter()._build_list(_list_surface(), ctx)
+    return FragmentRenderer().render(fragment)
+
+
+def test_fragment_search_placeholder_uses_declared_title() -> None:
+    html = _render_list_with_search("Curriculum Plan")
     assert 'placeholder="Search curriculum plan' in html
     # the FTS endpoint legitimately carries the raw entity name; the VISIBLE
     # placeholder must not.
@@ -129,17 +146,5 @@ def test_fragment_search_placeholder_uses_declared_title() -> None:
 
 
 def test_fragment_search_placeholder_default_when_no_title() -> None:
-    from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
-
-    toolbar = FragmentSurfaceAdapter()._build_list_toolbar(
-        search_enabled=True,
-        search_fields=["name"],
-        filter_values={},
-        columns=[],
-        entity_name="CurriculumPlan",
-        entity_title="",
-        endpoint="/api/curriculumplan",
-        region_name="curriculumplan",
-    )
-    html = "".join(FragmentRenderer().render(f) for f in toolbar)
+    html = _render_list_with_search("")
     assert 'placeholder="Search…"' in html

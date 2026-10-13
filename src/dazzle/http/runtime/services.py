@@ -11,7 +11,6 @@ from fastapi import Request
 
 from dazzle.core import ir
 from dazzle.http.runtime.event_bus import EntityEventBus
-from dazzle.http.runtime.presence_tracker import PresenceTracker
 from dazzle.render.fragment.registry import PrimitiveRegistry, RendererRegistry
 
 
@@ -37,12 +36,10 @@ class RuntimeServices:
 
     - ``event_bus`` (``EntityEventBus``) — in-process pub/sub for
       entity create/update/delete events. Extension code subscribes
-      via ``services.event_bus.subscribe(entity, kind, handler)``.
+      via ``services.event_bus.add_sync_handler(handler)`` or
+      ``add_handler(async_handler)``; handlers receive every
+      ``EntityEvent`` and filter on ``entity_name`` / ``event_type``.
       Constructed by default at app boot.
-    - ``presence_tracker`` (``PresenceTracker``) — tracks live
-      web-sockets per user for presence indicators. Read-only for
-      most extension code; the framework's collab surfaces consume
-      it. Renderer authors don't typically reach for this.
     - ``renderer_registry`` (``RendererRegistry``) — registry where
       custom renderers register and the dispatcher resolves them.
       Public API: ``register(name, handler)``,
@@ -60,14 +57,6 @@ class RuntimeServices:
       ``dazzle.events.framework``) or a ``NullEventFramework`` when
       HLESS is not configured. Renderer code that fires domain
       events reaches for this; rendering-only renderers don't.
-    - ``metrics_collector`` — the active metrics collector instance
-      (Prometheus-compatible) when telemetry is enabled. Extension
-      code emitting counters / histograms reads this. ``None`` when
-      telemetry is off; extension code must branch on ``None`` to
-      stay portable across deployments.
-    - ``system_collector`` — system-level metrics (CPU / memory /
-      event-bus depth). Mostly framework-internal; extension code
-      rarely needs this.
     - ``metrics_emitter`` — push-side surface for metrics emission
       (the framework's metric-name → Counter adapter). Use when you
       need to emit a named metric without reaching for the collector
@@ -97,14 +86,11 @@ class RuntimeServices:
     """
 
     event_bus: EntityEventBus = field(default_factory=EntityEventBus)
-    presence_tracker: PresenceTracker = field(default_factory=PresenceTracker)
     renderer_registry: RendererRegistry = field(default_factory=RendererRegistry)
     primitive_registry: PrimitiveRegistry = field(default_factory=PrimitiveRegistry)
     # Typed `Any` to avoid an import cycle at this level — call sites
     # that need the concrete type cast or use TYPE_CHECKING blocks.
     event_framework: Any = None  # EventFramework | NullEventFramework | None
-    metrics_collector: Any = None  # MetricsCollector | None
-    system_collector: Any = None  # SystemCollector | None
     metrics_emitter: Any = None  # MetricsEmitter | None
     process_manager: Any = None  # ProcessManager | None
     usage_collector: Any = None  # UsageCollector | None (ADR-0050 first-party usage signal)

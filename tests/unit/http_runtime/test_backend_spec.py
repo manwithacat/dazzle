@@ -131,7 +131,6 @@ def test_backend_spec_creation() -> None:
     # Test query methods
     assert spec.get_entity("Client") is not None
     assert spec.get_service("list_clients") is not None
-    assert spec.get_endpoint("list_clients_endpoint") is not None
 
     # Test stats
     stats = spec.stats

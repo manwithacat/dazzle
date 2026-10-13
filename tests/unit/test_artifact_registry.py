@@ -39,7 +39,6 @@ _EXPECTED_BASELINE = frozenset(
         "_dazzle_audit_log",
         "dazzle_files",
         "refresh_tokens",
-        "devices",
         "_grants",
         "_grant_events",
         "_dazzle_otp_codes",

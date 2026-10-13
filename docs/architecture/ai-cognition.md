@@ -124,8 +124,9 @@ trigger or a process step.
 
 ## Known limitations
 
-- The process-step AI executor (`http/runtime/process_executor.py`) is not yet
-  request-mounted (pre-existing limitation).
+- `llm_intent` steps inside a `process` do not run: the never-mounted
+  process-step AI executor was removed in flense ship O and is parked in
+  [DD-010](../decisions/DD-010-process-step-ai-executor.md).
 - The celery process backend is being deprecated (#1457).
 - `poly_ref` create/update probes are supported on manually-declared entities;
   the framework-injected `AIJob` inherits them automatically.

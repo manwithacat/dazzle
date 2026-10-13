@@ -38,7 +38,6 @@ from dazzle.render.fragment import (
     DetailGrid,
     DzTableMount,
     EmptyState,
-    FilterBar,
     FilterColumn,
     FormSection,
     FormStack,
@@ -53,7 +52,6 @@ from dazzle.render.fragment import (
     Row,
     SearchBox,
     SlideOver,
-    SortHeader,
     Stack,
     Submit,
     Surface,
@@ -606,65 +604,6 @@ class FragmentSurfaceAdapter:
         # surface; the inner sub-regions carry kind="related" for CSS.
         return _wrap(_detail_region(wrapper))
 
-    def _build_list_toolbar(
-        self,
-        *,
-        search_enabled: bool,
-        search_fields: list[str],
-        filter_values: dict[str, str],
-        columns: list[dict[str, Any]],
-        entity_name: str,
-        entity_title: str,
-        endpoint: str,
-        region_name: str,
-        include_closed: str = "",
-        as_of: str = "",
-    ) -> tuple[Fragment, ...]:
-        """Issue #1029 phase 5: compose the search box + filter bar
-        for the list region toolbar.
-
-        SearchBox emitted when `search_enabled` AND `search_fields`
-        non-empty AND we have an entity_name to derive the FTS
-        endpoint. FilterBar emitted when at least one column carries
-        `filterable=True`. Returns the ordered tuple of toolbar
-        primitives — empty when neither is configured."""
-        toolbar: list[Fragment] = []
-
-        if search_enabled and search_fields and entity_name:
-            # #1487 follow-on: name the entity by its declared title in the
-            # search placeholder ("Search curriculum plan…"), not the raw id.
-            placeholder = f"Search {entity_title.lower()}…" if entity_title else "Search…"
-            toolbar.append(
-                SearchBox(
-                    name=f"{region_name or entity_name}_search",
-                    fts_endpoint=URL(f"/_dazzle/fts/{entity_name}?html=1"),
-                    placeholder=placeholder,
-                )
-            )
-
-        filter_columns = tuple(
-            FilterColumn(
-                key=col["key"],
-                label=str(col.get("label", col["key"])),
-                options=tuple(_filter_option(o) for o in (col.get("filter_options") or [])),
-                selected=str(filter_values.get(col["key"], "")),
-            )
-            for col in columns
-            if col.get("filterable")
-        )
-        if filter_columns and endpoint and region_name:
-            toolbar.append(
-                FilterBar(
-                    endpoint=URL(endpoint),
-                    region_name=region_name,
-                    columns=filter_columns,
-                    include_closed=include_closed,
-                    as_of=as_of,
-                )
-            )
-
-        return tuple(toolbar)
-
     def _build_related_group(self, group: dict[str, Any], item_id: str) -> Fragment:
         """ADR-0049 Phase 2 Task 3a: build a `RelatedGroup` primitive from the
         fetched related-group ctx. Cells are formatted via `_format_cell`
@@ -971,46 +910,6 @@ def _filter_option(o: Any) -> tuple[str, str]:
     if isinstance(o, (tuple, list)) and len(o) >= 2:
         return (str(o[0]), str(o[1]))
     return (str(o), str(o))
-
-
-def _build_column_header(
-    *,
-    col: dict[str, Any],
-    endpoint: str,
-    region_name: str,
-    current_sort: str,
-    current_direction: str,
-    include_closed: str = "",
-    as_of: str = "",
-) -> object:
-    """Issue #1029 phase 6: per-column header builder.
-
-    Returns a `SortHeader` primitive when the column is `sortable=True`
-    AND endpoint + region_name are configured; falls back to the plain
-    string label otherwise. The Table primitive's column tuple is
-    `tuple[str | SortHeader, ...]` and the renderer dispatches per cell.
-
-    Leftover-honest ``include_closed`` / ``as_of`` (cycle 2172) thread
-    onto the SortHeader so hx-get does not invent open-only / current
-    after a sort click.
-    """
-    label = str(col.get("label", col.get("key", "")))
-    if not col.get("sortable") or not endpoint or not region_name:
-        return label
-    column_key = str(col.get("key", "") or "")
-    if not column_key:
-        return label
-    direction: str = "desc" if current_direction == "desc" else "asc"
-    return SortHeader(
-        label=label,
-        column_key=column_key,
-        endpoint=URL(endpoint),
-        region_name=region_name,
-        current_sort=current_sort,
-        current_direction=direction,  # type: ignore[arg-type]
-        include_closed=include_closed,
-        as_of=as_of,
-    )
 
 
 def _pick_empty_state(ctx: dict[str, Any]) -> tuple[str, str]:

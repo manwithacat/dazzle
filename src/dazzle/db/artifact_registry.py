@@ -127,17 +127,12 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
         "dazzle.http.runtime.file_storage.ensure_file_storage_tables",
         boot_entry="dazzle.http.runtime.file_storage.FileMetadataStore._init_db",
     ),
-    # refresh_tokens / devices / _grants — independent boot paths, now GATED
+    # refresh_tokens / _grants — independent boot paths, now GATED
     # (#1496/#1498/#1497 fixed: each self-gates with skip_boot_schema_ddl()).
     _fw(
         "refresh_tokens",
         "dazzle.http.runtime.token_store.ensure_refresh_token_tables",
         boot_entry="dazzle.http.runtime.token_store.TokenStore._init_db",
-    ),
-    _fw(
-        "devices",
-        "dazzle.http.runtime.device_registry.ensure_device_tables",
-        boot_entry="dazzle.http.runtime.device_registry.DeviceRegistry._init_db",
     ),
     _fw(
         "_grants",

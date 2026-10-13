@@ -1,6 +1,6 @@
 """Auth stores construct without I/O — #1504 design-smell follow-up.
 
-`AuthStore`/`TokenStore`/`DeviceRegistry` used to connect to PostgreSQL inside
+`AuthStore`/`TokenStore` used to connect to PostgreSQL inside
 `__init__` (eager `_init_db()`), so they could not even be *constructed* without a
 live database. Construction is now pure: schema init is deferred to first use (or
 an explicit `ensure_initialized()` at boot). These are true unit tests — no DB.
@@ -12,7 +12,6 @@ import psycopg
 import pytest
 
 from dazzle.http.runtime.auth import AuthStore
-from dazzle.http.runtime.device_registry import DeviceRegistry
 from dazzle.http.runtime.token_store import TokenStore
 
 # An unresolvable host: connecting would raise, so reaching the DB is observable.
@@ -24,9 +23,8 @@ BOGUS_URL = "postgresql://mock/test"
     [
         lambda: AuthStore(database_url=BOGUS_URL),
         lambda: TokenStore(database_url=BOGUS_URL),
-        lambda: DeviceRegistry(database_url=BOGUS_URL),
     ],
-    ids=["AuthStore", "TokenStore", "DeviceRegistry"],
+    ids=["AuthStore", "TokenStore"],
 )
 def test_construction_does_no_io(construct) -> None:
     """Building a store against an unreachable DB must not raise — no I/O."""

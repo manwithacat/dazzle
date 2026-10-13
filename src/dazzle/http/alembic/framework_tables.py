@@ -16,7 +16,7 @@ from __future__ import annotations
 
 # Tables created by framework runtime DDL (auth store, token/otp stores,
 # grants, files, analytics, audit, events, deploy history, spec versioning,
-# device registry, ops schema…). Names scraped from src/dazzle/http/ and
+# ops schema…). Names scraped from src/dazzle/http/ and
 # pinned by the drift gate.
 FRAMEWORK_TABLES: frozenset[str] = frozenset(
     {
@@ -27,7 +27,7 @@ FRAMEWORK_TABLES: frozenset[str] = frozenset(
         "connections",
         "dazzle_files",
         "deployment_history",
-        "devices",
+        "devices",  # device registry removed (flense ship O); kept so autogenerate never targets it
         "email_verification_tokens",
         "event_log",
         "health_checks",

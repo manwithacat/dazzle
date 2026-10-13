@@ -16,8 +16,8 @@ truth.
 pre-existing *admin-monitoring* ProcessRun is virtual (runtime-state
 read, no table). But the *governed* ProcessRun injected when a process
 has an ``llm_intent`` step is the AIJob subject — it is uuid-pk,
-carries a ``started_by`` RBAC anchor, and is written by
-``process_executor._process_run_service``, so it MUST be a real
+carries a ``started_by`` RBAC anchor, and is the row a process-step
+AI executor writes (parked in DD-010), so it MUST be a real
 persisted Postgres table. Discriminate by structure, not name:
 :func:`is_virtual_entity` treats a ProcessRun with a ``started_by``
 field as real. Call sites must filter via :func:`is_virtual_entity`

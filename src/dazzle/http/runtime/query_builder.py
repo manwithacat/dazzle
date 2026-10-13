@@ -509,36 +509,6 @@ class QueryBuilder:
 # =============================================================================
 
 
-def parse_filter_string(filter_str: str) -> dict[str, Any]:
-    """
-    Parse a filter string into a filters dict.
-
-    Format: "field1=value1,field2__op=value2"
-
-    Examples:
-        "status=active" -> {"status": "active"}
-        "status=active,priority__gte=5" -> {"status": "active", "priority__gte": 5}
-    """
-    if not filter_str:
-        return {}
-
-    filters = {}
-    pairs = filter_str.split(",")
-
-    for pair in pairs:
-        if "=" not in pair:
-            continue
-
-        key, value = pair.split("=", 1)
-        key = key.strip()
-        value = value.strip()
-
-        # Try to parse value type
-        filters[key] = _parse_value(value)
-
-    return filters
-
-
 def _parse_value(value: str) -> Any:
     """Parse a string value to appropriate Python type."""
     # Boolean
@@ -577,15 +547,3 @@ def _parse_value(value: str) -> Any:
 
     # String
     return value
-
-
-def parse_sort_string(sort_str: str) -> list[str]:
-    """
-    Parse a sort string into a list of sort fields.
-
-    Format: "field1,-field2" (comma-separated, - for descending)
-    """
-    if not sort_str:
-        return []
-
-    return [s.strip() for s in sort_str.split(",") if s.strip()]

@@ -38,7 +38,7 @@ application — no sidecar or separate management port required.
 | `/_dazzle/events/outbox` | GET | Transactional outbox stats + recent entries | None (all environments) |
 | `/_dazzle/events/dlq` | GET | Dead-letter queue contents | None (all environments) |
 | `/_dazzle/events/dlq/{event_id}/replay` | POST | Re-queue one DLQ event | None (all environments) |
-| `/_dazzle/metrics` | GET | Prometheus scrape endpoint (text exposition) | None (all environments) |
+| `/_dazzle/metrics` | GET | Prometheus scrape endpoint (empty document; no collector wired) | None (all environments) |
 | `/_dazzle/integrations/{name}/retries` | GET | Recent retry attempts (in-process, volatile) | None; only when `integration` blocks declared |
 
 **Gating note:** The `/_dazzle/*` debug and event endpoints are
@@ -415,31 +415,19 @@ The Redis stream is the integration point for external time-series systems.
 A lightweight bridge reads from `dazzle:metrics:stream` and forwards to
 your chosen backend:
 
-- **Prometheus:** Scrape `GET /_dazzle/metrics` directly (see below) — no
-  bridge needed.
+- **Prometheus:** Read the stream and expose it through a pushgateway or
+  exporter (`GET /_dazzle/metrics` carries no series; see below).
 - **Datadog / New Relic / Grafana Cloud:** Read the stream, forward via
   the provider's ingest API or statsd bridge.
 - **InfluxDB / TimescaleDB:** Read the stream, insert via line protocol.
 
 ### `GET /_dazzle/metrics` — Prometheus scrape endpoint
 
-Dazzle exposes the runtime's `SystemMetricsCollector` snapshot in the
-Prometheus text exposition format. Response content-type is
-`text/plain; version=0.0.4; charset=utf-8` — the standard pinned by the
-Prometheus project. Point any Prometheus-compatible scraper (Prometheus,
-VictoriaMetrics, Grafana Agent, OpenTelemetry Collector's `prometheus`
-receiver) at this endpoint on the application's HTTP port.
-
-The endpoint always responds with HTTP 200. When the collector is not
-wired (telemetry off, test boot, no broker), the body is an empty but
-valid Prometheus document — scrapes succeed cleanly with zero series
-rather than failing.
-
-Series surfaced today include `dazzle_uptime_seconds`,
-`dazzle_component_health{component="..."}`, per-component counters
-(suffixed `_total`), gauges, and histograms exported as summaries with
-0.5 / 0.95 / 0.99 quantile labels. See
-`src/dazzle/http/metrics/system_collector.py` for the full schema.
+The URL is reserved for a Prometheus scrape (content-type
+`text/plain; version=0.0.4; charset=utf-8`). No metrics collector is wired
+into the runtime, so it always answers HTTP 200 with an empty but valid
+Prometheus document — scrapes succeed with zero series. Use the Redis
+stream above or the OTLP push export below for runtime metrics.
 
 ### OTLP push export
 

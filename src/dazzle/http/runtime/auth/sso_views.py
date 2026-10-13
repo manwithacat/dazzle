@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from dazzle.http.runtime.auth.sso_config import SsoProviderConfig
-from dazzle.render.fragment import URL, Link, Stack, Text
+from dazzle.render.fragment import URL, Link, Text
 
 
 def _safe_next(next_url: str) -> str:
@@ -57,19 +57,3 @@ def build_sso_button_row(
             )
         )
     return tuple(children)
-
-
-def render_sso_section(
-    *,
-    providers: Iterable[SsoProviderConfig],
-    next_url: str = "/",
-) -> Stack | None:
-    """Convenience wrapper for callers that want a single Fragment.
-
-    Returns a `Stack` of the button row children, or `None` when no
-    providers are configured (so the caller can skip including it).
-    """
-    children = build_sso_button_row(providers=providers, next_url=next_url)
-    if not children:
-        return None
-    return Stack(children=children)

@@ -25,11 +25,9 @@ from dazzle.http.runtime.auth import (
 )
 from dazzle.http.runtime.auth_detection import (
     AuthConfig,
-    detect_auth_requirements,
     find_user_entity,
     get_auth_field_mapping,
     has_auth_fields,
-    should_enable_auth,
 )
 
 
@@ -1189,17 +1187,6 @@ class TestAuthConfig:
 
         assert config.enabled is False
         assert config.user_entity is None
-
-    def test_detect_auth_requirements(self, spec_with_user: Any) -> None:
-        """Test detect_auth_requirements convenience function."""
-        config = detect_auth_requirements(spec_with_user)
-
-        assert config.enabled is True
-
-    def test_should_enable_auth(self, spec_with_user: Any, spec_without_user: Any) -> None:
-        """Test should_enable_auth convenience function."""
-        assert should_enable_auth(spec_with_user) is True
-        assert should_enable_auth(spec_without_user) is False
 
 
 # =============================================================================

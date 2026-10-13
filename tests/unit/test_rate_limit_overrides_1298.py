@@ -15,7 +15,6 @@ from dazzle.http.runtime.rate_limit import (
     RateLimitConfig,
     _apply_env_limit_overrides,
     _normalize_rate_string,
-    _valid_rate_string,
     configure_rate_limits_for_profile,
 )
 
@@ -47,7 +46,7 @@ def test_basic_still_unlimited() -> None:
     ["300/minute", "5/second", "100/hour", "10/day", "300/minutes", " 60 / minute "],
 )
 def test_valid_rate_strings(value: str) -> None:
-    assert _valid_rate_string(value) is True
+    assert _normalize_rate_string(value) is not None
 
 
 @pytest.mark.parametrize(
@@ -65,7 +64,7 @@ def test_valid_rate_strings(value: str) -> None:
     ],
 )
 def test_invalid_rate_strings(value: str) -> None:
-    assert _valid_rate_string(value) is False
+    assert _normalize_rate_string(value) is None
 
 
 @pytest.mark.parametrize(

@@ -28,7 +28,6 @@ AUTH_TABLES = (
     "user_preferences",
 )
 TOKEN_TABLES = ("refresh_tokens",)
-DEVICE_TABLES = ("devices",)
 
 
 def has_pg() -> bool:

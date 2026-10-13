@@ -172,31 +172,3 @@ class AuthConfig:
 # =============================================================================
 # Convenience Functions
 # =============================================================================
-
-
-def detect_auth_requirements(spec: BackendSpec) -> AuthConfig:
-    """
-    Detect authentication requirements from a BackendSpec.
-
-    This is the main entry point for auth detection.
-
-    Args:
-        spec: Backend specification
-
-    Returns:
-        Auth configuration based on detected entities
-    """
-    return AuthConfig.from_spec(spec)
-
-
-def should_enable_auth(spec: BackendSpec) -> bool:
-    """
-    Check if authentication should be enabled for a spec.
-
-    Args:
-        spec: Backend specification
-
-    Returns:
-        True if auth should be enabled
-    """
-    return find_user_entity(spec) is not None

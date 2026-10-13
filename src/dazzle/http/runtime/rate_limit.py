@@ -151,12 +151,6 @@ def _normalize_rate_string(value: str) -> str | None:
     return f"{int(count)}/{period}"
 
 
-def _valid_rate_string(value: str) -> bool:
-    """True if ``value`` is a parseable ``N/period`` rate string (see
-    ``_normalize_rate_string``)."""
-    return _normalize_rate_string(value) is not None
-
-
 def _apply_env_limit_overrides(config: "RateLimitConfig", profile: str = "") -> None:
     """Override individual limits on ``config`` from env vars, in place.
 

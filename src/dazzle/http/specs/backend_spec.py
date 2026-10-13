@@ -111,28 +111,6 @@ class BackendSpec(BaseModel):
                 return service
         return None
 
-    def get_endpoint(self, name: str) -> EndpointSpec | None:
-        """Get endpoint by name."""
-        for endpoint in self.endpoints:
-            if endpoint.name == name:
-                return endpoint
-        return None
-
-    def get_role(self, name: str) -> RoleSpec | None:
-        """Get role by name."""
-        for role in self.roles:
-            if role.name == name:
-                return role
-        return None
-
-    def get_endpoints_for_service(self, service_name: str) -> list[EndpointSpec]:
-        """Get all endpoints that invoke a given service."""
-        return [ep for ep in self.endpoints if ep.service == service_name]
-
-    def get_services_for_entity(self, entity_name: str) -> list[ServiceSpec]:
-        """Get all services that operate on a given entity."""
-        return [svc for svc in self.services if svc.domain_operation.entity == entity_name]
-
     # =========================================================================
     # Validation
     # =========================================================================

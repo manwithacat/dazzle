@@ -16,7 +16,7 @@ followed by ``render_snapshot_literal``.
     This is SEPARATE from ``project_schema``'s lossy ``list[str]`` format used
     by the #1431 app-entity migration-diffing path.  Do not conflate the two.
 
-**In-scope tables** (31): every entry in the FRAMEWORK_SCHEMA_SNAPSHOT dict
+**In-scope tables** (30): every entry in the FRAMEWORK_SCHEMA_SNAPSHOT dict
 key set (see the global-constraints list in the migration-baseline plan).
 
 **Excluded (not in this snapshot):** ops-database tables, event-bus
@@ -464,36 +464,6 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             },
         },
         "uniques": [],
-    },
-    "devices": {
-        "columns": {
-            "app_version": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "created_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "device_name": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "id": {"default": None, "nullable": False, "pk": True, "type": "text"},
-            "is_active": {"default": "true", "nullable": True, "pk": False, "type": "boolean"},
-            "last_used_at": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "os_version": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "platform": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "push_token": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "user_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
-        },
-        "fks": {},
-        "indexes": {
-            "devices_user_id_push_token_key": {
-                "columns": ["user_id", "push_token"],
-                "predicate": None,
-                "unique": True,
-            },
-            "idx_devices_active": {
-                "columns": ["user_id", "is_active"],
-                "predicate": None,
-                "unique": False,
-            },
-            "idx_devices_platform": {"columns": ["platform"], "predicate": None, "unique": False},
-            "idx_devices_user_id": {"columns": ["user_id"], "predicate": None, "unique": False},
-        },
-        "uniques": ["push_token", "user_id"],
     },
     "email_verification_tokens": {
         "columns": {

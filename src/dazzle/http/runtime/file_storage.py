@@ -496,40 +496,6 @@ class FileMetadataStore:
         finally:
             conn.close()
 
-    def update_entity_association(
-        self,
-        file_id: UUID | str,
-        entity_name: str,
-        entity_id: str,
-        field_name: str,
-    ) -> bool:
-        """Update file's entity association."""
-        params = (
-            entity_name,
-            entity_id,
-            field_name,
-            datetime.now(UTC).isoformat(),
-            str(file_id),
-        )
-
-        conn = self._get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                UPDATE dazzle_files
-                SET entity_name = %s, entity_id = %s, field_name = %s,
-                    updated_at = %s
-                WHERE id = %s
-                """,
-                params,
-            )
-            rowcount = cursor.rowcount
-            conn.commit()
-            return bool(rowcount > 0)
-        finally:
-            conn.close()
-
     def _row_to_metadata(self, row: dict[str, Any]) -> FileMetadata:
         """Convert database row to FileMetadata."""
         # Note: URL needs to be reconstructed based on backend
@@ -997,18 +963,6 @@ class FileService:
     ) -> list[FileMetadata]:
         """Get files associated with an entity."""
         return self.metadata_store.get_by_entity(entity_name, entity_id, field_name)
-
-    async def associate_with_entity(
-        self,
-        file_id: UUID | str,
-        entity_name: str,
-        entity_id: str,
-        field_name: str,
-    ) -> bool:
-        """Associate a file with an entity record."""
-        return self.metadata_store.update_entity_association(
-            file_id, entity_name, entity_id, field_name
-        )
 
 
 # =============================================================================
