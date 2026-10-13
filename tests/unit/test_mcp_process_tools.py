@@ -353,26 +353,3 @@ class TestHelperFunctions:
         assert _slugify("Hello World") == "hello_world"
         assert _slugify("Test-123-Value") == "test_123_value"
         assert _slugify("  spaced  text  ") == "spaced_text"
-
-    def test_is_crud_story(self) -> None:
-        """Test _is_crud_story function."""
-        from dazzle.mcp.server.handlers.process import _is_crud_story
-
-        crud = StorySpec(
-            story_id="ST-001",
-            title="Create task",
-            persona="User",
-            trigger=StoryTrigger.FORM_SUBMITTED,
-            entities=["Task"],
-            then=[StoryCondition(expression="Task is saved")],
-        )
-        assert _is_crud_story(crud) is True
-
-        non_crud = StorySpec(
-            story_id="ST-002",
-            title="Submit task",
-            persona="User",
-            trigger=StoryTrigger.STATUS_CHANGED,
-            entities=["Task"],
-        )
-        assert _is_crud_story(non_crud) is False

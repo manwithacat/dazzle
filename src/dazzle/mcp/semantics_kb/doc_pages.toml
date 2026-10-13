@@ -560,10 +560,10 @@ accepted list. Every accepted entry must also carry a family classification
 `test_every_baselined_orphan_is_classified` — an inventory nobody has read is not
 a review, so a new dead definition cannot be baselined silently.
 
-Nine families, each a decision with a stated retire-when condition:
+Eight families, each a decision with a stated retire-when condition:
 `optional-extra-plumbing`, `agent-and-loop-legacy`, `superseded-runtime-path`,
 `qa-and-testing-helpers`, `error-and-report-helpers`, `semantics-and-kb-residue`,
-`doc-generation-residue`, `cli-parity-helpers`, `domain-brief-and-llm-legacy`.
+`doc-generation-residue`, `cli-parity-helpers`.
 
 Two things to know before deleting anything the gate names:
 
@@ -583,9 +583,8 @@ Two things to know before deleting anything the gate names:
 | `agent-and-loop-legacy` | 5 | the legacy agent entrypoints are deleted in favour of the current loop |
 | `semantics-and-kb-residue` | 5 | the user-profile / session surface settles (`_session_to_dict` is the largest single item) |
 | `doc-generation-residue` | 5 | the docs generator is wired again, or the surface is dropped |
-| `cli-parity-helpers` | 3 | `cli/project.py` absorbs the last caller, or the entry has zero callers and retires outright — the taxonomy has no column for "no caller left", which the fresh benchmark run hit |
+| `cli-parity-helpers` | 2 | `cli/project.py` absorbs the last caller, or the entry has zero callers and retires outright — the taxonomy has no column for "no caller left", which the fresh benchmark run hit |
 | `optional-extra-plumbing` | 3 | **the wiring lands, or the capability is formally dropped** — see below |
-| `domain-brief-and-llm-legacy` | 1 | `llm/spec_analyzer.analyze_spec_file` is confirmed dead or re-wired |
 
 `optional-extra-plumbing` (`create_kafka_bus`, `create_s3_file_service`,
 `create_jwt_service`) is the family to worry about: these are

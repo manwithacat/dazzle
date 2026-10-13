@@ -1,4 +1,3 @@
-# managed-by: dazzle quality bootstrap
 # Strict defaults from the agent code quality substrate.
 # Ignores require documented rationale in this file under
 # [tool.ruff.lint.per-file-ignores] or as inline # noqa: <code> - <reason> comments.

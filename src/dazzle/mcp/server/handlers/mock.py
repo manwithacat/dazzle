@@ -93,44 +93,6 @@ def mock_scenarios_impl(
     return {"error": f"Unknown action: {action}. Use list, activate, or deactivate."}
 
 
-def mock_fire_webhook_impl(
-    *,
-    vendor: str,
-    event: str,
-    overrides: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Fire a webhook event to the running app."""
-    from dazzle.testing.vendor_mock.webhooks import WebhookDispatcher
-
-    dispatcher = WebhookDispatcher()
-
-    try:
-        events = dispatcher.list_events(vendor)
-        if not events:
-            return {
-                "error": f"No webhook events defined for vendor '{vendor}'",
-                "hint": "Add [webhooks] section to the pack TOML",
-            }
-
-        attempt = dispatcher.fire_sync(
-            vendor,
-            event,
-            overrides=overrides,
-        )
-
-        return {
-            "status": "delivered" if attempt.status_code else "failed",
-            "vendor": vendor,
-            "event": event,
-            "target_url": attempt.target_url,
-            "status_code": attempt.status_code,
-            "elapsed_ms": round(attempt.elapsed_ms, 1),
-            "error": attempt.error,
-        }
-    except ValueError as e:
-        return {"error": str(e)}
-
-
 def mock_inject_error_impl(
     *,
     vendor: str,

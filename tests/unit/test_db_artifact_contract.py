@@ -129,7 +129,6 @@ _ALLOWLIST = frozenset(
         "dazzle.cli.runtime_impl.build._generate_sql_target",  # codegen SQL target
         # ── non-app-DB stores (SQLite / ops) ──
         "dazzle.mcp.knowledge_graph.store.KnowledgeGraph._init_schema",  # SQLite KG (ADR-0008 ok)
-        "dazzle.core.process.version_manager.VersionManager.initialize",  # SQLite version store
         # ── process-table http boot path: dead-in-prod, no live caller (ADR-0044) ──
         "dazzle.http.runtime.process_schema.ensure_process_tables",
         # ── alternative creators of ALREADY-REGISTERED framework tables ──

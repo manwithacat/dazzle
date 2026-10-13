@@ -16,7 +16,6 @@ DAZZLE_DIR = ".dazzle"
 
 # -- Database files ----------------------------------------------------------
 KG_DB_FILE = "knowledge_graph.db"
-PROCESSES_DB_FILE = "processes.db"
 
 # -- Subdirectory names under .dazzle ----------------------------------------
 DISCOVERY_DIR = "discovery"
@@ -53,11 +52,6 @@ def project_manifest(project_root: Path) -> Path:
 def project_kg_db(project_root: Path) -> Path:
     """Return the knowledge graph database path for a project."""
     return project_dazzle_dir(project_root) / KG_DB_FILE
-
-
-def project_processes_db(project_root: Path) -> Path:
-    """Return the processes database path for a project."""
-    return project_dazzle_dir(project_root) / PROCESSES_DB_FILE
 
 
 def project_discovery_dir(project_root: Path) -> Path:

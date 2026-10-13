@@ -11,10 +11,6 @@ Runtime Modes:
 Factory:
 - create_adapter(): Auto-selects backend based on availability
 - ProcessConfig: Configuration for backend selection
-
-Version Management:
-- VersionManager: DSL version lifecycle and migrations
-- DrainWatcher: Background monitoring for draining processes
 """
 
 from .adapter import (
@@ -26,15 +22,6 @@ from .adapter import (
 )
 from .context import ProcessContext
 from .factory import ProcessConfig, create_adapter, get_backend_info
-from .version_manager import (
-    DrainWatcher,
-    DrainWatcherConfig,
-    MigrationInfo,
-    MigrationStatus,
-    VersionInfo,
-    VersionManager,
-    generate_version_id,
-)
 
 __all__ = [
     # Adapter interface
@@ -49,14 +36,6 @@ __all__ = [
     "ProcessConfig",
     "create_adapter",
     "get_backend_info",
-    # Version Management
-    "VersionManager",
-    "VersionInfo",
-    "MigrationInfo",
-    "MigrationStatus",
-    "DrainWatcher",
-    "DrainWatcherConfig",
-    "generate_version_id",
 ]
 
 # EventBus adapter (requires: redis)

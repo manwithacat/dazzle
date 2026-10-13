@@ -7,11 +7,9 @@ This package contains modular implementations for project initialization:
 - spec.py - SPEC.md template generation
 - dnr_ui.py - Dazzle UI runtime generation from DSL
 - project.py - Main init_project logic
-- reset.py - Project reset and verification
 """
 
 from .project import create_mcp_config, init_project, list_examples
-from .reset import reset_project, verify_project
 from .spec import create_spec_template, create_specs_scaffold
 from .templates import (
     GENERATED_DIRECTORIES,
@@ -43,7 +41,4 @@ __all__ = [
     "list_examples",
     "create_mcp_config",
     "init_project",
-    # Reset
-    "reset_project",
-    "verify_project",
 ]

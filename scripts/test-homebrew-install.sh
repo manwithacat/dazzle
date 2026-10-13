@@ -170,17 +170,6 @@ else
     exit 1
 fi
 
-# Test dazzle check
-cd "$TEST_DIR/test-app"
-echo
-echo "📋 Testing 'dazzle check'..."
-if dazzle check 2>&1; then
-    echo "✅ 'dazzle check' passed"
-else
-    echo "❌ 'dazzle check' failed"
-fi
-echo
-
 # Test Python package import
 echo "🐍 Checking Python environment..."
 PYTHON_PATH=$(brew --prefix dazzle)/libexec/bin/python

@@ -39,8 +39,7 @@ class TestIntrospectionCompleteness:
     # the top level — its subcommands live in SUB_COMMANDS below.
     TOP_LEVEL = [
         "serve", "init", "validate", "lint",
-        "analyze-spec", "example", "doctor", "grammar",
-        "build", "info",
+        "doctor", "grammar", "build",
     ]
     # fmt: on
 
@@ -58,10 +57,7 @@ class TestIntrospectionCompleteness:
         "test agent",
         "test run-all",
         "pipeline run",
-        "discovery coherence",
         "story propose",
-        "kg export",
-        "kg import",
         "mcp run",
         "mcp setup",
         "deploy plan",
@@ -71,11 +67,6 @@ class TestIntrospectionCompleteness:
         "auth list-users",
         "db revision",
         "db upgrade",
-        "events tail",
-        "events status",
-        "dlq list",
-        "outbox status",
-        "process-migrate status",
     ]
 
     NESTED = [
@@ -193,7 +184,7 @@ class TestGetCliHelp:
         assert any(m["command"] == "validate" for m in result["matches"])
 
     def test_new_commands_found(self) -> None:
-        for cmd in ("pipeline run", "discovery coherence"):
+        for cmd in ("pipeline run", "story propose"):
             result = get_cli_help(cmd)
             assert result["found"] is True, f"'{cmd}' should be found"
 

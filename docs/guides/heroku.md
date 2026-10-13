@@ -189,10 +189,6 @@ Heroku Postgres provides automatic daily backups. For manual backups:
 ```bash
 # Heroku's built-in backup
 heroku pg:backups:capture
-
-# Dazzle's backup (includes uploads and metadata)
-heroku run dazzle backup create
-heroku run dazzle backup create --output /tmp/backup.tar.gz
 ```
 
 ## Custom Domains and SSL

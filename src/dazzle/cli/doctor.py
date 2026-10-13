@@ -176,7 +176,7 @@ def doctor_command() -> None:
         elif nested:
             _warn(
                 f"{len(nested)} nested snapshot tree(s) under {snap_root} "
-                f"({len(ids)} top-level) — run: dazzle clean snapshots --all"
+                f"({len(ids)} top-level) — delete the gitignored tree: rm -rf {snap_root}"
             )
         elif ids:
             _ok(f"{len(ids)} top-level snapshot(s) under {snap_root.name}/…")

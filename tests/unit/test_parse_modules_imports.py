@@ -26,7 +26,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # DSL deployment, or background worker DSL loading.
 RUNTIME_PARSE_MODULES_CALLERS = [
     "src/dazzle/http/alembic/metadata_loader.py",
-    "src/dazzle/cli/migrate.py",
 ]
 
 

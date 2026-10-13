@@ -16,7 +16,7 @@ module still provides:
    paths.
 3. Nest detection for doctor / tests.
 
-CLI: ``dazzle clean snapshots`` (see ``dazzle.cli.clean``).
+``dazzle doctor`` reports nested trees; the directory is gitignored and safe to delete.
 """
 
 from __future__ import annotations

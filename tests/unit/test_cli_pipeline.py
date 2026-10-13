@@ -1,4 +1,4 @@
-"""Tests for pipeline, composition, discovery CLI commands and --format json retrofits."""
+"""Tests for pipeline CLI commands and --format json retrofits."""
 
 import json
 from pathlib import Path
@@ -119,69 +119,6 @@ class TestPipelineRun:
         ):
             result = runner.invoke(
                 app, ["pipeline", "run", *_manifest_args(tmp_path), "--format", "json"]
-            )
-        assert result.exit_code == 1
-
-
-# ---------------------------------------------------------------------------
-# discovery coherence
-# ---------------------------------------------------------------------------
-
-_COHERENCE_RESULT = json.dumps(
-    {
-        "overall_score": 78,
-        "personas": [
-            {
-                "persona": "admin",
-                "coherence_score": 78,
-                "workspace": "main",
-                "checks": [
-                    {"check": "workspace_binding", "status": "pass"},
-                    {"check": "nav_filtering", "status": "warn", "detail": "1 issue"},
-                ],
-                "gap_count": 1,
-            }
-        ],
-        "skipped_personas": [],
-        "persona_count": 1,
-    }
-)
-
-
-class TestDiscoveryCoherence:
-    def test_json_format(self, tmp_path: Path) -> None:
-        with patch(
-            f"{_HANDLER_MOD}.discovery.app_coherence_handler",
-            return_value=_COHERENCE_RESULT,
-        ):
-            result = runner.invoke(
-                app, ["discovery", "coherence", *_manifest_args(tmp_path), "--format", "json"]
-            )
-        assert result.exit_code == 0
-        data = json.loads(result.output)
-        assert data["overall_score"] == 78
-        assert len(data["personas"]) == 1
-
-    def test_table_format(self, tmp_path: Path) -> None:
-        with patch(
-            f"{_HANDLER_MOD}.discovery.app_coherence_handler",
-            return_value=_COHERENCE_RESULT,
-        ):
-            result = runner.invoke(app, ["discovery", "coherence", *_manifest_args(tmp_path)])
-        assert result.exit_code == 0
-        assert "App Coherence" in result.output
-        assert "admin" in result.output
-
-    def test_exit_code_low_score(self, tmp_path: Path) -> None:
-        low = json.dumps(
-            {"overall_score": 40, "personas": [], "skipped_personas": [], "persona_count": 0}
-        )
-        with patch(
-            f"{_HANDLER_MOD}.discovery.app_coherence_handler",
-            return_value=low,
-        ):
-            result = runner.invoke(
-                app, ["discovery", "coherence", *_manifest_args(tmp_path), "--format", "json"]
             )
         assert result.exit_code == 1
 

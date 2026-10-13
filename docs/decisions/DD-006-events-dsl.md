@@ -69,7 +69,8 @@ When a force lands:
 
 - The event core stays and is live for every consumer: CRUD lifecycle
   events go through `EventEmittingMixin` into the outbox and on to the bus;
-  `/_dazzle/events/*` inspection and `dazzle events` remain.
+  `/_dazzle/events/*` inspection remains (the `dazzle events` / `dlq` /
+  `outbox` CLI groups were retired in flense ship J — no consumer ran them).
 - AegisMark's production boot log confirms the **Redis Streams** bus
   (`REDIS_URL` set), so the Redis tier is core, not parked.
 

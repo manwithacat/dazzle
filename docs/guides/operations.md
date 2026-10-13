@@ -72,27 +72,9 @@ Total connections = `DAZZLE_DB_POOL_MAX * number_of_workers`. Ensure this stays 
 
 ## Backup and Recovery
 
-### Create a backup
-
-```bash
-dazzle backup create                          # default: backup-{project}-{timestamp}.tar.gz
-dazzle backup create --output /path/backup.tar.gz
-dazzle backup create --data-only              # skip uploads directory
-dazzle backup create --dry-run                # preview what would be backed up
-```
-
-### Restore from backup
-
-```bash
-dazzle backup restore --from backup-myapp-20260310.tar.gz
-dazzle backup restore --from backup.tar.gz --dry-run    # preview
-```
-
-### What's in a backup
-
-- Database dump (pg_dump, data-only)
-- Uploads directory (if present)
-- Metadata: project name, framework version, timestamp
+Use your Postgres provider's backups (`pg_dump` / `pg_restore`, or
+`heroku pg:backups:capture` on Heroku). Back up the uploads directory
+separately if the app stores files locally.
 
 ## Multi-Worker Deployment
 

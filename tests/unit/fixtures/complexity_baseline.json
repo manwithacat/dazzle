@@ -604,7 +604,6 @@
   },
   "dazzle/cli/__init__.py": {
     "functions": {
-      "commands_command": 8,
       "grammar_command": 3,
       "main": 1,
       "main_callback": 2,
@@ -652,15 +651,6 @@
       "_scan_pii_name_hints": 6,
       "_scan_subprocessors": 14,
       "analytics_audit": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/api_pack.py": {
-    "functions": {
-      "env_vars": 4,
-      "generate_dsl": 6,
-      "infrastructure": 6,
-      "scaffold": 6
     },
     "mi_rank": "A"
   },
@@ -716,17 +706,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/cli/backup.py": {
-    "functions": {
-      "_build_pg_args": 5,
-      "_build_pg_env": 2,
-      "_parse_pg_url": 7,
-      "_resolve_database_url": 2,
-      "backup_command": 13,
-      "restore_command": 19
-    },
-    "mi_rank": "A"
-  },
   "dazzle/cli/capability.py": {
     "functions": {
       "_declared": 1,
@@ -741,12 +720,6 @@
   "dazzle/cli/claims.py": {
     "functions": {
       "claims_check": 13
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/clean.py": {
-    "functions": {
-      "clean_snapshots_command": 15
     },
     "mi_rank": "A"
   },
@@ -767,15 +740,6 @@
       "privacy_cmd": 6,
       "render_cmd": 2,
       "validate_citations_cmd": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/conformance.py": {
-    "functions": {
-      "execute": 7,
-      "generate": 4,
-      "run": 2,
-      "summary": 4
     },
     "mi_rank": "A"
   },
@@ -847,13 +811,6 @@
     },
     "mi_rank": "C"
   },
-  "dazzle/cli/dbshell.py": {
-    "functions": {
-      "_resolve_db_url": 3,
-      "dbshell_command": 5
-    },
-    "mi_rank": "A"
-  },
   "dazzle/cli/demo.py": {
     "functions": {
       "_find_data_dir": 3,
@@ -881,19 +838,6 @@
       "generate_heroku_files": 1,
       "generate_heroku_pyproject": 1,
       "generate_python_version_file": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/discovery.py": {
-    "functions": {
-      "_print_coherence_table": 13,
-      "discovery_coherence": 5,
-      "discovery_compile": 1,
-      "discovery_emit": 3,
-      "discovery_report": 1,
-      "discovery_run": 3,
-      "discovery_status": 1,
-      "discovery_verify_all_stories": 1
     },
     "mi_rank": "A"
   },
@@ -955,49 +899,13 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/cli/events.py": {
-    "functions": {
-      "_dlq_clear": 1,
-      "_dlq_list": 3,
-      "_dlq_replay": 3,
-      "_event_status": 3,
-      "_outbox_drain": 1,
-      "_outbox_failed": 3,
-      "_outbox_status": 2,
-      "_replay_events": 5,
-      "_tail_events": 5,
-      "dlq_clear": 2,
-      "dlq_list": 1,
-      "dlq_replay": 1,
-      "event_status": 1,
-      "outbox_drain": 1,
-      "outbox_failed": 1,
-      "outbox_status": 1,
-      "replay_events": 1,
-      "tail_events": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/feedback.py": {
-    "functions": {
-      "delete_command": 2,
-      "get_command": 4,
-      "list_command": 8,
-      "resolve_command": 4,
-      "stats_command": 5,
-      "triage_command": 5
-    },
-    "mi_rank": "A"
-  },
   "dazzle/cli/feedback_impl.py": {
     "functions": {
       "_auth_cookies": 4,
       "_get_server_url": 5,
-      "feedback_delete": 1,
       "feedback_get": 1,
       "feedback_list": 4,
       "feedback_resolve": 3,
-      "feedback_stats": 2,
       "feedback_triage": 4
     },
     "mi_rank": "A"
@@ -1012,14 +920,6 @@
   "dazzle/cli/fragment_audit.py": {
     "functions": {
       "fragment_audit_command": 7
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/guide.py": {
-    "functions": {
-      "_emit_step": 11,
-      "guide_list": 7,
-      "guide_narrate": 18
     },
     "mi_rank": "A"
   },
@@ -1070,53 +970,11 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/cli/kg.py": {
-    "functions": {
-      "_init_graph": 2,
-      "export_kg": 1,
-      "import_kg": 6
-    },
-    "mi_rank": "A"
-  },
   "dazzle/cli/mcp.py": {
     "functions": {
       "mcp_check": 3,
       "mcp_run": 4,
       "mcp_setup": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/migrate.py": {
-    "functions": {
-      "_get_dsl_files": 1,
-      "_get_version_manager": 2,
-      "deploy_command": 4,
-      "drain_command": 1,
-      "history_command": 2,
-      "list_command": 1,
-      "rollback_command": 1,
-      "status_command": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/mock.py": {
-    "functions": {
-      "fire_webhook_cmd": 5,
-      "inject_error_cmd": 4,
-      "list_vendors": 6,
-      "run_mocks": 9,
-      "scaffold_scenario_cmd": 1,
-      "scenario_cmd": 11,
-      "scenarios_cmd": 2,
-      "webhook_cmd": 9
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/param.py": {
-    "functions": {
-      "get_command": 1,
-      "list_command": 1,
-      "validate_command": 5
     },
     "mi_rank": "A"
   },
@@ -1164,30 +1022,15 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/cli/process_cli.py": {
-    "functions": {
-      "process_diagram": 2,
-      "process_propose": 4,
-      "process_save": 5
-    },
-    "mi_rank": "A"
-  },
   "dazzle/cli/project.py": {
     "functions": {
       "_is_directory_empty": 5,
       "_job_handler_errors": 11,
-      "_print_analysis_summary": 7,
       "_print_human_diagnostics": 11,
       "_print_vscode_diagnostics": 5,
       "_print_vscode_parse_error": 6,
       "_renderer_registration_advisory": 2,
-      "_resolve_analyze_spec_input": 7,
-      "_run_interactive_qa": 4,
-      "_run_llm_analyze_spec": 7,
-      "_run_offline_analyze_spec": 6,
       "_scaffold_app_directory": 6,
-      "analyze_spec_command": 2,
-      "example_command": 28,
       "init_command": 19,
       "inspect_command": 23,
       "lint_command": 13,
@@ -1233,13 +1076,6 @@
       "qa_trial_inventory": 1
     },
     "mi_rank": "B"
-  },
-  "dazzle/cli/quality.py": {
-    "functions": {
-      "bootstrap_command": 3,
-      "init_command": 20
-    },
-    "mi_rank": "A"
   },
   "dazzle/cli/rbac.py": {
     "functions": {
@@ -1300,7 +1136,6 @@
       "_run_codegen_targets": 6,
       "build_api_command": 7,
       "build_command": 12,
-      "build_css_command": 1,
       "build_ui_command": 7,
       "migrate_command": 10
     },
@@ -1322,25 +1157,6 @@
       "_persona_display_name": 2,
       "_provision_one": 3,
       "provision_dev_personas": 6
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/runtime_impl/info.py": {
-    "functions": {
-      "info_command": 14
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/runtime_impl/inspect.py": {
-    "functions": {
-      "_format_uptime": 3,
-      "_inspect_components": 4,
-      "_inspect_endpoints": 6,
-      "_inspect_entity": 17,
-      "_inspect_live": 26,
-      "_inspect_surface": 10,
-      "_inspect_workspace": 10,
-      "schema_command": 31
     },
     "mi_rank": "A"
   },
@@ -1389,12 +1205,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/cli/runtime_impl/test.py": {
-    "functions": {
-      "check_command": 40
-    },
-    "mi_rank": "A"
-  },
   "dazzle/cli/runtime_impl/ux_cycle_impl/__init__.py": {
     "functions": {},
     "mi_rank": "A"
@@ -1438,16 +1248,6 @@
       "emit": 1,
       "mark_run": 1,
       "since_last_run": 11
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/runtime_testing.py": {
-    "functions": {
-      "generate_test_data": 31,
-      "run_accessibility_checks": 1,
-      "run_api_contract_tests": 22,
-      "run_benchmarks": 18,
-      "run_e2e_tests": 11
     },
     "mi_rank": "A"
   },
@@ -1514,23 +1314,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/cli/services/event_service.py": {
-    "functions": {
-      "EventService": 2,
-      "EventService._broker": 2,
-      "EventService._get_outbox_connection": 2,
-      "EventService.clear_dlq": 1,
-      "EventService.get_dlq_events": 1,
-      "EventService.get_topic_info": 1,
-      "EventService.list_topics": 1,
-      "EventService.outbox_drain": 2,
-      "EventService.outbox_failed_entries": 1,
-      "EventService.outbox_status": 1,
-      "EventService.replay": 2,
-      "EventService.replay_dlq_event": 1
-    },
-    "mi_rank": "A"
-  },
   "dazzle/cli/signing.py": {
     "functions": {
       "_resolve_project_name": 5,
@@ -1562,23 +1345,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/cli/sweep.py": {
-    "functions": {
-      "AppResult": 3,
-      "AppResult.has_any_finding": 3,
-      "AppResult.has_lint_errors": 1,
-      "_coverage_snapshot": 2,
-      "_discover_example_apps": 4,
-      "_find_repo_root": 5,
-      "_parse_lint_output": 5,
-      "_render_human": 14,
-      "_render_json": 2,
-      "_run_app": 1,
-      "_run_gate": 3,
-      "sweep_examples_command": 12
-    },
-    "mi_rank": "A"
-  },
   "dazzle/cli/tenant.py": {
     "functions": {
       "_check_tenant_enabled": 3,
@@ -1591,17 +1357,6 @@
       "list_command": 3,
       "status_command": 2,
       "suspend_command": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/test_design.py": {
-    "functions": {
-      "coverage_actions": 2,
-      "improve_coverage": 2,
-      "propose_persona": 2,
-      "runtime_gaps": 2,
-      "save_designs": 5,
-      "save_runtime": 5
     },
     "mi_rank": "A"
   },
@@ -1663,14 +1418,6 @@
       "verify_story": 2
     },
     "mi_rank": "C"
-  },
-  "dazzle/cli/theme.py": {
-    "functions": {
-      "init_command": 8,
-      "list_command": 17,
-      "preview_command": 2
-    },
-    "mi_rank": "A"
   },
   "dazzle/cli/utils.py": {
     "functions": {
@@ -1735,25 +1482,6 @@
       "walk_pack_dry_run": 6,
       "walk_run": 6,
       "walk_validate": 11
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli_ui.py": {
-    "functions": {
-      "SelectOption": 1,
-      "_select_simple": 13,
-      "_select_with_keyboard": 9,
-      "confirm": 4,
-      "create_panel": 1,
-      "display_options_table": 6,
-      "print_divider": 1,
-      "print_error": 1,
-      "print_header": 2,
-      "print_info": 1,
-      "print_step": 1,
-      "print_success": 1,
-      "print_warning": 1,
-      "select_interactive": 4
     },
     "mi_rank": "A"
   },
@@ -2069,15 +1797,6 @@
       "_extract_real_personas": 3,
       "_resolve_count": 4,
       "generate_fixtures": 9
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/conformance/generator.py": {
-    "functions": {
-      "_build_entity_toml": 9,
-      "_escape_toml_string": 1,
-      "_format_inline_table": 3,
-      "generate_toml_files": 3
     },
     "mi_rank": "A"
   },
@@ -3804,13 +3523,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/core/init_impl/reset.py": {
-    "functions": {
-      "reset_project": 28,
-      "verify_project": 4
-    },
-    "mi_rank": "A"
-  },
   "dazzle/core/init_impl/spec.py": {
     "functions": {
       "create_spec_template": 1,
@@ -5099,7 +4811,6 @@
       "project_last_seen_version": 1,
       "project_log_dir": 1,
       "project_manifest": 1,
-      "project_processes_db": 1,
       "project_processes_dir": 1,
       "project_test_results_dir": 1
     },
@@ -5433,37 +5144,6 @@
       "TemporalNotAvailable": 2,
       "TemporalNotAvailable.__init__": 1,
       "_check_temporal_available": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/core/process/version_manager.py": {
-    "functions": {
-      "DrainWatcher": 4,
-      "DrainWatcher.__init__": 2,
-      "DrainWatcher._watch_loop": 7,
-      "DrainWatcher.is_running": 2,
-      "DrainWatcher.start": 2,
-      "DrainWatcher.stop": 3,
-      "DrainWatcherConfig": 1,
-      "MigrationInfo": 1,
-      "MigrationStatus": 1,
-      "VersionInfo": 1,
-      "VersionManager": 5,
-      "VersionManager.__init__": 1,
-      "VersionManager._connect": 3,
-      "VersionManager.check_migration_status": 10,
-      "VersionManager.complete_migration": 6,
-      "VersionManager.compute_version_hash": 3,
-      "VersionManager.deploy_version": 4,
-      "VersionManager.get_active_migrations": 5,
-      "VersionManager.get_current_version": 4,
-      "VersionManager.get_version": 4,
-      "VersionManager.initialize": 3,
-      "VersionManager.list_versions": 6,
-      "VersionManager.rollback_migration": 6,
-      "VersionManager.start_migration": 4,
-      "VersionManager.suspend_remaining_processes": 5,
-      "generate_version_id": 1
     },
     "mi_rank": "A"
   },
@@ -11296,18 +10976,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/llm/spec_analyzer.py": {
-    "functions": {
-      "SpecAnalyzer": 3,
-      "SpecAnalyzer.__init__": 1,
-      "SpecAnalyzer._get_analysis_summary": 1,
-      "SpecAnalyzer._parse_analysis": 7,
-      "SpecAnalyzer.analyze": 3,
-      "SpecAnalyzer.estimate_cost": 1,
-      "analyze_spec_file": 2
-    },
-    "mi_rank": "A"
-  },
   "dazzle/log_setup.py": {
     "functions": {
       "SecretRedactionFilter": 6,
@@ -11811,16 +11479,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/mcp/server/handlers/api_packs.py": {
-    "functions": {
-      "_serialize_infrastructure": 4,
-      "api_pack_env_vars_impl": 2,
-      "api_pack_generate_dsl_impl": 5,
-      "api_pack_infrastructure_impl": 18,
-      "api_pack_scaffold_impl": 10
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/server/handlers/bootstrap.py": {
     "functions": {
       "_build_instructions": 3,
@@ -12113,31 +11771,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/mcp/server/handlers/process/diagrams.py": {
-    "functions": {
-      "_generate_process_mermaid": 13,
-      "_generate_state_diagram": 14,
-      "_get_step_label": 15,
-      "_get_trigger_label": 13,
-      "_step_edges": 19,
-      "_step_to_mermaid": 9,
-      "process_diagram_impl": 9
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/server/handlers/process/proposals.py": {
-    "functions": {
-      "WorkflowProposal": 1,
-      "_build_entity_context": 13,
-      "_build_proposal": 4,
-      "_build_review_checklist": 3,
-      "_cluster_stories_into_workflows": 15,
-      "_generate_design_questions": 18,
-      "_is_crud_story": 9,
-      "process_propose_impl": 31
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/server/handlers/process/scope_fidelity.py": {
     "functions": {
       "ScopeGap": 1,
@@ -12149,12 +11782,6 @@
       "_pascal_to_snake": 4,
       "scope_fidelity_handler": 1,
       "scope_fidelity_impl": 27
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/server/handlers/process/storage.py": {
-    "functions": {
-      "process_save_impl": 18
     },
     "mi_rank": "A"
   },
@@ -12324,7 +11951,6 @@
       "get_runtime_coverage_gaps_handler": 1,
       "save_runtime_coverage_handler": 2,
       "test_design_coverage_actions_impl": 35,
-      "test_design_improve_coverage_impl": 1,
       "test_design_runtime_gaps_impl": 18,
       "test_design_save_runtime_impl": 1
     },
@@ -13700,21 +13326,6 @@
       "summary": 3,
       "surface_by_id": 2,
       "surfaces_from_ontology": 6
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/quality/__init__.py": {
-    "functions": {},
-    "mi_rank": "A"
-  },
-  "dazzle/quality/bootstrap.py": {
-    "functions": {
-      "_bootstrap_precommit": 2,
-      "_bootstrap_pyproject": 2,
-      "_bootstrap_pyright": 1,
-      "_load_template_ruff_tables": 1,
-      "_template_dir": 1,
-      "quality_bootstrap": 1
     },
     "mi_rank": "A"
   },

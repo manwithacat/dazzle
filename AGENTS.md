@@ -215,9 +215,8 @@ MCP = fast knowledge/query (prefer no side effects); CLI = process, writes, long
   the surface is drift-gated by the `mcp-tools` API baseline. `bootstrap` is the entry
   point for "build me an app"; `knowledge` (concept, examples, cli_help, workflow,
   counter_prior, search_commands) is the fastest orientation call.
-- **CLI process groups**: `discovery`, `e2e`, `story`, `rhythm`, `process`, `test-design`,
-  `test`, `pulse`, `sentinel`, `db`, `tenant`, `demo`, `api-pack`, `mock`,
-  `test`, `pitch`, `sentinel`, `db`, `tenant`, `demo`, `api-pack`, `mock` —
+- **CLI process groups**: `agent`, `auth`, `compliance`, `db`, `demo`, `deploy`, `e2e`,
+  `rbac`, `rhythm`, `sentinel`, `story`, `tenant`, `test`, `ux` —
   `dazzle <group> --help` or `dazzle search <keyword>`.
 
 ## Autonomous Loops (awareness)
@@ -250,7 +249,7 @@ Example: [DD-001](docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md) for #1621/
 
 See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **No new singletons** — use `RuntimeServices` or `ServerState` (ADR-0005)
-- **No SQLite in the app runtime** — `src/dazzle/http/` is PostgreSQL-only (ADR-0008). The MCP server's knowledge-graph DB and `core/process/version_manager.py` are outside that scope and may use SQLite.
+- **No SQLite in the app runtime** — `src/dazzle/http/` is PostgreSQL-only (ADR-0008). The MCP server's knowledge-graph DB is outside that scope and may use SQLite.
 - **No SPA frameworks** — server-side rendering + HTMX (ADR-0011); rendering is the typed Fragment substrate since #1042 (ADR-0023), not Jinja2
 - **No field conditions in `permit:`** — use `scope:` with `as:` (ADR-0010)
 - **No `from __future__ import annotations`** in FastAPI route files (ADR-0014)

@@ -151,54 +151,8 @@ def test_inspect_command_default(cli_runner: CliRunner, test_project: Path):
 
 
 # ===========================================================================
-# Discoverability commands: `dazzle commands` and `dazzle search`
+# Discoverability: `dazzle search`
 # ===========================================================================
-
-
-class TestCommandsCommand:
-    """Tests for `dazzle commands` — list all CLI commands."""
-
-    def test_commands_lists_output(self, cli_runner: CliRunner) -> None:
-        result = cli_runner.invoke(app, ["commands"])
-        assert result.exit_code == 0
-        assert "serve" in result.output
-
-    def test_commands_json_output(self, cli_runner: CliRunner) -> None:
-        import json
-
-        result = cli_runner.invoke(app, ["commands", "--json"])
-        assert result.exit_code == 0
-        data = json.loads(result.output)
-        assert "serve" in data
-
-    def test_commands_json_entries_have_description(self, cli_runner: CliRunner) -> None:
-        import json
-
-        result = cli_runner.invoke(app, ["commands", "--json"])
-        assert result.exit_code == 0
-        data = json.loads(result.output)
-        for cmd, info in data.items():
-            assert "description" in info, f"'{cmd}' missing description in JSON output"
-
-    @pytest.mark.parametrize(
-        "category",
-        ["Runtime", "runtime"],
-        ids=[
-            "test_commands_category_filter_runtime",
-            "test_commands_category_filter_case_insensitive",
-        ],
-    )
-    def test_commands_category_filter_serve_present(
-        self, cli_runner: CliRunner, category: str
-    ) -> None:
-        result = cli_runner.invoke(app, ["commands", "--category", category])
-        assert result.exit_code == 0
-        assert "serve" in result.output
-
-    def test_commands_unknown_category_returns_empty(self, cli_runner: CliRunner) -> None:
-        result = cli_runner.invoke(app, ["commands", "--category", "NonExistentCategoryXYZ"])
-        # Empty category → no output lines with "dazzle", but exit code still 0
-        assert result.exit_code == 0
 
 
 class TestSearchCommand:

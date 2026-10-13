@@ -11,8 +11,6 @@ This package contains the main CLI application and modularized sub-commands:
 - mcp.py: MCP server commands
 - deploy.py: Deploy commands
 - story.py: Story commands
-- events.py: Event system commands
-- migrate.py: Migration commands
 - db.py: Database migration commands (Alembic)
 - utils.py: Shared utilities
 """
@@ -38,8 +36,8 @@ app = typer.Typer(
 
 Command Types:
   - Project Creation: init
-  - Project Operations: validate, lint, inspect, analyze-spec
-  - Runtime: serve, build, stop, logs, status
+  - Project Operations: validate, lint, inspect
+  - Runtime: serve, build, migrate
 """,
     no_args_is_help=True,
 )
@@ -73,8 +71,6 @@ def main_callback(
 # Project Commands (top-level)
 # =============================================================================
 from dazzle.cli.project import (  # noqa: E402
-    analyze_spec_command,
-    example_command,
     init_command,
     inspect_command,
     lint_command,
@@ -91,8 +87,6 @@ app.command(name="lint")(lint_command)
 # the rename moves it under the inspect group alongside `inspect
 # renderers` / `inspect primitives` / etc. so the command tree has
 # a single owner for the `inspect` namespace (#1120 fallout).
-app.command(name="analyze-spec")(analyze_spec_command)
-app.command(name="example")(example_command)
 
 # Doctor command
 from dazzle.cli.doctor import doctor_command  # noqa: E402
@@ -108,15 +102,6 @@ app.command(name="coverage")(coverage_command)
 from dazzle.cli.fragment_audit import fragment_audit_command  # noqa: E402
 
 app.command(name="fragment-audit")(fragment_audit_command)
-
-# Sweep command group — unified health check across every example app.
-# `dazzle sweep examples` runs validate + lint + framework coverage snapshot
-# and emits a single report suitable for weekly scheduled runs.
-from dazzle.cli.sweep import sweep_examples_command  # noqa: E402
-
-_sweep_app = typer.Typer(help="Run unified health checks across example apps.")
-_sweep_app.command(name="examples")(sweep_examples_command)
-app.add_typer(_sweep_app, name="sweep")
 
 
 # Version command — mirrors `dazzle --version`. The subcommand form is
@@ -173,36 +158,6 @@ app.command(name="grammar")(grammar_command)
 # =============================================================================
 
 
-@app.command(name="commands")
-def commands_command(
-    category: str | None = typer.Option(None, "--category", "-c", help="Filter by category"),
-    json_output: bool = typer.Option(False, "--json", help="JSON output"),
-) -> None:
-    """List all available CLI commands with descriptions."""
-    from dazzle.mcp.cli_help import _get_commands
-
-    cmds = _get_commands()
-    if category:
-        cmds = {k: v for k, v in cmds.items() if v.get("category", "").lower() == category.lower()}
-
-    if json_output:
-        import json
-
-        typer.echo(json.dumps(cmds, indent=2))
-        return
-
-    # Group by category
-    by_cat: dict[str, list[tuple[str, str]]] = {}
-    for cmd, info in sorted(cmds.items()):
-        cat = info.get("category", "Other")
-        by_cat.setdefault(cat, []).append((cmd, info.get("description", "")))
-
-    for cat in sorted(by_cat):
-        typer.echo(f"\n{cat}:")
-        for cmd, desc in by_cat[cat]:
-            typer.echo(f"  dazzle {cmd:30s} {desc[:60]}")
-
-
 @app.command(name="search")
 def search_command(
     keyword: str = typer.Argument(..., help="Keyword to search for"),
@@ -226,12 +181,8 @@ def search_command(
 from dazzle.cli.runtime_impl import (  # noqa: E402
     build_api_command,
     build_command,
-    build_css_command,
     build_ui_command,
-    check_command,
-    info_command,
     migrate_command,
-    schema_command,
     serve_command,
 )
 
@@ -239,22 +190,7 @@ app.command(name="serve")(serve_command)
 app.command(name="build")(build_command)
 app.command(name="build-ui")(build_ui_command)
 app.command(name="build-api")(build_api_command)
-# v0.67.21 (#1038): `dazzle build-css` re-introduced as a no-op CLI
-# command so downstream deploy hooks (e.g. cyfuture's bin/post_compile)
-# stop failing silently with typer's "No such command". Prints a one-
-# shot migration note + exits 0. The implementation was removed in
-# v0.62 (Phase 4 teardown); this entry is purely for invocation
-# ergonomics, not backward-compat of the build behaviour itself.
-app.command(name="build-css")(build_css_command)
-app.command(name="info")(info_command)
 app.command(name="migrate")(migrate_command)
-app.command(name="schema")(schema_command)
-app.command(name="check")(check_command)
-
-# Database shell command
-from dazzle.cli.dbshell import dbshell_command  # noqa: E402
-
-app.command(name="dbshell")(dbshell_command)
 
 
 # =============================================================================
@@ -262,34 +198,20 @@ app.command(name="dbshell")(dbshell_command)
 # =============================================================================
 from dazzle.cli.agent_commands import agent_app  # noqa: E402
 from dazzle.cli.analytics import analytics_app  # noqa: E402
-from dazzle.cli.api_pack import api_pack_app  # noqa: E402
 from dazzle.cli.auth import auth_app  # noqa: E402
-from dazzle.cli.backup import backup_app  # noqa: E402
 from dazzle.cli.capability import capability_app  # noqa: E402
-from dazzle.cli.clean import clean_app  # noqa: E402
 from dazzle.cli.compliance import compliance_app  # noqa: E402
-from dazzle.cli.conformance import conformance_app  # noqa: E402
 from dazzle.cli.db import db_app  # noqa: E402
 from dazzle.cli.demo import demo_app  # noqa: E402
 from dazzle.cli.deploy import deploy_app  # noqa: E402
-from dazzle.cli.discovery import discovery_app  # noqa: E402
 from dazzle.cli.docs import docs_app  # noqa: E402
 from dazzle.cli.e2e import e2e_app  # noqa: E402
-from dazzle.cli.events import dlq_app, events_app, outbox_app  # noqa: E402
-from dazzle.cli.feedback import feedback_app  # noqa: E402
 from dazzle.cli.fitness import fitness_app  # noqa: E402
-from dazzle.cli.guide import guide_app  # noqa: E402
-from dazzle.cli.kg import kg_app  # noqa: E402
 from dazzle.cli.mcp import mcp_app  # noqa: E402
-from dazzle.cli.migrate import migrate_app  # noqa: E402
-from dazzle.cli.mock import mock_app  # noqa: E402
-from dazzle.cli.param import param_app  # noqa: E402
 from dazzle.cli.perf import perf_app  # noqa: E402
 from dazzle.cli.pipeline import pipeline_app  # noqa: E402
-from dazzle.cli.process_cli import process_app  # noqa: E402
 from dazzle.cli.prove import prove_app  # noqa: E402
 from dazzle.cli.qa import qa_app  # noqa: E402
-from dazzle.cli.quality import quality_app  # noqa: E402
 from dazzle.cli.rbac import rbac_app  # noqa: E402
 from dazzle.cli.representation import representation_app  # noqa: E402
 from dazzle.cli.rhythm import rhythm_app  # noqa: E402
@@ -299,25 +221,17 @@ from dazzle.cli.signing import signing_app  # noqa: E402
 from dazzle.cli.spec import spec_app  # noqa: E402
 from dazzle.cli.story import story_app  # noqa: E402
 from dazzle.cli.tenant import tenant_app  # noqa: E402
-from dazzle.cli.test_design import test_design_app  # noqa: E402
 from dazzle.cli.testing import test_app  # noqa: E402
-from dazzle.cli.theme import theme_app  # noqa: E402
 from dazzle.cli.ux import ux_app  # noqa: E402
 from dazzle.cli.vocab import vocab_app  # noqa: E402
 
 app.add_typer(analytics_app, name="analytics")
 app.add_typer(agent_app, name="agent")
-app.add_typer(api_pack_app, name="api-pack")
 app.add_typer(auth_app, name="auth")
 app.add_typer(capability_app, name="capability")
 app.add_typer(compliance_app, name="compliance")
-app.add_typer(conformance_app, name="conformance")
-app.add_typer(backup_app, name="backup")
-app.add_typer(clean_app, name="clean")
 app.add_typer(db_app, name="db")
 app.add_typer(demo_app, name="demo")
-app.add_typer(discovery_app, name="discovery")
-app.add_typer(feedback_app, name="feedback")
 app.add_typer(fitness_app, name="fitness")
 app.add_typer(docs_app, name="docs")
 app.add_typer(vocab_app, name="vocab")
@@ -326,31 +240,19 @@ app.add_typer(prove_app, name="prove")
 app.add_typer(representation_app, name="representation")
 app.add_typer(story_app, name="story")
 app.add_typer(tenant_app, name="tenant")
-app.add_typer(theme_app, name="theme")
 app.add_typer(test_app, name="test")
 app.add_typer(e2e_app, name="e2e")
-app.add_typer(guide_app, name="guide")
 app.add_typer(signing_app, name="signing")
 app.add_typer(spec_app, name="spec")
 app.add_typer(deploy_app, name="deploy")
-app.add_typer(events_app, name="events")
-app.add_typer(dlq_app, name="dlq")
-app.add_typer(outbox_app, name="outbox")
-app.add_typer(migrate_app, name="process-migrate")
 app.add_typer(pipeline_app, name="pipeline")
 app.add_typer(perf_app, name="perf")
-app.add_typer(quality_app, name="quality")
 app.add_typer(rbac_app, name="rbac")
-app.add_typer(kg_app, name="kg")
 app.add_typer(mcp_app, name="mcp")
-app.add_typer(mock_app, name="mock")
-app.add_typer(process_app, name="process")
 app.add_typer(rhythm_app, name="rhythm")
 app.add_typer(qa_app, name="qa")
 app.add_typer(sentinel_app, name="sentinel")
 app.add_typer(ux_app, name="ux")
-app.add_typer(test_design_app, name="test-design")
-app.add_typer(param_app, name="param")
 
 from dazzle.cli.i18n import i18n_app  # noqa: E402
 from dazzle.cli.inspect import inspect_app  # noqa: E402

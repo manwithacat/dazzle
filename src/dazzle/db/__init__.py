@@ -5,8 +5,6 @@ Layer A (zero-config, DSL-derived):
   - verify: FK integrity checks, orphan detection
   - reset: truncate entity tables in dependency order
   - cleanup: find and remove FK orphans
-
-Layer B (provider-pluggable backup/restore) lives in dazzle.cli.backup.
 """
 
 from .cleanup import db_cleanup_impl

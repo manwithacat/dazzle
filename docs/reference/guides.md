@@ -150,7 +150,7 @@ At request time, `_inject_onboarding_step` (`ui/runtime/page_routes.py`) resolve
 step for the user's persona + progress and prepends the rendered `<dz-onboarding-step>`
 fragment to the surface body; `POST /api/onboarding/{guide}/{step}/complete` (or `/dismiss`)
 advances state. Server-rendered + HTMX — no SPA. Inspect guides with the `guide` MCP tool
-(`list` / `get` / `concordance` / `narrate`) or `dazzle guide list` / `dazzle guide narrate <name>`.
+(`list` / `get` / `concordance` / `narrate`).
 
 ## Source map
 

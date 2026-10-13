@@ -460,24 +460,6 @@ def test_design_save_runtime_impl(
     }
 
 
-def test_design_improve_coverage_impl(
-    project_root: Path,
-    *,
-    max_actions: int = 5,
-    focus: str = "all",
-    coverage_path: str | None = None,
-) -> dict[str, Any]:
-    """Combined coverage improvement: static DSL gaps + runtime gaps."""
-    static = test_design_coverage_actions_impl(project_root, max_actions=max_actions, focus=focus)
-    runtime = test_design_runtime_gaps_impl(
-        project_root, max_actions=max_actions, coverage_path=coverage_path
-    )
-    return {
-        "static_coverage": static,
-        "runtime_coverage": runtime,
-    }
-
-
 @wrap_handler_errors
 def get_coverage_actions_handler(project_root: Path, args: dict[str, Any]) -> str:
     """

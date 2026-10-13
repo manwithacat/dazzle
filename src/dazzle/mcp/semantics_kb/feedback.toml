@@ -43,8 +43,6 @@ The human-to-agent feedback loop:
 3. Agent reads detail: feedback(operation='get', id='...')
 4. Agent fixes the issue (edits code, updates DSL, etc.)
 5. Agent resolves: feedback(operation='resolve', id='...', agent_notes='Fixed in commit ...')
-
-The CLI (`dazzle feedback list/triage/resolve`) provides human override.
 """
 
 [workflows.feedback_triage]

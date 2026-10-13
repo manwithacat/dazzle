@@ -18,12 +18,10 @@ from .models import (
     StateMachine,
     StateTransition,
 )
-from .spec_analyzer import SpecAnalyzer
 
 __all__ = [
     "LLMAPIClient",
     "LLMProvider",
-    "SpecAnalyzer",
     "SpecAnalysis",
     "StateMachine",
     "StateTransition",

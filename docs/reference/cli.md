@@ -9,7 +9,6 @@ Complete reference for the `dazzle` command-line interface.
 | Command | Description |
 |---------|-------------|
 | `dazzle init` | Create a new project (optionally from an example) |
-| `dazzle example` | Create a project from a built-in example |
 
 ### Project Operations
 
@@ -18,42 +17,13 @@ Complete reference for the `dazzle` command-line interface.
 | `dazzle validate` | Parse and validate all DSL modules |
 | `dazzle lint` | Extended validation with style checks |
 | `dazzle inspect` | Inspect entities, surfaces, and structure |
-| `dazzle analyze-spec` | LLM-assisted DSL generation from a spec file |
-| `dazzle info` | Show runtime installation status |
 | `dazzle doctor` | Run environment health checks |
-| `dazzle clean snapshots` | Remove local `.dazzle/spec_snapshots` (gitignored) |
-| `dazzle schema` | Inspect generated app structure |
-
-
-
-### Local cleanup
-
-| Command | Description |
-|---------|-------------|
-| `dazzle clean snapshots` | Delete local `.dazzle/spec_snapshots` trees (gitignored) |
-| `dazzle clean snapshots --dry-run` | List what would be removed |
-| `dazzle clean snapshots --all` | Remove the entire snapshots directory (use after nested explosion) |
-| `dazzle clean snapshots --keep N` | Keep the N newest top-level snapshot dirs (mtime); default 10 |
-
-**Why:** historical ops rollback mirrors and accidental full-tree copies under
-`.dazzle/spec_snapshots/` can nest prior snapshots and produce millions of paths
-(rsync backups stall). The product writer was retired with ADR-0051; residual
-trees are safe to delete. Prefer `--all` when doctor warns about nesting.
-
-**Backup tip:** exclude `.dazzle/spec_snapshots/`, `.venv/`, `node_modules/`,
-and `*cache*` when rsyncing the monorepo — durable state is source + `.git`.
-
-See also: `dazzle.core.local_snapshots` (shared copy-ignore for any future writer).
 
 ### Runtime
 
 | Command | Description |
 |---------|-------------|
 | `dazzle serve` | Start the full-stack app (API + UI) |
-| `dazzle stop` | Stop the running Docker container |
-| `dazzle rebuild` | Rebuild Docker image and restart |
-| `dazzle logs` | View container logs |
-| `dazzle status` | Show container status |
 | `dazzle build` | Build a production deployment bundle |
 | `dazzle build-ui` | Generate UI artifacts from AppSpec |
 | `dazzle build-api` | Generate API spec from AppSpec |
@@ -71,19 +41,8 @@ See also: `dazzle.core.local_snapshots` (shared copy-ignore for any future write
 | Command | Description |
 |---------|-------------|
 | `dazzle test` | Multi-tier test runner (API, Playwright, LLM agent) |
-| `dazzle check` | Run tests for a Dazzle application |
 | `dazzle e2e` | Docker-based E2E testing with UX coverage |
 | `dazzle story` | Story-driven test generation |
-
-### Events & Processes
-
-| Command | Description |
-|---------|-------------|
-| `dazzle events` | Event system commands |
-| `dazzle dlq` | Dead letter queue commands |
-| `dazzle outbox` | Event outbox commands |
-| `dazzle process-migrate` | Safe DSL version deployment migrations |
-| `dazzle overrides` | Template override management (scan, check, list) |
 
 ### Infrastructure
 
@@ -97,24 +56,18 @@ See also: `dazzle.core.local_snapshots` (shared copy-ignore for any future write
 |---------|-------------|
 | `dazzle vocab` | Manage app-local vocabulary (macros, aliases, patterns) |
 
-### Monitoring
-
-| Command | Description |
-|---------|-------------|
-
 ### Tooling
 
 | Command | Description |
 |---------|-------------|
 | `dazzle mcp` | MCP (Model Context Protocol) server commands |
-| `dazzle kg` | Knowledge graph management |
 
 ---
 
 ## Command Groups
 
 Every registered command group (sub-app). Run `dazzle <group> --help` for its
-subcommands, or `dazzle commands` / `dazzle search <keyword>` to discover commands
+subcommands, or `dazzle search <keyword>` to discover commands
 interactively. This table is drift-gated against the CLI registration in
 `src/dazzle/cli/__init__.py` (`tests/unit/test_docs_drift.py`) — adding a group
 there requires a row here.
@@ -123,36 +76,20 @@ there requires a row here.
 |-------|---------|
 | `dazzle agent` | Agent-first development commands |
 | `dazzle analytics` | Analytics, consent, and privacy tooling |
-| `dazzle api-pack` | API pack management — generate DSL, scaffold packs, inspect infrastructure |
 | `dazzle auth` | Manage authentication users and sessions |
-| `dazzle backup` | Backup and restore project data |
 | `dazzle capability` | Manage opt-in feature capabilities |
-| `dazzle clean` | Local hygiene — reclaim gitignored snapshot trees |
 | `dazzle compliance` | Compliance documentation tools (ISO 27001 / SOC 2) |
-| `dazzle conformance` | DSL conformance testing |
 | `dazzle db` | Database migration commands (Alembic) |
 | `dazzle demo` | Demo data management commands |
 | `dazzle deploy` | Plan infrastructure + generate buildpack (Heroku) deploy files |
-| `dazzle discovery` | App discovery and coherence analysis |
-| `dazzle dlq` | Dead letter queue commands |
 | `dazzle docs` | Documentation generation, validation, and maintenance |
-| `dazzle events` | Event system commands |
-| `dazzle feedback` | Feedback reports — list, triage, resolve |
 | `dazzle fitness` | Framework structural-fitness ratchets (complexity, clones) |
-| `dazzle guide` | Inspect onboarding guides declared in the project DSL |
 | `dazzle inspect` | Introspect framework extension points and the public API surface |
-| `dazzle kg` | Knowledge graph management |
 | `dazzle mcp` | MCP (Model Context Protocol) server commands |
-| `dazzle mock` | Vendor mock server management |
-| `dazzle outbox` | Event outbox commands |
-| `dazzle param` | Runtime parameter management |
 | `dazzle perf` | On-demand local OpenTelemetry tracing |
 | `dazzle pipeline` | Run the deterministic quality pipeline |
-| `dazzle process` | Process proposal, storage, and diagramming |
-| `dazzle process-migrate` | Process migration commands for safe DSL version deployments |
 | `dazzle prove` | Static story binding evidence (agent closed loop #1605) + representation prove (#1617) |
 | `dazzle qa` | QA toolkit — visual quality evaluation and screenshot capture |
-| `dazzle quality` | Quality pipeline scaffolding |
 | `dazzle rbac` | RBAC verification and compliance |
 | `dazzle representation` | Data-representation judgement — patterns, decide, classify (#1617) |
 | `dazzle rhythm` | Rhythm analysis and lifecycle management |
@@ -161,11 +98,8 @@ there requires a row here.
 | `dazzle signing` | Provision the native document signing primitive |
 | `dazzle spec` | Compare narrative product spec against DSL state — drift detection |
 | `dazzle story` | Story-driven test generation |
-| `dazzle sweep` | Run unified health checks across example apps |
 | `dazzle tenant` | Multi-tenant schema management |
 | `dazzle test` | Multi-tier test runner (dsl-run / playwright / agent) |
-| `dazzle test-design` | Test design proposal, persistence, and coverage analysis |
-| `dazzle theme` | Inspect and manage app-shell themes |
 | `dazzle ux` | UX verification — deterministic interaction testing |
 | `dazzle vocab` | Manage app-local vocabulary (macros, aliases, patterns) |
 

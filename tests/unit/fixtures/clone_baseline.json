@@ -35,28 +35,11 @@
     ]
   },
   {
-    "signature": "exact:943b526cb590ff48fbf3c77135106b8d",
-    "count": 2,
-    "names": [
-      "dazzle/cli/coverage.py::_example_app_dirs",
-      "dazzle/cli/sweep.py::_discover_example_apps"
-    ]
-  },
-  {
     "signature": "exact:a0b61b5525770e33703711db0c73ed03",
     "count": 2,
     "names": [
       "dazzle/cli/db.py::_run",
       "dazzle/cli/qa.py::_run"
-    ]
-  },
-  {
-    "signature": "889e21d25dedd6c293bcea785dd69890",
-    "count": 3,
-    "names": [
-      "dazzle/cli/discovery.py::discovery_status",
-      "dazzle/cli/e2e/__init__.py::e2e_coverage",
-      "dazzle/cli/e2e/__init__.py::e2e_list_viewport_specs"
     ]
   },
   {
@@ -1322,6 +1305,14 @@
     "names": [
       "dazzle/testing/walk/claims.py::__init__",
       "dazzle/testing/walk/loader.py::__init__"
+    ]
+  },
+  {
+    "signature": "889e21d25dedd6c293bcea785dd69890",
+    "count": 2,
+    "names": [
+      "dazzle/cli/e2e/__init__.py::e2e_coverage",
+      "dazzle/cli/e2e/__init__.py::e2e_list_viewport_specs"
     ]
   }
 ]

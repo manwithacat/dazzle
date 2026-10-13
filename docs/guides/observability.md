@@ -589,7 +589,7 @@ The `settle_invoice` process executes when `Invoice.status` transitions
 to `approved`. Inspect its runs in the `process_runs` table
 (`status`, `error`, `current_step`); a cluster of
 failed runs means the `payment_provider` integration is failing
-persistently — check the mock scenario (in dev: `dazzle mock status`)
+persistently — check the mock scenario (in dev: the `mock` MCP tool)
 or the live integration logs.
 
 **5. Are consumers keeping up?**
