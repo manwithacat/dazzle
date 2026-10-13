@@ -1,28 +1,15 @@
-"""Theme-variant server-side resolution (UX-048 + UX-056 Q1).
+"""Request-scoped app-shell chrome state read from cookies (#1294).
 
-The marketing shell (`site_base.html`) and in-app shell (`base.html`)
-both emit `<html data-theme="<variant>">` on first paint. Historically
-this was hardcoded to `"light"` and `site.js` flipped it client-side
-after `DOMContentLoaded` — which produced a visible flash-of-light for
-returning dark-mode users.
+:class:`ThemeVariantMiddleware` reads the ``dz_sidebar`` cookie at request
+ingress and publishes a validated value in :data:`sidebar_state_ctxvar`;
+:func:`get_sidebar_state` hands it to the Fragment app shell so SSR emits the
+correct ``data-dz-sidebar`` attribute on first paint.
 
-This module closes that gap by:
-
-1. Reading a `dz_theme` cookie from the incoming request via
-   :class:`ThemeVariantMiddleware` and storing the validated variant
-   in :data:`theme_variant_ctxvar`.
-2. Exposing :func:`get_theme_variant` as a Jinja global so the two
-   layout templates can emit the correct attribute at render time.
-
-The client side (`static/js/site.js` and `templates/layouts/
-app_shell.html` Alpine controller) writes the cookie alongside its
-existing ``localStorage`` state on toggle. Server + client stay in
-sync through the cookie round-trip.
-
-Side-effect: closes UX-048 Q1 (cross-shell sync gap). Both shells
-now read the same cookie and write the same cookie on toggle, so a
-user toggling dark on the marketing site and then signing in keeps
-dark-mode in the in-app shell.
+The light/dark colour scheme is not resolved server-side: ``static/js/site.js``
+reads the ``dz_theme`` cookie and rewrites ``data-theme`` on first paint. A
+server-side theme-variant context variable used to be published here as well,
+but its only reader (a Jinja global) went with ADR-0023 and nothing read it
+afterwards, so it was removed in flense ship K.
 """
 
 from __future__ import annotations
@@ -40,20 +27,6 @@ if TYPE_CHECKING:
     from starlette.types import ASGIApp
 
 
-# The cookie name and accepted values. Kept narrow on purpose —
-# unknown cookie values fall back to the default so a malformed
-# client can't inject arbitrary attribute values into `<html
-# data-theme>`.
-COOKIE_NAME = "dz_theme"
-DEFAULT_VARIANT = "light"
-VALID_VARIANTS: frozenset[str] = frozenset({"light", "dark"})
-
-# Per-request theme variant. The middleware sets it at request
-# ingress; Jinja's `theme_variant()` global reads it at render time.
-# Defaults to ``DEFAULT_VARIANT`` when no request is active (e.g. in
-# unit-test rendering paths that bypass the middleware).
-theme_variant_ctxvar: ContextVar[str] = ContextVar("dz_theme_variant", default=DEFAULT_VARIANT)
-
 # ── Sidebar open/closed state (#1294) ───────────────────────────────
 # The Fragment app-shell sidebar is driven by `data-dz-sidebar` on the
 # shell root (open → slid on-screen + content offset; closed → off-
@@ -62,7 +35,7 @@ theme_variant_ctxvar: ContextVar[str] = ContextVar("dz_theme_variant", default=D
 # ingress so SSR emits the correct initial attribute (no flash, and —
 # critically — the nav is reachable on first paint). Default "open" so
 # anonymous first-time visitors land on a desktop shell with visible
-# navigation. Mirrors the dz_theme cookie round-trip exactly.
+# navigation.
 SIDEBAR_COOKIE_NAME = "dz_sidebar"
 DEFAULT_SIDEBAR_STATE = "open"
 VALID_SIDEBAR_STATES: frozenset[str] = frozenset({"open", "closed"})
@@ -80,13 +53,6 @@ sidebar_state_ctxvar: ContextVar[str] = ContextVar(
 # gates the toggle button on `ctx.dark_mode_toggle`.
 
 
-def get_theme_variant() -> str:
-    """Return the current request's theme variant, or the default
-    when called outside a request context (e.g. in unit tests).
-    """
-    return theme_variant_ctxvar.get()
-
-
 def get_sidebar_state() -> str:
     """Return the current request's app-shell sidebar state ("open" or
     "closed"), or the default ("open") outside a request context.
@@ -98,18 +64,13 @@ def get_sidebar_state() -> str:
 
 
 class ThemeVariantMiddleware(BaseHTTPMiddleware):
-    """Read the ``dz_theme`` cookie and publish a validated theme
-    variant into :data:`theme_variant_ctxvar` for the lifetime of
-    the request.
+    """Read the ``dz_sidebar`` cookie and publish a validated sidebar
+    state into :data:`sidebar_state_ctxvar` for the lifetime of the
+    request.
 
-    Unknown cookie values fall back to :data:`DEFAULT_VARIANT`, so a
-    malformed client (or a stale cookie from a future schema change)
-    can never inject arbitrary strings into the rendered
-    ``data-theme`` attribute.
-
-    This middleware is intentionally a no-op when the cookie is
-    absent — the ``ContextVar`` default of ``"light"`` already gives
-    anonymous first-time visitors the correct starting value.
+    Unknown cookie values fall back to :data:`DEFAULT_SIDEBAR_STATE`,
+    so a malformed client can never inject arbitrary strings into the
+    rendered ``data-dz-sidebar`` attribute.
     """
 
     async def dispatch(
@@ -117,11 +78,7 @@ class ThemeVariantMiddleware(BaseHTTPMiddleware):
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
-        raw = request.cookies.get(COOKIE_NAME)
-        variant = raw if raw in VALID_VARIANTS else DEFAULT_VARIANT
-        token = theme_variant_ctxvar.set(variant)
-        # #1294 — same round-trip for the app-shell sidebar open/closed
-        # state. Unknown/absent → DEFAULT_SIDEBAR_STATE ("open") so a
+        # #1294 — unknown/absent → DEFAULT_SIDEBAR_STATE ("open") so a
         # malformed cookie can't inject arbitrary `data-dz-sidebar`
         # values and first-time visitors get a reachable nav.
         raw_sidebar = request.cookies.get(SIDEBAR_COOKIE_NAME)
@@ -130,10 +87,9 @@ class ThemeVariantMiddleware(BaseHTTPMiddleware):
         try:
             return await call_next(request)
         finally:
-            # Restore the previous values so nested request-handlers
+            # Restore the previous value so nested request-handlers
             # (rare but possible with Starlette test clients) don't
             # leak state across boundaries.
-            theme_variant_ctxvar.reset(token)
             sidebar_state_ctxvar.reset(sidebar_token)
 
 

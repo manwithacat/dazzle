@@ -39,14 +39,6 @@ class ProcessContext(BaseModel):
 
     model_config = ConfigDict(frozen=False)
 
-    def update_step(self, step_name: str, output: dict[str, Any]) -> None:
-        """Record output from a completed step."""
-        self.step_outputs[step_name] = output
-
-    def set_current_step(self, step_name: str | None) -> None:
-        """Update the currently executing step."""
-        self.current_step = step_name
-
     def set_variable(self, name: str, value: Any) -> None:
         """Set a context variable."""
         self.variables[name] = value
@@ -220,22 +212,6 @@ class ProcessContext(BaseModel):
             # Incompatible types
             return False
         return False
-
-    def build_step_inputs(self, mappings: list[tuple[str, str]]) -> dict[str, Any]:
-        """
-        Build step inputs from a list of (source, target) mappings.
-
-        Args:
-            mappings: List of (source_expression, target_field) tuples
-
-        Returns:
-            Dict of resolved inputs for the step
-        """
-        result: dict[str, Any] = {}
-        for source, target in mappings:
-            value = self.resolve(source)
-            result[target] = value
-        return result
 
     def to_dict(self) -> dict[str, Any]:
         """Export context as a serializable dict."""

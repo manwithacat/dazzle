@@ -139,22 +139,6 @@ def _get_list_surface_name(entity: EntitySpec, appspec: AppSpec) -> str:
     return f"{entity.name.lower()}_list"
 
 
-def _get_create_surface_name(entity: EntitySpec, appspec: AppSpec) -> str:
-    """Find or generate the create surface name for an entity."""
-    for surface in appspec.surfaces:
-        if surface.entity_ref == entity.name and surface.mode == SurfaceMode.CREATE:
-            return surface.name
-    return f"{entity.name.lower()}_create"
-
-
-def _get_edit_surface_name(entity: EntitySpec, appspec: AppSpec) -> str:
-    """Find or generate the edit surface name for an entity."""
-    for surface in appspec.surfaces:
-        if surface.entity_ref == entity.name and surface.mode == SurfaceMode.EDIT:
-            return surface.name
-    return f"{entity.name.lower()}_edit"
-
-
 def _get_surface_fields(entity: EntitySpec, appspec: AppSpec, mode: SurfaceMode) -> set[str] | None:
     """
     Get the set of field names defined in the surface for an entity and mode.

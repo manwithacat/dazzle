@@ -154,17 +154,6 @@ class Money(BaseModel):
         """
         return from_money(self)
 
-    def to_float(self) -> float:
-        """
-        Convert to float for display (NOT for calculations).
-
-        Warning: Use to_decimal() for any arithmetic operations.
-
-        Returns:
-            Float representation (e.g., 19.99 for 1999 GBP)
-        """
-        return float(self.to_decimal())
-
     def __str__(self) -> str:
         """Human-readable string representation."""
         decimal_amount = self.to_decimal()

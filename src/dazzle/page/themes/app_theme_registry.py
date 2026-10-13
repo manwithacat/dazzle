@@ -243,11 +243,6 @@ def get_theme(name: str, project_root: Path | None = None) -> AppThemeManifest |
     return discover_themes(project_root).get(name)
 
 
-def list_theme_names(project_root: Path | None = None) -> list[str]:
-    """Return shipped + project theme names in deterministic order."""
-    return sorted(discover_themes(project_root).keys())
-
-
 # Phase C Patch 1: theme inheritance — chain resolution.
 # Cap depth at 4 to prevent runaway chains; deeper than 4 is a design
 # smell and should fail loudly at validation time.

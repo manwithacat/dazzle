@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dazzle.testing.viewport import ViewportAssertionResult
+    pass
 
 
 @dataclass
@@ -108,34 +108,3 @@ def suggest_fix(
         explanation=f"{explanation} at {viewport} breakpoint",
         confidence=confidence,
     )
-
-
-def suggest_fixes_for_report(
-    results: list[ViewportAssertionResult],
-) -> list[ViewportSuggestion]:
-    """Generate suggestions for all failed assertions in a result list.
-
-    Parameters
-    ----------
-    results:
-        List of assertion results (typically from a single ViewportReport).
-
-    Returns
-    -------
-    list[ViewportSuggestion]
-        Suggestions for each failed assertion where a fix is known.
-    """
-    suggestions: list[ViewportSuggestion] = []
-    for res in results:
-        if res.passed:
-            continue
-        suggestion = suggest_fix(
-            selector=res.assertion.selector,
-            property=res.assertion.property,
-            expected=res.assertion.expected,
-            actual=res.actual,
-            viewport=res.assertion.viewport,
-        )
-        if suggestion is not None:
-            suggestions.append(suggestion)
-    return suggestions

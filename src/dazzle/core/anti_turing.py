@@ -19,7 +19,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    pass
 
 
 class ViolationType(Enum):
@@ -179,19 +179,6 @@ class AntiTuringValidator:
             violations.extend(self._check_function_calls(line, line_num))
 
         return violations
-
-    def validate_file(self, path: Path) -> list[Violation]:
-        """
-        Validate a DSL file.
-
-        Args:
-            path: Path to the DSL file
-
-        Returns:
-            List of violations found
-        """
-        content = path.read_text(encoding="utf-8")
-        return self.validate(content, str(path))
 
     # DSL-specific patterns that look like banned keywords but are allowed
     # at the top level of a line (NOT mid-expression).
@@ -375,26 +362,6 @@ class AntiTuringValidator:
             lines.append("")
 
         return "\n".join(lines)
-
-
-def validate_dsl_file(path: Path, strict: bool = False) -> tuple[bool, str]:
-    """
-    Convenience function to validate a DSL file.
-
-    Args:
-        path: Path to the DSL file
-        strict: If True, treat warnings as errors
-
-    Returns:
-        Tuple of (is_valid, message)
-    """
-    validator = AntiTuringValidator(strict=strict)
-    violations = validator.validate_file(path)
-
-    if not violations:
-        return True, "Anti-Turing validation passed."
-
-    return False, validator.format_violations(violations)
 
 
 def validate_dsl_content(content: str, strict: bool = False) -> tuple[bool, str]:

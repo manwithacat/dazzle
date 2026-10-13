@@ -175,10 +175,6 @@ class BacklogTracker:
         """Get stats for all tracked backlogs."""
         return {key: b.stats() for key, b in self._backlogs.items()}
 
-    def by_stream(self, stream: str) -> dict[str, BacklogStats]:
-        """Get stats for all consumers of a stream."""
-        return {key: b.stats() for key, b in self._backlogs.items() if b.stream == stream}
-
     def total_lag(self) -> int:
         """Get total lag across all consumers."""
         return sum(b.current_lag for b in self._backlogs.values())

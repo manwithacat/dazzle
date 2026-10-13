@@ -405,8 +405,3 @@ def _resolve_value_ref(raw: str | int | float | bool | None) -> ValueRef:
     if isinstance(raw, str) and raw in ("current_tenant", "current_tenant.id"):
         return ValueRef(current_tenant=True)
     return ValueRef(literal=raw)
-
-
-def _build_value_ref(raw: str | int | float | bool | None) -> ValueRef:
-    """Build a :class:`ValueRef` from a raw literal value (no current_user logic)."""
-    return ValueRef(literal=raw)

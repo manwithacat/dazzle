@@ -18,7 +18,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from dazzle.core.clock import utcnow
-from dazzle.core.ir.test_design import TestDesignSpec, TestDesignStatus
+from dazzle.core.ir.test_design import TestDesignSpec
 
 # Storage paths
 DSL_TESTS_DIR = "dsl/tests"
@@ -198,84 +198,6 @@ def get_next_test_design_id(project_root: Path) -> str:
     return f"TD-{max_num + 1:03d}"
 
 
-def get_test_designs_by_status(
-    project_root: Path,
-    status: TestDesignStatus | None = None,
-) -> list[TestDesignSpec]:
-    """Get test designs filtered by status.
-
-    Args:
-        project_root: Root directory of the DAZZLE project.
-        status: Filter by this status. None returns all designs.
-
-    Returns:
-        List of matching test designs.
-    """
-    designs = load_test_designs(project_root)
-
-    if status is None:
-        return designs
-
-    return [d for d in designs if d.status == status]
-
-
-def update_test_design_status(
-    project_root: Path,
-    test_id: str,
-    new_status: TestDesignStatus,
-    *,
-    notes: str | None = None,
-    implementation_path: str | None = None,
-) -> TestDesignSpec | None:
-    """Update the status of a test design.
-
-    Args:
-        project_root: Root directory of the DAZZLE project.
-        test_id: ID of the test design to update.
-        new_status: New status to set.
-        notes: Optional notes to add.
-        implementation_path: Path to implementation (if IMPLEMENTED).
-
-    Returns:
-        Updated test design spec, or None if not found.
-    """
-    designs = load_test_designs(project_root)
-
-    updated_designs = []
-    updated_design = None
-
-    for design in designs:
-        if design.test_id == test_id:
-            # Create updated design
-            updated_design = TestDesignSpec(
-                test_id=design.test_id,
-                title=design.title,
-                description=design.description,
-                persona=design.persona,
-                scenario=design.scenario,
-                trigger=design.trigger,
-                steps=design.steps,
-                expected_outcomes=design.expected_outcomes,
-                entities=design.entities,
-                surfaces=design.surfaces,
-                tags=design.tags,
-                status=new_status,
-                implementation_path=implementation_path or design.implementation_path,
-                notes=notes if notes is not None else design.notes,
-                prompt_version=design.prompt_version,
-                created_at=design.created_at,
-                updated_at=datetime.now(UTC),
-            )
-            updated_designs.append(updated_design)
-        else:
-            updated_designs.append(design)
-
-    if updated_design is not None:
-        save_test_designs(project_root, updated_designs)
-
-    return updated_design
-
-
 class AddTestDesignsResult(BaseModel):
     """Result of adding test designs, including any ID remappings."""
 
@@ -340,62 +262,3 @@ def add_test_designs(
         added_count=added_count,
         remapped_ids=remapped_ids,
     )
-
-
-def get_test_designs_by_persona(
-    project_root: Path,
-    persona: str,
-) -> list[TestDesignSpec]:
-    """Get test designs for a specific persona.
-
-    Args:
-        project_root: Root directory of the DAZZLE project.
-        persona: Persona name to filter by.
-
-    Returns:
-        List of test designs for this persona.
-    """
-    designs = load_test_designs(project_root)
-    return [d for d in designs if d.persona == persona]
-
-
-def get_test_designs_by_entity(
-    project_root: Path,
-    entity: str,
-) -> list[TestDesignSpec]:
-    """Get test designs that test a specific entity.
-
-    Args:
-        project_root: Root directory of the DAZZLE project.
-        entity: Entity name to filter by.
-
-    Returns:
-        List of test designs involving this entity.
-    """
-    designs = load_test_designs(project_root)
-    return [d for d in designs if entity in d.entities]
-
-
-def delete_test_design(
-    project_root: Path,
-    test_id: str,
-) -> bool:
-    """Delete a test design by ID.
-
-    Args:
-        project_root: Root directory of the DAZZLE project.
-        test_id: ID of the test design to delete.
-
-    Returns:
-        True if deleted, False if not found.
-    """
-    designs = load_test_designs(project_root)
-    original_count = len(designs)
-
-    designs = [d for d in designs if d.test_id != test_id]
-
-    if len(designs) < original_count:
-        save_test_designs(project_root, designs)
-        return True
-
-    return False

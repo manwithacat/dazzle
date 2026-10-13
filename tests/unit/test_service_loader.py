@@ -123,14 +123,6 @@ class TestServiceLoader:
         assert loader.has_service("calculate_overdue_penalty")
         assert not loader.has_service("nonexistent")
 
-    def test_get_service_ids(self) -> None:
-        """Test getting list of service IDs."""
-        services_dir = Path("examples/simple_task/services")
-        loader = ServiceLoader(services_dir=services_dir)
-
-        ids = loader.get_service_ids()
-        assert "calculate_overdue_penalty" in ids
-
     def test_get_service(self) -> None:
         """Test getting a specific service."""
         services_dir = Path("examples/simple_task/services")
@@ -149,19 +141,6 @@ class TestServiceLoader:
         loader = ServiceLoader(services_dir=Path("/nonexistent/path"))
         services = loader.load_services()
         assert services == {}
-
-    def test_unload_all(self) -> None:
-        """Test unloading all services."""
-        services_dir = Path("examples/simple_task/services")
-        loader = ServiceLoader(services_dir=services_dir)
-        loader.load_services()
-
-        assert len(loader.services) > 0
-
-        loader.unload_all()
-
-        assert len(loader.services) == 0
-        assert loader._loaded is False
 
 
 class TestLoadedService:
@@ -292,39 +271,3 @@ def different_name(x: str) -> dict:
 
         # Should not load because function name doesn't match
         assert "my_service" not in services
-
-    def test_reload_service(self, tmp_path: Path) -> None:
-        """Test reloading a service picks up changes."""
-        services_dir = tmp_path / "services"
-        services_dir.mkdir()
-
-        # Create initial service
-        file = services_dir / "counter.py"
-        file.write_text(
-            """
-def counter() -> dict:
-    return {"value": 1}
-"""
-        )
-
-        loader = ServiceLoader(services_dir=services_dir)
-        loader.load_services()
-
-        # Initial value
-        result1 = loader.invoke("counter")
-        assert result1["value"] == 1
-
-        # Update the service
-        file.write_text(
-            """
-def counter() -> dict:
-    return {"value": 42}
-"""
-        )
-
-        # Reload
-        loader.reload_service("counter")
-
-        # Should have new value
-        result2 = loader.invoke("counter")
-        assert result2["value"] == 42

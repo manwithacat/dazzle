@@ -460,10 +460,6 @@ class SessionManager:
             return []
         return [p.stem for p in self.sessions_dir.glob("*.json") if p.name != "manifest.json"]
 
-    async def refresh_sessions(self, appspec: Any) -> SessionManifest:
-        """Refresh all sessions (recreate expired ones)."""
-        return await self.create_all_sessions(appspec, force=True)
-
     def cleanup(self) -> int:
         """Remove all stored sessions. Returns count of files removed."""
         if not self.sessions_dir.exists():

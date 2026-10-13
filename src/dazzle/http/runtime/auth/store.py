@@ -2800,14 +2800,6 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
         )
         return {r["key"]: r["value"] for r in rows}
 
-    def get_preference(self, user_id: UUID, key: str) -> str | None:
-        """Get a single preference value, or None."""
-        row = self._execute_one(
-            "SELECT value FROM user_preferences WHERE user_id = %s AND key = %s",
-            (str(user_id), key),
-        )
-        return row["value"] if row else None
-
     def set_preference(self, user_id: UUID, key: str, value: str) -> None:
         """Set a user preference (upsert)."""
         now = datetime.now(UTC).isoformat()
@@ -2850,15 +2842,6 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             )
         )
 
-    def delete_preferences(self, user_id: UUID) -> int:
-        """Delete all preferences for a user. Returns count deleted."""
-        return int(
-            self._execute_modify(
-                "DELETE FROM user_preferences WHERE user_id = %s",
-                (str(user_id),),
-            )
-        )
-
     # =========================================================================
     # Aggregate / Query helpers (v0.48.x)
     # =========================================================================
@@ -2895,48 +2878,6 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             roles = json.loads(row["roles"]) if row["roles"] else []
             all_roles.update(roles)
         return sorted(all_roles)
-
-    def search_users(
-        self,
-        query: str | None = None,
-        user_id: str | None = None,
-        active_only: bool = True,
-        limit: int = 50,
-        offset: int = 0,
-    ) -> list[dict[str, Any]]:
-        """Search / list raw session rows for display purposes.
-
-        Returns raw dicts (not UserRecord objects) so callers can render them
-        without additional conversion.  Intended for admin tools that need
-        flexible filtering beyond what :meth:`list_users` provides.
-
-        Args:
-            query:      Filter by user_id equality (kept for backwards compat
-                        with callers that pass a dynamic WHERE fragment; pass
-                        ``None`` to skip).
-            user_id:    Explicit user_id filter applied as ``user_id = %s``.
-            active_only: When True, add ``is_active = TRUE`` to the WHERE clause.
-            limit:      Maximum rows to return.
-            offset:     Number of rows to skip.
-
-        Returns:
-            List of raw row dicts ordered by ``created_at DESC``.
-        """
-        conditions: list[str] = []
-        params: list[object] = []
-
-        if user_id is not None:
-            conditions.append("user_id = %s")
-            params.append(user_id)
-
-        if active_only:
-            conditions.append("is_active = TRUE")
-
-        where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
-        sql = f"SELECT * FROM users{where_clause} ORDER BY created_at DESC LIMIT %s OFFSET %s"
-        params.extend([limit, offset])
-
-        return self._execute(sql, tuple(params))
 
     def list_sessions(
         self,

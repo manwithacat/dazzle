@@ -773,11 +773,9 @@ class DazzleBackendApp:
 
         self._app.add_middleware(GZipMiddleware, minimum_size=500)
 
-        # Theme-variant middleware (UX-048 / UX-056 Q1) — reads the
-        # `dz_theme` cookie and publishes it into a ContextVar so the
-        # Jinja `theme_variant()` global can emit `<html data-theme>`
-        # correctly on first paint (prevents the flash-of-light for
-        # returning dark-mode users).
+        # App-shell chrome middleware (#1294) — reads the `dz_sidebar`
+        # cookie into a ContextVar so SSR emits `data-dz-sidebar` on
+        # first paint.
 
         install_theme_middleware(self._app)
 

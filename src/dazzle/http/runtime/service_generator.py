@@ -842,7 +842,3 @@ class ServiceContext:
         self.tenant_id = tenant_id
         self.trace_id = trace_id or str(uuid4())
         self.permissions = permissions or []
-
-    def has_permission(self, permission: str) -> bool:
-        """Check if context has a specific permission."""
-        return "*" in self.permissions or permission in self.permissions

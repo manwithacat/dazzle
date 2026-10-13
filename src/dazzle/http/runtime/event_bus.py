@@ -110,11 +110,6 @@ class EntityEventBus:
         if handler in self._handlers:
             self._handlers.remove(handler)
 
-    def remove_sync_handler(self, handler: SyncEventHandler) -> None:
-        """Remove a sync event handler."""
-        if handler in self._sync_handlers:
-            self._sync_handlers.remove(handler)
-
     def enable(self) -> None:
         """Enable event publishing."""
         self._enabled = True
@@ -296,39 +291,6 @@ class EntityEventBus:
             entity_name=entity_name,
             entity_id=str(entity_id),
             data=data,
-            user_id=user_id,
-        )
-        self.emit_sync(event)
-
-    def emit_updated_sync(
-        self,
-        entity_name: str,
-        entity_id: str | UUID,
-        data: dict[str, Any],
-        user_id: str | None = None,
-    ) -> None:
-        """Emit updated event synchronously."""
-        event = EntityEvent(
-            event_type=EntityEventType.UPDATED,
-            entity_name=entity_name,
-            entity_id=str(entity_id),
-            data=data,
-            user_id=user_id,
-        )
-        self.emit_sync(event)
-
-    def emit_deleted_sync(
-        self,
-        entity_name: str,
-        entity_id: str | UUID,
-        user_id: str | None = None,
-    ) -> None:
-        """Emit deleted event synchronously."""
-        event = EntityEvent(
-            event_type=EntityEventType.DELETED,
-            entity_name=entity_name,
-            entity_id=str(entity_id),
-            data=None,
             user_id=user_id,
         )
         self.emit_sync(event)

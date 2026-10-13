@@ -11,7 +11,6 @@ import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
 
 from .backlog import BacklogStats, BacklogTracker
 from .latency import LatencyStats, LatencyTracker
@@ -82,29 +81,6 @@ class MetricsCollector:
         """
         self._latency.record(name, latency_ms)
 
-    def record_hop_latency(
-        self,
-        correlation_id: UUID,
-        hop_name: str,
-        start_time: datetime,
-        end_time: datetime,
-    ) -> float:
-        """
-        Record latency for a processing hop.
-
-        Args:
-            correlation_id: Event correlation ID
-            hop_name: Name of the hop (e.g., "intent_to_fact")
-            start_time: Start timestamp
-            end_time: End timestamp
-
-        Returns:
-            Latency in milliseconds
-        """
-        latency_ms = (end_time - start_time).total_seconds() * 1000
-        self.record_latency(hop_name, latency_ms)
-        return latency_ms
-
     def get_latency_stats(self, name: str) -> LatencyStats | None:
         """Get latency statistics for a named histogram."""
         histogram = self._latency.get(name)
@@ -139,26 +115,9 @@ class MetricsCollector:
     # Backlog
     # =========================================================================
 
-    def update_producer_sequence(self, stream: str, sequence: int) -> None:
-        """Update producer sequence for a stream."""
-        self._backlog.update_producer(stream, sequence)
-
-    def update_consumer_sequence(self, stream: str, consumer: str, sequence: int) -> None:
-        """Update consumer sequence for a stream:consumer pair."""
-        self._backlog.update_consumer(stream, consumer, sequence)
-
     def register_consumer(self, stream: str, consumer: str) -> None:
         """Register a consumer without updating sequences."""
         self._backlog.register_consumer(stream, consumer)
-
-    def get_backlog_stats(self, stream: str, consumer: str) -> BacklogStats | None:
-        """Get backlog statistics for a stream:consumer pair."""
-        backlog = self._backlog.get(stream, consumer)
-        return backlog.stats() if backlog else None
-
-    def get_total_lag(self) -> int:
-        """Get total lag across all consumers."""
-        return self._backlog.total_lag()
 
     # =========================================================================
     # Errors
@@ -189,22 +148,6 @@ class MetricsCollector:
     # =========================================================================
     # Recovery
     # =========================================================================
-
-    def record_recovery_time(self, derivation: str, seconds: float) -> None:
-        """
-        Record rebuild time for a DERIVATION stream.
-
-        Args:
-            derivation: Stream name
-            seconds: Rebuild time in seconds
-        """
-        with self._lock:
-            self._recovery_times[derivation] = seconds
-
-    def get_recovery_time(self, derivation: str) -> float | None:
-        """Get last recorded rebuild time for a derivation."""
-        with self._lock:
-            return self._recovery_times.get(derivation)
 
     # =========================================================================
     # Snapshot & Reset

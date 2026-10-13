@@ -382,14 +382,6 @@ def _has_attr_containing(tags: Tags, attr: str, substring: str) -> bool:
     return False
 
 
-def _has_tag_with_attr(tags: Tags, tag: str, attr: str, value: str) -> bool:
-    """Return True if a specific *tag* has *attr* with exact *value*."""
-    for tag_name, attrs in tags:
-        if tag_name == tag and attrs.get(attr) == value:
-            return True
-    return False
-
-
 # ---------------------------------------------------------------------------
 # Per-type checkers
 # ---------------------------------------------------------------------------

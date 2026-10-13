@@ -269,37 +269,6 @@ class SESAdapter(EmailAdapter):
                 error=error_str,
             )
 
-    async def send_bulk(self, messages: list[OutboxMessage]) -> list[SendResult]:
-        """Send multiple emails via SES v2 bulk API.
-
-        Groups messages into batches of 50 (SES limit per call).
-
-        Args:
-            messages: List of outbox messages to send
-
-        Returns:
-            List of SendResult, one per message
-        """
-        results: list[SendResult] = []
-        batch_size = 50
-
-        for i in range(0, len(messages), batch_size):
-            batch = messages[i : i + batch_size]
-            batch_results = await self._send_batch(batch)
-            results.extend(batch_results)
-
-        return results
-
-    async def _send_batch(self, messages: list[OutboxMessage]) -> list[SendResult]:
-        """Send a batch of messages via SES bulk API."""
-        # Fall back to individual sends for simplicity
-        # SES v2 SendBulkEmail requires templates; for non-templated we send individually
-        results: list[SendResult] = []
-        for msg in messages:
-            result = await self.send(msg)
-            results.append(result)
-        return results
-
     async def health_check(self) -> bool:
         """Check if SES is accessible by calling get_account."""
         try:
@@ -449,51 +418,3 @@ class FileEmailAdapter(EmailAdapter):
     async def health_check(self) -> bool:
         """File adapter is always healthy."""
         return True
-
-    async def get_recent_emails(self, limit: int = 20) -> list[dict[str, Any]]:
-        """Get recent emails from the index.
-
-        Args:
-            limit: Maximum emails to return
-
-        Returns:
-            List of email summaries
-        """
-        index_path = self._mail_dir / "index.json"
-
-        if not index_path.exists():
-            return []
-
-        try:
-            index = json.loads(index_path.read_text(encoding="utf-8"))
-            messages: list[dict[str, Any]] = index.get("messages", [])[:limit]
-            return messages
-        except json.JSONDecodeError:
-            return []
-
-    async def get_email_content(self, message_id: str) -> str | None:
-        """Get full email content by ID.
-
-        Args:
-            message_id: Message ID
-
-        Returns:
-            Email content as string or None if not found
-        """
-        index_path = self._mail_dir / "index.json"
-
-        if not index_path.exists():
-            return None
-
-        try:
-            index = json.loads(index_path.read_text(encoding="utf-8"))
-            for entry in index.get("messages", []):
-                if entry["id"] == message_id:
-                    filepath = self._mail_dir / "messages" / entry["filename"]
-                    if filepath.exists():
-                        content: str = filepath.read_text(encoding="utf-8")
-                        return content
-        except (json.JSONDecodeError, KeyError) as exc:
-            logger.warning("Failed to read message %s: %s", message_id, exc)
-
-        return None

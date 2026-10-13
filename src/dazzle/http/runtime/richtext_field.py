@@ -3,10 +3,20 @@
 Spec: dev_docs/2026-05-04-dz-richtext-spec.md (#977 cycle 4 §8).
 
 The dz-richtext editor's client-side schema enforcement is a UX layer.
-The security boundary is here: every persisted rich-text value passes
-through `clean_rich_text()`, which uses `bleach` with the IR-sourced
-allowlist. Drift between the client and server allowlists is caught
-by `tests/unit/test_richtext_allowlist_parity.py`.
+`clean_rich_text()` is meant to be the server-side boundary, using
+`bleach` with the IR-sourced allowlist; drift between the client and
+server allowlists is caught by `tests/unit/test_richtext_allowlist_parity.py`.
+
+**Not yet wired** (found in flense ships H/K, 2026-10-13): no write path
+calls `clean_rich_text()`. `widget=rich_text` is a surface hint on a plain
+`text` field, so the create/update handlers in
+`handlers/write_handlers.py` persist the posted HTML unchanged. The edit
+form escapes the stored value into its textarea
+(`_render_forms._emit_rich_text`) and `dz-richtext.js` re-sanitises on
+load, but JSON API readers receive the raw HTML and any display path that
+emits a text value as `RawHTML` without escaping would be a stored XSS. Wiring it (per-entity rich-text field set derived from
+surfaces, threaded like `file_fields` through `route_generator` into
+`create_create_handler` / `create_update_handler`) is a dedicated ship.
 
 The function is deliberately small and dependency-light: take a
 string, return a sanitised string, raise `ValueError` if too long.

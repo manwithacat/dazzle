@@ -4,12 +4,10 @@ from typing import Any
 
 import pytest
 
-from dazzle.testing.viewport import ViewportAssertion, ViewportAssertionResult
 from dazzle.testing.viewport_suggestions import (
     SUGGESTION_TABLE,
     VIEWPORT_TO_TAILWIND_PREFIX,
     suggest_fix,
-    suggest_fixes_for_report,
 )
 
 
@@ -129,57 +127,6 @@ class TestViewportPrefixMapping:
     )
     def test_viewport_prefix_mapping(self, viewport_key: str, expected_prefix: str) -> None:
         assert VIEWPORT_TO_TAILWIND_PREFIX[viewport_key] == expected_prefix
-
-
-class TestSuggestFixesForReport:
-    """Tests for suggest_fixes_for_report()."""
-
-    def _make_result(
-        self,
-        passed: bool,
-        prop: str = "display",
-        expected: str = "grid",
-        actual: str | None = "block",
-        viewport: str = "mobile",
-    ) -> ViewportAssertionResult:
-        return ViewportAssertionResult(
-            assertion=ViewportAssertion(
-                selector=".test",
-                property=prop,
-                expected=expected,
-                viewport=viewport,
-                description="test assertion",
-            ),
-            actual=actual,
-            passed=passed,
-        )
-
-    def test_skips_passed(self) -> None:
-        results = [self._make_result(passed=True)]
-        suggestions = suggest_fixes_for_report(results)
-        assert suggestions == []
-
-    def test_generates_for_failed(self) -> None:
-        results = [self._make_result(passed=False)]
-        suggestions = suggest_fixes_for_report(results)
-        assert len(suggestions) == 1
-        assert suggestions[0].suggested_class == "grid"
-
-    def test_no_suggestion_for_unknown(self) -> None:
-        results = [
-            self._make_result(passed=False, prop="font-size", expected="16px", actual="14px")
-        ]
-        suggestions = suggest_fixes_for_report(results)
-        assert suggestions == []
-
-    def test_mixed_results(self) -> None:
-        results = [
-            self._make_result(passed=True),
-            self._make_result(passed=False),
-            self._make_result(passed=False, prop="visibility", expected="hidden", actual="visible"),
-        ]
-        suggestions = suggest_fixes_for_report(results)
-        assert len(suggestions) == 2
 
 
 class TestSuggestionTable:

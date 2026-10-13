@@ -70,34 +70,6 @@ def get_aws_config() -> AWSConfig:
     )
 
 
-def get_boto3_session(config: AWSConfig | None = None) -> Any:
-    """Create a boto3 Session with credentials from config.
-
-    Args:
-        config: AWS config (uses get_aws_config() if None)
-
-    Returns:
-        boto3.Session instance
-    """
-    try:
-        import boto3
-    except ImportError:
-        raise ImportError(
-            "boto3 is required for AWS services. Install with: pip install dazzle-dsl[aws]"
-        )
-
-    if config is None:
-        config = get_aws_config()
-
-    kwargs: dict[str, str] = {"region_name": config.region}
-    if config.access_key_id:
-        kwargs["aws_access_key_id"] = config.access_key_id
-    if config.secret_access_key:
-        kwargs["aws_secret_access_key"] = config.secret_access_key
-
-    return boto3.Session(**kwargs)
-
-
 def get_aioboto3_session(config: AWSConfig | None = None) -> Any:
     """Create an aioboto3 Session with credentials from config.
 

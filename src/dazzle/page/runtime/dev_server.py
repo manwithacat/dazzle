@@ -205,16 +205,6 @@ class DazzleDevServer:
         if self._server:
             self._server.shutdown()
 
-    def update_spec(self, spec: UISpec) -> None:
-        """
-        Update the UISpec (for hot reload).
-
-        Args:
-            spec: New UI specification
-        """
-        self.spec = spec
-        DazzleDevHandler.spec = spec
-
 
 # =============================================================================
 # Convenience Functions

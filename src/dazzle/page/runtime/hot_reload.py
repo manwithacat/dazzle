@@ -286,11 +286,6 @@ class HotReloadManager:
             if event in self._sse_clients:
                 self._sse_clients.remove(event)
 
-    def get_specs(self) -> tuple[AppSpec | None, UISpec | None]:
-        """Get current specs (thread-safe)."""
-        with self._spec_lock:
-            return self._appspec, self._ui_spec
-
     def set_specs(self, appspec: AppSpec, ui_spec: UISpec) -> None:
         """Set current specs (thread-safe)."""
         with self._spec_lock:

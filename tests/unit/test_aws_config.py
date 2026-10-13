@@ -10,7 +10,6 @@ from dazzle.http.runtime.aws_config import (
     AWSConfig,
     get_aioboto3_session,
     get_aws_config,
-    get_boto3_session,
 )
 
 # ---------------------------------------------------------------------------
@@ -278,74 +277,6 @@ class TestAWSConfigDataclass:
         cfg1 = AWSConfig(region="us-east-1")
         cfg2 = AWSConfig(region="eu-west-1")
         assert cfg1 != cfg2
-
-
-# ===================================================================
-# get_boto3_session()
-# ===================================================================
-
-
-class TestGetBoto3Session:
-    """Test boto3 session creation with mocked boto3 import."""
-
-    def test_creates_session_with_config(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        mock_boto3 = MagicMock()
-        mock_session = MagicMock()
-        mock_boto3.Session.return_value = mock_session
-        monkeypatch.setitem(sys.modules, "boto3", mock_boto3)
-
-        config = AWSConfig(
-            region="eu-west-1",
-            access_key_id="AKID",
-            secret_access_key="SECRET",
-        )
-        result = get_boto3_session(config)
-
-        mock_boto3.Session.assert_called_once_with(
-            region_name="eu-west-1",
-            aws_access_key_id="AKID",
-            aws_secret_access_key="SECRET",
-        )
-        assert result is mock_session
-
-    def test_creates_session_without_credentials(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        mock_boto3 = MagicMock()
-        monkeypatch.setitem(sys.modules, "boto3", mock_boto3)
-
-        config = AWSConfig(region="us-east-1")
-        get_boto3_session(config)
-
-        mock_boto3.Session.assert_called_once_with(region_name="us-east-1")
-
-    def test_uses_get_aws_config_when_config_is_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        mock_boto3 = MagicMock()
-        monkeypatch.setitem(sys.modules, "boto3", mock_boto3)
-        monkeypatch.setenv("DAZZLE_AWS_REGION", "sa-east-1")
-        get_aws_config.cache_clear()
-
-        get_boto3_session(None)
-
-        mock_boto3.Session.assert_called_once_with(region_name="sa-east-1")
-
-    def test_import_error_with_helpful_message(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        # Ensure boto3 cannot be imported by removing it from sys.modules
-        # and making the import fail.
-        monkeypatch.delitem(sys.modules, "boto3", raising=False)
-
-        # Create a fake module that raises ImportError on import
-        original_import = (
-            __builtins__.__import__ if hasattr(__builtins__, "__import__") else __import__
-        )
-
-        def fake_import(name: str, *args: object, **kwargs: object) -> ModuleType:
-            if name == "boto3":
-                raise ImportError("No module named 'boto3'")
-            return original_import(name, *args, **kwargs)
-
-        monkeypatch.setattr("builtins.__import__", fake_import)
-
-        with pytest.raises(ImportError, match="boto3 is required for AWS services"):
-            get_boto3_session(AWSConfig(region="us-east-1"))
 
 
 # ===================================================================

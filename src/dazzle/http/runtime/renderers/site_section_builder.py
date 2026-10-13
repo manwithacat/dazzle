@@ -439,8 +439,7 @@ def _build_stats_section(section: dict[str, Any]) -> str:
     Emits Dazzle-native `.dz-stats-grid` / `.dz-stat` / `.dz-stat-value`
     / `.dz-stat-title` classes (defined in `HM components/sitespec.css`). Pre-#1113
     this used DaisyUI's `stats` / `stat` / `stat-value` / `stat-title`
-    classes which required the third-party CDN bundle loaded via
-    `site_renderer.get_shared_head_html`."""
+    classes which required a third-party CDN bundle."""
     parts: list[str] = []
     parts.append(f'<section{_section_id_attr(section)} class="dz-section dz-section-stats">')
     inner: list[str] = [_section_header(section)]

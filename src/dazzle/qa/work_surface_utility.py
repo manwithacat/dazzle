@@ -159,28 +159,6 @@ def _surface_mode(surface: Any) -> str:
     return str(getattr(mode, "value", mode) or "").strip().lower()
 
 
-def _first_display_token(obj: Any, attrs: tuple[str, ...]) -> str:
-    for attr in attrs:
-        val = getattr(obj, attr, None)
-        if val is None:
-            continue
-        text = str(getattr(val, "value", val) or "").strip()
-        if text and text.lower() not in _MODE_SKIP:
-            return text
-    return ""
-
-
-def _surface_display(surface: Any) -> str:
-    """Explicit board/stream display token only — not mode (view/list)."""
-    text = _first_display_token(surface, ("display", "region_kind", "list_display"))
-    if text:
-        return text
-    ux = getattr(surface, "ux", None)
-    if ux is not None:
-        return _first_display_token(ux, ("display", "region"))
-    return ""
-
-
 def _region_display(region: Any) -> str:
     disp = getattr(region, "display", None)
     if disp is None:

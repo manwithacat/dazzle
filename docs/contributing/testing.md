@@ -152,12 +152,11 @@ Runtime tests live under `tests/`; the wheel ships no tests (ADR-0057, flense sh
 | `test_state_machine.py` | State transitions |
 | `test_websocket_manager.py` | WebSocket connectivity |
 | `test_file_storage.py` | File uploads |
-| `test_fts.py` | Full-text search |
 | `test_auth.py` | Auth store, sessions, middleware, routes |
 
-Access control, computed fields, invariants and rich text are covered by
-`tests/unit/test_access_control.py`, `test_computed_evaluator.py`,
-`test_invariant_evaluator.py` and `test_richtext_processor.py`.
+Computed fields, invariants and the rich-text allowlist are covered by
+`tests/unit/test_computed_evaluator.py`, `test_invariant_evaluator.py` and
+`test_richtext_allowlist_parity.py`.
 
 #### UI Tests (`tests/unit/page/`)
 

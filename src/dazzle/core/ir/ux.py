@@ -96,10 +96,6 @@ class PersonaVariant(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    def applies_to_user(self, user_context: dict[str, Any]) -> bool:
-        """Check if persona applies to given user context."""
-        return user_context.get("persona") == self.persona
-
 
 class SortSpec(BaseModel):
     """
@@ -255,13 +251,6 @@ class UXSpec(BaseModel):
             return None
         if isinstance(em, str):
             return em
-        return None
-
-    def get_persona_variant(self, user_context: dict[str, Any]) -> PersonaVariant | None:
-        """Get applicable persona variant for user context."""
-        for variant in self.persona_variants:
-            if variant.applies_to_user(user_context):
-                return variant
         return None
 
     @property

@@ -705,11 +705,6 @@ class Repository[T: BaseModel]:
 
         return _python_to_postgres(value, field_type)
 
-    def _model_to_row(self, model: T) -> dict[str, Any]:
-        """Convert Pydantic model to row dict for the database."""
-        data = model.model_dump()
-        return {k: self._python_to_db(v, self._field_types.get(k)) for k, v in data.items()}
-
     def _row_to_model(self, row: Any) -> T:
         """Convert database row to Pydantic model.
 

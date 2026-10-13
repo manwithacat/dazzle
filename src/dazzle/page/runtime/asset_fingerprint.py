@@ -74,25 +74,6 @@ def build_asset_manifest(*static_dirs: Path) -> dict[str, str]:
     return manifest
 
 
-def static_url_filter(path: str, manifest: dict[str, str]) -> str:
-    """Jinja2 filter: rewrite a static path with its content hash.
-
-    Usage in templates::
-
-        <link rel="stylesheet" href="{{ 'css/dazzle-bundle.css' | static_url }}">
-        <!-- outputs: /static/css/dazzle-bundle.a1b2c3d4.css -->
-
-    Falls back to the original path if the file is not in the manifest.
-    """
-    # Strip /static/ prefix if present (templates may use full or relative paths)
-    relative = path.removeprefix("/static/")
-    fingerprinted = manifest.get(relative)
-    if fingerprinted:
-        return f"/static/{fingerprinted}"
-    # Fallback: return original path unchanged
-    return path if path.startswith("/") else f"/static/{path}"
-
-
 def strip_fingerprint(path: str) -> str | None:
     """Strip the content hash from a fingerprinted filename.
 
@@ -165,8 +146,3 @@ def fingerprint_static_url(url: str, *, active_development: bool = False) -> str
     rel = url.removeprefix("/static/")
     fingerprinted = _framework_manifest().get(rel)
     return f"/static/{fingerprinted}" if fingerprinted else url
-
-
-def fingerprint_urls(urls: tuple[str, ...], *, active_development: bool = False) -> tuple[str, ...]:
-    """Fingerprint every framework ``/static/`` URL in a tuple (order-preserving)."""
-    return tuple(fingerprint_static_url(u, active_development=active_development) for u in urls)

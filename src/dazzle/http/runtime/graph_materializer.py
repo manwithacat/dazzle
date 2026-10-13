@@ -24,44 +24,6 @@ def _safe_sql(stmt: str) -> str:
     return stmt
 
 
-def fetch_graph_records(
-    conn: Any,
-    edge_tbl: str,
-    node_tbl: str,
-    filter_sql: str,
-    filter_params: dict[str, Any],
-    src: str,
-    tgt: str,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Fetch edge and node rows for a graph query.
-
-    ``edge_tbl`` and ``node_tbl`` are pre-quoted DSL-derived identifiers.
-    ``filter_sql`` is a WHERE clause built from ``quote_identifier``-sanitised
-    column names with all values in ``filter_params`` (never interpolated).
-    """
-    cursor = conn.cursor()
-
-    cursor.execute(_safe_sql("SELECT * FROM " + edge_tbl + filter_sql), filter_params)
-    edges: list[dict[str, Any]] = cursor.fetchall()
-
-    node_ids: set[str] = set()
-    for edge in edges:
-        if edge.get(src):
-            node_ids.add(str(edge[src]))
-        if edge.get(tgt):
-            node_ids.add(str(edge[tgt]))
-
-    nodes: list[dict[str, Any]] = []
-    if node_ids:
-        cursor.execute(
-            _safe_sql("SELECT * FROM " + node_tbl + ' WHERE "id" IN %(node_ids)s'),
-            {"node_ids": tuple(node_ids)},
-        )
-        nodes = cursor.fetchall()
-
-    return edges, nodes
-
-
 class GraphMaterializer:
     """Builds a NetworkX graph from database node/edge records."""
 

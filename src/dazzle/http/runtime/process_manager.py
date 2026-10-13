@@ -366,14 +366,6 @@ class ProcessManager:
                 return sched
         return None
 
-    def list_process_names(self) -> list[str]:
-        """List all registered process names."""
-        return [proc.name for proc in self._process_specs]
-
-    def list_schedule_names(self) -> list[str]:
-        """List all registered schedule names."""
-        return [sched.name for sched in self._schedule_specs]
-
     def register_process(self, spec: ProcessSpec) -> None:
         """Register a new process spec (for dynamic registration)."""
         self._process_specs.append(spec)

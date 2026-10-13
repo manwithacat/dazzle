@@ -27,7 +27,7 @@ from threading import Lock
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from dazzle.http.events.bus import EventBus
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -355,11 +355,6 @@ class SystemMetricsCollector:
             self._components[component].status = status
             self._components[component].last_check = datetime.now(UTC)
 
-    def record_request(self) -> None:
-        """Record an incoming request."""
-        with self._lock:
-            self._total_requests += 1
-
     def snapshot(self) -> SystemMetricsSnapshot:
         """Get a snapshot of all current metrics."""
         with self._lock:
@@ -422,141 +417,6 @@ class SystemMetricsCollector:
         if latency_ms > 100:
             self.inc_counter(ComponentType.DATABASE, "slow_queries")
 
-    def record_event_bus_publish(
-        self,
-        topic: str,
-        latency_ms: float,
-        batch_size: int = 1,
-    ) -> None:
-        """Record an event bus publish operation."""
-        self.inc_counter(ComponentType.EVENT_BUS, "events_published", batch_size)
-        self.record_histogram(ComponentType.EVENT_BUS, "publish_latency_ms", latency_ms)
-        self.set_gauge(ComponentType.EVENT_BUS, f"topic_{topic}_rate", batch_size)
-
-    def record_event_bus_consume(
-        self,
-        topic: str,
-        consumer_group: str,
-        latency_ms: float,
-        batch_size: int = 1,
-    ) -> None:
-        """Record an event bus consume operation."""
-        self.inc_counter(ComponentType.EVENT_BUS, "events_consumed", batch_size)
-        self.record_histogram(ComponentType.EVENT_BUS, "consume_latency_ms", latency_ms)
-
-    def record_event_bus_backlog(
-        self,
-        topic: str,
-        consumer_group: str,
-        backlog: int,
-    ) -> None:
-        """Record event bus consumer backlog."""
-        self.set_gauge(
-            ComponentType.EVENT_BUS,
-            f"backlog_{topic}_{consumer_group}",
-            float(backlog),
-        )
-
-    def record_http_request(
-        self,
-        method: str,
-        path: str,
-        status_code: int,
-        latency_ms: float,
-    ) -> None:
-        """Record an HTTP API request."""
-        self.record_request()
-        self.inc_counter(ComponentType.HTTP_API, f"requests_{method}")
-        self.inc_counter(ComponentType.HTTP_API, f"status_{status_code}")
-        self.record_histogram(ComponentType.HTTP_API, "request_latency_ms", latency_ms)
-
-        if status_code >= 400:
-            self.record_error(
-                ComponentType.HTTP_API,
-                f"http_{status_code}",
-                f"{method} {path}",
-            )
-
-    def record_websocket_connection(
-        self,
-        action: str,  # "connect" or "disconnect"
-        connection_count: int,
-    ) -> None:
-        """Record WebSocket connection change."""
-        self.inc_counter(ComponentType.WEBSOCKET, f"connections_{action}")
-        self.set_gauge(ComponentType.WEBSOCKET, "active_connections", float(connection_count))
-
-    def record_cache_operation(
-        self,
-        operation: str,  # "get", "set", "delete"
-        hit: bool | None,
-        latency_ms: float,
-    ) -> None:
-        """Record a cache operation."""
-        self.inc_counter(ComponentType.CACHE, f"{operation}_total")
-        if hit is not None:
-            self.inc_counter(ComponentType.CACHE, f"{operation}_{'hit' if hit else 'miss'}")
-        self.record_histogram(ComponentType.CACHE, f"{operation}_latency_ms", latency_ms)
-
     # ========================================================================
     # Background collection
     # ========================================================================
-
-    async def start_collection(
-        self,
-        event_bus: EventBus | None = None,
-        collection_interval: float = 10.0,
-    ) -> None:
-        """Start background metric collection tasks."""
-        if self._running:
-            return
-
-        self._running = True
-
-        # Event bus metrics collection
-        if event_bus:
-            task = asyncio.create_task(
-                self._collect_event_bus_metrics(event_bus, collection_interval)
-            )
-            self._collection_tasks.append(task)
-
-        logger.info("System metrics collection started")
-
-    async def stop_collection(self) -> None:
-        """Stop background metric collection."""
-        self._running = False
-        for task in self._collection_tasks:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-        self._collection_tasks.clear()
-        logger.info("System metrics collection stopped")
-
-    async def _collect_event_bus_metrics(
-        self,
-        event_bus: EventBus,
-        interval: float,
-    ) -> None:
-        """Periodically collect event bus metrics."""
-        while self._running:
-            try:
-                # Get event bus stats if available
-                if hasattr(event_bus, "get_stats"):
-                    stats = await event_bus.get_stats()
-                    if stats:
-                        for topic, topic_stats in stats.get("topics", {}).items():
-                            self.set_gauge(
-                                ComponentType.EVENT_BUS,
-                                f"topic_{topic}_events",
-                                float(topic_stats.get("count", 0)),
-                            )
-
-                self.set_component_status(ComponentType.EVENT_BUS, "healthy")
-
-            except Exception as e:
-                logger.warning("Error collecting event bus metrics: %s", e)
-                self.set_component_status(ComponentType.EVENT_BUS, "degraded")
-
-            await asyncio.sleep(interval)

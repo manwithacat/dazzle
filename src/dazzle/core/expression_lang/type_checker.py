@@ -20,11 +20,6 @@ from dazzle.core.ir.expressions import (
     UnaryOp,
 )
 
-
-class ExpressionTypeError(Exception):
-    """Type error in an expression."""
-
-
 # Type context maps field paths to their types
 FieldTypeContext = dict[str, ExprType]
 
@@ -42,9 +37,6 @@ def infer_type(
 
     Returns:
         The inferred ExprType.
-
-    Raises:
-        ExpressionTypeError: If types are incompatible.
     """
     ctx = field_types or {}
     return _infer(expr, ctx)

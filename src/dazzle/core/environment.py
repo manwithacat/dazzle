@@ -84,11 +84,6 @@ def is_production() -> bool:
     return get_dazzle_env() == DazzleEnv.PRODUCTION
 
 
-def is_development() -> bool:
-    """Check if running in development environment."""
-    return get_dazzle_env() == DazzleEnv.DEVELOPMENT
-
-
 def is_test() -> bool:
     """Check if running in test environment."""
     return get_dazzle_env() == DazzleEnv.TEST
@@ -162,20 +157,3 @@ def should_enable_test_endpoints(manifest_override: bool | None = None) -> bool:
         return False
     else:  # DEVELOPMENT or TEST
         return True
-
-
-def get_environment_info() -> dict[str, str | bool]:
-    """Get a summary of the current environment configuration.
-
-    Useful for debugging and startup logging.
-
-    Returns:
-        dict: Environment information including:
-            - env: Current DAZZLE_ENV value
-            - test_endpoints_default: Default test endpoints setting
-    """
-    env = get_dazzle_env()
-    return {
-        "env": env.value,
-        "test_endpoints_default": should_enable_test_endpoints(None),
-    }

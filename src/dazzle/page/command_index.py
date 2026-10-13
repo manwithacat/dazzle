@@ -16,7 +16,6 @@ from typing import Any
 
 from dazzle.core import ir
 from dazzle.core.access import workspace_allowed_personas
-from dazzle.core.ir.identity import spec_display_id
 from dazzle.core.strings import normalize_role, to_api_plural
 from dazzle.page.app_paths import list_path
 from dazzle.render.fragment.nav_icons import infer_nav_icon
@@ -144,8 +143,3 @@ def filter_command_index(entries: list[CommandEntry], query: str) -> list[Comman
         ranked.append((0 if pos == 0 else 1, i, e))
     ranked.sort(key=lambda t: (t[0], t[1]))
     return [e for _, _, e in ranked]
-
-
-def spec_display_persona_ids(appspec: ir.AppSpec) -> list[str]:
-    """Persona ids declared by the app (helper for callers/tests)."""
-    return [str(spec_display_id(p)) for p in (getattr(appspec, "personas", None) or [])]

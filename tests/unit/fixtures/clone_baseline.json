@@ -127,22 +127,6 @@
     ]
   },
   {
-    "signature": "exact:c5c53730fa432c0891126f5fff6aeb39",
-    "count": 2,
-    "names": [
-      "dazzle/core/access.py::has_role",
-      "dazzle/http/runtime/access_control.py::has_role"
-    ]
-  },
-  {
-    "signature": "exact:3d6a382b1a4689c7269c496243dcab95",
-    "count": 2,
-    "names": [
-      "dazzle/core/access.py::is_authenticated",
-      "dazzle/http/runtime/access_control.py::is_authenticated"
-    ]
-  },
-  {
     "signature": "a1d18f44636c36c73962208e67055b60",
     "count": 2,
     "names": [
@@ -755,14 +739,6 @@
     ]
   },
   {
-    "signature": "afc06a788667c0905d5923336329cbd2",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/access_control.py::create_authenticated",
-      "dazzle/http/runtime/access_control.py::create_public"
-    ]
-  },
-  {
     "signature": "38b80ab1aec659f00f913657ad66e678",
     "count": 2,
     "names": [
@@ -922,14 +898,6 @@
     ]
   },
   {
-    "signature": "8b9d53209fa1fc837f46c55af6fbea15",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/aws_config.py::get_aioboto3_session",
-      "dazzle/http/runtime/aws_config.py::get_boto3_session"
-    ]
-  },
-  {
     "signature": "exact:b39e87aceb4e7a9aea08e91b64f4d98f",
     "count": 3,
     "names": [
@@ -988,14 +956,6 @@
     ]
   },
   {
-    "signature": "1ab2b34f8eb73ec30edb98ae4b18b286",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/handlers/graph_handlers.py::_check_networkx",
-      "dazzle/http/runtime/richtext_processor.py::is_available"
-    ]
-  },
-  {
     "signature": "9b4e98cc859e95ebf905605730cbd0ec",
     "count": 2,
     "names": [
@@ -1025,14 +985,6 @@
     "names": [
       "dazzle/http/runtime/pg_backend.py::__init__",
       "dazzle/http/runtime/tenant/aliases.py::__init__"
-    ]
-  },
-  {
-    "signature": "7eb9fd2b59a9431eff3510576154c410",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/pg_backend.py::get_table_columns",
-      "dazzle/http/runtime/pg_backend.py::get_table_indexes"
     ]
   },
   {
@@ -1106,14 +1058,6 @@
     "names": [
       "dazzle/http/runtime/subsystems/auth.py::_mount_enterprise_sso",
       "dazzle/http/runtime/subsystems/auth.py::_mount_saml"
-    ]
-  },
-  {
-    "signature": "33ff9c1dbab909bd48fb7733b64a76d4",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/token_store.py::revoke_token",
-      "dazzle/http/runtime/token_store.py::use_token"
     ]
   },
   {

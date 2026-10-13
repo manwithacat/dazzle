@@ -286,37 +286,6 @@ class TokenStore:
         finally:
             conn.close()
 
-    def use_token(self, token: str) -> bool:
-        """
-        Mark a token as used.
-
-        Updates last_used_at timestamp.
-
-        Args:
-            token: Plain text refresh token
-
-        Returns:
-            True if token was updated
-        """
-        token_hash = self._hash_token(token)
-        now = datetime.now(UTC)
-
-        conn = self._get_connection()
-        try:
-            with conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    UPDATE refresh_tokens
-                    SET last_used_at = %s
-                    WHERE token_hash = %s AND revoked_at IS NULL
-                    """,
-                    (now.isoformat(), token_hash),
-                )
-                return bool(cursor.rowcount > 0)
-        finally:
-            conn.close()
-
     def rotate_token(
         self,
         old_token: str,
@@ -422,35 +391,6 @@ class TokenStore:
                         """,
                         (now.isoformat(), str(user_id)),
                     )
-                return int(cursor.rowcount)
-        finally:
-            conn.close()
-
-    def revoke_device_tokens(self, user_id: UUID, device_id: str) -> int:
-        """
-        Revoke all tokens for a specific device.
-
-        Args:
-            user_id: User ID
-            device_id: Device identifier
-
-        Returns:
-            Number of tokens revoked
-        """
-        now = datetime.now(UTC)
-
-        conn = self._get_connection()
-        try:
-            with conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    UPDATE refresh_tokens
-                    SET revoked_at = %s
-                    WHERE user_id = %s AND device_id = %s AND revoked_at IS NULL
-                    """,
-                    (now.isoformat(), str(user_id), device_id),
-                )
                 return int(cursor.rowcount)
         finally:
             conn.close()

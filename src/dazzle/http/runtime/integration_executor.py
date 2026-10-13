@@ -81,10 +81,6 @@ class IntegrationExecutor:
                     surface = action.when_surface
                     self._actions_by_surface.setdefault(surface, []).append(action)
 
-    def get_actions_for_surface(self, surface_name: str) -> list[IntegrationAction]:
-        """Return integration actions triggered by the given surface."""
-        return self._actions_by_surface.get(surface_name, [])
-
     def resolve_service(self, api_ref: str) -> ServiceConfig:
         """Resolve a service reference to base_url and headers.
 

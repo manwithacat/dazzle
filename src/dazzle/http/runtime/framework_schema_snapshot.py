@@ -23,12 +23,7 @@ key set (see the global-constraints list in the migration-baseline plan).
 ``{prefix}events/offsets/dlq`` tables (dynamic prefix), tenant registry
 ``public.tenants``, per-tenant schemas, and app-entity tables.
 
-**Regeneration:** run ``dazzle db reframework-baseline`` (Task 5) or:
-
-    python -c "
-    from dazzle.http.runtime.framework_schema_snapshot import regenerate_and_print
-    regenerate_and_print()
-    "
+**Regeneration:** run ``dazzle db reframework-baseline`` (Task 5).
 
 **Parity gate:** ``tests/integration/test_framework_baseline_parity_pg.py``
 asserts all three paths agree on every in-scope table.
@@ -42,8 +37,6 @@ from __future__ import annotations
 # Module-top dazzle imports (no circular dependency: snapshot ← db.schema_snapshot;
 # snapshot ← http.runtime.framework_schema which does not import back from here).
 from dazzle.db.artifact_registry import in_baseline_tables
-from dazzle.db.schema_snapshot import introspect_schema, render_snapshot_literal
-from dazzle.http.runtime.framework_schema import ensure_framework_schema
 
 # ---------------------------------------------------------------------------
 # In-scope table set — the filter applied during introspect_schema.
@@ -985,39 +978,3 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         "uniques": ["email"],
     },
 }
-
-
-def regenerate_and_print() -> None:
-    """Re-generate the snapshot from a fresh orchestrator run and print it.
-
-    Useful for updating this file after schema changes.  Pipe the output
-    back into this module to update the snapshot.
-    """
-    import uuid
-
-    import psycopg
-    import sqlalchemy as sa
-
-    admin_url = "postgresql://localhost:5432/postgres"
-    name = f"dazzle_snap_{uuid.uuid4().hex[:8]}"
-    with psycopg.connect(admin_url, autocommit=True) as a:
-        a.execute(
-            f'CREATE DATABASE "{name}"'  # nosemgrep
-        )
-    try:
-        conn = psycopg.connect(f"postgresql://localhost:5432/{name}")
-        conn.autocommit = False
-        ensure_framework_schema(conn)
-        conn.close()
-
-        eng = sa.create_engine(f"postgresql+psycopg://localhost:5432/{name}")
-        try:
-            snap = introspect_schema(eng, only=set(IN_SCOPE_TABLES))
-            print(render_snapshot_literal(snap))
-        finally:
-            eng.dispose()
-    finally:
-        with psycopg.connect(admin_url, autocommit=True) as a:
-            a.execute(
-                f'DROP DATABASE IF EXISTS "{name}"'  # nosemgrep
-            )

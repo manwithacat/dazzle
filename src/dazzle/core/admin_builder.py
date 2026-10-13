@@ -503,18 +503,10 @@ _NAV_GROUPS: list[tuple[str, list[str]]] = [
 # admin_api_routes (never mounted), so the buttons always 404'd.
 _REGION_ACTIONS: dict[str, list[dict[str, str]]] = {}
 
-# Row-level actions (shown per item)
-_ROW_ACTIONS: dict[str, list[dict[str, str]]] = {}
-
 
 def get_region_actions(region_name: str) -> list[dict[str, str]]:
     """Get header-level actions for an admin workspace region."""
     return list(_REGION_ACTIONS.get(region_name, []))
-
-
-def get_row_actions(region_name: str) -> list[dict[str, str]]:
-    """Get row-level actions for an admin workspace region."""
-    return list(_ROW_ACTIONS.get(region_name, []))
 
 
 def _build_regions(

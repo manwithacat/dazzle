@@ -124,7 +124,6 @@ _ALLOWLIST = frozenset(
         "dazzle.http.runtime.pg_backend._create_table_sql",
         "dazzle.http.runtime.pg_backend._create_index_sql",
         "dazzle.http.runtime.relation_loader.get_foreign_key_indexes",
-        "dazzle.http.runtime.fts_postgres.PostgresFTSBackend.create_fts_index",
         "dazzle.http.runtime.search_schema.build_search_index_ddl",
         "dazzle.cli.runtime_impl.build._generate_sql_target",  # codegen SQL target
         # ── non-app-DB stores (SQLite / ops) ──

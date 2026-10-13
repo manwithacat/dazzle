@@ -175,18 +175,14 @@ class TestSecretKeySecurity:
 class TestTokenLengthSecurity:
     """Test token length limits (DoS prevention)."""
 
-    def test_oversized_token_rejected_in_both_paths(self, jwt_service) -> None:
-        """Oversized tokens are rejected by both verify_access_token and decode_token_unverified."""
+    def test_oversized_token_rejected(self, jwt_service) -> None:
+        """Oversized tokens are rejected by verify_access_token."""
         from dazzle.http.runtime.jwt_auth import MAX_TOKEN_LENGTH, JWTError
 
         oversized_token = "a" * (MAX_TOKEN_LENGTH + 1)
 
         with pytest.raises(JWTError) as exc_info:
             jwt_service.verify_access_token(oversized_token)
-        assert exc_info.value.code == "token_too_large"
-
-        with pytest.raises(JWTError) as exc_info:
-            jwt_service.decode_token_unverified(oversized_token)
         assert exc_info.value.code == "token_too_large"
 
     def test_normal_token_passes_length_check(self, jwt_service) -> None:

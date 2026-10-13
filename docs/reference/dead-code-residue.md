@@ -12,10 +12,15 @@ accepted list. Every accepted entry must also carry a family classification
 `test_every_baselined_orphan_is_classified` — an inventory nobody has read is not
 a review, so a new dead definition cannot be baselined silently.
 
-Eight families, each a decision with a stated retire-when condition:
-`optional-extra-plumbing`, `agent-and-loop-legacy`, `superseded-runtime-path`,
-`qa-and-testing-helpers`, `error-and-report-helpers`, `semantics-and-kb-residue`,
-`doc-generation-residue`, `cli-parity-helpers`.
+Six families, each a decision with a stated retire-when condition:
+`agent-and-loop-legacy`, `qa-and-testing-helpers`, `semantics-and-kb-residue`,
+`doc-generation-residue`, `cli-parity-helpers`, `error-and-report-helpers`. Three
+more were retired on 2026-10-13: `superseded-runtime-path` and
+`optional-extra-plumbing` in flense ship K (every entry deleted, because the wiring
+had been absent for more than one release and no Deferred Decision covered it — the
+S3 backend, the JWT factory and the device routes had live replacements or no
+consumer), and `domain-brief-and-llm-legacy` in ship J (`llm/spec_analyzer` went
+with the `analyze-spec` command).
 
 Two things to know before deleting anything the gate names:
 
@@ -29,20 +34,16 @@ Two things to know before deleting anything the gate names:
 
 | family | n | retires when |
 |---|---|---|
-| `superseded-runtime-path` | 15 | each entry is re-wired, or confirmed superseded by name — the leftovers of ADR-0023 (Jinja2 → typed Fragments), ADR-0038's four-layer split, and the tenant-hierarchy work |
-| `qa-and-testing-helpers` | 10 | the UX contract suite stops referencing them, or they fold into the runner that does |
-| `error-and-report-helpers` | 8 | the callers are gone and no dynamic use remains — error constructors and introspection helpers |
 | `agent-and-loop-legacy` | 5 | the legacy agent entrypoints are deleted in favour of the current loop |
-| `semantics-and-kb-residue` | 5 | the user-profile / session surface settles (`_session_to_dict` is the largest single item) |
-| `doc-generation-residue` | 5 | the docs generator is wired again, or the surface is dropped |
+| `qa-and-testing-helpers` | 4 | the RBAC proof and walk-pack code stop referencing them, or they fold into the runner that does |
+| `semantics-and-kb-residue` | 3 | the MCP state / serializer surface settles |
+| `doc-generation-residue` | 3 | the docs generator is wired again, or the surface is dropped |
 | `cli-parity-helpers` | 2 | `cli/project.py` absorbs the last caller, or the entry has zero callers and retires outright — the taxonomy has no column for "no caller left", which the fresh benchmark run hit |
-| `optional-extra-plumbing` | 3 | **the wiring lands, or the capability is formally dropped** — see below |
+| `error-and-report-helpers` | 2 | the callers are gone and no dynamic use remains — error constructors and introspection helpers |
 
-`optional-extra-plumbing` (`create_kafka_bus`, `create_s3_file_service`,
-`create_jwt_service`) is the family to worry about: these are
-meant to be reachable when the matching extra is installed, and nothing
-constructs them. That is either missing wiring — a bug report — or a dropped
-feature, and the answer changes what the fix is.
+When an entry has had no caller for more than one release and no Deferred
+Decision names it, delete it (and its row here) rather than re-classifying it:
+that is how the three retired families went.
 
 ## The trap when you go looking
 

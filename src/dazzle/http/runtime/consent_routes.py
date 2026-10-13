@@ -207,36 +207,3 @@ def create_consent_routes(
         return HTMLResponse(content=body)  # nosemgrep
 
     return router
-
-
-def resolve_consent_for_request(
-    request: Request,
-    defaults: ConsentDefaults,
-) -> dict[str, Any]:
-    """Template-context helper — returns the consent state as a dict.
-
-    Use from context builders so every page render can see consent:
-
-        context["consent"] = resolve_consent_for_request(request, defaults)
-        context["consent_state_json"] = json.dumps(context["consent"])
-
-    The template then passes ``context.consent`` to the banner include.
-    """
-    raw = request.cookies.get(CONSENT_COOKIE_NAME)
-    state = parse_consent_cookie(raw, defaults)
-    return {
-        "analytics": state.analytics == "granted",
-        "advertising": state.advertising == "granted",
-        "personalization": state.personalization == "granted",
-        "functional": state.functional == "granted",
-        "undecided": state.undecided,
-        "decided_at": state.decided_at,
-    }
-
-
-def resolve_consent_state_json(
-    request: Request,
-    defaults: ConsentDefaults,
-) -> str:
-    """Serialize the resolved consent dict for embedding in a `data-*` attribute."""
-    return json.dumps(resolve_consent_for_request(request, defaults))

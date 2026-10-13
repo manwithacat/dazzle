@@ -147,10 +147,6 @@ class DomainServiceSpec(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    def python_function_name(self) -> str:
-        """Return the Python function name for this service."""
-        return self.name
-
     def result_type_name(self) -> str:
         """Return the TypedDict name for the result type."""
         # Convert snake_case to PascalCase and add Result

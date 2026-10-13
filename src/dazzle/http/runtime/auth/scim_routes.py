@@ -407,12 +407,6 @@ def leftover_scim_groups_stay_put(body: dict[str, Any]) -> bool:
     return False
 
 
-def _coerce_active(value: Any) -> bool | None:
-    """SCIM clients send ``active`` as a bool or (Entra) a string. Returns the bool, or
-    ``None`` if the value isn't a recognizable active flag."""
-    return leftover_honest_scim_active(value)
-
-
 def _active_from_patch(body: dict[str, Any]) -> Any:
     """Extract the target ``active`` value from a SCIM PatchOp body, tolerating both
     ``{"path":"active","value":false}`` and ``{"value":{"active":false}}`` (Entra).

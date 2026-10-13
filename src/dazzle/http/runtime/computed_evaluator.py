@@ -301,32 +301,3 @@ def enrich_record_with_computed_fields(
     """
     computed_values = evaluate_computed_fields(record, computed_fields, related_data)
     return {**record, **computed_values}
-
-
-def enrich_records_with_computed_fields(
-    records: list[dict[str, Any]],
-    computed_fields: list[ComputedFieldSpec],
-    related_data_map: dict[str, dict[str, list[dict[str, Any]]]] | None = None,
-) -> list[dict[str, Any]]:
-    """
-    Add computed field values to multiple records.
-
-    Args:
-        records: List of record dicts
-        computed_fields: List of computed field specifications
-        related_data_map: Optional dict of record_id -> relation_name -> related records
-
-    Returns:
-        List of records with computed fields added
-    """
-    if not computed_fields:
-        return records
-
-    result = []
-    for record in records:
-        record_id = str(record.get("id", ""))
-        related_data = (related_data_map or {}).get(record_id, {})
-        enriched = enrich_record_with_computed_fields(record, computed_fields, related_data)
-        result.append(enriched)
-
-    return result

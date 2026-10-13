@@ -7,7 +7,6 @@ This module provides the schema and utilities for managing vocabulary entries.
 
 from __future__ import annotations  # required: forward reference
 
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -93,13 +92,6 @@ class VocabEntry(BaseModel):
             raise ValueError("Expansion language must be 'dazzle-core-dsl'")
         return v
 
-    def get_param(self, name: str) -> VocabParameter | None:
-        """Get parameter definition by name."""
-        for param in self.parameters:
-            if param.name == name:
-                return param
-        return None
-
     @property
     def stability(self) -> str:
         """Get stability level from metadata."""
@@ -111,28 +103,6 @@ class VocabEntry(BaseModel):
         """Get usage count from metadata."""
         result = self.metadata.get("usage_count", 0)
         return int(result) if isinstance(result, int | float | str) else 0
-
-    def increment_usage(self) -> VocabEntry:
-        """
-        Increment usage count.
-
-        Returns a new VocabEntry with updated metadata (entries are immutable).
-        """
-        new_metadata = self.metadata.copy()
-        new_metadata["usage_count"] = self.usage_count + 1
-        new_metadata["last_used_at"] = datetime.now(UTC).isoformat()
-
-        return VocabEntry(
-            id=self.id,
-            kind=self.kind,
-            scope=self.scope,
-            dsl_core_version=self.dsl_core_version,
-            description=self.description,
-            parameters=self.parameters,
-            expansion=self.expansion,
-            metadata=new_metadata,
-            tags=self.tags,
-        )
 
     model_config = {"frozen": True}
 
@@ -149,85 +119,12 @@ class VocabManifest(BaseModel):
     dsl_core_version: str = Field(..., description="Target core DSL version")
     entries: list[VocabEntry] = Field(default_factory=list, description="Vocabulary entries")
 
-    def add_entry(self, entry: VocabEntry) -> VocabManifest:
-        """
-        Add a new vocabulary entry.
-
-        Returns a new VocabManifest with the entry added (manifests are immutable).
-
-        Raises:
-            ValueError: If entry ID already exists
-        """
-        if self.get_entry(entry.id):
-            raise ValueError(f"Entry '{entry.id}' already exists in manifest")
-
-        return VocabManifest(
-            version=self.version,
-            app_id=self.app_id,
-            dsl_core_version=self.dsl_core_version,
-            entries=self.entries + [entry],
-        )
-
     def get_entry(self, entry_id: str) -> VocabEntry | None:
         """Get entry by ID."""
         for entry in self.entries:
             if entry.id == entry_id:
                 return entry
         return None
-
-    def update_entry(self, entry: VocabEntry) -> VocabManifest:
-        """
-        Update an existing entry.
-
-        Returns a new VocabManifest with the entry updated.
-
-        Raises:
-            ValueError: If entry doesn't exist
-        """
-        if not self.get_entry(entry.id):
-            raise ValueError(f"Entry '{entry.id}' not found in manifest")
-
-        new_entries = [e if e.id != entry.id else entry for e in self.entries]
-
-        return VocabManifest(
-            version=self.version,
-            app_id=self.app_id,
-            dsl_core_version=self.dsl_core_version,
-            entries=new_entries,
-        )
-
-    def remove_entry(self, entry_id: str) -> VocabManifest:
-        """
-        Remove an entry.
-
-        Returns a new VocabManifest with the entry removed.
-
-        Raises:
-            ValueError: If entry doesn't exist
-        """
-        if not self.get_entry(entry_id):
-            raise ValueError(f"Entry '{entry_id}' not found in manifest")
-
-        new_entries = [e for e in self.entries if e.id != entry_id]
-
-        return VocabManifest(
-            version=self.version,
-            app_id=self.app_id,
-            dsl_core_version=self.dsl_core_version,
-            entries=new_entries,
-        )
-
-    def filter_by_scope(self, scope: str) -> list[VocabEntry]:
-        """Get all entries with given scope."""
-        return [e for e in self.entries if e.scope == scope]
-
-    def filter_by_kind(self, kind: str) -> list[VocabEntry]:
-        """Get all entries with given kind."""
-        return [e for e in self.entries if e.kind == kind]
-
-    def filter_by_tag(self, tag: str) -> list[VocabEntry]:
-        """Get all entries with given tag."""
-        return [e for e in self.entries if tag in e.tags]
 
     model_config = {"frozen": True}
 
@@ -259,19 +156,3 @@ def load_manifest(path: Path) -> VocabManifest:
         raise ValueError(f"Empty or invalid YAML in {path}")
 
     return VocabManifest(**data)
-
-
-def create_empty_manifest(app_id: str, dsl_core_version: str = "1.0.0") -> VocabManifest:
-    """
-    Create an empty vocabulary manifest.
-
-    Args:
-        app_id: Unique app identifier
-        dsl_core_version: Target core DSL version
-
-    Returns:
-        Empty VocabManifest
-    """
-    return VocabManifest(
-        version="1.0.0", app_id=app_id, dsl_core_version=dsl_core_version, entries=[]
-    )

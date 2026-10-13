@@ -43,19 +43,6 @@ up to 4 alphanumeric subtags of length 2-8. No semicolons, CRLF, or
 other cookie-injection vectors can pass."""
 
 
-def _safe_redirect_target(raw: str | None) -> str:
-    """Return *raw* iff it's a same-origin relative path; else ``"/"``.
-
-    Test-only helper that delegates to the same regex used inline at
-    the redirect sink. The sink itself does NOT call this — CodeQL
-    elides helper calls from its taint trace, so the inline check at
-    the sink is what registers as a sanitizer.
-    """
-    if not raw:
-        return "/"
-    return raw if _SAFE_RELATIVE_PATH.fullmatch(raw) else "/"
-
-
 def create_locale_routes(
     *,
     cookie_name: str = "dazzle_locale",

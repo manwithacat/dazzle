@@ -296,8 +296,3 @@ def test_pattern_analysis():
     assert "crud" in all_patterns, "Should have CRUD patterns"
     assert "integrations" in all_patterns, "Should have integration patterns"
     assert "experiences" in all_patterns, "Should have experience patterns"
-
-    # Test report formatting
-    report = patterns.format_pattern_report(all_patterns)
-    assert "Task" in report, "Report should mention Task entity"
-    assert "Complete CRUD" in report, "Report should show complete CRUD"

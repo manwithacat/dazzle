@@ -233,20 +233,6 @@ class ScenarioParserMixin:
             seed_script=seed_script,
         )
 
-    def parse_demo(self) -> list[ir.DemoFixture]:
-        """
-        Parse top-level demo block.
-
-        Syntax:
-            demo:
-              Task:
-                - title: "Grade assignments", status: "pending"
-                - title: "Prepare lecture", status: "done"
-              Student:
-                - name: "Alice", grade: 85
-        """
-        return self._parse_inline_demo()
-
     def _parse_inline_demo(self) -> list[ir.DemoFixture]:
         """
         Parse inline demo block (shared between top-level and scenario-embedded).

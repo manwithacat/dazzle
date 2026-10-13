@@ -275,59 +275,11 @@ class ServiceLoader:
             self.load_services()
         return service_id in self.services
 
-    def get_service_ids(self) -> list[str]:
-        """Get list of loaded service IDs."""
-        if not self._loaded:
-            self.load_services()
-        return list(self.services.keys())
-
     def get_service(self, service_id: str) -> LoadedService | None:
         """Get a loaded service by ID."""
         if not self._loaded:
             self.load_services()
         return self.services.get(service_id)
-
-    def reload_service(self, service_id: str) -> LoadedService | None:
-        """
-        Reload a specific service from disk.
-
-        Useful for development when stub code changes.
-
-        Args:
-            service_id: Service identifier to reload
-
-        Returns:
-            Reloaded service, or None if not found
-        """
-        # Find the stub file
-        stub_file = self.services_dir / f"{service_id}.py"
-        if not stub_file.exists():
-            return None
-
-        # Remove old module from sys.modules
-        module_name = f"dazzle_stub_{service_id}"
-        if module_name in sys.modules:
-            del sys.modules[module_name]
-
-        # Remove from services dict
-        self.services.pop(service_id, None)
-
-        # Reload
-        loaded = self._load_stub_file(stub_file)
-        if loaded:
-            self.services[loaded.service_id] = loaded
-            logger.info("Reloaded service stub: %s", service_id)
-        return loaded
-
-    def unload_all(self) -> None:
-        """Unload all services and clean up modules."""
-        for service_id in list(self.services.keys()):
-            module_name = f"dazzle_stub_{service_id}"
-            if module_name in sys.modules:
-                del sys.modules[module_name]
-
-        self.services.clear()
-        self._loaded = False
 
 
 def create_service_loader(project_dir: Path | str) -> ServiceLoader:

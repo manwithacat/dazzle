@@ -515,27 +515,6 @@ def content_file_exists(project_root: Path, content_path: str) -> bool:
     return get_content_file_path(project_root, content_path).exists()
 
 
-def load_content_file(project_root: Path, content_path: str) -> str:
-    """Load content from a file in site/content/.
-
-    Args:
-        project_root: Root directory of the DAZZLE project.
-        content_path: Relative path within site/content/.
-
-    Returns:
-        Content as string.
-
-    Raises:
-        SiteSpecError: If file doesn't exist.
-    """
-    full_path = get_content_file_path(project_root, content_path)
-
-    if not full_path.exists():
-        raise SiteSpecError(f"Content file not found: {full_path}")
-
-    return full_path.read_text(encoding="utf-8")
-
-
 def ensure_content_dir(project_root: Path) -> Path:
     """Ensure the site/content/ directory exists.
 

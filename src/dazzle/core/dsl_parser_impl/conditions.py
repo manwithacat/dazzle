@@ -341,36 +341,3 @@ class ConditionParserMixin:
         # Single value
         value = self._parse_literal_value()
         return ir.ConditionValue(literal=value)
-
-    def parse_value(self) -> Any:
-        """Parse a value (string, number, identifier, boolean)."""
-        token = self.current_token()
-
-        if self.match(TokenType.STRING):
-            return self.advance().value
-
-        elif self.match(TokenType.NUMBER):
-            value = self.advance().value
-            if "." in value:
-                return float(value)
-            return int(value)
-
-        elif self.match(TokenType.TRUE):
-            self.advance()
-            return True
-
-        elif self.match(TokenType.FALSE):
-            self.advance()
-            return False
-
-        elif self.match(TokenType.IDENTIFIER):
-            # Could be a variable reference
-            return self.advance().value
-
-        else:
-            raise make_parse_error(
-                f"Expected value, got {token.type.value}",
-                self.file,
-                token.line,
-                token.column,
-            )

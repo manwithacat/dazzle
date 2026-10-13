@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING, Any
 from dazzle.testing.walk.claims import (
     ClaimGuide,
     ClaimIssue,
-    ClaimsCheckResult,
     JobClaimRegistry,
     check_registry,
     discover_registry_path,
@@ -222,17 +221,3 @@ def claims_residuals(
             }
         )
     return gaps
-
-
-def claims_check_result_as_gaps(result: ClaimsCheckResult) -> list[dict[str, Any]]:
-    """Map an existing ClaimsCheckResult to seed gaps."""
-    return [
-        {
-            "kind": "walk_claim",
-            "description": f"[{i.guide_id}] {i.message}",
-            "status": "PENDING",
-            "attempts": 0,
-            "notes": f"claims check #{i.code}",
-        }
-        for i in result.errors
-    ]

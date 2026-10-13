@@ -377,33 +377,3 @@ class VocabExpander:
 
         # Plain string (unquoted)
         return value
-
-
-def expand_vocab_in_file(
-    input_path: Path, manifest_path: Path, output_path: Path | None = None
-) -> str:
-    """
-    Convenience function to expand vocabulary in a file.
-
-    Args:
-        input_path: Path to input DSL file
-        manifest_path: Path to vocabulary manifest
-        output_path: Optional path to write output
-
-    Returns:
-        Expanded DSL text
-
-    Raises:
-        ExpansionError: If expansion fails
-        FileNotFoundError: If files don't exist
-    """
-    from .vocab import load_manifest
-
-    # Load manifest
-    manifest = load_manifest(manifest_path)
-
-    # Create expander
-    expander = VocabExpander(manifest)
-
-    # Expand file
-    return expander.expand_file(input_path, output_path)

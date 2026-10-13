@@ -56,17 +56,6 @@ class InfraRequirements:
         if self.async_service_names is None:
             self.async_service_names = []
 
-    def has_any_infra_needs(self) -> bool:
-        """Check if any infrastructure is needed."""
-        return (
-            self.needs_database
-            or self.needs_cache
-            or self.needs_queue
-            or self.needs_workers
-            or self.needs_webhooks
-            or self.needs_storage
-        )
-
 
 def analyze_infra_requirements(appspec: ir.AppSpec) -> InfraRequirements:
     """

@@ -764,26 +764,3 @@ class PostgresBackend:
                 (table_name,),
             )
             return [row["column_name"] for row in cursor.fetchall()]
-
-    def get_column_info(self, table_name: str) -> list[dict[str, Any]]:
-        """Get detailed column information for a table."""
-        with self.connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT column_name, data_type, is_nullable, column_default "
-                "FROM information_schema.columns "
-                "WHERE table_schema = 'public' AND table_name = %s "
-                "ORDER BY ordinal_position",
-                (table_name,),
-            )
-            return [dict(row) for row in cursor.fetchall()]
-
-    def get_table_indexes(self, table_name: str) -> list[str]:
-        """Get index names for a table."""
-        with self.connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT indexname FROM pg_indexes WHERE tablename = %s",
-                (table_name,),
-            )
-            return [row["indexname"] for row in cursor.fetchall()]

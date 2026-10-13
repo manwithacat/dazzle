@@ -124,10 +124,8 @@ Post-#1042 (v0.67.92) the framework no longer ships Jinja2. Surfaces declare `re
 | **dz.js** | Lightweight client-side state (modals, toggles, transitions) |
 | **Alpine.js** | Local component state (filter bars, popovers, modals) — narrowly scoped per ADR-0022 |
 
-> The workspace runtime no longer loads Tailwind or DaisyUI. Site/marketing
-> pages still consume the legacy CDN tags via `site_renderer.get_shared_head_html`
-> for back-compat with `stat-value` / `bg-base-*` class names — see
-> `docs/CSS_MIGRATION_GUIDE.md` for the rename map.
+> The runtime no longer loads Tailwind or DaisyUI; site/marketing pages render
+> Dazzle-native classes through the typed Fragment substrate.
 
 ### Rendering Structure
 

@@ -12,7 +12,6 @@ Usage:
 import importlib
 import inspect
 import re
-import textwrap
 from pathlib import Path
 
 from dazzle.core.ir.fields import FieldTypeKind
@@ -74,12 +73,6 @@ def _load_mixin_module(name: str) -> object:
     return importlib.import_module(f"dazzle.core.dsl_parser_impl.{name}")
 
 
-def get_mixin_docstring(mod_name: str) -> str:
-    """Return the module-level docstring for a parser mixin."""
-    mod = _load_mixin_module(mod_name)
-    return inspect.getdoc(mod) or ""
-
-
 def get_mixin_class_names() -> dict[str, str]:
     """Return mapping of module name -> class name for every mixin."""
     result: dict[str, str] = {}
@@ -90,42 +83,6 @@ def get_mixin_class_names() -> dict[str, str]:
                 result[mod_name] = name
                 break
     return result
-
-
-def extract_dsl_examples(mod_name: str) -> list[str]:
-    """Extract DSL code blocks from a module docstring."""
-    docstring = get_mixin_docstring(mod_name)
-    blocks: list[str] = []
-
-    # Find indented code blocks after "DSL syntax" or "DSL Syntax" lines
-    in_block = False
-    current_block: list[str] = []
-    for line in docstring.splitlines():
-        stripped = line.strip()
-        if stripped.lower().startswith("dsl syntax"):
-            in_block = True
-            continue
-        if in_block:
-            if stripped == "" and current_block:
-                # End of indented block on blank line after content
-                pass
-            elif line.startswith("    ") or line.startswith("\t"):
-                current_block.append(line)
-            elif stripped and current_block:
-                # Non-indented line after content = end of block
-                blocks.append(textwrap.dedent("\n".join(current_block)).strip())
-                current_block = []
-                in_block = False
-            elif not stripped and not current_block:
-                # Blank line before content starts
-                continue
-            else:
-                in_block = False
-
-    if current_block:
-        blocks.append(textwrap.dedent("\n".join(current_block)).strip())
-
-    return blocks
 
 
 # ---------------------------------------------------------------------------

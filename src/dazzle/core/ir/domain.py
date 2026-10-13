@@ -176,13 +176,6 @@ class AccessSpec(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    def get_visibility_for(self, context: AuthContext) -> ConditionExpr | None:
-        """Get visibility condition for a specific auth context."""
-        for rule in self.visibility:
-            if rule.context == context:
-                return rule.condition
-        return None
-
     def get_permission_for(self, operation: PermissionKind) -> PermissionRule | None:
         """Get permission rule for a specific operation."""
         for rule in self.permissions:

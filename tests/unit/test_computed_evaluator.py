@@ -7,7 +7,6 @@ import pytest
 
 from dazzle.http.runtime.computed_evaluator import (
     enrich_record_with_computed_fields,
-    enrich_records_with_computed_fields,
     evaluate_computed_fields,
     evaluate_expression,
 )
@@ -372,28 +371,3 @@ class TestComputedFieldEvaluation:
         assert enriched["id"] == "1"
         assert enriched["amount"] == 50
         assert enriched["total"] == 50
-
-    def test_enrich_records_empty_fields(self) -> None:
-        records = [{"id": "1"}, {"id": "2"}]
-        result = enrich_records_with_computed_fields(records, [])
-        assert result == records
-
-    def test_enrich_records_with_related_data(self) -> None:
-        fields = [
-            ComputedFieldSpec(
-                name="item_count",
-                expression=ComputedExprSpec(
-                    kind="aggregate",
-                    function=AggregateFunctionKind.COUNT,
-                    field=ComputedExprSpec(kind="field_ref", path=["items"]),
-                ),
-            ),
-        ]
-        records = [{"id": "r1"}, {"id": "r2"}]
-        related_map = {
-            "r1": {"items": [{"x": 1}, {"x": 2}]},
-            "r2": {"items": [{"x": 1}]},
-        }
-        result = enrich_records_with_computed_fields(records, fields, related_map)
-        assert result[0]["item_count"] == 2
-        assert result[1]["item_count"] == 1

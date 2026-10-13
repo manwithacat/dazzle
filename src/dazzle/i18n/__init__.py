@@ -56,7 +56,7 @@ from dazzle.i18n.display_locale import (
 
 logger = logging.getLogger(__name__)
 
-# Per-request locale (mirrors the theme_variant ContextVar pattern in
+# Per-request locale (mirrors the sidebar-state ContextVar pattern in
 # `dazzle.page.runtime.theme`). Set by :class:`LocaleMiddleware` on
 # ingress; read by the ``_()`` Jinja filter at render time so templates
 # never have to thread the locale through their context arguments.

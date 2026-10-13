@@ -360,54 +360,6 @@ class JWTService:
             expires_in=self.config.access_token_expire_minutes * 60,
         )
 
-    def decode_token_unverified(self, token: str) -> dict[str, Any]:
-        """
-        Decode a token without verification.
-
-        Useful for extracting claims from expired tokens during refresh.
-        Still performs security checks on token structure.
-
-        Args:
-            token: JWT token string
-
-        Returns:
-            Token payload
-
-        Raises:
-            JWTError: If token structure is invalid
-        """
-        # Security: Check token length even for unverified decode
-        if len(token) > MAX_TOKEN_LENGTH:
-            raise JWTError(
-                f"Token exceeds maximum length ({MAX_TOKEN_LENGTH} bytes)",
-                code="token_too_large",
-            )
-
-        try:
-            import jwt
-        except ImportError:
-            raise RuntimeError("PyJWT is not installed. Install with: pip install PyJWT")
-
-        # Security: Check algorithm in header
-        try:
-            unverified_header = jwt.get_unverified_header(token)
-            header_alg = unverified_header.get("alg", "")
-
-            if header_alg in BLOCKED_ALGORITHMS:
-                raise JWTError(
-                    f"Algorithm '{header_alg}' is not allowed",
-                    code="blocked_algorithm",
-                )
-        except jwt.exceptions.DecodeError:
-            raise JWTError("Malformed token header", code="invalid_token")
-
-        # Intentional: this method is *decode without verification* for
-        # refresh/expired-claim extraction. Signature verification belongs on
-        # the verified decode path. Length + blocked-alg checks still run above.
-        # Keep nosemgrep on the same physical line as jwt.decode — wrap loses it.
-        result: dict[str, Any] = jwt.decode(token, options={"verify_signature": False})  # nosemgrep: python.jwt.security.unverified-jwt-decode.unverified-jwt-decode  # fmt: skip
-        return result
-
 
 # =============================================================================
 # Exceptions
@@ -426,33 +378,3 @@ class JWTError(Exception):
 # =============================================================================
 # Factory Functions
 # =============================================================================
-
-
-def create_jwt_service(
-    secret_key: str | None = None,
-    algorithm: str = "HS256",
-    access_token_expire_minutes: int = 15,
-    refresh_token_expire_days: int = 7,
-    issuer: str = "dazzle-app",
-) -> JWTService:
-    """
-    Create a JWT service with the given configuration.
-
-    Args:
-        secret_key: Secret key for HS256 (auto-generated if not provided)
-        algorithm: JWT algorithm (HS256 or RS256)
-        access_token_expire_minutes: Access token lifetime
-        refresh_token_expire_days: Refresh token lifetime
-        issuer: Token issuer
-
-    Returns:
-        Configured JWT service
-    """
-    config = JWTConfig(
-        algorithm=algorithm,
-        secret_key=secret_key or secrets.token_urlsafe(32),
-        access_token_expire_minutes=access_token_expire_minutes,
-        refresh_token_expire_days=refresh_token_expire_days,
-        issuer=issuer,
-    )
-    return JWTService(config)

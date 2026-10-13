@@ -203,20 +203,13 @@
   },
   "dazzle/agent/missions/_shared.py": {
     "functions": {
-      "ComponentContract": 1,
-      "QualityGate": 1,
-      "_derive_gate_id": 3,
-      "_extract_section": 2,
-      "_parse_bullet_list": 4,
-      "_parse_numbered_list": 10,
       "build_dsl_summary": 23,
       "get_surface_entity": 2,
       "is_step_kind": 3,
       "is_trigger_kind": 3,
       "make_observe_gap_tool": 1,
       "make_query_dsl_tool": 1,
-      "make_stagnation_completion": 1,
-      "parse_component_contract": 15
+      "make_stagnation_completion": 1
     },
     "mi_rank": "A"
   },
@@ -408,7 +401,6 @@
       "AgentTranscript": 6,
       "AgentTranscript.add_observation": 2,
       "AgentTranscript.summary": 4,
-      "AgentTranscript.to_html_report": 11,
       "AgentTranscript.to_json": 3,
       "Observation": 1,
       "_esc": 1
@@ -1918,7 +1910,6 @@
       "build_admin_infrastructure": 11,
       "format_injected_as_dsl": 24,
       "get_region_actions": 1,
-      "get_row_actions": 1,
       "is_injected_workspace": 1
     },
     "mi_rank": "A"
@@ -1934,11 +1925,9 @@
       "AntiTuringValidator._strip_comments": 2,
       "AntiTuringValidator.format_violations": 3,
       "AntiTuringValidator.validate": 4,
-      "AntiTuringValidator.validate_file": 1,
       "Violation": 1,
       "ViolationType": 1,
-      "validate_dsl_content": 2,
-      "validate_dsl_file": 2
+      "validate_dsl_content": 2
     },
     "mi_rank": "A"
   },
@@ -2406,8 +2395,7 @@
       "ConditionParserMixin._parse_condition_value": 10,
       "ConditionParserMixin._parse_or_expr": 2,
       "ConditionParserMixin._parse_primary_condition": 9,
-      "ConditionParserMixin.parse_condition_expr": 1,
-      "ConditionParserMixin.parse_value": 7
+      "ConditionParserMixin.parse_condition_expr": 1
     },
     "mi_rank": "A"
   },
@@ -2870,7 +2858,6 @@
       "ScenarioParserMixin._parse_persona_scenario_entry": 5,
       "ScenarioParserMixin._parse_string_list": 10,
       "ScenarioParserMixin._skip_unknown_or_raise_for_renamed_keyword": 5,
-      "ScenarioParserMixin.parse_demo": 1,
       "ScenarioParserMixin.parse_persona": 2,
       "ScenarioParserMixin.parse_scenario": 8,
       "_PersonaState": 1,
@@ -3247,8 +3234,6 @@
     "functions": {
       "DazzleEnv": 1,
       "get_dazzle_env": 8,
-      "get_environment_info": 1,
-      "is_development": 1,
       "is_production": 1,
       "is_test": 1,
       "pin_production_env": 1,
@@ -3285,8 +3270,7 @@
       "VocabExpander._validate_param_value": 16,
       "VocabExpander.expand_entry": 6,
       "VocabExpander.expand_file": 3,
-      "VocabExpander.expand_text": 5,
-      "expand_vocab_in_file": 1
+      "VocabExpander.expand_text": 5
     },
     "mi_rank": "A"
   },
@@ -3356,7 +3340,6 @@
   },
   "dazzle/core/expression_lang/type_checker.py": {
     "functions": {
-      "ExpressionTypeError": 1,
       "_infer": 9,
       "_infer_binary": 30,
       "_infer_func": 7,
@@ -3462,11 +3445,9 @@
       "_load_mixin_module": 1,
       "_section_separator": 1,
       "build_type_spec_rule": 11,
-      "extract_dsl_examples": 13,
       "generate_grammar": 13,
       "get_keyword_groups": 18,
       "get_mixin_class_names": 5,
-      "get_mixin_docstring": 2,
       "get_version": 1,
       "write_grammar": 2
     },
@@ -3503,7 +3484,6 @@
     "functions": {
       "InfraRequirements": 8,
       "InfraRequirements.__post_init__": 6,
-      "InfraRequirements.has_any_infra_needs": 7,
       "analyze_infra_requirements": 25,
       "get_required_env_vars": 7
     },
@@ -3778,7 +3758,6 @@
     "functions": {
       "AccessSpec": 4,
       "AccessSpec.get_permission_for": 3,
-      "AccessSpec.get_visibility_for": 3,
       "AuditConfig": 1,
       "AuthContext": 1,
       "AuthIdentitySpec": 1,
@@ -4100,7 +4079,6 @@
       "Money.__str__": 1,
       "Money.scale": 1,
       "Money.to_decimal": 1,
-      "Money.to_float": 1,
       "Money.validate_currency": 1,
       "MoneyWithScale": 3,
       "MoneyWithScale.scale": 2,
@@ -4158,7 +4136,6 @@
   },
   "dazzle/core/ir/predicate_builder.py": {
     "functions": {
-      "_build_value_ref": 1,
       "_convert_binding": 1,
       "_expand_current_tenant_hierarchy": 13,
       "_resolve_value_ref": 7,
@@ -4292,7 +4269,6 @@
       "AuthProfile": 1,
       "DomainServiceKind": 1,
       "DomainServiceSpec": 3,
-      "DomainServiceSpec.python_function_name": 1,
       "DomainServiceSpec.result_type_name": 2,
       "ServiceFieldSpec": 1,
       "StubLanguage": 1
@@ -4513,13 +4489,11 @@
       "BulkActionSpec.__str__": 1,
       "EmptyMessages": 1,
       "PersonaVariant": 2,
-      "PersonaVariant.applies_to_user": 1,
       "SignalLevel": 1,
       "SortSpec": 2,
       "SortSpec.__str__": 1,
       "UXSpec": 4,
       "UXSpec.empty_for": 4,
-      "UXSpec.get_persona_variant": 3,
       "UXSpec.has_attention_signals": 1
     },
     "mi_rank": "A"
@@ -4831,8 +4805,7 @@
       "analyze_patterns": 1,
       "detect_crud_patterns": 9,
       "detect_experience_patterns": 5,
-      "detect_integration_patterns": 10,
-      "format_pattern_report": 11
+      "detect_integration_patterns": 10
     },
     "mi_rank": "A"
   },
@@ -4892,16 +4865,13 @@
       "ProcessContext._interpolate": 1,
       "ProcessContext._navigate": 6,
       "ProcessContext._parse_literal": 10,
-      "ProcessContext.build_step_inputs": 2,
       "ProcessContext.evaluate_condition": 5,
       "ProcessContext.from_dict": 2,
       "ProcessContext.get_variable": 1,
       "ProcessContext.outputs": 3,
       "ProcessContext.resolve": 7,
-      "ProcessContext.set_current_step": 1,
       "ProcessContext.set_variable": 1,
-      "ProcessContext.to_dict": 1,
-      "ProcessContext.update_step": 1
+      "ProcessContext.to_dict": 1
     },
     "mi_rank": "A"
   },
@@ -5263,7 +5233,6 @@
       "get_content_file_path": 1,
       "get_copy_file_path": 1,
       "get_sitespec_path": 1,
-      "load_content_file": 2,
       "load_copy": 2,
       "load_sitespec": 7,
       "load_sitespec_with_copy": 2,
@@ -5554,24 +5523,15 @@
   "dazzle/core/vocab.py": {
     "functions": {
       "VocabEntry": 3,
-      "VocabEntry.get_param": 3,
-      "VocabEntry.increment_usage": 1,
       "VocabEntry.stability": 2,
       "VocabEntry.usage_count": 2,
       "VocabEntry.validate_expansion": 4,
       "VocabEntry.validate_kind": 2,
       "VocabEntry.validate_scope": 2,
       "VocabManifest": 4,
-      "VocabManifest.add_entry": 2,
-      "VocabManifest.filter_by_kind": 3,
-      "VocabManifest.filter_by_scope": 3,
-      "VocabManifest.filter_by_tag": 3,
       "VocabManifest.get_entry": 3,
-      "VocabManifest.remove_entry": 4,
-      "VocabManifest.update_entry": 4,
       "VocabParameter": 3,
       "VocabParameter.validate_type": 2,
-      "create_empty_manifest": 1,
       "load_manifest": 3
     },
     "mi_rank": "A"
@@ -6196,8 +6156,6 @@
       "FileEmailAdapter": 4,
       "FileEmailAdapter.__init__": 3,
       "FileEmailAdapter._update_index": 3,
-      "FileEmailAdapter.get_email_content": 6,
-      "FileEmailAdapter.get_recent_emails": 3,
       "FileEmailAdapter.health_check": 1,
       "FileEmailAdapter.initialize": 1,
       "FileEmailAdapter.provider_name": 1,
@@ -6211,12 +6169,10 @@
       "SESAdapter": 3,
       "SESAdapter.__init__": 1,
       "SESAdapter._get_ses_client_kwargs": 1,
-      "SESAdapter._send_batch": 2,
       "SESAdapter.health_check": 2,
       "SESAdapter.initialize": 1,
       "SESAdapter.provider_name": 1,
-      "SESAdapter.send": 11,
-      "SESAdapter.send_bulk": 2
+      "SESAdapter.send": 11
     },
     "mi_rank": "A"
   },
@@ -6737,7 +6693,6 @@
       "BacklogTracker": 3,
       "BacklogTracker._key": 1,
       "BacklogTracker.all_stats": 2,
-      "BacklogTracker.by_stream": 3,
       "BacklogTracker.get": 1,
       "BacklogTracker.growth_rate": 6,
       "BacklogTracker.max_lag": 2,
@@ -6761,23 +6716,16 @@
   "dazzle/http/metrics/collector.py": {
     "functions": {
       "MetricsCollector": 2,
-      "MetricsCollector.get_backlog_stats": 2,
       "MetricsCollector.get_error_count": 1,
       "MetricsCollector.get_latency_stats": 2,
-      "MetricsCollector.get_recovery_time": 1,
       "MetricsCollector.get_throughput_stats": 2,
-      "MetricsCollector.get_total_lag": 1,
       "MetricsCollector.record_error": 1,
-      "MetricsCollector.record_hop_latency": 1,
       "MetricsCollector.record_latency": 1,
-      "MetricsCollector.record_recovery_time": 1,
       "MetricsCollector.record_throughput": 1,
       "MetricsCollector.register_consumer": 1,
       "MetricsCollector.reset": 1,
       "MetricsCollector.snapshot": 1,
       "MetricsCollector.to_dict": 2,
-      "MetricsCollector.update_consumer_sequence": 1,
-      "MetricsCollector.update_producer_sequence": 1,
       "PRAMetrics": 1
     },
     "mi_rank": "A"
@@ -6826,25 +6774,15 @@
       "MetricType": 1,
       "SystemMetricsCollector": 3,
       "SystemMetricsCollector.__init__": 2,
-      "SystemMetricsCollector._collect_event_bus_metrics": 6,
       "SystemMetricsCollector.inc_counter": 1,
-      "SystemMetricsCollector.record_cache_operation": 3,
       "SystemMetricsCollector.record_db_query": 3,
       "SystemMetricsCollector.record_error": 3,
-      "SystemMetricsCollector.record_event_bus_backlog": 1,
-      "SystemMetricsCollector.record_event_bus_consume": 1,
-      "SystemMetricsCollector.record_event_bus_publish": 1,
       "SystemMetricsCollector.record_histogram": 2,
-      "SystemMetricsCollector.record_http_request": 2,
-      "SystemMetricsCollector.record_request": 1,
       "SystemMetricsCollector.record_tigerbeetle_operation": 2,
-      "SystemMetricsCollector.record_websocket_connection": 1,
       "SystemMetricsCollector.reset": 2,
       "SystemMetricsCollector.set_component_status": 1,
       "SystemMetricsCollector.set_gauge": 1,
       "SystemMetricsCollector.snapshot": 8,
-      "SystemMetricsCollector.start_collection": 3,
-      "SystemMetricsCollector.stop_collection": 3,
       "SystemMetricsSnapshot": 8,
       "SystemMetricsSnapshot.to_dict": 4,
       "SystemMetricsSnapshot.to_prometheus": 9,
@@ -6896,44 +6834,6 @@
       "access_context_from": 1,
       "gated_list": 10,
       "gated_read": 11
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/http/runtime/access_control.py": {
-    "functions": {
-      "AccessContext": 3,
-      "AccessContext.bypasses_tenant_filter": 3,
-      "AccessContext.has_role": 2,
-      "AccessContext.is_authenticated": 1,
-      "AccessContext.is_tenant_scoped": 1,
-      "AccessDenied": 2,
-      "AccessDenied.__init__": 1,
-      "AccessEnforcer": 3,
-      "AccessEnforcer.__init__": 1,
-      "AccessEnforcer.check_create": 6,
-      "AccessEnforcer.check_delete": 2,
-      "AccessEnforcer.check_read": 3,
-      "AccessEnforcer.check_update": 2,
-      "AccessEnforcer.get_list_filters": 1,
-      "AccessOperation": 1,
-      "AccessPolicy": 4,
-      "AccessPolicy.can_access": 2,
-      "AccessPolicy.create_authenticated": 2,
-      "AccessPolicy.create_owner_based": 2,
-      "AccessPolicy.create_public": 2,
-      "AccessPolicy.create_tenant_based": 2,
-      "AccessPolicy.get_list_filters": 9,
-      "AccessRule": 17,
-      "AccessRule.evaluate": 16,
-      "PolicyRegistry": 2,
-      "PolicyRegistry.__init__": 1,
-      "PolicyRegistry.get": 1,
-      "PolicyRegistry.has_policy": 1,
-      "PolicyRegistry.register": 1,
-      "PolicyRegistry.set_default": 1,
-      "create_policy_from_entity": 4,
-      "detect_owner_field": 5,
-      "detect_tenant_field": 3
     },
     "mi_rank": "A"
   },
@@ -7764,7 +7664,6 @@
   "dazzle/http/runtime/auth/scim_routes.py": {
     "functions": {
       "_active_from_patch": 9,
-      "_coerce_active": 4,
       "_email_for": 3,
       "_error": 2,
       "_groups_from_body": 6,
@@ -7831,13 +7730,11 @@
       "AuthStore.count_users": 3,
       "AuthStore.create_scim_group": 1,
       "AuthStore.delete_preference": 1,
-      "AuthStore.delete_preferences": 1,
       "AuthStore.delete_scim_group": 1,
       "AuthStore.ensure_initialized": 3,
       "AuthStore.get_group_member_ids": 2,
       "AuthStore.get_member_group_keys": 3,
       "AuthStore.get_member_group_names": 2,
-      "AuthStore.get_preference": 2,
       "AuthStore.get_preferences": 2,
       "AuthStore.get_scim_group": 2,
       "AuthStore.list_distinct_roles": 3,
@@ -7846,7 +7743,6 @@
       "AuthStore.remove_group_member": 1,
       "AuthStore.rename_scim_group": 1,
       "AuthStore.replace_group_members": 2,
-      "AuthStore.search_users": 4,
       "AuthStore.set_partition_hierarchy": 1,
       "AuthStore.set_preference": 1,
       "AuthStore.set_preferences": 3,
@@ -7996,8 +7892,7 @@
       "AWSConfig": 5,
       "AWSConfig.to_boto3_kwargs": 4,
       "get_aioboto3_session": 5,
-      "get_aws_config": 5,
-      "get_boto3_session": 5
+      "get_aws_config": 5
     },
     "mi_rank": "A"
   },
@@ -8053,7 +7948,6 @@
       "_evaluate_date_function": 5,
       "_evaluate_field_ref": 6,
       "enrich_record_with_computed_fields": 1,
-      "enrich_records_with_computed_fields": 4,
       "evaluate_computed_fields": 2,
       "evaluate_expression": 7
     },
@@ -8071,9 +7965,7 @@
   },
   "dazzle/http/runtime/consent_routes.py": {
     "functions": {
-      "create_consent_routes": 2,
-      "resolve_consent_for_request": 1,
-      "resolve_consent_state_json": 1
+      "create_consent_routes": 2
     },
     "mi_rank": "A"
   },
@@ -8142,15 +8034,10 @@
       "DeviceRegistry._connect_raw": 1,
       "DeviceRegistry._get_connection": 1,
       "DeviceRegistry._init_db": 2,
-      "DeviceRegistry.cleanup_inactive": 1,
       "DeviceRegistry.ensure_initialized": 3,
-      "DeviceRegistry.get_device": 3,
       "DeviceRegistry.get_user_devices": 5,
-      "DeviceRegistry.invalidate_token": 1,
-      "DeviceRegistry.mark_device_used": 1,
       "DeviceRegistry.register_device": 2,
       "DeviceRegistry.unregister_device": 2,
-      "create_device_routes": 1,
       "ensure_device_tables": 1
     },
     "mi_rank": "A"
@@ -8209,15 +8096,12 @@
       "EntityEventBus.emit_created": 1,
       "EntityEventBus.emit_created_sync": 1,
       "EntityEventBus.emit_deleted": 1,
-      "EntityEventBus.emit_deleted_sync": 1,
       "EntityEventBus.emit_file_uploaded": 1,
       "EntityEventBus.emit_sync": 4,
       "EntityEventBus.emit_updated": 1,
-      "EntityEventBus.emit_updated_sync": 1,
       "EntityEventBus.enable": 1,
       "EntityEventBus.is_enabled": 1,
       "EntityEventBus.remove_handler": 2,
-      "EntityEventBus.remove_sync_handler": 2,
       "EntityEventBus.set_websocket_manager": 1,
       "EntityEventType": 1,
       "LLMEventType": 1,
@@ -8356,17 +8240,6 @@
       "LocalStorageBackend.retrieve": 2,
       "LocalStorageBackend.store": 2,
       "LocalStorageBackend.stream": 4,
-      "S3StorageBackend": 3,
-      "S3StorageBackend.__init__": 3,
-      "S3StorageBackend._get_client_config": 4,
-      "S3StorageBackend.delete": 2,
-      "S3StorageBackend.get_presigned_url": 2,
-      "S3StorageBackend.get_url": 3,
-      "S3StorageBackend.name": 1,
-      "S3StorageBackend.read_range": 4,
-      "S3StorageBackend.retrieve": 2,
-      "S3StorageBackend.store": 3,
-      "S3StorageBackend.stream": 3,
       "StorageBackend": 2,
       "StorageBackend.delete": 1,
       "StorageBackend.get_url": 1,
@@ -8376,7 +8249,6 @@
       "StorageBackend.store": 1,
       "StorageBackend.stream": 1,
       "create_local_file_service": 1,
-      "create_s3_file_service": 1,
       "ensure_file_storage_tables": 1,
       "resolve_under_base": 3,
       "sanitize_storage_relpath": 13,
@@ -8400,38 +8272,7 @@
     "mi_rank": "A"
   },
   "dazzle/http/runtime/framework_schema_snapshot.py": {
-    "functions": {
-      "regenerate_and_print": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/http/runtime/fts_manager.py": {
-    "functions": {
-      "FTSConfig": 3,
-      "FTSConfig.__post_init__": 2,
-      "FTSManager": 3,
-      "FTSManager.__post_init__": 1,
-      "FTSManager.create_fts_table": 3,
-      "FTSManager.get_config": 1,
-      "FTSManager.is_enabled": 1,
-      "FTSManager.rebuild_index": 2,
-      "FTSManager.register_entity": 6,
-      "FTSManager.search": 2,
-      "FTSManager.search_with_snippets": 2,
-      "create_fts_manager": 4,
-      "init_fts_tables": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/http/runtime/fts_postgres.py": {
-    "functions": {
-      "PostgresFTSBackend": 4,
-      "PostgresFTSBackend._build_tsvector_expr": 2,
-      "PostgresFTSBackend.create_fts_index": 1,
-      "PostgresFTSBackend.rebuild_index": 2,
-      "PostgresFTSBackend.search": 8,
-      "PostgresFTSBackend.search_with_snippets": 5
-    },
+    "functions": {},
     "mi_rank": "A"
   },
   "dazzle/http/runtime/fts_routes.py": {
@@ -8483,8 +8324,7 @@
       "GraphMaterializer": 7,
       "GraphMaterializer.__init__": 2,
       "GraphMaterializer.build": 10,
-      "_safe_sql": 1,
-      "fetch_graph_records": 5
+      "_safe_sql": 1
     },
     "mi_rank": "A"
   },
@@ -8650,7 +8490,6 @@
       "IntegrationExecutor.apply_mapping": 2,
       "IntegrationExecutor.evaluate_expression": 6,
       "IntegrationExecutor.execute_action": 7,
-      "IntegrationExecutor.get_actions_for_surface": 1,
       "IntegrationExecutor.resolve_service": 3,
       "ServiceConfig": 1
     },
@@ -8718,11 +8557,9 @@
       "JWTService._validate_config": 9,
       "JWTService.create_access_token": 5,
       "JWTService.create_token_pair": 1,
-      "JWTService.decode_token_unverified": 5,
       "JWTService.verify_access_token": 9,
       "TokenPair": 1,
-      "TokenResponse": 1,
-      "create_jwt_service": 2
+      "TokenResponse": 1
     },
     "mi_rank": "A"
   },
@@ -8824,7 +8661,6 @@
   },
   "dazzle/http/runtime/locale_routes.py": {
     "functions": {
-      "_safe_redirect_target": 3,
       "create_locale_routes": 1
     },
     "mi_rank": "A"
@@ -9085,10 +8921,8 @@
       "PostgresBackend.connection": 7,
       "PostgresBackend.create_all_tables": 11,
       "PostgresBackend.create_table": 6,
-      "PostgresBackend.get_column_info": 2,
       "PostgresBackend.get_persistent_connection": 4,
       "PostgresBackend.get_table_columns": 2,
-      "PostgresBackend.get_table_indexes": 2,
       "PostgresBackend.open_pool": 3,
       "PostgresBackend.placeholder": 1,
       "PostgresBackend.table_exists": 1,
@@ -9224,9 +9058,7 @@
       "ProcessManager.get_schedule_spec": 3,
       "ProcessManager.get_task": 1,
       "ProcessManager.initialize": 9,
-      "ProcessManager.list_process_names": 2,
       "ProcessManager.list_runs": 1,
-      "ProcessManager.list_schedule_names": 2,
       "ProcessManager.list_tasks": 4,
       "ProcessManager.on_entity_created": 1,
       "ProcessManager.on_entity_deleted": 1,
@@ -9337,9 +9169,7 @@
       "RelationLoader._load_to_one": 24,
       "RelationLoader.apply_display_joins_to_rows": 7,
       "RelationLoader.build_display_join_plan": 10,
-      "RelationLoader.build_join_sql": 8,
       "RelationLoader.load_relations": 8,
-      "RelationLoader.parse_joined_row": 9,
       "RelationRegistry": 4,
       "RelationRegistry.from_entities": 10,
       "RelationRegistry.get_relation": 1,
@@ -9449,7 +9279,6 @@
       "Repository": 11,
       "Repository.__init__": 9,
       "Repository._convert_row_dict": 10,
-      "Repository._model_to_row": 2,
       "Repository._python_to_db": 1,
       "Repository._read_on_conn": 2,
       "Repository._record_query": 2,
@@ -9518,31 +9347,6 @@
     "functions": {
       "_attr_filter": 5,
       "clean_rich_text": 4
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/http/runtime/richtext_processor.py": {
-    "functions": {
-      "HTMLProcessor": 3,
-      "HTMLProcessor.__init__": 1,
-      "HTMLProcessor.clean": 2,
-      "HTMLProcessor.extract_text": 2,
-      "MarkdownProcessor": 3,
-      "MarkdownProcessor.__init__": 1,
-      "MarkdownProcessor._basic_sanitize": 1,
-      "MarkdownProcessor._sanitize_html": 3,
-      "MarkdownProcessor.extract_text": 1,
-      "MarkdownProcessor.is_available": 2,
-      "MarkdownProcessor.process_inline_images": 5,
-      "MarkdownProcessor.render_html": 4,
-      "MarkdownProcessor.truncate": 3,
-      "RichTextProcessingError": 1,
-      "RichTextService": 4,
-      "RichTextService.__init__": 1,
-      "RichTextService.extract_text": 3,
-      "RichTextService.preview": 4,
-      "RichTextService.process_content": 3,
-      "RichTextService.render_html": 3
     },
     "mi_rank": "A"
   },
@@ -9850,7 +9654,6 @@
       "CustomService.set_handler": 1,
       "ServiceContext": 4,
       "ServiceContext.__init__": 3,
-      "ServiceContext.has_permission": 2,
       "ServiceFactory": 4,
       "ServiceFactory.__init__": 3,
       "ServiceFactory.create_all_services": 4,
@@ -9871,12 +9674,9 @@
       "ServiceLoader._load_stub_file": 6,
       "ServiceLoader._to_result_type_name": 2,
       "ServiceLoader.get_service": 2,
-      "ServiceLoader.get_service_ids": 2,
       "ServiceLoader.has_service": 2,
       "ServiceLoader.invoke": 4,
       "ServiceLoader.load_services": 7,
-      "ServiceLoader.reload_service": 4,
-      "ServiceLoader.unload_all": 3,
       "_coerce_value": 5,
       "coerce_service_inputs": 6,
       "create_service_loader": 1
@@ -10430,11 +10230,9 @@
       "TokenStore.create_token": 1,
       "TokenStore.ensure_initialized": 3,
       "TokenStore.get_user_tokens": 3,
-      "TokenStore.revoke_device_tokens": 1,
       "TokenStore.revoke_token": 1,
       "TokenStore.revoke_user_tokens": 3,
       "TokenStore.rotate_token": 3,
-      "TokenStore.use_token": 1,
       "TokenStore.validate_token": 6,
       "ensure_refresh_token_tables": 1
     },
@@ -12214,8 +12012,7 @@
       "_workspace_entries": 10,
       "build_command_index": 1,
       "filter_command_index": 6,
-      "nav_model_entries": 6,
-      "spec_display_persona_ids": 3
+      "nav_model_entries": 6
     },
     "mi_rank": "A"
   },
@@ -12393,9 +12190,7 @@
       "_hash_file": 1,
       "build_asset_manifest": 6,
       "fingerprint_static_url": 4,
-      "fingerprint_urls": 2,
       "should_fingerprint": 3,
-      "static_url_filter": 3,
       "strip_fingerprint": 2
     },
     "mi_rank": "A"
@@ -12446,7 +12241,6 @@
       "DazzleDevServer.__init__": 1,
       "DazzleDevServer.start": 2,
       "DazzleDevServer.stop": 2,
-      "DazzleDevServer.update_spec": 1,
       "run_dev_server": 1,
       "run_dev_server_from_dict": 1,
       "run_dev_server_from_json": 1
@@ -12531,7 +12325,6 @@
       "HotReloadManager._on_source_change": 6,
       "HotReloadManager._reload_python_modules": 5,
       "HotReloadManager._start_source_watcher": 9,
-      "HotReloadManager.get_specs": 1,
       "HotReloadManager.register_sse_client": 1,
       "HotReloadManager.set_specs": 1,
       "HotReloadManager.start": 5,
@@ -12584,11 +12377,7 @@
   },
   "dazzle/page/runtime/site_renderer.py": {
     "functions": {
-      "get_shared_head_html": 3,
-      "get_site_js": 1,
-      "get_task_header_script_tag": 1,
-      "render_task_context_script": 2,
-      "render_task_surface_page": 1
+      "get_site_js": 1
     },
     "mi_rank": "A"
   },
@@ -12596,20 +12385,6 @@
     "functions": {
       "_render_surface_body_preview": 2,
       "generate_preview_files": 26
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/page/runtime/task_context.py": {
-    "functions": {
-      "TaskContext": 5,
-      "TaskContext.is_escalated": 1,
-      "TaskContext.is_overdue": 2,
-      "TaskContext.time_remaining": 9,
-      "TaskContext.to_dict": 5,
-      "TaskContext.to_json": 1,
-      "TaskContext.urgency": 5,
-      "TaskOutcome": 1,
-      "create_task_context_from_task": 2
     },
     "mi_rank": "A"
   },
@@ -12626,7 +12401,6 @@
       "ThemeVariantMiddleware": 4,
       "ThemeVariantMiddleware.dispatch": 3,
       "get_sidebar_state": 1,
-      "get_theme_variant": 1,
       "install_theme_middleware": 1
     },
     "mi_rank": "A"
@@ -12796,7 +12570,6 @@
       "_resolve_templates_dir": 2,
       "discover_themes": 4,
       "get_theme": 1,
-      "list_theme_names": 1,
       "resolve_inheritance_chain": 9,
       "resolve_site_config": 7
     },
@@ -13310,13 +13083,11 @@
       "WorkSurface": 1,
       "_append_finding": 5,
       "_entity_name": 6,
-      "_first_display_token": 6,
       "_region_display": 3,
       "_row_to_surface": 6,
       "_scan_list_surfaces": 8,
       "_scan_workspace_regions": 10,
       "_str_tuple": 3,
-      "_surface_display": 3,
       "_surface_mode": 2,
       "load_ontology": 3,
       "normalize_display": 3,
@@ -15756,7 +15527,6 @@
       "SessionManager.list_sessions": 4,
       "SessionManager.load_manifest": 3,
       "SessionManager.load_session": 3,
-      "SessionManager.refresh_sessions": 1,
       "SessionManager.validate_session": 5,
       "SessionManifest": 4,
       "SessionManifest.is_stale": 4,
@@ -15817,16 +15587,11 @@
       "_find_designs_file": 3,
       "_get_max_td_number": 3,
       "add_test_designs": 8,
-      "delete_test_design": 4,
       "get_dsl_tests_dir": 1,
       "get_next_test_design_id": 3,
       "get_runtime_tests_dir": 1,
-      "get_test_designs_by_entity": 3,
-      "get_test_designs_by_persona": 3,
-      "get_test_designs_by_status": 4,
       "load_test_designs": 3,
-      "save_test_designs": 2,
-      "update_test_design_status": 6
+      "save_test_designs": 2
     },
     "mi_rank": "A"
   },
@@ -15878,8 +15643,6 @@
   "dazzle/testing/testspec_generator.py": {
     "functions": {
       "_generate_field_value": 1,
-      "_get_create_surface_name": 4,
-      "_get_edit_surface_name": 4,
       "_get_expected_computed_value": 6,
       "_get_form_fields": 6,
       "_get_list_surface_name": 4,
@@ -16021,7 +15784,6 @@
       "_classify_opacity_visibility": 6,
       "_has_attr_containing": 4,
       "_has_card_chrome": 2,
-      "_has_tag_with_attr": 4,
       "_href_targets_entity_op": 5,
       "_region_tokens": 4,
       "_regions_from_layout_html": 6,
@@ -16492,8 +16254,7 @@
   "dazzle/testing/viewport_suggestions.py": {
     "functions": {
       "ViewportSuggestion": 1,
-      "suggest_fix": 7,
-      "suggest_fixes_for_report": 4
+      "suggest_fix": 7
     },
     "mi_rank": "A"
   },
@@ -16599,7 +16360,6 @@
       "PackDryRunResult.ok": 4,
       "_pack_key": 2,
       "_run_pack_walk": 12,
-      "claims_check_result_as_gaps": 2,
       "claims_residuals": 3,
       "guides_for_pack": 3,
       "pack_dry_run": 11,

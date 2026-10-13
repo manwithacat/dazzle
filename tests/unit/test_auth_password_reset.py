@@ -146,24 +146,6 @@ class TestAuthMiddlewareExclusions:
 class TestCustomCssOverride:
     """Tests for project-level custom CSS override (#187)."""
 
-    def test_get_shared_head_html_includes_custom_css_when_enabled(self) -> None:
-        """custom_css=True adds a link to /static/css/custom.css."""
-        from dazzle.page.runtime.site_renderer import get_shared_head_html
-
-        html = get_shared_head_html("Test Page", custom_css=True)
-        assert "/static/css/custom.css" in html
-        # Must appear after dazzle.css
-        dazzle_pos = html.index("/styles/dazzle.css")
-        custom_pos = html.index("/static/css/custom.css")
-        assert custom_pos > dazzle_pos
-
-    def test_get_shared_head_html_no_custom_css_by_default(self) -> None:
-        """custom_css defaults to False — no custom.css link."""
-        from dazzle.page.runtime.site_renderer import get_shared_head_html
-
-        html = get_shared_head_html("Test Page")
-        assert "/static/css/custom.css" not in html
-
     # test_render_site_page_passes_custom_css retired in Phase 4
     # chrome-flag flip (v0.67.43). Used to render site/page.html
     # directly — that template is gone. The custom.css override now
