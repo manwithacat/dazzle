@@ -35,22 +35,6 @@
     ]
   },
   {
-    "signature": "exact:466fdb01a82e8fa7915927818519daac",
-    "count": 2,
-    "names": [
-      "dazzle/cli/auth.py::_generate_temp_password",
-      "dazzle/mcp/server/handlers/user_management.py::_generate_temp_password"
-    ]
-  },
-  {
-    "signature": "da19e2332a35f4408d54b55ce21ad3d5",
-    "count": 2,
-    "names": [
-      "dazzle/cli/auth.py::_user_to_dict",
-      "dazzle/mcp/server/handlers/user_management.py::_user_to_dict"
-    ]
-  },
-  {
     "signature": "exact:943b526cb590ff48fbf3c77135106b8d",
     "count": 2,
     "names": [
@@ -1219,12 +1203,9 @@
   },
   {
     "signature": "exact:0553c3cc228ec0bdb1ef763bc05f9c00",
-    "count": 5,
+    "count": 2,
     "names": [
       "dazzle/mcp/server/handlers_consolidated.py::handle_agent",
-      "dazzle/mcp/server/handlers_consolidated.py::handle_perf",
-      "dazzle/mcp/server/handlers_consolidated.py::handle_presentation",
-      "dazzle/mcp/server/handlers_consolidated.py::handle_representation",
       "dazzle/mcp/server/handlers_consolidated.py::handle_spec_analyze"
     ]
   },

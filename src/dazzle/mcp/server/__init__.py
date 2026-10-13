@@ -251,12 +251,6 @@ async def list_resources_handler() -> list[Resource]:
             "Step-by-step guides for common tasks (getting_started, add_entity, add_workspace, etc.)",
             "application/json",
         ),
-        _resource(
-            "dazzle://user/profile",
-            "User Profile",
-            "Adaptive user profile with scored dimensions (technical depth, domain clarity, UX focus) and LLM guidance for adjusting communication register",
-            "application/json",
-        ),
     ]
 
     project_path = get_active_project_path()
@@ -347,12 +341,6 @@ async def read_resource(uri: str) -> str:
         result = {name: get_workflow_guide(name) for name in workflows}
         return json.dumps(result, indent=2)
 
-    if uri == "dazzle://user/profile":
-        from dazzle.mcp.user_profile import load_profile, profile_to_context
-
-        profile = load_profile()
-        return json.dumps(profile_to_context(profile), indent=2)
-
     if uri.startswith("dazzle://project/"):
         project_path = get_active_project_path()
         if not project_path:
@@ -394,7 +382,6 @@ def _mime_for_uri(uri: str) -> str:
         or uri.endswith("/patterns")
         or uri.endswith("/workflows")
         or uri.endswith("/catalog")
-        or uri.endswith("/profile")
     ):
         return "application/json"
     if "glossary" in uri or "reference" in uri or "context" in uri or uri.endswith(".md"):

@@ -1,14 +1,12 @@
 """
-API packs tool handlers.
+API pack implementations behind the ``dazzle api-pack`` CLI.
 
-Handles API pack listing, searching, details, and DSL generation.
+DSL generation, env-var templates, infrastructure summaries and pack
+scaffolding. (The MCP ``api_pack`` tool was removed in flense ship I.)
 """
 
-import json
 from pathlib import Path
 from typing import Any
-
-from .common import error_response, extract_progress, wrap_handler_errors
 
 # ---------------------------------------------------------------------------
 # Impl functions (no MCP types, explicit params, return plain dicts)
@@ -161,133 +159,6 @@ def api_pack_scaffold_impl(
     }
 
 
-@wrap_handler_errors
-def list_api_packs_handler(args: dict[str, Any]) -> str:
-    """List all available API packs."""
-    progress = extract_progress(args)
-    from dazzle.api_kb import list_packs
-
-    progress.log_sync("Listing API packs...")
-    packs = list_packs()
-
-    return json.dumps(
-        {
-            "count": len(packs),
-            "packs": [
-                {
-                    "name": p.name,
-                    "provider": p.provider,
-                    "category": p.category,
-                    "description": p.description,
-                    "version": p.version,
-                }
-                for p in packs
-            ],
-        },
-        indent=2,
-    )
-
-
-@wrap_handler_errors
-def search_api_packs_handler(args: dict[str, Any]) -> str:
-    """Search for API packs by category, provider, or query."""
-    progress = extract_progress(args)
-    from dazzle.api_kb import search_packs
-
-    progress.log_sync("Searching API packs...")
-    category = args.get("category")
-    provider = args.get("provider")
-    query = args.get("query")
-
-    packs = search_packs(category=category, provider=provider, query=query)
-
-    return json.dumps(
-        {
-            "query": {
-                "category": category,
-                "provider": provider,
-                "text": query,
-            },
-            "count": len(packs),
-            "packs": [
-                {
-                    "name": p.name,
-                    "provider": p.provider,
-                    "category": p.category,
-                    "description": p.description,
-                    "version": p.version,
-                }
-                for p in packs
-            ],
-        },
-        indent=2,
-    )
-
-
-@wrap_handler_errors
-def get_api_pack_handler(args: dict[str, Any]) -> str:
-    """Get full details of an API pack."""
-    progress = extract_progress(args)
-    from dazzle.api_kb import load_pack
-
-    pack_name = args.get("pack_name")
-    if pack_name:
-        progress.log_sync(f"Loading API pack '{pack_name}'...")
-    if not pack_name:
-        return error_response("pack_name parameter required")
-
-    pack = load_pack(pack_name)
-    if pack is None:
-        return error_response(f"Pack '{pack_name}' not found")
-
-    return json.dumps(
-        {
-            "name": pack.name,
-            "provider": pack.provider,
-            "category": pack.category,
-            "version": pack.version,
-            "description": pack.description,
-            "base_url": pack.base_url,
-            "docs_url": pack.docs_url,
-            "auth": {
-                "type": pack.auth.auth_type if pack.auth else None,
-                "env_var": pack.auth.env_var if pack.auth else None,
-                "token_url": pack.auth.token_url if pack.auth else None,
-                "scopes": pack.auth.scopes if pack.auth else None,
-            },
-            "env_vars": [
-                {
-                    "name": e.name,
-                    "required": e.required,
-                    "description": e.description,
-                    "example": e.example,
-                }
-                for e in pack.env_vars
-            ],
-            "operations": [
-                {
-                    "name": o.name,
-                    "method": o.method,
-                    "path": o.path,
-                    "description": o.description,
-                }
-                for o in pack.operations
-            ],
-            "foreign_models": [
-                {
-                    "name": m.name,
-                    "description": m.description,
-                    "key": m.key_field,
-                    "fields": m.fields,
-                }
-                for m in pack.foreign_models
-            ],
-            "infrastructure": _serialize_infrastructure(pack.infrastructure),
-        },
-        indent=2,
-    )
-
-
 def _serialize_infrastructure(infra: Any) -> dict[str, Any] | None:
     """Serialize InfrastructureSpec to JSON-compatible dict."""
     if infra is None:
@@ -302,54 +173,3 @@ def _serialize_infrastructure(infra: Any) -> dict[str, Any] | None:
             "docs": infra.sandbox.docs,
         }
     return result
-
-
-@wrap_handler_errors
-def generate_service_dsl_handler(args: dict[str, Any]) -> str:
-    """Generate DSL service and foreign_model blocks from an API pack."""
-    progress = extract_progress(args)
-    progress.log_sync("Generating DSL from API pack...")
-    pack_name = args.get("pack_name")
-    if not pack_name:
-        return error_response("pack_name parameter required")
-    result = api_pack_generate_dsl_impl(pack_name=pack_name)
-    if "error" in result:
-        return error_response(result["error"])
-    return json.dumps(result, indent=2)
-
-
-@wrap_handler_errors
-def infrastructure_handler(project_path: Path | None, args: dict[str, Any]) -> str:
-    """Discover infrastructure requirements for services declared in DSL."""
-    progress = extract_progress(args)
-    progress.log_sync("Discovering infrastructure requirements...")
-    if project_path is None:
-        return error_response("No active project")
-    result = api_pack_infrastructure_impl(Path(project_path))
-    return json.dumps(result, indent=2)
-
-
-@wrap_handler_errors
-def scaffold_pack_handler(project_path: Path | None, args: dict[str, Any]) -> str:
-    """Scaffold a new API pack TOML from OpenAPI spec or blank template."""
-    progress = extract_progress(args)
-    progress.log_sync("Scaffolding API pack...")
-    result = api_pack_scaffold_impl(
-        openapi_spec=args.get("openapi_spec"),
-        openapi_url=args.get("openapi_url"),
-        provider=args.get("provider", "MyVendor"),
-        category=args.get("category", "api"),
-        pack_name=args.get("pack_name", ""),
-    )
-    if "error" in result:
-        return json.dumps(result)
-    return json.dumps(result, indent=2)
-
-
-@wrap_handler_errors
-def get_env_vars_for_packs_handler(args: dict[str, Any]) -> str:
-    """Get .env.example content for specified packs or all packs."""
-    progress = extract_progress(args)
-    progress.log_sync("Generating env vars...")
-    result = api_pack_env_vars_impl(pack_names=args.get("pack_names"))
-    return json.dumps(result, indent=2)

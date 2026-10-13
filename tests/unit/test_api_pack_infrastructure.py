@@ -47,27 +47,3 @@ class TestPacksWithoutInfrastructure:
         pack = load_pack("companies_house_lookup")
         assert pack is not None
         assert pack.infrastructure is None
-
-
-class TestMcpGetIncludesInfrastructure:
-    """Tests that the MCP get handler includes infrastructure data."""
-
-    def test_get_handler_returns_infrastructure(self) -> None:
-        import json
-
-        from dazzle.mcp.server.handlers.api_packs import get_api_pack_handler
-
-        result = json.loads(get_api_pack_handler({"pack_name": "stripe_payments"}))
-        assert "infrastructure" in result
-        infra = result["infrastructure"]
-        assert infra is not None
-        assert infra["hosting"] == "cloud_only"
-
-    def test_get_handler_infrastructure_null_when_absent(self) -> None:
-        import json
-
-        from dazzle.mcp.server.handlers.api_packs import get_api_pack_handler
-
-        result = json.loads(get_api_pack_handler({"pack_name": "companies_house_lookup"}))
-        assert "infrastructure" in result
-        assert result["infrastructure"] is None

@@ -33,7 +33,6 @@
   "src/dazzle/mcp/resources.py::create_static_resources": "doc-generation-residue",
   "src/dazzle/mcp/server/handlers/discovery/_helpers.py::_build_mission_summary": "agent-and-loop-legacy",
   "src/dazzle/mcp/server/handlers/serializers.py::success_response": "semantics-and-kb-residue",
-  "src/dazzle/mcp/server/handlers/user_management.py::_session_to_dict": "semantics-and-kb-residue",
   "src/dazzle/mcp/server/state.py::get_appspec_data": "semantics-and-kb-residue",
   "src/dazzle/page/command_index.py::spec_display_persona_ids": "qa-and-testing-helpers",
   "src/dazzle/page/runtime/asset_fingerprint.py::fingerprint_urls": "superseded-runtime-path",

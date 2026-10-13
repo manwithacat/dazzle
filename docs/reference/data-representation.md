@@ -26,7 +26,6 @@ dazzle representation patterns
 dazzle representation decide --text "company or sole trader client overview"
 dazzle representation classify -p .
 dazzle prove representation -p .
-# MCP: representation(operation=patterns|decide|classify|prove)
 ```
 
 - **decide** — ladder → `pattern_id` + DSL sketch + reject list

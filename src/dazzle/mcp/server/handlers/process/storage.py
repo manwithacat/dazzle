@@ -1,46 +1,19 @@
 """
-Process storage handlers — save processes and manage process runs.
+Process storage — save composed processes.
 """
 
 from __future__ import annotations
 
-import json
-from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir.process import ProcessSpec
-from dazzle.core.process.adapter import ProcessStatus
 from dazzle.core.process_persistence import add_processes
 
-from ..common import (
-    error_response,
-    extract_progress,
-    wrap_async_handler_errors,
-    wrap_handler_errors,
-)
 from . import _helpers
 
 if TYPE_CHECKING:
     from dazzle.core.ir.stories import StorySpec
-
-
-# =============================================================================
-# Data Classes
-# =============================================================================
-
-
-@dataclass
-class ProcessRunSummary:
-    """Summary of a process run."""
-
-    run_id: str
-    process_name: str
-    status: str
-    current_step: str | None
-    started_at: str
-    duration_seconds: float | None
-    error: str | None
 
 
 # =============================================================================
@@ -112,140 +85,3 @@ def process_save_impl(
         result["warnings"] = warnings
 
     return result
-
-
-@wrap_handler_errors
-def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Save composed processes to .dazzle/processes/processes.json.
-
-    Accepts a list of process definitions and persists them. Validates
-    that referenced story IDs exist and entity references are valid.
-
-    Args (via args dict):
-        processes: List of process dicts (ProcessSpec-compatible)
-        overwrite: If True, replace processes with matching names (default: False)
-    """
-    progress = extract_progress(args)
-    raw_processes = args.get("processes")
-    if not raw_processes or not isinstance(raw_processes, list):
-        return error_response("processes list is required")
-
-    progress.log_sync("Validating processes...")
-    progress.log_sync("Validating story and entity references...")
-    result = process_save_impl(
-        project_root,
-        raw_processes=raw_processes,
-        overwrite=args.get("overwrite", False),
-    )
-    if "error" in result and "details" not in result:
-        return error_response(result["error"])
-    progress.log_sync(f"Saving {result.get('saved', 0)} processes...")
-    return json.dumps(result, indent=2)
-
-
-# =============================================================================
-# Process Runs Handlers
-# =============================================================================
-
-
-async def _list_runs_async(project_root: Path, args: dict[str, Any]) -> str:
-    """Async implementation for listing process runs."""
-    progress = extract_progress(args)
-    progress.log_sync("Loading process runs...")
-    adapter = _helpers.get_process_adapter(project_root)
-    await adapter.initialize()
-
-    process_name = args.get("process_name")
-    status_filter = args.get("status")
-    limit = args.get("limit", 50)
-
-    status = ProcessStatus(status_filter) if status_filter else None
-
-    runs = await adapter.list_runs(
-        process_name=process_name,
-        status=status,
-        limit=limit,
-    )
-
-    summaries: list[ProcessRunSummary] = []
-    for run in runs:
-        duration = None
-        if run.completed_at:
-            duration = (run.completed_at - run.started_at).total_seconds()
-
-        summaries.append(
-            ProcessRunSummary(
-                run_id=run.run_id,
-                process_name=run.process_name,
-                status=run.status.value,
-                current_step=run.current_step,
-                started_at=run.started_at.isoformat(),
-                duration_seconds=duration,
-                error=run.error,
-            )
-        )
-
-    return json.dumps(
-        {
-            "count": len(summaries),
-            "runs": [asdict(s) for s in summaries],
-        },
-        indent=2,
-    )
-
-
-@wrap_async_handler_errors
-async def list_process_runs_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """List process runs with optional filters."""
-    return await _list_runs_async(project_root, args)
-
-
-async def _get_run_async(project_root: Path, args: dict[str, Any]) -> str:
-    """Async implementation for getting a process run."""
-    progress = extract_progress(args)
-    progress.log_sync("Fetching process run details...")
-    adapter = _helpers.get_process_adapter(project_root)
-    await adapter.initialize()
-
-    run_id = args.get("run_id")
-    if not run_id:
-        return error_response("run_id is required")
-
-    run = await adapter.get_run(run_id)
-    if not run:
-        return error_response(f"Run '{run_id}' not found")
-
-    duration = None
-    if run.completed_at:
-        duration = (run.completed_at - run.started_at).total_seconds()
-
-    return json.dumps(
-        {
-            "run_id": run.run_id,
-            "process_name": run.process_name,
-            "process_version": run.process_version,
-            "dsl_version": run.dsl_version,
-            "status": run.status.value,
-            "current_step": run.current_step,
-            "inputs": run.inputs,
-            "context": run.context,
-            "outputs": run.outputs,
-            "error": run.error,
-            "idempotency_key": run.idempotency_key,
-            "started_at": run.started_at.isoformat(),
-            "updated_at": run.updated_at.isoformat(),
-            "completed_at": run.completed_at.isoformat() if run.completed_at else None,
-            "duration_seconds": duration,
-        },
-        indent=2,
-    )
-
-
-@wrap_async_handler_errors
-async def get_process_run_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Get detailed information about a specific process run."""
-    run_id = args.get("run_id") if args else None
-    if not run_id:
-        return error_response("run_id is required")
-
-    return await _get_run_async(project_root, args)

@@ -1032,7 +1032,7 @@ partnership), use N optional `ref` fields + an at-least-one-anchor
 invariant + list `open: first_non_null(...)`.
 
 This is **not** Rails polymorphic association and **not** `poly_ref`.
-Call `representation(operation=decide)` / `dazzle representation decide`.
+Run `dazzle representation decide --text '…'`.
 """
 when_to_use = [
     "2–4 alternative parent types on one row",

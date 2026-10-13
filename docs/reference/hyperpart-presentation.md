@@ -111,7 +111,6 @@ Suggested residual ids: `person_as_text`, `ref_as_repr`, `host_emit_skew`, `hype
 | `user_chip` + `present()` | Product **emit** |
 | `qa hyperpart-opportunities` | Observe host coverage |
 | `demo_fleet` | Floors (seed / still bytes) |
-| MCP `presentation` | cognition / opportunities / shapes for agents |
 | counter-prior `ref_as_repr` | KG inoculation vs dict/UUID chrome |
 | Mid-dot R1 separators | Between segments; not a substitute for Avatar |
 
@@ -125,8 +124,7 @@ presentation process. Use the published surfaces:
 | Surface | How to find / invoke | What it answers |
 |---------|----------------------|-----------------|
 | Doctrine | `docs/reference/hyperpart-presentation.md` · KG doc page `hyperpart-presentation` | Rules + matrix |
-| Presentation tool | MCP `presentation(operation=cognition\|opportunities\|shapes)` | Matrix honesty + rational DSL shapes |
-| Opportunity scan | CLI `dazzle qa hyperpart-opportunities` · MCP `presentation(opportunities)` | Host emit coverage |
+| Opportunity scan | CLI `dazzle qa hyperpart-opportunities` | Host emit coverage |
 | Counter-prior | MCP `knowledge(operation=counter_prior, id=ref_as_repr)` | Wrong vs right shape |
 | Recapture | `scripts/recapture_demo_fleet_1626.py --apps <app>` | Still proof after emit |
 
@@ -134,10 +132,10 @@ presentation process. Use the published surfaces:
 `framework-ux hyperpart_presentation` (framework emit fix). Use `example-apps
 hyperpart_presentation` only for recapture/prove after emit is fixed.
 
-**MCP + knowledge graph:** both support this goal. MCP exposes machine-checkable
-ops for OBSERVE; the KG seeds the counter-prior + doc page so `knowledge` /
-`graph` queries surface the doctrine without grepping the monorepo. Agents that
-only have MCP (downstream apps) get the same ops as the monorepo improve loop.
+**Knowledge graph:** the KG seeds the counter-prior + doc page so `knowledge`
+queries surface the doctrine without grepping the monorepo; the opportunity scan
+is the CLI above. (The MCP `presentation` tool was removed in flense ship I — no
+consumer called it.)
 
 ---
 

@@ -1,11 +1,11 @@
 """
-Process and coverage tool handlers for MCP server.
+Process and coverage handlers.
 
-Handles process inspection, story coverage analysis, process proposal generation,
-and process run monitoring.
+Story coverage and scope fidelity back the MCP ``story`` tool; process
+proposal, save and diagram implementations back the ``dazzle process`` CLI.
 """
 
-from ._helpers import get_process_adapter, load_app_spec
+from ._helpers import load_app_spec
 from .coverage import (
     CRUD_OUTCOME_PATTERNS,
     UI_FEEDBACK_PATTERNS,
@@ -20,18 +20,12 @@ from .coverage import (
 from .diagrams import (
     FLOW_COMPLETE_KEYWORDS,
     FLOW_FAILURE_KEYWORDS,
-    get_process_diagram_handler,
-)
-from .inspection import (
-    inspect_process_handler,
-    list_processes_handler,
 )
 from .proposals import (
     WorkflowProposal,
     _build_review_checklist,
     _cluster_stories_into_workflows,
     _is_crud_story,
-    propose_processes_handler,
 )
 from .scope_fidelity import (
     ScopeGap,
@@ -39,16 +33,9 @@ from .scope_fidelity import (
     scope_fidelity_handler,
     scope_fidelity_impl,
 )
-from .storage import (
-    ProcessRunSummary,
-    _get_run_async,
-    _list_runs_async,
-    get_process_run_handler,
-    list_process_runs_handler,
-    save_processes_handler,
-)
 
 __all__ = [
+    "load_app_spec",
     # Coverage
     "StoryCoverage",
     "CoverageReport",
@@ -62,24 +49,11 @@ __all__ = [
     # Diagrams
     "FLOW_COMPLETE_KEYWORDS",
     "FLOW_FAILURE_KEYWORDS",
-    "get_process_diagram_handler",
-    # Inspection
-    "inspect_process_handler",
-    "list_processes_handler",
     # Proposals
     "WorkflowProposal",
-    "propose_processes_handler",
     "_is_crud_story",
-    "_slugify",
     "_cluster_stories_into_workflows",
     "_build_review_checklist",
-    # Storage / Runs
-    "ProcessRunSummary",
-    "save_processes_handler",
-    "list_process_runs_handler",
-    "get_process_run_handler",
-    "_list_runs_async",
-    "_get_run_async",
     # Scope Fidelity
     "ScopeGap",
     "StoryScopeFidelity",

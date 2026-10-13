@@ -87,8 +87,6 @@ MCP_TOOL_MAP: dict[str, str] = {
     "test dsl-coverage": "dsl_test(operation='coverage')",
     "test run-all": "dsl_test(operation='run_all')",
     "test diff-personas": "dsl_test(operation='diff_personas')",
-    "kg export": "graph(operation='export')",
-    "kg import": "graph(operation='import')",
 }
 
 ENRICHMENTS: dict[str, dict[str, Any]] = {
@@ -1266,13 +1264,14 @@ entity Task "Task":
                 {
                     "step": 1,
                     "action": "Read cognition",
-                    "mcp_tool": "presentation(operation='cognition')",
-                    "notes": "hosts audited vs wired; how_to_extend",
+                    "notes": (
+                        "docs/reference/hyperpart-presentation.md — hosts audited vs "
+                        "wired; how_to_extend"
+                    ),
                 },
                 {
                     "step": 2,
                     "action": "Scan opportunities",
-                    "mcp_tool": "presentation(operation='opportunities', app='…')",
                     "command": "dazzle qa hyperpart-opportunities --table",
                 },
                 {

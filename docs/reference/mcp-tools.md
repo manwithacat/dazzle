@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 33 tools, 158 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 18 tools, 91 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -14,28 +14,16 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | Tool | Operations | Summary |
 |------|------------|---------|
 | [`agent`](#agent) | 3 | Agent closed-loop control plane (#1605): context (brownfield map + runtime |
-| [`agent_commands`](#agent_commands) | 3 | Agent development commands: list (available commands with maturity status), get (rendered skill content for a command), check_updates (version comparison for sync) |
-| [`api_pack`](#api_pack) | 3 | API pack operations: list, search, get |
 | [`bootstrap`](#bootstrap) | — | Entry point for 'build me an app' requests |
 | [`compliance`](#compliance) | 5 | Compliance documentation operations |
 | [`conformance`](#conformance) | 4 | DSL conformance testing operations |
 | [`db`](#db) | 2 | Database operations: status (row counts per entity, database size), verify (FK integrity check, orphan detection) |
-| [`demo_data`](#demo_data) | 1 | Demo data operations: get |
 | [`discovery`](#discovery) | 1 | Capability discovery operations: coherence (persona-by-persona authenticated UX coherence score) |
 | [`dsl`](#dsl) | 10 | DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec |
-| [`e2e`](#e2e) | 4 | E2E environment operations (read-only) |
 | [`feedback`](#feedback) | 4 | Feedback operations: list, get, triage, resolve |
-| [`graph`](#graph) | 14 | Knowledge graph operations for codebase understanding |
 | [`guide`](#guide) | 4 | Inspect declared onboarding guides |
 | [`knowledge`](#knowledge) | 9 | Knowledge lookup: concept, examples, cli_help, workflow, inference, changelog, counter_prior, get_spec, search_commands |
-| [`llm`](#llm) | 4 | LLM operations: list_intents (declared intents), list_models (declared models), inspect_intent (detailed intent view with resolved model), get_config (module-level LLM configuration) |
-| [`mock`](#mock) | 2 | Vendor mock server management: status, request_log |
-| [`param`](#param) | 2 | Query runtime parameter declarations |
-| [`perf`](#perf) | 3 | Local OpenTelemetry trace findings for the current project (read-only) |
 | [`policy`](#policy) | 6 | Policy analysis operations for RBAC access control |
-| [`presentation`](#presentation) | 3 | Hyperpart presentation process (#1626): closed role×host → density matrix + present() seam |
-| [`process`](#process) | 5 | Process operations: list, inspect, list_runs, get_run, coverage |
-| [`representation`](#representation) | 4 | Data-representation organisational judgement (#1617): named hatch patterns (rel |
 | [`rhythm`](#rhythm) | 3 | Rhythm operations: get, list, coverage |
 | [`semantics`](#semantics) | 5 | Semantic analysis: extract, tenancy, compliance, analytics, extract_guards |
 | [`sentinel`](#sentinel) | 4 | Sentinel operations: findings (get findings from latest/specific scan), status (available agents and last scan), history (list recent scans), fuzz_summary (run a small mutation fuzz campaign and return the markdown report) |
@@ -43,15 +31,12 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`spec_analyze`](#spec_analyze) | 6 | Low-level narrative analysis (untrusted draft) |
 | [`status`](#status) | 7 | Status operations: mcp, logs, active_project, telemetry, activity, demo_world (alias: runtime) |
 | [`story`](#story) | 4 | Story operations: get, composition, coverage, scope_fidelity |
-| [`test_intelligence`](#test_intelligence) | 6 | Query persisted test result history |
-| [`user_management`](#user_management) | 9 | User management operations: list, create, get, update, reset_password, deactivate, list_sessions, revoke_session, config |
-| [`user_profile`](#user_profile) | 4 | User profile for adaptive persona inference |
 
 ## Per-tool detail
 
 ### `agent`
 
-Agent closed-loop control plane (#1605): context (brownfield map + runtime.truth + next_steps), prove (static binding evidence), playbook (domain_logic map→bind→scaffold→prove). Does NOT write files — use CLI `dazzle scaffold` / `dazzle prove`. For data-shape judgement (exclusive FKs / poly_ref / JSONB) use the `representation` tool (#1617).
+Agent closed-loop control plane (#1605): context (brownfield map + runtime.truth + next_steps), prove (static binding evidence), playbook (domain_logic map→bind→scaffold→prove). Does NOT write files — use CLI `dazzle scaffold` / `dazzle prove`. For data-shape judgement (exclusive FKs / poly_ref / JSONB) use CLI `dazzle representation decide` (#1617).
 
 **Operations (3):** `context`, `prove`, `playbook`
 
@@ -60,36 +45,6 @@ Agent closed-loop control plane (#1605): context (brownfield map + runtime.truth
 - `story_id` *(string)* — Story id for prove (optional; default all accepted)
 - `name` *(string)* — Playbook name (default: domain_logic)
 - `mode` *(string)* — Proof kind (for prove). static: target exists in DSL/host map. runtime: host-module readiness. journey: surface hub / open-via hop coherence. Default: static.
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `agent_commands`
-
-Agent development commands: list (available commands with maturity status), get (rendered skill content for a command), check_updates (version comparison for sync).
-
-**Operations (3):** `list`, `get`, `check_updates`
-
-**Parameters:**
-
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-- `command` *(string)* — Command name (for 'get' operation)
-- `commands_version` *(string)* — Local commands_version from .manifest.json (for 'check_updates')
-
----
-
-### `api_pack`
-
-API pack operations: list, search, get. Project-local packs in .dazzle/api_packs/ override built-in packs.
-
-**Operations (3):** `list`, `search`, `get`
-
-**Parameters:**
-
-- `pack_name` *(string)* — Pack name (for get)
-- `query` *(string)* — Search query (for search)
-- `category` *(string)* — Filter by category (for search)
-- `provider` *(string)* — Filter by provider (for search)
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---
@@ -147,18 +102,6 @@ Database operations: status (row counts per entity, database size), verify (FK i
 
 ---
 
-### `demo_data`
-
-Demo data operations: get. Retrieve the current demo data blueprint.
-
-**Operations (1):** `get`
-
-**Parameters:**
-
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
 ### `discovery`
 
 Capability discovery operations: coherence (persona-by-persona authenticated UX coherence score).
@@ -194,20 +137,6 @@ DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze
 
 ---
 
-### `e2e`
-
-E2E environment operations (read-only). Operations: list_modes (available runner modes), describe_mode (single mode details), status (lock + runtime + log-tail for an example app), list_baselines (hash-tagged db snapshot files for an example). Process operations (start/stop) live in the CLI only.
-
-**Operations (4):** `list_modes`, `describe_mode`, `status`, `list_baselines`
-
-**Parameters:**
-
-- `name` *(string)* — Mode name (for describe_mode)
-- `project_root` *(string)* — Path to an example app (for status/list_baselines)
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
 ### `feedback`
 
 Feedback operations: list, get, triage, resolve. Query and manage user-submitted feedback reports. Use 'list' to see open feedback, 'get' for detail, 'triage' to mark as triaged, 'resolve' to close.
@@ -225,35 +154,6 @@ Feedback operations: list, get, triage, resolve. Query and manage user-submitted
 - `agent_classification` *(string)* — Classification (triage only)
 - `assigned_to` *(string)* — Assign to (triage only)
 - `resolved_by` *(string)* — Who resolved (resolve only)
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `graph`
-
-Knowledge graph operations for codebase understanding. Operations: query (search entities by text), dependencies (what does X depend on?), dependents (what depends on X?), neighbourhood (entities within N hops), paths (find paths between entities), stats (graph statistics), populate (refresh graph from source), concept (look up a framework concept by name), inference (find inference patterns matching a query), related (get related concepts for an entity), export (export project KG data to JSON), import (import KG data from JSON), triggers (show what fires when an entity event occurs), topology (derive project structure from DSL: entity relationships, surface/workspace mapping, dead constructs; optionally filter by entity name)
-
-**Operations (14):** `query`, `dependencies`, `dependents`, `neighbourhood`, `paths`, `stats`, `populate`, `concept`, `inference`, `related`, `export`, `import`, `triggers`, `topology`
-
-**Parameters:**
-
-- `text` *(string)* — Search text (for query; accepted alias for inference, which takes query)
-- `query` *(string)* — Search query (for inference)
-- `entity_id` *(string)* — Entity ID with prefix like file:, module:, class: (for dependencies, dependents, neighbourhood)
-- `source_id` *(string)* — Source entity ID (for paths)
-- `target_id` *(string)* — Target entity ID (for paths)
-- `depth` *(integer)* — Traversal depth (for neighbourhood, default: 1)
-- `transitive` *(boolean)* — Include transitive deps (for dependencies, dependents)
-- `relation_types` *(array)* — Filter by relation types: imports, contains, inherits, depends_on
-- `entity_types` *(array)* — Filter by entity types: file, module, class, function
-- `limit` *(integer)* — Max results (default: 20)
-- `root_path` *(string)* — Path to populate from (for populate)
-- `name` *(string)* — Entity or concept name (for concept, related, triggers)
-- `entity` *(string)* — Entity name (for triggers, e.g. 'Ticket')
-- `event` *(string)* — Event type (for triggers, default: created)
-- `data` *(object)* — JSON export data to import (for import)
-- `file_path` *(string)* — Path to JSON file to import (for import, alternative to data)
-- `mode` *(string)* — Import mode: merge (additive upsert) or replace (wipe and load). Default: merge
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---
@@ -296,60 +196,6 @@ Knowledge lookup: concept, examples, cli_help, workflow, inference, changelog, c
 
 ---
 
-### `llm`
-
-LLM operations: list_intents (declared intents), list_models (declared models), inspect_intent (detailed intent view with resolved model), get_config (module-level LLM configuration).
-
-**Operations (4):** `list_intents`, `list_models`, `inspect_intent`, `get_config`
-
-**Parameters:**
-
-- `name` *(string)* — Intent name (for inspect_intent)
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `mock`
-
-Vendor mock server management: status, request_log. Operates on auto-started mock servers during 'dazzle serve'.
-
-**Operations (2):** `status`, `request_log`
-
-**Parameters:**
-
-- `vendor` *(string)* — API pack name (e.g. 'stripe_payments')
-- `method` *(string)* — Filter by HTTP method (for request_log)
-- `path` *(string)* — Filter by path substring (for request_log)
-- `limit` *(integer)* — Max results (for request_log, default: 20)
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `param`
-
-Query runtime parameter declarations. Operations: list (all declared params with defaults), get (specific param by key with type, constraints, scope).
-
-**Operations (2):** `list`, `get`
-
-**Parameters:**
-
-- `key` *(string)* — Parameter key (for 'get' operation)
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `perf`
-
-Local OpenTelemetry trace findings for the current project (read-only). list: enumerate past runs in .dazzle/perf/. report: return heuristic findings (slow endpoints, N+1, etc.) as JSON. show: return the raw span tree for a run.
-
-**Operations (3):** `list`, `report`, `show`
-
-**Parameters:**
-
-- `run` *(string)* — Run id (default: latest).
-
----
-
 ### `policy`
 
 Policy analysis operations for RBAC access control. Operations: analyze (find entities without access rules), conflicts (detect contradictory permit/forbid rules), coverage (permission matrix: persona x entity x operation), simulate (trace which rules fire for a given persona + entity + operation), access_matrix (full RBAC access matrix from rbac module), verify_status (summary of last `dazzle rbac verify` run)
@@ -361,54 +207,6 @@ Policy analysis operations for RBAC access control. Operations: analyze (find en
 - `entity_names` *(array)* — Filter to specific entity names (optional)
 - `persona` *(string)* — Persona ID (required for simulate)
 - `operation_kind` *(string)* — CRUD operation to simulate (required for simulate)
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `presentation`
-
-Hyperpart presentation process (#1626): closed role×host → density matrix + present() seam. Operations: cognition (matrix hosts audited vs wired; how_to_extend), opportunities (static person/queue scan + presentation_cognition; CLI: dazzle qa hyperpart-opportunities), shapes (rational DSL authoring shapes + scenario_missing residual for domain-modelling agents; optional id=/status= filters). Doctrine: docs/reference/hyperpart-presentation.md + docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md. Force: /improve framework-ux hyperpart_emitter (planned shapes / scenario_missing).
-
-**Operations (3):** `cognition`, `opportunities`, `shapes`
-
-**Parameters:**
-
-- `app` *(string)* — Showcase app name when project_path is examples/ (or monorepo root with examples/<app>).
-- `id` *(string)* — Optional hyperpart id when operation=shapes (returns one shape + its scenarios).
-- `status` *(string)* — Optional shape status filter when operation=shapes (live|planned|chrome_only).
-- `project_root` *(string)* — Path to one example app (dazzle.toml) or examples/ root. Defaults to the active MCP project.
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `process`
-
-Process operations: list, inspect, list_runs, get_run, coverage
-
-**Operations (5):** `list`, `inspect`, `list_runs`, `get_run`, `coverage`
-
-**Parameters:**
-
-- `process_name` *(string)* — Process name (for inspect)
-- `run_id` *(string)* — Run ID (for get_run)
-- `status` *(string)* — Filter by status (for list_runs)
-- `status_filter` *(string)* — Filter by coverage status (for coverage, default: all)
-- `limit` *(integer)* — Max results (for list_runs, coverage; default: 50)
-- `offset` *(integer)* — Skip N results for pagination (for coverage, default: 0)
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `representation`
-
-Data-representation organisational judgement (#1617): named hatch patterns (rel.explicit_ref, rel.exclusive_fks, rel.poly_ref, rel.tpt_subtype, rel.json_extension, …). Operations: patterns (catalogue), decide (ladder → pattern_id + DSL sketch + reject list), classify (project AppSpec evidence), prove (static integrity gate). Prefer before inventing host poly or dual-lock open-via. Complements agent/story prove (behaviour) with shape prove.
-
-**Operations (4):** `patterns`, `decide`, `classify`, `prove`
-
-**Parameters:**
-
-- `text` *(string)* — Free-text domain pressure for decide
-- `signals` *(object)* — Structured decide signals: shared_child_of_many_parents, exclusive_parents, parent_count, true_isa, needs_mixed_kind_list, tenant_variable_fields, four_questions_failed, host_extension, journey_open_via
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---
@@ -527,60 +325,5 @@ Story operations: get, composition, coverage, scope_fidelity. Use get with view=
 - `limit` *(integer)* — Max items per page (for coverage, scope_fidelity). Default: 50.
 - `offset` *(integer)* — Items to skip (for coverage, scope_fidelity). Default: 0.
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `test_intelligence`
-
-Query persisted test result history. Operations: summary (recent runs overview), failures (failure patterns, flaky tests, persistent failures), regression (tests that went pass→fail between last two runs), coverage (success rate trend across recent runs), context (single-call AI-ready snapshot combining all above), journey (most recent E2E journey analysis). Results are automatically persisted by dsl_test run_all.
-
-**Operations (6):** `summary`, `failures`, `regression`, `coverage`, `context`, `journey`
-
-**Parameters:**
-
-- `limit` *(integer)* — Number of recent runs to analyze (default: 10)
-- `run_id` *(string)* — Specific run ID to query test cases for
-- `failure_type` *(string)* — Filter by failure type (for failures)
-- `category` *(string)* — Filter by test category (for failures)
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `user_management`
-
-User management operations: list, create, get, update, reset_password, deactivate, list_sessions, revoke_session, config. Manage auth users and sessions in PostgreSQL.
-
-**Operations (9):** `list`, `create`, `get`, `update`, `reset_password`, `deactivate`, `list_sessions`, `revoke_session`, `config`
-
-**Parameters:**
-
-- `email` *(string)* — User email (for create, get)
-- `user_id` *(string)* — User UUID (for get, update, reset_password, deactivate, list_sessions)
-- `name` *(string)* — Display name (for create)
-- `username` *(string)* — New display name (for update)
-- `roles` *(array)* — Role names (for create, update)
-- `role` *(string)* — Filter by role (for list)
-- `is_superuser` *(boolean)* — Superuser flag (for create, update)
-- `is_active` *(boolean)* — Active status (for update)
-- `active_only` *(boolean)* — Only active users/sessions (for list, list_sessions; default: true)
-- `password` *(string)* — Explicit password (for create, reset_password). If omitted, a random password is generated.
-- `session_id` *(string)* — Session ID (for revoke_session)
-- `limit` *(integer)* — Max results (for list, list_sessions; default: 50)
-- `offset` *(integer)* — Pagination offset (for list; default: 0)
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `user_profile`
-
-User profile for adaptive persona inference. Operations: observe (analyze recent tool invocations), observe_message (analyze user message vocabulary), get (return current profile context), reset (delete and return fresh default).
-
-**Operations (4):** `observe`, `observe_message`, `get`, `reset`
-
-**Parameters:**
-
-- `message_text` *(string)* — User message text (for observe_message)
-- `limit` *(integer)* — Max invocations to analyze (for observe; default: 50)
-- `since_minutes` *(integer)* — Only analyze invocations from last N minutes (for observe; default: 30)
 
 ---

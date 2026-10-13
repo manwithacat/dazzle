@@ -23,7 +23,7 @@ dazzle mcp check
 
 ## Consolidated Tools
 
-The MCP server provides **24 consolidated tools** (down from 66 original tools), plus 4 dev-mode project management tools. Each tool uses an `operation` parameter to select the action, reducing token overhead while preserving discoverability.
+The MCP server provides **18 consolidated tools**, plus the dev-mode `project` tool; `docs/reference/mcp-tools.md` is the generated inventory. Process work (process diagrams, demo data, API packs, mocks, perf traces) is CLI-only. Each tool uses an `operation` parameter to select the action, reducing token overhead while preserving discoverability.
 
 ### dsl
 
@@ -67,44 +67,6 @@ Story-driven development and test generation.
 | `generate_tests` | Convert stories to test designs |
 | `coverage` | Analyze story coverage |
 
-### process
-
-Workflow process inspection and visualization.
-
-| Operation | Purpose |
-|-----------|---------|
-| `propose` | Generate process definitions from stories |
-| `save` | Save process definitions |
-| `list` | List all defined processes |
-| `inspect` | Inspect process structure and steps |
-| `list_runs` | List process execution runs |
-| `get_run` | Get details of a specific run |
-| `diagram` | Generate Mermaid diagrams (flowchart or state) |
-| `coverage` | Process coverage analysis |
-
-### demo_data
-
-Generate demo and seed data from DSL.
-
-| Operation | Purpose |
-|-----------|---------|
-| `propose` | Generate demo data blueprint from DSL |
-| `save` | Save blueprint to project |
-| `get` | Retrieve current blueprint |
-| `generate` | Generate CSV/JSONL demo data files |
-
-### api_pack
-
-External API integrations.
-
-| Operation | Purpose |
-|-----------|---------|
-| `list` | List available API packs |
-| `search` | Search integrations by category or provider |
-| `get` | Get full API pack details |
-| `generate_dsl` | Generate DSL from API pack |
-| `env_vars` | Get `.env.example` content for packs |
-
 ### sitespec
 
 Public website specification and theming.
@@ -138,52 +100,6 @@ Event-first architecture analysis.
 | `analytics` | Infer analytics intent |
 | `extract_guards` | Extract guard conditions |
 
-### graph
-
-Knowledge graph for codebase understanding.
-
-| Operation | Purpose |
-|-----------|---------|
-| `query` | Search entities by text |
-| `dependencies` | What does X depend on? |
-| `dependents` | What depends on X? |
-| `neighbourhood` | Entities within N hops |
-| `paths` | Find paths between entities |
-| `stats` | Graph statistics |
-| `populate` | Refresh graph from source |
-| `concept` | Look up a framework concept |
-| `inference` | Find inference patterns |
-| `related` | Get related concepts for an entity |
-
-### dsl_test
-
-API-level test generation and execution.
-
-| Operation | Purpose |
-|-----------|---------|
-| `generate` | Generate tests from DSL definitions |
-| `run` | Run a specific test |
-| `run_all` | Run all tests against a server |
-| `coverage` | Show test coverage |
-| `list` | List available tests |
-| `create_sessions` | Create authenticated sessions for personas |
-| `diff_personas` | Compare responses across personas |
-| `verify_story` | Verify a story against API tests |
-
-### e2e_test
-
-End-to-end testing with Playwright.
-
-| Operation | Purpose |
-|-----------|---------|
-| `check_infra` | Check Playwright infrastructure |
-| `run` | Run E2E tests |
-| `run_agent` | Run LLM-agent-powered E2E tests |
-| `coverage` | E2E coverage analysis |
-| `list_flows` | List test flows |
-| `tier_guidance` | Get testing tier guidance for a scenario |
-| `run_viewport` | Run viewport/responsive tests |
-
 ### discovery
 
 Capability discovery — explore a running app as a persona.
@@ -196,27 +112,6 @@ Capability discovery — explore a running app as a persona.
 | `emit` | Generate DSL from proposals |
 | `status` | Check readiness |
 | `verify_all_stories` | Batch verify stories against API tests |
-
-### pipeline
-
-Full deterministic quality audit in a single call.
-
-| Operation | Purpose |
-|-----------|---------|
-| `run` | Chain: validate, lint, fidelity, tests, coverage, semantics |
-
-### composition
-
-Visual composition analysis.
-
-| Operation | Purpose |
-|-----------|---------|
-| `audit` | DOM-level visual hierarchy audit |
-| `capture` | Take section-level screenshots |
-| `analyze` | LLM visual evaluation of screenshots |
-| `report` | Combined audit + visual analysis |
-| `bootstrap` | Generate reference library for evaluation |
-| `inspect_styles` | Extract computed CSS styles |
 
 ### bootstrap
 
@@ -247,26 +142,6 @@ RBAC access control analysis.
 | `coverage` | Measure RBAC coverage gaps |
 | `simulate` | Simulate access for a persona/route |
 
-### user_management
-
-Manage auth users and sessions.
-
-| Operation | Purpose |
-|-----------|---------|
-| `list` | List users |
-| `create` | Create a user |
-| `get` | Get user details |
-| `update` | Update user properties |
-| `deactivate` | Soft-delete a user |
-
-### user_profile
-
-Adaptive persona inference.
-
-| Operation | Purpose |
-|-----------|---------|
-| (default) | Infer the current user's persona from context |
-
 ## Usage Examples
 
 **Validating a project:**
@@ -292,15 +167,6 @@ User: "Propose user stories for my app"
 Claude: [Uses story tool with operation=propose]
         "Generated 12 stories covering Task CRUD and status transitions..."
 ```
-
-**Visualizing a process:**
-
-```
-User: "Show me the order fulfillment workflow"
-Claude: [Uses process tool with operation=diagram]
-        "Here's a Mermaid flowchart showing the 5-step process..."
-```
-
 ## Configuration
 
 `dazzle mcp setup` writes to the first available Claude Code MCP config path
@@ -402,23 +268,21 @@ The MCP server uses consolidated handlers for maintainability:
 ```
 src/dazzle/mcp/server/
 ├── __init__.py                  # Server setup and routing
-├── tools_consolidated.py        # Tool definitions (24 consolidated + 4 dev-mode)
+├── tools_consolidated.py        # Tool definitions (18 consolidated + 1 dev-mode)
 ├── handlers_consolidated.py     # Dispatch: operation → handler function
 ├── handlers/
 │   ├── dsl.py                   # DSL parsing, entity/surface inspection
 │   ├── knowledge.py             # Concept lookup, workflow guides
 │   ├── stories.py               # Story generation, test conversion
-│   ├── process.py               # Process inspection, diagrams
+│   ├── process/                # Story coverage, process proposals (CLI)
 │   ├── test_design.py           # Test coverage, persona tests
-│   ├── demo_data.py             # Demo data generation
-│   ├── api_packs.py             # External API integrations
+│   ├── demo_data.py             # Demo data generation (CLI)
+│   ├── api_packs.py             # External API integrations (CLI)
 │   ├── sitespec.py              # Site specification and theming
 │   ├── semantics.py             # Event-first architecture analysis
 │   ├── discovery.py             # Capability discovery missions
 │   ├── dsl_test.py              # API test generation and execution
-│   ├── e2e_test.py              # E2E Playwright tests
 │   ├── pipeline.py              # Quality audit pipeline
-│   ├── composition.py           # Visual composition analysis
 │   ├── policy.py                # RBAC access control analysis
 │   ├── status.py                # MCP + runtime status and activity
 │   └── ...

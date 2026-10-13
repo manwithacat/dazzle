@@ -33,7 +33,6 @@
   "src/dazzle/mcp/resources.py::create_static_resources",
   "src/dazzle/mcp/server/handlers/discovery/_helpers.py::_build_mission_summary",
   "src/dazzle/mcp/server/handlers/serializers.py::success_response",
-  "src/dazzle/mcp/server/handlers/user_management.py::_session_to_dict",
   "src/dazzle/mcp/server/state.py::get_appspec_data",
   "src/dazzle/page/command_index.py::spec_display_persona_ids",
   "src/dazzle/page/runtime/asset_fingerprint.py::fingerprint_urls",

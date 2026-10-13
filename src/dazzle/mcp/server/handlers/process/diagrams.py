@@ -4,14 +4,12 @@ Process diagram generation — Mermaid flowchart and state diagram rendering.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir.process import ProcessTriggerKind, StepKind
 from dazzle.core.process_persistence import load_processes as load_persisted_processes
 
-from ..common import error_response, extract_progress, wrap_handler_errors
 from . import _helpers
 
 if TYPE_CHECKING:
@@ -76,36 +74,6 @@ def process_diagram_impl(
         "type": diagram_type,
         "diagram": mermaid_code,
     }
-
-
-@wrap_handler_errors
-def get_process_diagram_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Generate a Mermaid diagram for a process.
-
-    Produces a flowchart showing:
-    - Process trigger (start node)
-    - Steps as nodes with kind-specific shapes
-    - Flow control edges (on_success, on_failure)
-    - Human task outcome branches
-    - Parallel step groupings
-    - Compensation handlers (optional)
-    """
-    progress = extract_progress(args)
-    process_name = args.get("process_name") if args else None
-    include_compensations = args.get("include_compensations", False) if args else False
-    diagram_type = args.get("type", "flowchart") if args else "flowchart"
-
-    if not process_name:
-        return error_response("process_name is required")
-
-    progress.log_sync(f"Generating {diagram_type} diagram for '{process_name}'...")
-    result = process_diagram_impl(
-        project_root,
-        process_name=process_name,
-        include_compensations=include_compensations,
-        diagram_type=diagram_type,
-    )
-    return json.dumps(result, indent=2)
 
 
 # =============================================================================

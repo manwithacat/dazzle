@@ -64,18 +64,6 @@ automatically invalidate cached files. Other names (`dazzle db snapshot
 mid-refactor`) use verbatim filenames — useful for capturing a known
 state before a destructive experiment.
 
-## MCP surface (read-only)
-
-Agents can enumerate modes and inspect state via the `e2e` MCP tool.
-Operations:
-
-- `list_modes` — full registry of runner modes
-- `describe_mode` — details for one mode
-- `status` — lock holder, runtime ports, last log tail
-- `list_baselines` — hash-tagged snapshot files + which matches current key
-
-Process operations (start/stop) are **CLI-only** per ADR-0002.
-
 ## Troubleshooting
 
 **`ModeAlreadyRunningError: lock held by pid N`** — another Mode A

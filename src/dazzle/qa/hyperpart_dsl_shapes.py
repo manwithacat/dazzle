@@ -125,17 +125,3 @@ def shapes_snapshot() -> dict[str, Any]:
             "archive/docs-superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md"
         ),
     }
-
-
-def agent_shape_table() -> list[dict[str, str]]:
-    """Compact rows for agent pick surfaces / MCP."""
-    return [
-        {
-            "id": r.id,
-            "dsl": r.dsl,
-            "status": r.status,
-            "agent_surface": r.agent_surface,
-            "job": r.job,
-        }
-        for r in load_shapes()
-    ]

@@ -13,8 +13,6 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from dazzle.mcp.server.mcp_session import mcp_kg_db_path
-
 from .state import get_available_projects, get_project_root, is_dev_mode, resolve_project_path
 
 logger = logging.getLogger(__name__)
@@ -125,23 +123,12 @@ def _dispatch_standalone_ops(
     arguments: dict[str, Any],
     ops: dict[str, Callable[..., str]],
     tool_label: str,
-    value_errors_as_errors: bool = False,
 ) -> str:
-    """Dispatch for handlers that take only arguments (no project_path).
-
-    `value_errors_as_errors` is for read-only tools whose stores raise on a
-    malformed argument instead of degrading — an agent must be told its call
-    was wrong, not handed an unfiltered dump that reads like an answer (#1750).
-    """
+    """Dispatch for handlers that take only arguments (no project_path)."""
     operation = arguments.get("operation")
     fn = ops.get(operation)  # type: ignore[arg-type]
     if fn is None:
         return unknown_op_response(operation, tool_label)
-    if value_errors_as_errors:
-        try:
-            return fn(arguments)
-        except ValueError as exc:
-            return error_response(f"{tool_label} {operation}: {exc}")
     return fn(arguments)
 
 
@@ -253,56 +240,6 @@ handle_dsl: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 # =============================================================================
-# API Pack Handler
-# =============================================================================
-
-
-def handle_api_pack(arguments: dict[str, Any]) -> str:
-    """Handle consolidated API pack operations."""
-    from .handlers.api_packs import (
-        get_api_pack_handler,
-        list_api_packs_handler,
-        search_api_packs_handler,
-    )
-
-    # Set project root for project-local pack discovery
-    project_path = _resolve_project(arguments)
-    if project_path is not None:
-        from dazzle.mcp.server.state import set_project_root
-
-        set_project_root(project_path)
-
-    standalone_ops: dict[str, Callable[..., str]] = {
-        "list": list_api_packs_handler,
-        "search": search_api_packs_handler,
-        "get": get_api_pack_handler,
-    }
-
-    operation = arguments.get("operation")
-
-    standalone = standalone_ops.get(operation)  # type: ignore[arg-type]
-    if standalone is not None:
-        return standalone(arguments)
-
-    return unknown_op_response(operation, "API pack")
-
-
-# =============================================================================
-# Mock Handler
-# =============================================================================
-
-_MOD_MOCK = "dazzle.mcp.server.handlers.mock"
-
-handle_mock: Callable[[dict[str, Any]], str] = _make_project_handler(
-    "mock",
-    {
-        "status": f"{_MOD_MOCK}:mock_status_handler",
-        "request_log": f"{_MOD_MOCK}:mock_request_log_handler",
-    },
-)
-
-
-# =============================================================================
 # DB Handler
 # =============================================================================
 
@@ -360,20 +297,6 @@ handle_rhythm: Callable[[dict[str, Any]], str] = _make_project_handler(
         "coverage": f"{_MOD_RHYTHM}:coverage_rhythms_handler",
         "get": f"{_MOD_RHYTHM}:get_rhythm_handler",
         "list": f"{_MOD_RHYTHM}:list_rhythms_handler",
-    },
-)
-
-
-# =============================================================================
-# Demo Data Handler
-# =============================================================================
-
-_MOD_DEMO = "dazzle.mcp.server.handlers.demo_data"
-
-handle_demo_data: Callable[[dict[str, Any]], str] = _make_project_handler(
-    "demo data",
-    {
-        "get": f"{_MOD_DEMO}:get_demo_blueprint_handler",
     },
 )
 
@@ -448,24 +371,6 @@ handle_semantics: Callable[[dict[str, Any]], str] = _make_project_handler(
         "compliance": _sem_wrap(f"{_MOD_SEM}:handle_infer_compliance"),
         "analytics": _sem_wrap(f"{_MOD_SEM}:handle_infer_analytics"),
         "extract_guards": _sem_wrap(f"{_MOD_SEM}:handle_extract_guards"),
-    },
-)
-
-
-# =============================================================================
-# Process Handler
-# =============================================================================
-
-_MOD_PROC = "dazzle.mcp.server.handlers.process"
-
-handle_process: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
-    "process",
-    {
-        "list": f"{_MOD_PROC}:list_processes_handler",
-        "inspect": f"{_MOD_PROC}:inspect_process_handler",
-        "list_runs": f"{_MOD_PROC}:list_process_runs_handler",
-        "get_run": f"{_MOD_PROC}:get_process_run_handler",
-        "coverage": f"{_MOD_PROC}:stories_coverage_handler",
     },
 )
 
@@ -550,138 +455,6 @@ def handle_knowledge(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
-# User Management Handler
-# =============================================================================
-
-
-async def handle_user_management(arguments: dict[str, Any]) -> str:
-    """Handle consolidated user management operations (async)."""
-    from .handlers.user_management import (
-        create_user_handler,
-        deactivate_user_handler,
-        get_auth_config_handler,
-        get_user_handler,
-        list_sessions_handler,
-        list_users_handler,
-        reset_password_handler,
-        revoke_session_handler,
-        update_user_handler,
-    )
-    from .progress import ProgressContext
-    from .progress import noop as _noop_progress
-
-    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
-    operation = arguments.get("operation")
-    progress.log_sync(f"User management: {operation}...")
-    project_path = _resolve_project(arguments)
-
-    if project_path is None:
-        return _project_error()
-
-    pp = str(project_path)
-
-    if operation == "list":
-        return json.dumps(
-            await list_users_handler(
-                role=arguments.get("role"),
-                active_only=arguments.get("active_only", True),
-                limit=arguments.get("limit", 50),
-                offset=arguments.get("offset", 0),
-                project_path=pp,
-            ),
-            indent=2,
-        )
-    elif operation == "create":
-        email = arguments.get("email")
-        if not email:
-            return error_response("email is required")
-        return json.dumps(
-            await create_user_handler(
-                email=email,
-                name=arguments.get("name"),
-                roles=arguments.get("roles"),
-                is_superuser=arguments.get("is_superuser", False),
-                password=arguments.get("password"),
-                project_path=pp,
-            ),
-            indent=2,
-        )
-    elif operation == "get":
-        user_id = arguments.get("user_id")
-        email = arguments.get("email")
-        if not user_id and not email:
-            return error_response("user_id or email is required")
-        return json.dumps(
-            await get_user_handler(
-                user_id=user_id,
-                email=email,
-                project_path=pp,
-            ),
-            indent=2,
-        )
-    elif operation == "update":
-        user_id = arguments.get("user_id")
-        if not user_id:
-            return error_response("user_id is required")
-        return json.dumps(
-            await update_user_handler(
-                user_id=user_id,
-                username=arguments.get("username"),
-                roles=arguments.get("roles"),
-                is_active=arguments.get("is_active"),
-                is_superuser=arguments.get("is_superuser"),
-                project_path=pp,
-            ),
-            indent=2,
-        )
-    elif operation == "reset_password":
-        user_id = arguments.get("user_id")
-        if not user_id:
-            return error_response("user_id is required")
-        return json.dumps(
-            await reset_password_handler(
-                user_id=user_id,
-                password=arguments.get("password"),
-                project_path=pp,
-            ),
-            indent=2,
-        )
-    elif operation == "deactivate":
-        user_id = arguments.get("user_id")
-        if not user_id:
-            return error_response("user_id is required")
-        return json.dumps(
-            await deactivate_user_handler(user_id=user_id, project_path=pp),
-            indent=2,
-        )
-    elif operation == "list_sessions":
-        return json.dumps(
-            await list_sessions_handler(
-                user_id=arguments.get("user_id"),
-                active_only=arguments.get("active_only", True),
-                limit=arguments.get("limit", 50),
-                project_path=pp,
-            ),
-            indent=2,
-        )
-    elif operation == "revoke_session":
-        session_id = arguments.get("session_id")
-        if not session_id:
-            return error_response("session_id is required")
-        return json.dumps(
-            await revoke_session_handler(session_id=session_id, project_path=pp),
-            indent=2,
-        )
-    elif operation == "config":
-        return json.dumps(
-            await get_auth_config_handler(project_path=pp),
-            indent=2,
-        )
-    else:
-        return unknown_op_response(operation, "user_management")
-
-
-# =============================================================================
 # Bootstrap Handler
 # =============================================================================
 
@@ -711,414 +484,6 @@ def handle_spec_analyze(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
-# Graph Handler
-# =============================================================================
-
-
-def _handle_graph_query(handlers: Any, arguments: dict[str, Any]) -> str:
-    return json.dumps(
-        handlers.handle_query(
-            text=arguments.get("text", ""),
-            entity_types=arguments.get("entity_types"),
-            limit=arguments.get("limit", 20),
-        ),
-        indent=2,
-    )
-
-
-def _handle_graph_dependencies(handlers: Any, arguments: dict[str, Any]) -> str:
-    return json.dumps(
-        handlers.handle_get_dependencies(
-            entity_id=arguments.get("entity_id", ""),
-            relation_types=arguments.get("relation_types"),
-            transitive=arguments.get("transitive", False),
-        ),
-        indent=2,
-    )
-
-
-def _handle_graph_dependents(handlers: Any, arguments: dict[str, Any]) -> str:
-    return json.dumps(
-        handlers.handle_get_dependents(
-            entity_id=arguments.get("entity_id", ""),
-            relation_types=arguments.get("relation_types"),
-            transitive=arguments.get("transitive", False),
-        ),
-        indent=2,
-    )
-
-
-def _handle_graph_neighbourhood(handlers: Any, arguments: dict[str, Any]) -> str:
-    return json.dumps(
-        handlers.handle_get_neighbourhood(
-            entity_id=arguments.get("entity_id", ""),
-            depth=arguments.get("depth", 1),
-            relation_types=arguments.get("relation_types"),
-        ),
-        indent=2,
-    )
-
-
-def _handle_graph_paths(handlers: Any, arguments: dict[str, Any]) -> str:
-    return json.dumps(
-        handlers.handle_find_paths(
-            source_id=arguments.get("source_id", ""),
-            target_id=arguments.get("target_id", ""),
-            relation_types=arguments.get("relation_types"),
-        ),
-        indent=2,
-    )
-
-
-def _handle_graph_concept(graph: Any, arguments: dict[str, Any]) -> str:
-    name = arguments.get("name", "")
-    entity = graph.lookup_concept(name)
-    if entity is None:
-        return error_response(f"Concept not found: {name}")
-    return json.dumps(
-        {
-            "id": entity.id,
-            "type": entity.entity_type,
-            "name": entity.name,
-            "metadata": entity.metadata,
-        },
-        indent=2,
-    )
-
-
-def _handle_graph_inference(graph: Any, arguments: dict[str, Any]) -> str:
-    # `query` is the declared key for this op (and the one the `knowledge`
-    # tool already uses for inference). The handler used to read `text`, so a
-    # caller following the published interface got "" back and a confident
-    # zero-match result instead of an error (#1750). `text` stays accepted —
-    # it is a declared property of this tool and the pre-#1750 docs example
-    # uses it — but it is an alias, not the contract, and an empty query on
-    # either key is now an error rather than a silent miss.
-    query_text = arguments.get("query") or arguments.get("text", "")
-    if not query_text:
-        return error_response(
-            "`inference` needs a query: pass query=<text to match> (text= is accepted as an alias)."
-        )
-    limit = arguments.get("limit", 20)
-    matches = graph.lookup_inference_matches(query_text, limit=limit)
-    return json.dumps(
-        {
-            "query": query_text,
-            "matches": [
-                {
-                    "id": e.id,
-                    "name": e.name,
-                    "category": e.metadata.get("category", ""),
-                    "triggers": e.metadata.get("triggers", []),
-                }
-                for e in matches
-            ],
-            "count": len(matches),
-        },
-        indent=2,
-    )
-
-
-def _handle_graph_related(graph: Any, arguments: dict[str, Any]) -> str:
-    # Three defects, all serving the same failure (#1750). This read
-    # `entity_id` where the schema declares `name`, so the lookup never
-    # happened; `get_relations` filtered nothing when handed the empty id it
-    # got, so the caller received every relation in the graph; and neighbours
-    # were emitted per relation rather than per entity, so one concept appeared
-    # five times. Asking for three results returned 320 rows that read like a
-    # neighbourhood computation.
-    #
-    # A name that resolves to nothing is an error now, never an unfiltered
-    # dump: a miss must not be indistinguishable from an answer.
-    name = arguments.get("name") or arguments.get("entity_id", "")
-    limit = arguments.get("limit", 20)
-    if not name:
-        return error_response(
-            "`related` needs a concept name: pass name=<concept>. "
-            "Passing nothing used to return every relation in the graph."
-        )
-    entity = graph.lookup_concept(name)
-    if entity is None:
-        return error_response(f"Concept not found: {name}")
-    relations = graph.get_relations(
-        entity_id=entity.id,
-        relation_type="related_concept",
-        direction="outgoing",
-    )
-    # One row per neighbour, first-seen order preserved.
-    neighbours: dict[str, dict[str, Any]] = {}
-    for relation in relations:
-        found = graph.get_entity(relation.target_id)
-        if found is not None:
-            neighbours.setdefault(
-                found.id, {"id": found.id, "name": found.name, "type": found.entity_type}
-            )
-    ordered = list(neighbours.values())
-    return json.dumps(
-        {
-            "entity_id": entity.id,
-            "name": entity.name,
-            "related": ordered[:limit],
-            # Distinct neighbours found, not rows returned — a caller reading
-            # `count` must not be told 320 when it asked for 3.
-            "count": len(ordered),
-            "truncated": len(ordered) > limit,
-        },
-        indent=2,
-    )
-
-
-def _handle_graph_import(graph: Any, arguments: dict[str, Any]) -> str:
-    import_data = arguments.get("data")
-    file_path = arguments.get("file_path")
-    if import_data is None and file_path:
-        try:
-            with open(file_path, encoding="utf-8") as f:
-                import_data = json.load(f)
-        except Exception as e:
-            return error_response(f"Failed to read file: {e}")
-    if import_data is None:
-        return error_response("Either 'data' or 'file_path' is required")
-    mode = arguments.get("mode", "merge")
-    try:
-        stats = graph.import_project_data(import_data, mode=mode)
-        return json.dumps({"status": "success", "mode": mode, **stats}, indent=2)
-    except ValueError as e:
-        return error_response(str(e))
-
-
-def _handle_graph_triggers(arguments: dict[str, Any]) -> str:
-    """Show everything that triggers when an entity event fires."""
-    from .state import resolve_project_path
-
-    entity = arguments.get("entity") or arguments.get("name")
-    event = arguments.get("event", "created")
-
-    try:
-        project_root = resolve_project_path(arguments.get("project_path"))
-    except ValueError as exc:
-        return error_response(str(exc))
-
-    from .handlers.common import load_project_appspec
-
-    appspec = load_project_appspec(project_root)
-
-    results: list[dict[str, Any]] = []
-
-    # Check LLM intent triggers
-    for intent in appspec.llm_intents or []:
-        for trigger in intent.triggers:
-            if entity and trigger.on_entity != entity:
-                continue
-            if trigger.on_event.value != event:
-                continue
-            results.append(
-                {
-                    "type": "llm_intent",
-                    "name": intent.name,
-                    "entity": trigger.on_entity,
-                    "event": trigger.on_event.value,
-                    "input_map": trigger.input_map,
-                    "write_back": trigger.write_back,
-                    "when": trigger.when,
-                }
-            )
-
-    # Check process triggers
-    for process in appspec.processes or []:
-        if process.trigger and process.trigger.entity_name:
-            if entity and process.trigger.entity_name != entity:
-                continue
-            if process.trigger.event_type != event:
-                continue
-            results.append(
-                {
-                    "type": "process",
-                    "name": process.name,
-                    "entity": process.trigger.entity_name,
-                    "event": process.trigger.event_type,
-                    "steps": [s.name for s in process.steps],
-                }
-            )
-
-    return json.dumps(
-        {
-            "entity": entity,
-            "event": event,
-            "trigger_count": len(results),
-            "triggers": results,
-        },
-        indent=2,
-    )
-
-
-def _handle_graph_topology(arguments: dict[str, Any]) -> str:
-    """Derive project topology from the current AppSpec.
-
-    Returns entity relationships, surface→entity mapping, workspace composition,
-    and dead construct detection. All derived from the DSL — no separate indexing.
-    """
-    from .state import resolve_project_path
-
-    try:
-        project_root = resolve_project_path(arguments.get("project_path"))
-    except ValueError as exc:
-        return error_response(str(exc))
-
-    from .handlers.common import load_project_appspec
-
-    appspec = load_project_appspec(project_root)
-
-    # Entity relationship graph
-    entities_map: dict[str, dict[str, Any]] = {}
-    for entity in appspec.domain.entities:
-        refs: list[dict[str, str]] = []
-        for field in entity.fields:
-            if field.type.kind in ("ref", "belongs_to") and field.type.ref_entity:
-                refs.append(
-                    {
-                        "field": field.name,
-                        "target": field.type.ref_entity,
-                        "kind": str(field.type.kind),
-                        "required": "yes"
-                        if "required" in [str(m) for m in field.modifiers]
-                        else "no",
-                    }
-                )
-        entities_map[entity.name] = {
-            "field_count": len(entity.fields),
-            "references": refs,
-            "has_state_machine": getattr(entity, "state_machine", None) is not None,
-            "has_access": getattr(entity, "access", None) is not None,
-        }
-
-    # Surface → entity mapping
-    surface_map: dict[str, dict[str, Any]] = {}
-    entity_surfaces: dict[str, list[str]] = {}  # reverse index
-    for surface in appspec.surfaces:
-        surface_map[surface.name] = {
-            "entity_ref": surface.entity_ref,
-            "mode": str(surface.mode),
-            "title": surface.title,
-        }
-        if surface.entity_ref:
-            entity_surfaces.setdefault(surface.entity_ref, []).append(surface.name)
-
-    # Workspace composition
-    workspace_map: dict[str, dict[str, Any]] = {}
-    workspace_entities: dict[str, set[str]] = {}
-    for ws in appspec.workspaces:
-        regions: list[dict[str, str]] = []
-        ws_ents: set[str] = set()
-        for region in getattr(ws, "regions", []):
-            source = getattr(region, "source", None) or ""
-            regions.append(
-                {
-                    "name": getattr(region, "name", ""),
-                    "type": str(getattr(region, "type", "")),
-                    "source": source,
-                }
-            )
-            if source:
-                ws_ents.add(source)
-        workspace_map[ws.name] = {
-            "title": getattr(ws, "title", ws.name),
-            "region_count": len(regions),
-            "regions": regions,
-            "entities": sorted(ws_ents),
-        }
-        workspace_entities[ws.name] = ws_ents
-
-    # Dead construct detection
-    all_entity_names = set(entities_map.keys())
-    entities_with_surfaces = set(entity_surfaces.keys())
-    entities_in_workspaces: set[str] = set()
-    for ws_ents in workspace_entities.values():
-        entities_in_workspaces |= ws_ents
-
-    dead = {
-        "entities_without_surfaces": sorted(all_entity_names - entities_with_surfaces),
-        "entities_without_workspaces": sorted(entities_with_surfaces - entities_in_workspaces),
-    }
-
-    # Query filter (optional — return only info about a specific entity)
-    entity_filter = arguments.get("entity")
-    if entity_filter:
-        filtered = {
-            "entity": entity_filter,
-            "details": entities_map.get(entity_filter, {}),
-            "surfaces": entity_surfaces.get(entity_filter, []),
-            "in_workspaces": [
-                ws_name for ws_name, ents in workspace_entities.items() if entity_filter in ents
-            ],
-            "referenced_by": [
-                {"entity": ename, "field": ref["field"]}
-                for ename, edata in entities_map.items()
-                for ref in edata["references"]
-                if ref["target"] == entity_filter
-            ],
-        }
-        return json.dumps(filtered, indent=2)
-
-    return json.dumps(
-        {
-            "entities": len(entities_map),
-            "surfaces": len(surface_map),
-            "workspaces": len(workspace_map),
-            "entity_graph": entities_map,
-            "surface_map": surface_map,
-            "workspace_map": workspace_map,
-            "dead_constructs": dead,
-        },
-        indent=2,
-    )
-
-
-def handle_graph(arguments: dict[str, Any]) -> str:
-    """Handle knowledge graph operations."""
-    from .state import get_graph_db_path, get_knowledge_graph, refresh_knowledge_graph
-
-    graph = get_knowledge_graph()
-    if graph is None:
-        return error_response("Knowledge graph not initialized")
-
-    resolved_path = arguments.get("_resolved_project_path")
-    if isinstance(resolved_path, Path) and get_graph_db_path() != mcp_kg_db_path(resolved_path):
-        return error_response(
-            "Knowledge graph belongs to a different project. "
-            "Start an MCP server with --working-dir for this project, "
-            "or select it before calling graph."
-        )
-
-    from dazzle.mcp.knowledge_graph import KnowledgeGraphHandlers
-
-    handlers = KnowledgeGraphHandlers(graph)
-
-    # Operations that use the KnowledgeGraphHandlers wrapper
-    ops: dict[str, Callable[..., str]] = {
-        "query": lambda args: _handle_graph_query(handlers, args),
-        "dependencies": lambda args: _handle_graph_dependencies(handlers, args),
-        "dependents": lambda args: _handle_graph_dependents(handlers, args),
-        "neighbourhood": lambda args: _handle_graph_neighbourhood(handlers, args),
-        "paths": lambda args: _handle_graph_paths(handlers, args),
-        "stats": lambda args: json.dumps(handlers.handle_get_stats(), indent=2),
-        "populate": lambda args: json.dumps(
-            refresh_knowledge_graph(args.get("root_path")), indent=2
-        ),
-        # Operations that use the graph directly
-        "concept": lambda args: _handle_graph_concept(graph, args),
-        "inference": lambda args: _handle_graph_inference(graph, args),
-        "related": lambda args: _handle_graph_related(graph, args),
-        "export": lambda args: json.dumps(graph.export_project_data(), indent=2),
-        "import": lambda args: _handle_graph_import(graph, args),
-        "triggers": lambda args: _handle_graph_triggers(args),
-        "topology": lambda args: _handle_graph_topology(args),
-    }
-
-    return _dispatch_standalone_ops(arguments, ops, "graph", value_errors_as_errors=True)
-
-
-# =============================================================================
 # Discovery Handler
 # =============================================================================
 
@@ -1129,34 +494,6 @@ handle_discovery: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
     {
         "coherence": f"{_MOD_DISC}:app_coherence_handler",
     },
-)
-
-
-# =============================================================================
-# E2E Environment Handler
-# =============================================================================
-
-_MOD_E2E = "dazzle.mcp.server.handlers.e2e"
-
-handle_e2e: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
-    "e2e",
-    {
-        "list_modes": f"{_MOD_E2E}:e2e_list_modes_handler",
-        "describe_mode": f"{_MOD_E2E}:e2e_describe_mode_handler",
-        "status": f"{_MOD_E2E}:e2e_status_handler",
-        "list_baselines": f"{_MOD_E2E}:e2e_list_baselines_handler",
-    },
-)
-
-
-# =============================================================================
-# User Profile Handler
-# =============================================================================
-
-_MOD_UP = "dazzle.mcp.server.handlers.user_profile"
-
-handle_user_profile: Callable[[dict[str, Any]], str] = _lazy_import(
-    f"{_MOD_UP}:handle_user_profile"
 )
 
 
@@ -1185,25 +522,6 @@ handle_policy: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 # =============================================================================
-# Test Intelligence Handler
-# =============================================================================
-
-_MOD_TI = "dazzle.mcp.server.handlers.test_intelligence"
-
-handle_test_intelligence: Callable[[dict[str, Any]], str] = _make_project_handler(
-    "test intelligence",
-    {
-        "summary": f"{_MOD_TI}:test_summary_handler",
-        "failures": f"{_MOD_TI}:test_failures_handler",
-        "regression": f"{_MOD_TI}:test_regression_handler",
-        "coverage": f"{_MOD_TI}:test_coverage_handler",
-        "context": f"{_MOD_TI}:test_context_handler",
-        "journey": f"{_MOD_TI}:test_journey_handler",
-    },
-)
-
-
-# =============================================================================
 # Sentinel Handler
 # =============================================================================
 
@@ -1216,38 +534,6 @@ handle_sentinel: Callable[[dict[str, Any]], str] = _make_project_handler(
         "status": f"{_MOD_SENT}:status_handler",
         "history": f"{_MOD_SENT}:history_handler",
         "fuzz_summary": f"{_MOD_SENT}:fuzz_summary_handler",
-    },
-)
-
-
-# =============================================================================
-# LLM Handler
-# =============================================================================
-
-_MOD_LLM = "dazzle.mcp.server.handlers.llm"
-
-handle_llm: Callable[[dict[str, Any]], str] = _make_project_handler(
-    "llm",
-    {
-        "list_intents": f"{_MOD_LLM}:list_intents_handler",
-        "list_models": f"{_MOD_LLM}:list_models_handler",
-        "inspect_intent": f"{_MOD_LLM}:inspect_intent_handler",
-        "get_config": f"{_MOD_LLM}:get_config_handler",
-    },
-)
-
-
-# =============================================================================
-# Param Handler
-# =============================================================================
-
-_MOD_PARAM = "dazzle.mcp.server.handlers.param"
-
-handle_param: Callable[[dict[str, Any]], str] = _make_project_handler(
-    "param",
-    {
-        "list": f"{_MOD_PARAM}:param_list_handler",
-        "get": f"{_MOD_PARAM}:param_get_handler",
     },
 )
 
@@ -1305,35 +591,7 @@ handle_compliance: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 # =============================================================================
-# Agent Commands Handler
-# =============================================================================
-
-_MOD_AGENT_CMDS = "dazzle.mcp.server.handlers.agent_commands"
-
-handle_agent_commands: Callable[[dict[str, Any]], str] = _make_project_handler(
-    "agent_commands",
-    {
-        "list": f"{_MOD_AGENT_CMDS}:handle_list",
-        "get": f"{_MOD_AGENT_CMDS}:handle_get",
-        "check_updates": f"{_MOD_AGENT_CMDS}:handle_check_updates",
-    },
-)
-
-
-# =============================================================================
-# Perf Handler (read-only)
-# =============================================================================
-
-
-def handle_perf(arguments: dict[str, Any]) -> dict[str, Any]:
-    """Handle perf tool — read-only access to local OpenTelemetry trace data."""
-    from .handlers.perf import handle_perf as _handle
-
-    return _handle(arguments)
-
-
-# =============================================================================
-# Main Dispatcher
+# Agent Handler
 # =============================================================================
 
 
@@ -1344,55 +602,31 @@ def handle_agent(arguments: dict[str, Any]) -> str:
     return _handle(arguments)
 
 
-def handle_representation(arguments: dict[str, Any]) -> str:
-    """#1617 representation decide / classify / prove."""
-    from .handlers.representation import handle_representation as _handle
-
-    return _handle(arguments)
-
-
-def handle_presentation(arguments: dict[str, Any]) -> str:
-    """#1626 hyperpart presentation cognition / opportunities / shapes."""
-    from .handlers.presentation import handle_presentation as _handle
-
-    return _handle(arguments)
+# =============================================================================
+# Main Dispatcher
+# =============================================================================
 
 
 # Map of consolidated tool names to their handlers
 CONSOLIDATED_TOOL_HANDLERS = {
     "dsl": handle_dsl,
-    "api_pack": handle_api_pack,
-    "mock": handle_mock,
     "db": handle_db,
     "story": handle_story,
     "rhythm": handle_rhythm,
-    "demo_data": handle_demo_data,
     "feedback": handle_feedback,
     "sitespec": handle_sitespec,
     "semantics": handle_semantics,
-    "process": handle_process,
     "status": handle_status,
     "knowledge": handle_knowledge,
-    "user_management": handle_user_management,
     "bootstrap": handle_bootstrap,
     "spec_analyze": handle_spec_analyze,
-    "graph": handle_graph,
     "discovery": handle_discovery,
-    "e2e": handle_e2e,
-    "user_profile": handle_user_profile,
     "policy": handle_policy,
     "sentinel": handle_sentinel,
-    "test_intelligence": handle_test_intelligence,
-    "llm": handle_llm,
-    "param": handle_param,
     "guide": handle_guide,
     "conformance": handle_conformance,
     "compliance": handle_compliance,
-    "agent_commands": handle_agent_commands,
-    "perf": handle_perf,
     "agent": handle_agent,
-    "representation": handle_representation,
-    "presentation": handle_presentation,
 }
 
 

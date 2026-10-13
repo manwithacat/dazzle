@@ -143,85 +143,6 @@ def _tool_dsl() -> Tool:
     )
 
 
-def _tool_api_pack() -> Tool:
-    """API packs (replaces 5 tools)."""
-    return Tool(
-        name="api_pack",
-        description="API pack operations: list, search, get. Project-local packs in .dazzle/api_packs/ override built-in packs.",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": [
-                        "list",
-                        "search",
-                        "get",
-                    ],
-                    "description": "Operation to perform",
-                },
-                "pack_name": {
-                    "type": "string",
-                    "description": "Pack name (for get)",
-                },
-                "query": {
-                    "type": "string",
-                    "description": "Search query (for search)",
-                },
-                "category": {
-                    "type": "string",
-                    "description": "Filter by category (for search)",
-                },
-                "provider": {
-                    "type": "string",
-                    "description": "Filter by provider (for search)",
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
-def _tool_mock() -> Tool:
-    """Mock server management."""
-    return Tool(
-        name="mock",
-        description="Vendor mock server management: status, request_log. Operates on auto-started mock servers during 'dazzle serve'.",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": [
-                        "status",
-                        "request_log",
-                    ],
-                    "description": "Operation to perform",
-                },
-                "vendor": {
-                    "type": "string",
-                    "description": "API pack name (e.g. 'stripe_payments')",
-                },
-                "method": {
-                    "type": "string",
-                    "description": "Filter by HTTP method (for request_log)",
-                },
-                "path": {
-                    "type": "string",
-                    "description": "Filter by path substring (for request_log)",
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Max results (for request_log, default: 20)",
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
 def _tool_db() -> Tool:
     """DB operations (read-only)."""
     return Tool(
@@ -321,26 +242,6 @@ def _tool_rhythm() -> Tool:
                 "name": {
                     "type": "string",
                     "description": "Rhythm name (for get)",
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
-def _tool_demo_data() -> Tool:
-    """Demo data (replaces 4 tools)."""
-    return Tool(
-        name="demo_data",
-        description="Demo data operations: get. Retrieve the current demo data blueprint.",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": ["get"],
-                    "description": "Operation to perform",
                 },
                 **PROJECT_PATH_SCHEMA,
             },
@@ -476,68 +377,6 @@ def _tool_semantics() -> Tool:
                         "extract_guards",
                     ],
                     "description": "Operation to perform",
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
-def _tool_process() -> Tool:
-    """Processes (replaces 7 tools)."""
-    return Tool(
-        name="process",
-        description="Process operations: list, inspect, list_runs, get_run, coverage",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": [
-                        "list",
-                        "inspect",
-                        "list_runs",
-                        "get_run",
-                        "coverage",
-                    ],
-                    "description": "Operation to perform",
-                },
-                "process_name": {
-                    "type": "string",
-                    "description": "Process name (for inspect)",
-                },
-                "run_id": {
-                    "type": "string",
-                    "description": "Run ID (for get_run)",
-                },
-                "status": {
-                    "type": "string",
-                    "enum": [
-                        "pending",
-                        "running",
-                        "draining",
-                        "suspended",
-                        "waiting",
-                        "completed",
-                        "failed",
-                        "compensating",
-                        "cancelled",
-                    ],
-                    "description": "Filter by status (for list_runs)",
-                },
-                "status_filter": {
-                    "type": "string",
-                    "enum": ["all", "covered", "partial", "uncovered"],
-                    "description": "Filter by coverage status (for coverage, default: all)",
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Max results (for list_runs, coverage; default: 50)",
-                },
-                "offset": {
-                    "type": "integer",
-                    "description": "Skip N results for pagination (for coverage, default: 0)",
                 },
                 **PROJECT_PATH_SCHEMA,
             },
@@ -727,130 +566,6 @@ def _tool_knowledge() -> Tool:
     )
 
 
-def _tool_user_management() -> Tool:
-    """User management (auth user/session CRUD)."""
-    return Tool(
-        name="user_management",
-        description=(
-            "User management operations: list, create, get, update, "
-            "reset_password, deactivate, list_sessions, revoke_session, config. "
-            "Manage auth users and sessions in PostgreSQL."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": [
-                        "list",
-                        "create",
-                        "get",
-                        "update",
-                        "reset_password",
-                        "deactivate",
-                        "list_sessions",
-                        "revoke_session",
-                        "config",
-                    ],
-                    "description": "Operation to perform",
-                },
-                "email": {
-                    "type": "string",
-                    "description": "User email (for create, get)",
-                },
-                "user_id": {
-                    "type": "string",
-                    "description": "User UUID (for get, update, reset_password, deactivate, list_sessions)",
-                },
-                "name": {
-                    "type": "string",
-                    "description": "Display name (for create)",
-                },
-                "username": {
-                    "type": "string",
-                    "description": "New display name (for update)",
-                },
-                "roles": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Role names (for create, update)",
-                },
-                "role": {
-                    "type": "string",
-                    "description": "Filter by role (for list)",
-                },
-                "is_superuser": {
-                    "type": "boolean",
-                    "description": "Superuser flag (for create, update)",
-                },
-                "is_active": {
-                    "type": "boolean",
-                    "description": "Active status (for update)",
-                },
-                "active_only": {
-                    "type": "boolean",
-                    "description": "Only active users/sessions (for list, list_sessions; default: true)",
-                },
-                "password": {
-                    "type": "string",
-                    "description": "Explicit password (for create, reset_password). If omitted, a random password is generated.",
-                },
-                "session_id": {
-                    "type": "string",
-                    "description": "Session ID (for revoke_session)",
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Max results (for list, list_sessions; default: 50)",
-                },
-                "offset": {
-                    "type": "integer",
-                    "description": "Pagination offset (for list; default: 0)",
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
-def _tool_user_profile() -> Tool:
-    """User profile (adaptive persona inference)."""
-    return Tool(
-        name="user_profile",
-        description=(
-            "User profile for adaptive persona inference. "
-            "Operations: observe (analyze recent tool invocations), "
-            "observe_message (analyze user message vocabulary), "
-            "get (return current profile context), "
-            "reset (delete and return fresh default)."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": ["observe", "observe_message", "get", "reset"],
-                    "description": "Operation to perform",
-                },
-                "message_text": {
-                    "type": "string",
-                    "description": "User message text (for observe_message)",
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Max invocations to analyze (for observe; default: 50)",
-                },
-                "since_minutes": {
-                    "type": "integer",
-                    "description": "Only analyze invocations from last N minutes (for observe; default: 30)",
-                },
-            },
-            "required": ["operation"],
-        },
-    )
-
-
 def _tool_agent() -> Tool:
     """#1605 agent-first closed loop (read/report only — ADR-0002)."""
     return Tool(
@@ -861,7 +576,7 @@ def _tool_agent() -> Tool:
             "playbook (domain_logic map→bind→scaffold→prove). "
             "Does NOT write files — use CLI `dazzle scaffold` / `dazzle prove`. "
             "For data-shape judgement (exclusive FKs / poly_ref / JSONB) use "
-            "the `representation` tool (#1617)."
+            "CLI `dazzle representation decide` (#1617)."
         ),
         input_schema={
             "type": "object",
@@ -885,47 +600,6 @@ def _tool_agent() -> Tool:
                     "type": "string",
                     "enum": ["static", "runtime", "journey"],
                     "description": "Proof kind (for prove). static: target exists in DSL/host map. runtime: host-module readiness. journey: surface hub / open-via hop coherence. Default: static.",
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
-def _tool_representation() -> Tool:
-    """#1617 data-representation judgement (decide / classify / prove)."""
-    return Tool(
-        name="representation",
-        description=(
-            "Data-representation organisational judgement (#1617): named hatch "
-            "patterns (rel.explicit_ref, rel.exclusive_fks, rel.poly_ref, "
-            "rel.tpt_subtype, rel.json_extension, …). Operations: patterns "
-            "(catalogue), decide (ladder → pattern_id + DSL sketch + reject "
-            "list), classify (project AppSpec evidence), prove (static "
-            "integrity gate). Prefer before inventing host poly or dual-lock "
-            "open-via. Complements agent/story prove (behaviour) with shape prove."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": ["patterns", "decide", "classify", "prove"],
-                    "description": "Operation to perform",
-                },
-                "text": {
-                    "type": "string",
-                    "description": "Free-text domain pressure for decide",
-                },
-                "signals": {
-                    "type": "object",
-                    "description": (
-                        "Structured decide signals: shared_child_of_many_parents, "
-                        "exclusive_parents, parent_count, true_isa, "
-                        "needs_mixed_kind_list, tenant_variable_fields, "
-                        "four_questions_failed, host_extension, journey_open_via"
-                    ),
                 },
                 **PROJECT_PATH_SCHEMA,
             },
@@ -1023,132 +697,6 @@ def _tool_spec_analyze() -> Tool:
     )
 
 
-def _tool_graph() -> Tool:
-    """Graph (knowledge graph operations)."""
-    return Tool(
-        name="graph",
-        description=(
-            "Knowledge graph operations for codebase understanding. Operations: "
-            "query (search entities by text), "
-            "dependencies (what does X depend on?), "
-            "dependents (what depends on X?), "
-            "neighbourhood (entities within N hops), "
-            "paths (find paths between entities), "
-            "stats (graph statistics), "
-            "populate (refresh graph from source), "
-            "concept (look up a framework concept by name), "
-            "inference (find inference patterns matching a query), "
-            "related (get related concepts for an entity), "
-            "export (export project KG data to JSON), "
-            "import (import KG data from JSON), "
-            "triggers (show what fires when an entity event occurs), "
-            "topology (derive project structure from DSL: entity relationships, surface/workspace mapping, dead constructs; optionally filter by entity name)"
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": [
-                        "query",
-                        "dependencies",
-                        "dependents",
-                        "neighbourhood",
-                        "paths",
-                        "stats",
-                        "populate",
-                        "concept",
-                        "inference",
-                        "related",
-                        "export",
-                        "import",
-                        "triggers",
-                        "topology",
-                    ],
-                    "description": "Operation to perform",
-                },
-                "text": {
-                    "type": "string",
-                    "description": "Search text (for query; accepted alias for inference, which takes query)",
-                },
-                "query": {
-                    "type": "string",
-                    "description": "Search query (for inference)",
-                },
-                "entity_id": {
-                    "type": "string",
-                    "description": "Entity ID with prefix like file:, module:, class: (for dependencies, dependents, neighbourhood)",
-                },
-                "source_id": {
-                    "type": "string",
-                    "description": "Source entity ID (for paths)",
-                },
-                "target_id": {
-                    "type": "string",
-                    "description": "Target entity ID (for paths)",
-                },
-                "depth": {
-                    "type": "integer",
-                    "description": "Traversal depth (for neighbourhood, default: 1)",
-                },
-                "transitive": {
-                    "type": "boolean",
-                    "description": "Include transitive deps (for dependencies, dependents)",
-                },
-                "relation_types": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Filter by relation types: imports, contains, inherits, depends_on",
-                },
-                "entity_types": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Filter by entity types: file, module, class, function",
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Max results (default: 20)",
-                },
-                "root_path": {
-                    "type": "string",
-                    "description": "Path to populate from (for populate)",
-                },
-                "name": {
-                    "type": "string",
-                    "description": "Entity or concept name (for concept, related, triggers)",
-                },
-                "entity": {
-                    "type": "string",
-                    "description": "Entity name (for triggers, e.g. 'Ticket')",
-                },
-                "event": {
-                    "type": "string",
-                    "enum": ["created", "updated", "deleted"],
-                    "description": "Event type (for triggers, default: created)",
-                },
-                "data": {
-                    "type": "object",
-                    "description": "JSON export data to import (for import)",
-                },
-                "file_path": {
-                    "type": "string",
-                    "description": "Path to JSON file to import (for import, alternative to data)",
-                },
-                "mode": {
-                    "type": "string",
-                    "enum": ["merge", "replace"],
-                    "description": "Import mode: merge (additive upsert) or replace (wipe and load). Default: merge",
-                },
-                # #1756 — the graph handlers resolve the project from this key
-                # (`resolve_project_path`); it was read but never declared, so it
-                # could not arrive. Every other project-scoped tool has it.
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
 def _tool_discovery() -> Tool:
     """Discovery operations (capability discovery agent)."""
     return Tool(
@@ -1172,105 +720,6 @@ def _tool_discovery() -> Tool:
                 "persona": {
                     "type": "string",
                     "description": "Persona id to score (for coherence). Omit to score every persona.",
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
-def _tool_e2e() -> Tool:
-    """E2E environment operations."""
-    return Tool(
-        name="e2e",
-        description=(
-            "E2E environment operations (read-only). "
-            "Operations: list_modes (available runner modes), "
-            "describe_mode (single mode details), "
-            "status (lock + runtime + log-tail for an example app), "
-            "list_baselines (hash-tagged db snapshot files for an example). "
-            "Process operations (start/stop) live in the CLI only."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": [
-                        "list_modes",
-                        "describe_mode",
-                        "status",
-                        "list_baselines",
-                    ],
-                    "description": "Operation to perform",
-                },
-                "name": {
-                    "type": "string",
-                    "description": "Mode name (for describe_mode)",
-                },
-                "project_root": {
-                    "type": "string",
-                    "description": "Path to an example app (for status/list_baselines)",
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
-def _tool_presentation() -> Tool:
-    """#1626 hyperpart presentation process (role×host → density)."""
-    return Tool(
-        name="presentation",
-        description=(
-            "Hyperpart presentation process (#1626): closed role×host → density "
-            "matrix + present() seam. Operations: cognition (matrix hosts audited "
-            "vs wired; how_to_extend), opportunities (static person/queue scan + "
-            "presentation_cognition; CLI: dazzle qa hyperpart-opportunities), "
-            "shapes (rational DSL authoring shapes + scenario_missing residual "
-            "for domain-modelling agents; optional id=/status= filters). "
-            "Doctrine: docs/reference/hyperpart-presentation.md + "
-            "docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md. "
-            "Force: /improve framework-ux hyperpart_emitter (planned shapes / "
-            "scenario_missing)."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": ["cognition", "opportunities", "shapes"],
-                    "description": "Operation to perform",
-                },
-                "app": {
-                    "type": "string",
-                    "description": (
-                        "Showcase app name when project_path is examples/ "
-                        "(or monorepo root with examples/<app>)."
-                    ),
-                },
-                "id": {
-                    "type": "string",
-                    "description": (
-                        "Optional hyperpart id when operation=shapes "
-                        "(returns one shape + its scenarios)."
-                    ),
-                },
-                "status": {
-                    "type": "string",
-                    "description": (
-                        "Optional shape status filter when operation=shapes "
-                        "(live|planned|chrome_only)."
-                    ),
-                },
-                "project_root": {
-                    "type": "string",
-                    "description": (
-                        "Path to one example app (dazzle.toml) or examples/ root. "
-                        "Defaults to the active MCP project."
-                    ),
                 },
                 **PROJECT_PATH_SCHEMA,
             },
@@ -1328,67 +777,6 @@ def _tool_policy() -> Tool:
     )
 
 
-def _tool_test_intelligence() -> Tool:
-    """Test intelligence (test history and failure patterns)."""
-    return Tool(
-        name="test_intelligence",
-        description=(
-            "Query persisted test result history. Operations: "
-            "summary (recent runs overview), "
-            "failures (failure patterns, flaky tests, persistent failures), "
-            "regression (tests that went pass→fail between last two runs), "
-            "coverage (success rate trend across recent runs), "
-            "context (single-call AI-ready snapshot combining all above), "
-            "journey (most recent E2E journey analysis). "
-            "Results are automatically persisted by dsl_test run_all."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": [
-                        "summary",
-                        "failures",
-                        "regression",
-                        "coverage",
-                        "context",
-                        "journey",
-                    ],
-                    "description": "Operation to perform",
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Number of recent runs to analyze (default: 10)",
-                },
-                "run_id": {
-                    "type": "string",
-                    "description": "Specific run ID to query test cases for",
-                },
-                "failure_type": {
-                    "type": "string",
-                    "enum": [
-                        "rbac_denied",
-                        "validation_error",
-                        "dsl_surface_gap",
-                        "state_machine",
-                        "timeout",
-                        "framework_bug",
-                        "unknown",
-                    ],
-                    "description": "Filter by failure type (for failures)",
-                },
-                "category": {
-                    "type": "string",
-                    "description": "Filter by test category (for failures)",
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
 def _tool_sentinel() -> Tool:
     """Sentinel (SaaS failure-mode detection)."""
     return Tool(
@@ -1433,68 +821,6 @@ def _tool_sentinel() -> Tool:
                 "samples": {
                     "type": "integer",
                     "description": "Samples per layer for fuzz_summary. Default: 10.",
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
-def _tool_llm() -> Tool:
-    """LLM (intent/model inspection)."""
-    return Tool(
-        name="llm",
-        description=(
-            "LLM operations: list_intents (declared intents), "
-            "list_models (declared models), "
-            "inspect_intent (detailed intent view with resolved model), "
-            "get_config (module-level LLM configuration)."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": [
-                        "list_intents",
-                        "list_models",
-                        "inspect_intent",
-                        "get_config",
-                    ],
-                    "description": "Operation to perform",
-                },
-                "name": {
-                    "type": "string",
-                    "description": "Intent name (for inspect_intent)",
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
-def _tool_param() -> Tool:
-    """Param (runtime parameter inspection)."""
-    return Tool(
-        name="param",
-        description=(
-            "Query runtime parameter declarations. Operations: "
-            "list (all declared params with defaults), "
-            "get (specific param by key with type, constraints, scope)."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": ["list", "get"],
-                    "description": "Operation to perform",
-                },
-                "key": {
-                    "type": "string",
-                    "description": "Parameter key (for 'get' operation)",
                 },
                 **PROJECT_PATH_SCHEMA,
             },
@@ -1613,66 +939,6 @@ def _tool_compliance() -> Tool:
     )
 
 
-def _tool_agent_commands() -> Tool:
-    """Agent commands (autonomous development skill management)."""
-    return Tool(
-        name="agent_commands",
-        description=(
-            "Agent development commands: list (available commands with maturity status), "
-            "get (rendered skill content for a command), "
-            "check_updates (version comparison for sync)."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                **PROJECT_PATH_SCHEMA,
-                "operation": {
-                    "type": "string",
-                    "enum": ["list", "get", "check_updates"],
-                    "description": "Operation to perform",
-                },
-                "command": {
-                    "type": "string",
-                    "description": "Command name (for 'get' operation)",
-                },
-                "commands_version": {
-                    "type": "string",
-                    "description": "Local commands_version from .manifest.json (for 'check_updates')",
-                },
-            },
-            "required": ["operation"],
-        },
-    )
-
-
-def _tool_perf() -> Tool:
-    """Local OpenTelemetry trace findings (read-only)."""
-    return Tool(
-        name="perf",
-        description=(
-            "Local OpenTelemetry trace findings for the current project (read-only). "
-            "list: enumerate past runs in .dazzle/perf/. "
-            "report: return heuristic findings (slow endpoints, N+1, etc.) as JSON. "
-            "show: return the raw span tree for a run."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": ["list", "report", "show"],
-                    "description": "Which read operation to perform.",
-                },
-                "run": {
-                    "type": "string",
-                    "description": "Run id (default: latest).",
-                },
-            },
-            "required": ["operation"],
-        },
-    )
-
-
 def get_consolidated_tools() -> list[Tool]:
     """
     Get consolidated tools (knowledge/query operations only).
@@ -1685,38 +951,23 @@ def get_consolidated_tools() -> list[Tool]:
     """
     return [
         _tool_dsl(),
-        _tool_api_pack(),
-        _tool_mock(),
         _tool_db(),
         _tool_story(),
         _tool_rhythm(),
-        _tool_demo_data(),
         _tool_feedback(),
         _tool_sitespec(),
         _tool_semantics(),
-        _tool_process(),
         _tool_status(),
         _tool_knowledge(),
-        _tool_user_management(),
-        _tool_user_profile(),
         _tool_bootstrap(),
         _tool_agent(),
-        _tool_representation(),
-        _tool_presentation(),
         _tool_spec_analyze(),
-        _tool_graph(),
         _tool_discovery(),
-        _tool_e2e(),
         _tool_policy(),
-        _tool_test_intelligence(),
         _tool_sentinel(),
-        _tool_llm(),
-        _tool_param(),
         _tool_guide(),
         _tool_conformance(),
         _tool_compliance(),
-        _tool_agent_commands(),
-        _tool_perf(),
     ]
 
 

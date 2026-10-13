@@ -11351,13 +11351,9 @@
   "dazzle/mcp/event_first_tools.py": {
     "functions": {
       "SemanticExtraction": 1,
-      "ValidationIssue": 1,
-      "ValidationSeverity": 1,
       "_build_guard_expression": 13,
       "_match_compliance_pattern": 11,
       "_match_transitions_to_constraint": 4,
-      "check_projection_necessity": 9,
-      "detect_idempotency_hazards": 5,
       "extract_guards": 7,
       "extract_semantics": 32,
       "handle_extract_guards": 2,
@@ -11365,12 +11361,9 @@
       "handle_infer_analytics": 2,
       "handle_infer_compliance": 2,
       "handle_infer_tenancy": 2,
-      "handle_validate_events": 2,
       "infer_analytics_intent": 20,
       "infer_compliance_requirements": 24,
-      "infer_multi_tenancy": 24,
-      "validate_event_first": 8,
-      "validate_event_naming": 5
+      "infer_multi_tenancy": 24
     },
     "mi_rank": "B"
   },
@@ -11809,14 +11802,6 @@
     "functions": {},
     "mi_rank": "A"
   },
-  "dazzle/mcp/server/handlers/agent_commands.py": {
-    "functions": {
-      "handle_check_updates": 2,
-      "handle_get": 5,
-      "handle_list": 2
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/server/handlers/agent_loop.py": {
     "functions": {
       "agent_context_handler": 1,
@@ -11832,14 +11817,7 @@
       "api_pack_env_vars_impl": 2,
       "api_pack_generate_dsl_impl": 5,
       "api_pack_infrastructure_impl": 18,
-      "api_pack_scaffold_impl": 10,
-      "generate_service_dsl_handler": 3,
-      "get_api_pack_handler": 11,
-      "get_env_vars_for_packs_handler": 1,
-      "infrastructure_handler": 2,
-      "list_api_packs_handler": 2,
-      "scaffold_pack_handler": 2,
-      "search_api_packs_handler": 2
+      "api_pack_scaffold_impl": 10
     },
     "mi_rank": "A"
   },
@@ -11900,16 +11878,8 @@
       "_infer_domain_suffix": 11,
       "_infer_field_strategy": 29,
       "demo_generate_impl": 20,
-      "demo_load_impl": 9,
       "demo_propose_impl": 61,
-      "demo_save_impl": 23,
-      "demo_validate_seeds_impl": 6,
-      "generate_demo_data_handler": 1,
-      "get_demo_blueprint_handler": 2,
-      "load_demo_data_handler": 2,
-      "propose_demo_blueprint_handler": 1,
-      "save_demo_blueprint_handler": 2,
-      "validate_demo_data_handler": 1
+      "demo_save_impl": 23
     },
     "mi_rank": "B"
   },
@@ -12014,17 +11984,6 @@
     },
     "mi_rank": "C"
   },
-  "dazzle/mcp/server/handlers/e2e.py": {
-    "functions": {
-      "_mode_to_dict": 1,
-      "_status_for": 13,
-      "e2e_describe_mode_handler": 1,
-      "e2e_list_baselines_handler": 7,
-      "e2e_list_modes_handler": 2,
-      "e2e_status_handler": 6
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/server/handlers/feedback.py": {
     "functions": {
       "get_handler": 2,
@@ -12064,28 +12023,13 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/mcp/server/handlers/llm.py": {
-    "functions": {
-      "get_config_handler": 4,
-      "inspect_intent_handler": 11,
-      "list_intents_handler": 3,
-      "list_models_handler": 2
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/server/handlers/mock.py": {
     "functions": {
       "_get_orchestrator": 1,
-      "mock_fire_webhook_handler": 5,
       "mock_fire_webhook_impl": 4,
-      "mock_inject_error_handler": 5,
       "mock_inject_error_impl": 4,
-      "mock_request_log_handler": 12,
-      "mock_scaffold_scenario_handler": 1,
       "mock_scaffold_scenario_impl": 1,
-      "mock_scenarios_handler": 3,
-      "mock_scenarios_impl": 15,
-      "mock_status_handler": 3
+      "mock_scenarios_impl": 15
     },
     "mi_rank": "A"
   },
@@ -12097,7 +12041,6 @@
       "_extract_run_all_metrics": 8,
       "_extract_scope_fidelity_metrics": 1,
       "_extract_semantics_extract_metrics": 1,
-      "_extract_semantics_validate_metrics": 1,
       "_extract_story_coverage_metrics": 2,
       "_extract_test_coverage_metrics": 1,
       "_extract_test_design_gaps_metrics": 5,
@@ -12117,17 +12060,6 @@
     "functions": {
       "param_get_handler": 5,
       "param_list_handler": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/server/handlers/perf.py": {
-    "functions": {
-      "_do_list": 4,
-      "_do_report": 2,
-      "_do_show": 3,
-      "_perf_dir": 1,
-      "_resolve_run": 4,
-      "handle_perf": 4
     },
     "mi_rank": "A"
   },
@@ -12161,26 +12093,12 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/mcp/server/handlers/presentation.py": {
-    "functions": {
-      "_filter_shape_table": 8,
-      "_resolve_app_root": 6,
-      "_shape_detail": 6,
-      "handle_presentation": 13,
-      "presentation_cognition_handler": 1,
-      "presentation_opportunities_handler": 2,
-      "presentation_shapes_handler": 9
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/server/handlers/process/__init__.py": {
     "functions": {},
     "mi_rank": "A"
   },
   "dazzle/mcp/server/handlers/process/_helpers.py": {
-    "functions": {
-      "get_process_adapter": 1
-    },
+    "functions": {},
     "mi_rank": "A"
   },
   "dazzle/mcp/server/handlers/process/coverage.py": {
@@ -12203,16 +12121,7 @@
       "_get_trigger_label": 13,
       "_step_edges": 19,
       "_step_to_mermaid": 9,
-      "get_process_diagram_handler": 5,
       "process_diagram_impl": 9
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/server/handlers/process/inspection.py": {
-    "functions": {
-      "_format_step": 15,
-      "inspect_process_handler": 19,
-      "list_processes_handler": 7
     },
     "mi_rank": "A"
   },
@@ -12225,8 +12134,7 @@
       "_cluster_stories_into_workflows": 15,
       "_generate_design_questions": 18,
       "_is_crud_story": 9,
-      "process_propose_impl": 31,
-      "propose_processes_handler": 1
+      "process_propose_impl": 31
     },
     "mi_rank": "A"
   },
@@ -12246,13 +12154,7 @@
   },
   "dazzle/mcp/server/handlers/process/storage.py": {
     "functions": {
-      "ProcessRunSummary": 1,
-      "_get_run_async": 5,
-      "_list_runs_async": 5,
-      "get_process_run_handler": 3,
-      "list_process_runs_handler": 1,
-      "process_save_impl": 18,
-      "save_processes_handler": 5
+      "process_save_impl": 18
     },
     "mi_rank": "A"
   },
@@ -12263,16 +12165,6 @@
       "load_appspec_for_project": 6,
       "select_project": 9,
       "validate_all_projects": 8
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/server/handlers/representation.py": {
-    "functions": {
-      "handle_representation": 10,
-      "representation_classify_handler": 1,
-      "representation_decide_handler": 6,
-      "representation_patterns_handler": 1,
-      "representation_prove_handler": 1
     },
     "mi_rank": "A"
   },
@@ -12461,19 +12353,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/mcp/server/handlers/test_intelligence.py": {
-    "functions": {
-      "_get_graph": 1,
-      "_project_name_from_root": 3,
-      "test_context_handler": 5,
-      "test_coverage_handler": 2,
-      "test_failures_handler": 8,
-      "test_journey_handler": 3,
-      "test_regression_handler": 2,
-      "test_summary_handler": 3
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/server/handlers/testing.py": {
     "functions": {
       "_resolve_project_root": 4,
@@ -12499,32 +12378,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/mcp/server/handlers/user_management.py": {
-    "functions": {
-      "_generate_temp_password": 2,
-      "_get_auth_store": 4,
-      "_session_to_dict": 1,
-      "_user_to_dict": 2,
-      "create_user_handler": 7,
-      "deactivate_user_handler": 4,
-      "get_auth_config_handler": 2,
-      "get_user_handler": 8,
-      "list_sessions_handler": 3,
-      "list_users_handler": 3,
-      "reset_password_handler": 6,
-      "revoke_session_handler": 3,
-      "update_user_handler": 4
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/server/handlers/user_profile.py": {
-    "functions": {
-      "_observe": 5,
-      "_observe_message": 2,
-      "handle_user_profile": 5
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/server/handlers/viewport_testing.py": {
     "functions": {
       "list_viewport_specs_impl": 2,
@@ -12541,17 +12394,6 @@
       "_dispatch_project_ops_async": 4,
       "_dispatch_standalone_ops": 2,
       "_dsl_list_fragments": 1,
-      "_handle_graph_concept": 2,
-      "_handle_graph_dependencies": 1,
-      "_handle_graph_dependents": 1,
-      "_handle_graph_import": 6,
-      "_handle_graph_inference": 2,
-      "_handle_graph_neighbourhood": 1,
-      "_handle_graph_paths": 1,
-      "_handle_graph_query": 1,
-      "_handle_graph_related": 5,
-      "_handle_graph_topology": 21,
-      "_handle_graph_triggers": 17,
       "_lazy_import": 1,
       "_make_project_handler": 1,
       "_make_project_handler_async": 1,
@@ -12563,17 +12405,11 @@
       "dispatch_consolidated_tool": 21,
       "error_response": 1,
       "handle_agent": 1,
-      "handle_api_pack": 3,
       "handle_bootstrap": 3,
-      "handle_graph": 2,
       "handle_knowledge": 3,
-      "handle_perf": 1,
-      "handle_presentation": 1,
-      "handle_representation": 1,
       "handle_spec_analyze": 1,
       "handle_status": 4,
       "handle_story": 4,
-      "handle_user_management": 19,
       "unknown_op_response": 1
     },
     "mi_rank": "A"
@@ -12642,7 +12478,6 @@
       "get_activity_store": 1,
       "get_appspec_data": 1,
       "get_available_projects": 1,
-      "get_graph_db_path": 1,
       "get_knowledge_graph": 1,
       "get_mock_orchestrator": 1,
       "get_or_create_ui_spec": 1,
@@ -12655,7 +12490,6 @@
       "init_dev_mode": 3,
       "init_knowledge_graph": 6,
       "is_dev_mode": 1,
-      "refresh_knowledge_graph": 5,
       "reinit_knowledge_graph": 2,
       "reset_state": 1,
       "resolve_project_path": 12,
@@ -12671,15 +12505,12 @@
     "functions": {
       "analyze_patterns": 5,
       "find_examples_handler": 1,
-      "generate_service_dsl_handler": 6,
       "generate_tests_from_stories_handler": 1,
       "get_active_project_info": 8,
-      "get_api_pack_handler": 10,
       "get_cli_help_handler": 1,
       "get_dnr_logs_handler": 18,
       "get_dsl_spec_handler": 12,
       "get_entities": 3,
-      "get_env_vars_for_packs_handler": 2,
       "get_mcp_status_handler": 7,
       "get_product_spec_handler": 4,
       "get_stories_handler": 11,
@@ -12688,7 +12519,6 @@
       "inspect_entity": 10,
       "inspect_surface": 7,
       "lint_project": 2,
-      "list_api_packs_handler": 2,
       "list_modules": 2,
       "list_projects": 4,
       "load_appspec_for_project": 6,
@@ -12696,7 +12526,6 @@
       "lookup_inference_handler": 4,
       "propose_stories_from_dsl_handler": 22,
       "save_stories_handler": 11,
-      "search_api_packs_handler": 2,
       "select_project": 8,
       "validate_all_projects": 8,
       "validate_dsl": 2
@@ -12706,30 +12535,16 @@
   "dazzle/mcp/server/tools_consolidated.py": {
     "functions": {
       "_tool_agent": 1,
-      "_tool_agent_commands": 1,
-      "_tool_api_pack": 1,
       "_tool_bootstrap": 1,
       "_tool_compliance": 1,
-      "_tool_composition": 1,
       "_tool_conformance": 1,
       "_tool_db": 1,
-      "_tool_demo_data": 1,
       "_tool_discovery": 1,
       "_tool_dsl": 1,
-      "_tool_e2e": 1,
       "_tool_feedback": 1,
-      "_tool_graph": 1,
       "_tool_guide": 1,
       "_tool_knowledge": 1,
-      "_tool_llm": 1,
-      "_tool_mock": 1,
-      "_tool_param": 1,
-      "_tool_perf": 1,
       "_tool_policy": 1,
-      "_tool_presentation": 1,
-      "_tool_process": 1,
-      "_tool_product_quality": 1,
-      "_tool_representation": 1,
       "_tool_rhythm": 1,
       "_tool_semantics": 1,
       "_tool_sentinel": 1,
@@ -12737,9 +12552,6 @@
       "_tool_spec_analyze": 1,
       "_tool_status": 1,
       "_tool_story": 1,
-      "_tool_test_intelligence": 1,
-      "_tool_user_management": 1,
-      "_tool_user_profile": 1,
       "get_all_consolidated_tools": 2,
       "get_consolidated_tools": 1,
       "get_dev_mode_tools": 1
@@ -12752,21 +12564,6 @@
       "check_mcp_server": 7,
       "get_claude_config_path": 3,
       "register_mcp_server": 7
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/user_profile.py": {
-    "functions": {
-      "UserProfile": 1,
-      "_derive_framing": 7,
-      "_make_default_profile": 1,
-      "_recompute_derived": 1,
-      "analyze_message": 5,
-      "analyze_tool_invocations": 7,
-      "load_profile": 4,
-      "profile_to_context": 8,
-      "reset_profile": 3,
-      "save_profile": 2
     },
     "mi_rank": "A"
   },
@@ -13565,7 +13362,6 @@
       "PartShape": 2,
       "PartShape.to_json": 1,
       "_scenario_covered_ids": 3,
-      "agent_shape_table": 2,
       "load_shapes": 14,
       "shapes_snapshot": 10
     },

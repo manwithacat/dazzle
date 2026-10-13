@@ -34,6 +34,8 @@
   "money.MoneyWithScale.scale_override",
   "process.HumanTaskOutcome.sets",
   "process.HumanTaskSpec.escalation_timeout_seconds",
+  "process.ProcessEventEmission.on_start",
+  "process.ProcessStepSpec.parallel_policy",
   "rhythm.Gap.rhythm",
   "rhythm.Gap.scene",
   "rhythm.Gap.story_ref",

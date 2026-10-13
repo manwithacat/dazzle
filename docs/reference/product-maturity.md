@@ -159,8 +159,8 @@ seeding (`live_desk_residual`).
 Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → story_walk → trial_verdict / agent_acceptance → Tier 1**.
 
 When stills show **presentation** residual (`ref_as_repr` / `person_as_text`), force
-**`framework-ux hyperpart_presentation`** (not `demo_fleet`). MCP:
-`presentation(operation=cognition|opportunities|shapes)`; doctrine
+**`framework-ux hyperpart_presentation`** (not `demo_fleet`). CLI:
+`dazzle qa hyperpart-opportunities`; doctrine
 `hyperpart-presentation.md`; counter-prior `ref_as_repr`.
 
 **Hard stop:** if status shows `densify_allowed=0`, do **not** run WI D densify

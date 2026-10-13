@@ -112,7 +112,7 @@ def test_ir_types_includes_known_types():
 
 def test_mcp_tools_includes_known_tools():
     snapshot = mcp_mod.snapshot_mcp_tools()
-    for tool in ("dsl", "graph", "knowledge", "story", "rhythm", "discovery"):
+    for tool in ("dsl", "knowledge", "story", "rhythm", "discovery"):
         assert f"tool: {tool}\n" in snapshot, f"Missing tool: {tool}"
 
 

@@ -84,9 +84,3 @@ agent can rely on `## Slow endpoints`, `## Suspected N+1 patterns`,
 etc., as recognisable hooks.
 
 For programmatic use, see `docs/reference/perf-findings-schema.md`.
-
-## MCP
-
-The `perf` MCP tool exposes read-only operations: `list`, `report`,
-`show`. The `trace` subcommand stays CLI-only because it spawns a
-subprocess (ADR-0002).

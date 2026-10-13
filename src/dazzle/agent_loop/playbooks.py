@@ -64,8 +64,7 @@ features**, not host folklore. Agents must **decide → author → classify → 
 **Exclusive FKs ≠ poly_ref.** Company|sole_trader clients are exclusive FKs.
 
 ## Loop
-1. **Decide** — `dazzle representation decide --text '…'` or MCP
-   `representation(operation=decide, text=…)`
+1. **Decide** — `dazzle representation decide --text '…'`
 2. **Author** — DSL sketch from decide (invariant + open for exclusive FKs)
 3. **Classify** — `dazzle representation classify -p .`
 4. **Prove** — `dazzle prove representation -p .`

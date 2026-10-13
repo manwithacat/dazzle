@@ -4,7 +4,6 @@ Process proposal generation — workflow design briefs from uncovered stories.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -12,7 +11,6 @@ from typing import TYPE_CHECKING, Any
 from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.ir.stories import StoryTrigger
 
-from ..common import extract_progress, wrap_handler_errors
 from ..text_utils import slugify as _slugify
 from . import _helpers
 from .coverage import (
@@ -44,11 +42,6 @@ class WorkflowProposal:
     design_questions: list[str]
     recommendation: str  # "compose_process" | "process_not_recommended"
     reason: str
-
-
-# =============================================================================
-# Helper Functions
-# =============================================================================
 
 
 # =============================================================================
@@ -163,24 +156,6 @@ def process_propose_impl(
         result["skipped_crud_count"] = len(skipped_crud)
 
     return result
-
-
-@wrap_handler_errors
-def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Generate workflow design briefs from uncovered stories.
-
-    Clusters stories into workflow-oriented groups and returns design briefs
-    that guide the agent in composing processes, rather than generating
-    ready-made DSL stubs.
-    """
-    progress = extract_progress(args)
-    progress.log_sync("Loading app spec and stories...")
-    result = process_propose_impl(
-        project_root,
-        story_ids=args.get("story_ids"),
-        include_crud=args.get("include_crud", False),
-    )
-    return json.dumps(result, indent=2)
 
 
 # =============================================================================

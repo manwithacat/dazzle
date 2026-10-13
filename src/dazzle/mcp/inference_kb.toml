@@ -1819,7 +1819,7 @@ Use the #1617 representation ladder (pattern IDs) — never invent subject_type+
 4. rel.tpt_subtype — true ISA + mixed-kind list: `subtype_of:`
 5. rel.json_extension — tenant bag: core columns + `extensions: json`
 
-Call MCP `representation(operation=decide)` or `dazzle representation decide --text '…'`.
+Run `dazzle representation decide --text '…'`.
 """
 rationale = "Hand-rolled polymorphic keys break referential integrity and scope. Named hatches keep integrity + render + RBAC co-designed (#1617)."
 example = """

@@ -240,7 +240,7 @@ def _representation_instruction_bits(
     if not representation_decision or not representation_decision.get("ok"):
         return [
             (
-                "4b. Data shape: call representation(operation=decide, text=<spec>) "
+                "4b. Data shape: run `dazzle representation decide --text <spec>` "
                 "before modeling multi-parent or attachable domains. Use pattern IDs "
                 "(rel.exclusive_fks, rel.poly_ref, …) — never hand-rolled subject_type+id."
             ),
@@ -250,7 +250,7 @@ def _representation_instruction_bits(
         (
             f"4b. Data shape (#1617): analysis.representation_decision chose **{pid}**. "
             f"Author DSL per that sketch; reject list is binding. After entities+open-via, "
-            f"run representation(operation=prove) / `dazzle prove representation`. "
+            f"run `dazzle prove representation`. "
             f"Playbook: agent(operation=playbook, name=domain_data_shape)."
         ),
     ]
@@ -283,8 +283,9 @@ def _generation_steps(
         "5. Add state machines where analysis.lifecycles matches the brief",
         (
             "6. If spec mentions third-party services (payments, email, identity, etc.), "
-            "call api_pack(operation='search', query=<vendor>) to check for existing "
-            "integration packs before writing integration DSL blocks."
+            "check for an existing integration pack (built-in packs live in "
+            "dazzle.api_kb; project packs in .dazzle/api_packs/) and run "
+            "`dazzle api-pack generate-dsl <pack>` before writing integration DSL blocks."
         ),
         # --- Access control (mandatory) ---
         (
@@ -365,7 +366,7 @@ def _generation_steps(
         # --- Coverage + demo loop ---
         (
             "17. If stories or processes were defined, run story(operation='coverage') "
-            "and process(operation='coverage') to verify the generated app covers them."
+            "to verify the generated app covers them."
         ),
         (
             "18. Demo close: dazzle serve → re-read runtime.json → "

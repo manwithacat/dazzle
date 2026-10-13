@@ -145,7 +145,7 @@ dazzle rbac verify                             # Verify runtime matches matrix
 - /architecture/overview/ — DSL-to-AppSpec pipeline
 - /architecture/mcp-server/ — MCP tool integration
 
-## MCP Tools (25 tools, 170+ operations)
+## MCP Tools (19 tools)
 
 When connected via Claude Code, these tools are available:
 
@@ -155,26 +155,20 @@ When connected via Claude Code, these tools are available:
 | `spec_analyze` | discover_entities, identify_lifecycles, extract_personas | Spec → DSL |
 | `dsl` | validate, lint, inspect_entity, inspect_surface, fidelity | Validation |
 | `story` | propose, save, get, coverage | Stories & Testing |
-| `test_intelligence` | summary, failures, regression, coverage, context | Stories & Testing |
 | `rhythm` | propose, evaluate, coverage, get, list | Stories & Testing |
-| `demo_data` | propose, save, get, generate | Stories & Testing |
 | `discovery` | run, report, compile, emit, coherence | Analysis |
 | `sentinel` | scan, findings, suppress, status, history | Analysis |
-| `composition` | audit, capture, analyze, report, inspect_styles | Analysis |
 | `semantics` | extract, validate_events, tenancy, compliance, analytics | Analysis |
 | `policy` | analyze, conflicts, coverage, simulate | Analysis |
 | `compliance` | compile, evidence, gaps, summary, review | Compliance |
 | `conformance` | (compliance conformance checks) | Compliance |
-| `graph` | query, dependencies, neighbourhood, concept, inference | Knowledge |
 | `knowledge` | concept, examples, workflow, inference | Knowledge |
 | `sitespec` | get, validate, scaffold, coherence, themes, copy, tokens | Site & Brand |
 | `status` | mcp, logs, telemetry, activity | Operations |
 | `db` | status, verify | Operations |
-| `mock` | status, request_log | Operations |
-| `api_pack` | list, search, get, generate_dsl | Integrations |
-| `user_management` | list, create, get, update, deactivate | User Admin |
-| `user_profile` | observe, observe_message, get, reset | User Admin |
-| `param` | (runtime parameter management) | Configuration |
+| `feedback` | list, get, triage, resolve | Operations |
+| `guide` | list, get, concordance, narrate | Onboarding |
+| `agent` | context, prove, playbook | Agent loop |
 
 ## Supported Compliance Frameworks
 

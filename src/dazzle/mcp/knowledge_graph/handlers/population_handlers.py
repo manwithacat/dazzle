@@ -125,8 +125,8 @@ class PopulationHandlers:
         - Surface-to-entity "uses" relations
 
         This enables queries like:
-        - "Which surfaces use Entity X?" via graph(operation="dependents", entity_id="entity:Task")
-        - "What fields does Entity Y have?" via graph(operation="query", text="Order")
+        - "Which surfaces use Entity X?" via handle_get_dependents("entity:Task")
+        - "What fields does Entity Y have?" via handle_query("Order")
 
         Args:
             project_path: Path to the DAZZLE project directory
@@ -369,7 +369,7 @@ class PopulationHandlers:
 
             # #1238: subtype polymorphism edges (#1217 Phase 3(e)).
             # Mirror IR fields (subtype_of, subtype_children) into traversable
-            # graph relations so MCP `graph` queries can answer "what are the
+            # graph relations so knowledge-graph queries can answer "what are the
             # subtypes of X?" without re-walking the IR.
             if getattr(entity, "subtype_of", None):
                 self._create_relation_counted(

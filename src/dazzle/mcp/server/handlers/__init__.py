@@ -5,13 +5,6 @@ This package splits the tool handlers into domain-specific modules
 for better maintainability.
 """
 
-from .api_packs import (
-    generate_service_dsl_handler,
-    get_api_pack_handler,
-    get_env_vars_for_packs_handler,
-    list_api_packs_handler,
-    search_api_packs_handler,
-)
 from .bootstrap import handle_bootstrap
 from .dsl import (
     analyze_patterns,
@@ -79,12 +72,6 @@ __all__ = [
     # Status handlers
     "get_mcp_status_handler",
     "get_dnr_logs_handler",
-    # API pack handlers
-    "list_api_packs_handler",
-    "search_api_packs_handler",
-    "get_api_pack_handler",
-    "generate_service_dsl_handler",
-    "get_env_vars_for_packs_handler",
     # Story handlers
     "get_dsl_spec_handler",
     "propose_stories_from_dsl_handler",

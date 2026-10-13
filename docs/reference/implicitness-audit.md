@@ -67,7 +67,7 @@ Given a stripped-down AppSpec and a natural-language question ("who has access t
 
 If not, the DSL is relying on implicit framework knowledge. Either (a) change the DSL so the answer is derivable, (b) add a canonical MCP tool so the agent has a named way to ask, or (c) accept it's not agent-readable and document that exception.
 
-Status: the MCP `graph` and `knowledge` tools cover a lot of these questions already. Gaps worth checking: persona/workspace ownership graph, access inheritance across roles, scope interactions across entities.
+Status: the MCP `knowledge` and `policy` tools cover a lot of these questions already. Gaps worth checking: persona/workspace ownership graph, access inheritance across roles, scope interactions across entities.
 
 ### Heuristic 3: "every structural claim needs a generator and a verifier"
 

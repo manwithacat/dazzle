@@ -246,7 +246,7 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
         result["guidance"] = (
             f"Showing {len(page)} of {len(coverage_results)} stories "
             f"(filter: {status_filter}). "
-            f"Use process(operation='coverage', offset={next_offset}) "
+            f"Use story(operation='coverage', offset={next_offset}) "
             f"for the next page."
         )
 

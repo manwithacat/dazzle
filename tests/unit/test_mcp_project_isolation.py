@@ -7,8 +7,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from dazzle.mcp.server import _execute_tool
-from dazzle.mcp.server.handlers_consolidated import handle_graph
-from dazzle.mcp.server.mcp_session import mcp_kg_db_path
 from dazzle.mcp.server.state import get_state, reset_state
 
 
@@ -64,18 +62,3 @@ async def test_failed_switch_clears_previous_project_state(tmp_path: Path) -> No
     assert state.knowledge_graph is None
     assert state.appspec_data is None
     reset_state()
-
-
-def test_graph_rejects_another_projects_database(tmp_path: Path) -> None:
-    project_a = tmp_path / "a"
-    project_b = tmp_path / "b"
-    graph = MagicMock()
-    with (
-        patch("dazzle.mcp.server.state.get_knowledge_graph", return_value=graph),
-        patch("dazzle.mcp.server.state.get_graph_db_path", return_value=mcp_kg_db_path(project_a)),
-    ):
-        response = json.loads(
-            handle_graph({"operation": "stats", "_resolved_project_path": project_b})
-        )
-    assert "different project" in response["error"]
-    graph.get_stats.assert_not_called()

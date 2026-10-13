@@ -371,11 +371,6 @@ def get_knowledge_graph() -> KnowledgeGraph | None:
     return _state.knowledge_graph
 
 
-def get_graph_db_path() -> Path | None:
-    """Get the path to the knowledge graph database."""
-    return _state.graph_db_path
-
-
 def reinit_knowledge_graph(project_root: Path) -> None:
     """
     Close the current KG and open a new per-project database.
@@ -524,31 +519,3 @@ def init_browser_gate(max_concurrent: int | None = None) -> None:
         "Browser gate configured (max_concurrent=%s)",
         max_concurrent or "default",
     )
-
-
-def refresh_knowledge_graph(root_path: str | None = None) -> dict[str, Any]:
-    """
-    Refresh the knowledge graph by re-populating from source.
-
-    Args:
-        root_path: Optional specific path to populate from
-
-    Returns:
-        Population statistics
-    """
-    if _state.knowledge_graph is None:
-        return {"error": "Knowledge graph not initialized"}
-
-    from dazzle.mcp.knowledge_graph import KnowledgeGraphHandlers
-
-    handlers = KnowledgeGraphHandlers(_state.knowledge_graph)
-
-    populate_path = root_path or str(_state.project_root)
-    if _state.is_dev_mode and not root_path:
-        populate_path = str(_state.project_root / "src")
-
-    result = handlers.handle_auto_populate(
-        root_path=populate_path,
-        max_files=1000,
-    )
-    return result

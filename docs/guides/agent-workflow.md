@@ -291,7 +291,7 @@ Typical agent loop for a DSL edit cycle in Claude Code:
 3. `dsl { "operation": "fidelity", "gaps_only": true }` — check whether new
    surfaces have coverage gaps.
 
-The MCP server also exposes `graph`, `knowledge`, `policy`, `sentinel`, and
+The MCP server also exposes `knowledge`, `policy`, `sentinel`, and
 other tools for deeper introspection — run `dazzle inspect api mcp-tools` for
 the full list.
 

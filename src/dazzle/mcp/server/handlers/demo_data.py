@@ -1,15 +1,14 @@
-"""Demo data tool handlers.
+"""Demo data implementations behind the ``dazzle demo`` and ``dazzle qa`` CLIs.
 
-Handles demo blueprint proposal, saving, loading, and data generation.
+Blueprint proposal, saving and data generation. (The MCP
+``demo_data`` tool was removed in flense ship I.)
 """
 
-import json
 import logging
 from pathlib import Path
 from typing import Any
 
 from dazzle.core.demo_blueprint_persistence import (
-    get_blueprint_file,
     load_blueprint,
     save_blueprint,
 )
@@ -21,9 +20,9 @@ from dazzle.core.ir.demo_blueprint import (
     PersonaBlueprint,
     TenantBlueprint,
 )
-from dazzle.core.manifest import load_manifest, resolve_api_url
+from dazzle.core.manifest import load_manifest
 
-from .common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
+from .common import load_project_appspec
 
 logger = logging.getLogger(__name__)
 
@@ -416,104 +415,6 @@ def demo_generate_impl(
     return response
 
 
-def demo_load_impl(
-    project_root: Path,
-    *,
-    base_url: str | None = None,
-    email: str | None = None,
-    password: str | None = None,
-    data_dir_str: str | None = None,
-    filter_entities: list[str] | None = None,
-) -> dict[str, Any]:
-    """Load demo data seed files into a running instance via REST API."""
-    if base_url is None:
-        base_url = resolve_api_url()
-    from dazzle.demo_data.loader import (
-        DemoDataLoader,
-        find_seed_files,
-        topological_sort_entities,
-    )
-
-    app_spec = load_project_appspec(project_root)
-
-    if data_dir_str:
-        data_dir = Path(data_dir_str)
-    else:
-        for candidate in [
-            project_root / "demo_data",
-            project_root / ".dazzle" / "demo_data",
-        ]:
-            if candidate.is_dir():
-                data_dir = candidate
-                break
-        else:
-            return {
-                "status": "no_data",
-                "message": "No demo data directory found. Run generate first.",
-            }
-
-    seed_files = find_seed_files(data_dir)
-    if not seed_files:
-        return {
-            "status": "no_data",
-            "message": f"No seed files found in {data_dir}",
-        }
-
-    entity_order = topological_sort_entities(app_spec.domain.entities)
-
-    with DemoDataLoader(base_url=base_url, email=email, password=password) as loader:
-        if email and password:
-            loader.authenticate()
-
-        report = loader.load_all(data_dir, entity_order, entities_filter=filter_entities)
-
-    return {
-        "status": "loaded",
-        "base_url": base_url,
-        "data_dir": str(data_dir),
-        "report": report.to_dict(),
-        "summary": report.summary(),
-    }
-
-
-def demo_validate_seeds_impl(
-    project_root: Path,
-    *,
-    data_dir_str: str | None = None,
-) -> dict[str, Any]:
-    """Validate seed files against DSL entity definitions."""
-    from dazzle.demo_data.loader import find_seed_files, validate_seed_data
-
-    app_spec = load_project_appspec(project_root)
-
-    if data_dir_str:
-        data_dir = Path(data_dir_str)
-    else:
-        for candidate in [
-            project_root / "demo_data",
-            project_root / ".dazzle" / "demo_data",
-        ]:
-            if candidate.is_dir():
-                data_dir = candidate
-                break
-        else:
-            return {
-                "status": "no_data",
-                "message": "No demo data directory found.",
-            }
-
-    seed_files = find_seed_files(data_dir)
-    errors = validate_seed_data(data_dir, app_spec.domain.entities)
-
-    return {
-        "status": "valid" if not errors else "invalid",
-        "data_dir": str(data_dir),
-        "seed_files": list(seed_files.keys()),
-        "error_count": len(errors),
-        "errors": errors[:20],
-    }
-
-
 NATO_PREFIXES = [
     "Alpha",
     "Bravo",
@@ -656,110 +557,3 @@ def _infer_field_strategy(
         return "free_text_lorem", {"min_words": 3, "max_words": 8}
     # Default to lorem text
     return "free_text_lorem", {"min_words": 2, "max_words": 5}
-
-
-@wrap_handler_errors
-def propose_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Analyze DSL and propose a Demo Data Blueprint."""
-    progress = extract_progress(args)
-    progress.log_sync("Analyzing DSL for demo data...")
-    result = demo_propose_impl(
-        project_root,
-        domain_description=args.get("domain_description", ""),
-        tenant_count=args.get("tenant_count", 2),
-        filter_entities=args.get("entities"),
-        include_metadata=args.get("include_metadata", True),
-        quick_mode=args.get("quick_mode", False),
-    )
-    return json.dumps(result, indent=2)
-
-
-@wrap_handler_errors
-def save_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Save a Demo Data Blueprint to .dazzle/demo_data/blueprint.json."""
-    progress = extract_progress(args)
-
-    blueprint_data = args.get("blueprint")
-    if not blueprint_data:
-        return error_response("blueprint parameter required")
-
-    progress.log_sync("Saving demo data blueprint...")
-    result = demo_save_impl(
-        project_root,
-        blueprint_data=blueprint_data,
-        merge_entities=args.get("merge", False),
-        validate_coverage=args.get("validate", True),
-    )
-    return json.dumps(result, indent=2)
-
-
-@wrap_handler_errors
-def get_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Load the current Demo Data Blueprint."""
-
-    progress = extract_progress(args)
-
-    progress.log_sync("Loading demo data blueprint...")
-    blueprint = load_blueprint(project_root)
-    blueprint_file = get_blueprint_file(project_root)
-
-    if blueprint is None:
-        return json.dumps(
-            {
-                "status": "not_found",
-                "file": str(blueprint_file),
-                "message": "No blueprint found. Use propose_demo_blueprint to create one.",
-            }
-        )
-
-    return json.dumps(
-        {
-            "status": "loaded",
-            "file": str(blueprint_file),
-            "blueprint": blueprint.model_dump(mode="json"),
-        },
-        indent=2,
-    )
-
-
-@wrap_handler_errors
-def generate_demo_data_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Generate demo data files from the blueprint."""
-    progress = extract_progress(args)
-    progress.log_sync("Generating demo data...")
-    result = demo_generate_impl(
-        project_root,
-        output_format=args.get("format", "csv"),
-        output_dir=args.get("output_dir", "demo_data"),
-        filter_entities=args.get("entities"),
-    )
-    return json.dumps(result, indent=2)
-
-
-@wrap_handler_errors
-def load_demo_data_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Load demo data seed files into a running instance via REST API."""
-    progress = extract_progress(args)
-    base_url = args.get("base_url") or resolve_api_url()
-    progress.log_sync("Loading demo data...")
-    result = demo_load_impl(
-        project_root,
-        base_url=base_url,
-        email=args.get("email"),
-        password=args.get("password"),
-        data_dir_str=args.get("data_dir"),
-        filter_entities=args.get("entities"),
-    )
-    return json.dumps(result, indent=2)
-
-
-@wrap_handler_errors
-def validate_demo_data_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Validate seed files against DSL entity definitions."""
-    progress = extract_progress(args)
-    progress.log_sync("Validating demo data...")
-    result = demo_validate_seeds_impl(
-        project_root,
-        data_dir_str=args.get("data_dir"),
-    )
-    return json.dumps(result, indent=2)

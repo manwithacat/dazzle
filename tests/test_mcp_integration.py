@@ -165,7 +165,7 @@ class TestMCPServerIntegration:
 
         # Check expected consolidated tools exist
         assert "dsl" in tool_names
-        assert "api_pack" in tool_names
+        assert "bootstrap" in tool_names
         assert "knowledge" in tool_names
 
     def test_tool_call_validate_dsl(self, mcp_server, request_id_counter):
@@ -246,7 +246,7 @@ class TestMCPServerUnit:
         # Consolidated mode: fewer but more comprehensive tools
         assert len(tools) >= 13
         assert "dsl" in tool_names
-        assert "api_pack" in tool_names
+        assert "bootstrap" in tool_names
         assert "story" in tool_names
         assert "knowledge" in tool_names
 

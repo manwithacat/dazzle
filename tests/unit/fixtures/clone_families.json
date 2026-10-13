@@ -18,7 +18,6 @@
   "exact:3d6a382b1a4689c7269c496243dcab95": "per-class-constant-accessors",
   "exact:429652ebb79aa901e04ea7a8544a00b5": "predicate-and-type-resolution",
   "exact:44ae1bace7e4a7e63c050b08b65e2fa9": "per-module-sql-and-connection-helpers",
-  "exact:466fdb01a82e8fa7915927818519daac": "credentials-and-tokens",
   "exact:4b0924ea9f27f8df6da9e6db7be157b6": "per-class-constant-accessors",
   "exact:52afc7bbdc7d3849dcbbfab307142111": "per-class-constant-accessors",
   "exact:609910252989bb670d925506308a1d61": "dataclass-and-store-boilerplate",

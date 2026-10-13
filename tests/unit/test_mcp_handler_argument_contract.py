@@ -111,7 +111,7 @@ def _lazy_refs(tree: ast.Module, consts: dict[str, str]) -> dict[str, tuple[str,
     """`_x = _lazy_import(f"{_MOD}:func")` → name → (module, function).
 
     Several op tables reference their handler through one of these aliases
-    (`_policy_inner`, `_user_profile_inner`) rather than a literal. Missing them
+    (`_policy_inner`) rather than a literal. Missing them
     makes the tool look like it reads nothing, which turns the gate into a
     rubber stamp for exactly the tools it most needs to check.
     """
@@ -232,7 +232,7 @@ def _imported_aliases(
 ) -> dict[str, tuple[str, str]]:
     """Local names bound by a function-local `from .x import f as g`.
 
-    Several consolidated handlers are one line long — `handle_perf` imports the
+    Several consolidated handlers are one line long — `handle_agent` imports the
     real handler inside the function and returns `_handle(arguments)`. Without
     following the import, every such tool reads nothing and the gate passes it
     vacuously, which is the failure mode a gate must not have.
@@ -258,7 +258,7 @@ def _expand(
     Two delegation shapes occur in this codebase and both have to be followed:
     a handler that calls a module-level helper, and a consolidated wrapper that
     imports its real handler inside the function body
-    (`handle_perf` → `.handlers.perf.handle_perf`). A gate that cannot see
+    (`handle_agent` → `.handlers.agent_loop.handle_agent`). A gate that cannot see
     through either passes those tools vacuously.
     """
     param = _arg_param(fn)
@@ -321,7 +321,7 @@ def _norm(name: str) -> str:
 def _registry_variable(tree: ast.Module) -> dict[str, str]:
     """tool name → the module-level variable that holds its handler.
 
-    Read from the `CONSOLIDATED_TOOL_HANDLERS = {"graph": handle_graph, …}`
+    Read from the `CONSOLIDATED_TOOL_HANDLERS = {"dsl": handle_dsl, …}`
     literal itself. Deriving it from the runtime objects does not work: a
     registry value is the *result* of a factory call, and an AST node's `id()`
     never equals it. Getting this wrong leaves a tool with no handler at all,
@@ -374,7 +374,7 @@ def _tool_reads() -> dict[str, set[str]]:
                 reads.setdefault(tool, set()).update(_handler_reads(*resolved, cache))
 
     # Inline `ops = {"op": lambda args: _handle_x(args)}` tables, attributed to
-    # whichever handler function owns them (the graph tool).
+    # whichever handler function owns them.
     tool_of_function = {name: tool for tool, name in variables.items()}
     functions = _functions(tree)
     for name, fn in functions.items():
@@ -385,7 +385,7 @@ def _tool_reads() -> dict[str, set[str]]:
             for value in node.values:
                 if isinstance(value, ast.Name) and value.id in imported:
                     # `standalone_ops = {"search": search_api_packs_handler, …}`
-                    # built from function-local imports (`handle_api_pack`).
+                    # built from function-local imports (e.g. the former `handle_api_pack`).
                     reads.setdefault(tool_of_function.get(name, name), set()).update(
                         _handler_reads(*imported[value.id], cache)
                     )
@@ -527,23 +527,25 @@ def test_reads_ignores_other_dicts() -> None:
 
 
 def test_walk_sees_through_a_one_line_delegating_wrapper() -> None:
-    """`handle_perf` imports its real handler inside the function body. A walk
+    """`handle_agent` imports its real handler inside the function body. A walk
     that cannot follow that hop would report the tool as reading nothing, and
     the gate would pass it vacuously."""
-    from dazzle.mcp.server.handlers_consolidated import handle_perf  # noqa: F401
+    from dazzle.mcp.server.handlers_consolidated import handle_agent  # noqa: F401
 
     reads = _tool_reads()
-    assert "run" in reads["perf"], "perf's wrapper delegates to .handlers.perf.handle_perf"
+    assert "project_root" in reads["agent"], (
+        "agent's wrapper delegates to .handlers.agent_loop.handle_agent"
+    )
 
 
 # Tools whose operations genuinely take no arguments beyond `operation`, so an
 # empty read set is the truth and not a walk failure. Named rather than
 # tolerated silently — #1751 asked for coverage to be reported, not implied.
-ARGUMENT_LESS_TOOLS = {"db", "demo_data", "semantics"}
+ARGUMENT_LESS_TOOLS = {"db", "semantics"}
 
 
 def test_walk_finds_a_handler_for_every_registered_tool() -> None:
-    """Every tool either reads arguments or is one of the four that take none.
+    """Every tool either reads arguments or is one of the few that take none.
 
     A tool that reads nothing *and* is not argument-less is a walk failure —
     the state a rubber-stamp gate is in, where the tool passes because nothing

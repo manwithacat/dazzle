@@ -143,9 +143,9 @@ demo:
     - <field>: <value>, <field>: <value>
     - <field>: <value>, <field>: <value>
 
-# Or via MCP tool:
-# demo_data(operation="propose") → generates blueprint
-# demo_data(operation="generate") → creates seed files
+# Or via the CLI:
+# dazzle demo propose  → generates blueprint
+# dazzle demo generate → creates seed files
 ```
 
 **Related:** [Scenario](testing.md#scenario), [Persona](ux.md#persona)
