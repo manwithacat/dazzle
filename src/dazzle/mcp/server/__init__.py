@@ -47,7 +47,7 @@ from mcp.types import (
 )
 
 from dazzle.mcp.examples import get_example_metadata
-from dazzle.mcp.resources import create_resources
+from dazzle.mcp.resources import create_resources, get_entities, get_surfaces, list_modules
 from dazzle.mcp.semantics_kb import get_dsl_patterns, get_semantic_index
 
 from .glossary import get_glossary
@@ -61,11 +61,6 @@ from .state import (
     init_knowledge_graph,
     is_dev_mode,
     set_project_root,
-)
-from .tool_handlers import (
-    get_entities,
-    get_surfaces,
-    list_modules,
 )
 from .tools_consolidated import get_all_consolidated_tools
 
@@ -341,6 +336,17 @@ async def read_resource(uri: str) -> str:
         result = {name: get_workflow_guide(name) for name in workflows}
         return json.dumps(result, indent=2)
 
+    project_readers = {
+        "dazzle://modules": list_modules,
+        "dazzle://entities": get_entities,
+        "dazzle://surfaces": get_surfaces,
+    }
+    if uri in project_readers:
+        project_path = get_active_project_path()
+        if not project_path:
+            return json.dumps({"error": "No active project"})
+        return project_readers[uri](project_path)
+
     if uri.startswith("dazzle://project/"):
         project_path = get_active_project_path()
         if not project_path:
@@ -351,15 +357,6 @@ async def read_resource(uri: str) -> str:
             if manifest_path.exists():
                 return manifest_path.read_text(encoding="utf-8")
             return "Manifest not found"
-
-        if uri == "dazzle://modules":
-            return list_modules(project_path)
-
-        if uri == "dazzle://entities":
-            return get_entities(project_path)
-
-        if uri == "dazzle://surfaces":
-            return get_surfaces(project_path)
 
     if uri.startswith("dazzle://dsl/"):
         project_path = get_active_project_path()
@@ -539,7 +536,7 @@ After each major section: `dsl(operation="validate")`
 ## Phase 4: Refinement
 
 1. `dsl(operation="lint", extended=true)` - catch issues
-2. `story(operation="propose")` - verify coverage
+2. `story(operation="coverage")` - verify coverage
 3. `dazzle serve` - run the app
 
 ## Key Principles

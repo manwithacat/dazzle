@@ -4,49 +4,19 @@ Resource definitions for DAZZLE MCP server.
 Resources are data sources that Claude Code can reference using @server:uri syntax.
 """
 
+import json
+import logging
+from collections.abc import Callable
+from functools import wraps
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
 
-def create_static_resources() -> list[dict[str, Any]]:
-    """
-    Create static resources that are always available (not project-specific).
-
-    Returns:
-        List of static resource definitions
-    """
-    return [
-        {
-            "uri": "dazzle://docs/context",
-            "name": "DAZZLE Context",
-            "description": "Quick reference context for Claude - key concepts, tools, and common workflows",
-            "mimeType": "text/markdown",
-        },
-        {
-            "uri": "dazzle://docs/patterns",
-            "name": "DSL Patterns",
-            "description": "Common DSL patterns with copy-paste examples (CRUD, dashboard, role-based access, etc.)",
-            "mimeType": "application/json",
-        },
-        {
-            "uri": "dazzle://docs/workflows",
-            "name": "Workflow Guides",
-            "description": "Step-by-step guides for common tasks (getting_started, add_entity, add_workspace, etc.)",
-            "mimeType": "application/json",
-        },
-        {
-            "uri": "dazzle://docs/htmx-templates",
-            "name": "HTMX Template Specification",
-            "description": "HTMX template patterns, fragment contracts, and LLM cognition strategies for rich UI development",
-            "mimeType": "text/markdown",
-        },
-        {
-            "uri": "dazzle://docs/runtime-capabilities",
-            "name": "Runtime UI Capabilities",
-            "description": "What the runtime renders for each DSL construct: DataTable sort/filter/search, attention signals, persona variants, form widgets",
-            "mimeType": "text/markdown",
-        },
-    ]
+logger = logging.getLogger(__name__)
 
 
 def create_resources(project_root: Path) -> list[dict[str, Any]]:
@@ -102,3 +72,77 @@ def create_resources(project_root: Path) -> list[dict[str, Any]]:
             )
 
     return resources
+
+
+def _json_error_on_failure(fn: Callable[[Path], str]) -> Callable[[Path], str]:
+    """Return ``{"error": ...}`` JSON instead of raising (resource reads never raise)."""
+
+    @wraps(fn)
+    def wrapper(project_path: Path) -> str:
+        try:
+            return fn(project_path)
+        except Exception as e:
+            logger.debug("Resource reader %s failed: %s", fn.__name__, e, exc_info=True)
+            return json.dumps({"error": str(e)}, indent=2)
+
+    return wrapper
+
+
+@_json_error_on_failure
+def list_modules(project_root: Path) -> str:
+    """List all modules in the project."""
+    manifest = load_manifest(project_root / "dazzle.toml")
+    dsl_files = discover_dsl_files(project_root, manifest)
+    parsed_modules = parse_modules(dsl_files)
+
+    modules = {}
+    for idx, module in enumerate(parsed_modules):
+        modules[module.name] = {
+            "file": str(dsl_files[idx].relative_to(project_root)),
+            "dependencies": module.uses,
+        }
+
+    return json.dumps({"project_path": str(project_root), "modules": modules}, indent=2)
+
+
+@_json_error_on_failure
+def get_entities(project_path: Path) -> str:
+    """Get all entity definitions from project."""
+    app_spec = load_project_appspec(project_path)
+
+    entities = {}
+    for entity in app_spec.domain.entities:
+        entities[entity.name] = {
+            "name": entity.name,
+            "title": entity.title,
+            "fields": [
+                {
+                    "name": f.name,
+                    "type": str(f.type),
+                    "required": f.is_required,
+                    "unique": f.is_unique,
+                    "is_pk": f.is_primary_key,
+                }
+                for f in entity.fields
+            ],
+        }
+
+    return json.dumps(entities, indent=2)
+
+
+@_json_error_on_failure
+def get_surfaces(project_path: Path) -> str:
+    """Get all surface definitions from project."""
+    app_spec = load_project_appspec(project_path)
+
+    surfaces = {}
+    for surface in app_spec.surfaces:
+        surfaces[surface.name] = {
+            "name": surface.name,
+            "title": surface.title,
+            "mode": surface.mode,
+            "entity": surface.entity_ref,
+            "has_ux": surface.ux is not None,
+        }
+
+    return json.dumps(surfaces, indent=2)

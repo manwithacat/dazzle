@@ -778,7 +778,6 @@
       "_validate_revision_widths": 5,
       "_verify_snapshot_consistency": 7,
       "apply_rls_command": 6,
-      "audit_atomic_command": 9,
       "baseline_command": 11,
       "cleanup_command": 12,
       "current_command": 2,
@@ -917,7 +916,6 @@
   },
   "dazzle/cli/i18n.py": {
     "functions": {
-      "_extract_msgids": 2,
       "_iter_source_files": 12,
       "_line_of": 1,
       "_read_pot_msgids": 3,
@@ -1017,7 +1015,6 @@
   "dazzle/cli/project.py": {
     "functions": {
       "_is_directory_empty": 5,
-      "_job_handler_errors": 11,
       "_print_human_diagnostics": 11,
       "_print_vscode_diagnostics": 5,
       "_print_vscode_parse_error": 6,
@@ -1439,7 +1436,6 @@
       "_build_context_selector_walk": 3,
       "_build_default_walk": 4,
       "_build_guide_walk": 8,
-      "_default_workspace_path": 3,
       "_layout_card_ids_and_catalog": 10,
       "_make_authed_client": 5,
       "_render_human_report": 8,
@@ -4776,12 +4772,8 @@
   },
   "dazzle/core/paths.py": {
     "functions": {
-      "project_composition_captures": 1,
-      "project_composition_references": 1,
       "project_dazzle_dir": 1,
       "project_demo_data_dir": 1,
-      "project_discovery_dir": 1,
-      "project_kg_db": 1,
       "project_last_seen_version": 1,
       "project_log_dir": 1,
       "project_manifest": 1,
@@ -10836,8 +10828,6 @@
   "dazzle/mcp/examples.py": {
     "functions": {
       "get_example_metadata": 1,
-      "get_feature_examples_map": 4,
-      "get_v0_2_examples": 3,
       "search_examples": 8
     },
     "mi_rank": "A"
@@ -10846,7 +10836,6 @@
     "functions": {
       "_inference_entity_to_suggestion": 7,
       "get_inference_kb_version": 3,
-      "get_pattern_by_id": 6,
       "list_all_patterns": 11,
       "lookup_inference": 7,
       "reload_inference_kb": 2
@@ -10886,12 +10875,6 @@
       "KnowledgeGraphActivity.log_activity_event": 6,
       "KnowledgeGraphActivity.log_tool_invocation": 3,
       "KnowledgeGraphActivity.start_activity_session": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/knowledge_graph/failure_classifier.py": {
-    "functions": {
-      "classify_failure": 15
     },
     "mi_rank": "A"
   },
@@ -11069,20 +11052,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/mcp/knowledge_graph/test_results.py": {
-    "functions": {
-      "KnowledgeGraphTestResults": 5,
-      "KnowledgeGraphTestResults.detect_regressions": 3,
-      "KnowledgeGraphTestResults.get_failure_summary": 9,
-      "KnowledgeGraphTestResults.get_test_cases": 5,
-      "KnowledgeGraphTestResults.get_test_coverage_trend": 2,
-      "KnowledgeGraphTestResults.get_test_runs": 6,
-      "KnowledgeGraphTestResults.save_test_case": 2,
-      "KnowledgeGraphTestResults.save_test_cases_batch": 4,
-      "KnowledgeGraphTestResults.save_test_run": 1
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/lock_doctor.py": {
     "functions": {
       "_append_lock_section": 7,
@@ -11112,8 +11081,7 @@
   },
   "dazzle/mcp/resources.py": {
     "functions": {
-      "create_resources": 3,
-      "create_static_resources": 1
+      "create_resources": 3
     },
     "mi_rank": "A"
   },
@@ -11343,50 +11311,10 @@
     "functions": {},
     "mi_rank": "A"
   },
-  "dazzle/mcp/server/handlers/discovery/_helpers.py": {
-    "functions": {
-      "_build_mission_summary": 5,
-      "_get_persona_session_info": 6,
-      "_populate_kg_for_discovery": 2,
-      "deserialize_observations": 2,
-      "load_report_data": 6,
-      "save_discovery_report": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/server/handlers/discovery/compiler.py": {
-    "functions": {
-      "compile_discovery_handler": 2,
-      "discovery_compile_impl": 5,
-      "discovery_report_impl": 8,
-      "get_discovery_report_handler": 4
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/server/handlers/discovery/emitter.py": {
-    "functions": {
-      "discovery_emit_impl": 10,
-      "emit_discovery_handler": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/server/handlers/discovery/missions.py": {
-    "functions": {
-      "discovery_run_headless_impl": 3,
-      "discovery_run_impl": 7,
-      "run_discovery_handler": 7,
-      "run_headless_discovery_handler": 4
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/server/handlers/discovery/status.py": {
     "functions": {
       "_compute_coherence_score": 1,
-      "app_coherence_handler": 23,
-      "discovery_status_handler": 1,
-      "discovery_status_impl": 4,
-      "discovery_verify_all_stories_impl": 7,
-      "verify_all_stories_handler": 2
+      "app_coherence_handler": 23
     },
     "mi_rank": "A"
   },
@@ -11419,24 +11347,13 @@
   },
   "dazzle/mcp/server/handlers/dsl_test.py": {
     "functions": {
-      "_generate_bash_tests": 3,
-      "_infer_category": 6,
-      "_persist_test_results": 8,
-      "create_sessions_handler": 4,
-      "diff_personas_handler": 5,
       "dsl_test_coverage_impl": 12,
-      "dsl_test_diff_personas_impl": 3,
       "dsl_test_generate_impl": 12,
-      "dsl_test_list_impl": 11,
       "dsl_test_run_all_impl": 27,
-      "dsl_test_run_impl": 15,
       "dsl_test_verify_story_impl": 31,
       "generate_dsl_tests_handler": 6,
       "get_dsl_test_coverage_handler": 2,
-      "list_dsl_tests_handler": 2,
-      "run_all_dsl_tests_handler": 4,
-      "run_dsl_tests_handler": 7,
-      "verify_story_handler": 7
+      "run_all_dsl_tests_handler": 4
     },
     "mi_rank": "C"
   },
@@ -11479,16 +11396,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/mcp/server/handlers/mock.py": {
-    "functions": {
-      "_get_orchestrator": 1,
-      "mock_fire_webhook_impl": 4,
-      "mock_inject_error_impl": 4,
-      "mock_scaffold_scenario_impl": 1,
-      "mock_scenarios_impl": 15
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/server/handlers/orchestration.py": {
     "functions": {
       "QualityStep": 1,
@@ -11509,13 +11416,6 @@
       "run_step": 12,
       "run_steps_sequential": 5,
       "step_has_issues": 22
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/server/handlers/param.py": {
-    "functions": {
-      "param_get_handler": 5,
-      "param_list_handler": 2
     },
     "mi_rank": "A"
   },
@@ -11647,9 +11547,7 @@
       "serialize_surface_detail": 9,
       "serialize_surface_summary": 4,
       "serialize_test_design": 1,
-      "serialize_test_design_summary": 1,
-      "serialize_ux_summary": 9,
-      "success_response": 1
+      "serialize_ux_summary": 9
     },
     "mi_rank": "A"
   },
@@ -11720,18 +11618,9 @@
   "dazzle/mcp/server/handlers/stories.py": {
     "functions": {
       "_composition_focus_view": 3,
-      "_extract_entity_from_condition": 5,
-      "_extract_target_from_condition": 3,
-      "_get_trigger_map": 1,
-      "generate_tests_from_stories_handler": 2,
       "get_dsl_spec_handler": 16,
       "get_stories_handler": 9,
-      "propose_stories_from_dsl_handler": 1,
-      "save_stories_handler": 2,
       "story_composition_handler": 14,
-      "story_generate_tests_impl": 12,
-      "story_propose_impl": 30,
-      "story_save_impl": 15,
       "wall_stories_handler": 20
     },
     "mi_rank": "A"
@@ -11779,19 +11668,10 @@
   },
   "dazzle/mcp/server/handlers/testing.py": {
     "functions": {
-      "_resolve_project_root": 4,
-      "check_test_infrastructure_handler": 1,
       "check_test_infrastructure_impl": 11,
-      "get_e2e_test_coverage_handler": 2,
       "get_e2e_test_coverage_impl": 9,
-      "get_test_tier_guidance_handler": 1,
       "get_test_tier_guidance_impl": 10,
-      "list_e2e_flows_handler": 2,
-      "list_e2e_flows_impl": 9,
-      "run_agent_e2e_tests_handler": 4,
-      "run_agent_e2e_tests_impl": 7,
-      "run_e2e_tests_handler": 2,
-      "run_e2e_tests_impl": 7
+      "list_e2e_flows_impl": 9
     },
     "mi_rank": "A"
   },
@@ -11805,8 +11685,6 @@
   "dazzle/mcp/server/handlers/viewport_testing.py": {
     "functions": {
       "list_viewport_specs_impl": 2,
-      "manage_viewport_specs_handler": 5,
-      "run_viewport_tests_handler": 2,
       "run_viewport_tests_impl": 3,
       "save_viewport_specs_impl": 2
     },
@@ -11900,10 +11778,8 @@
       "get_active_project_path": 5,
       "get_activity_log": 1,
       "get_activity_store": 1,
-      "get_appspec_data": 1,
       "get_available_projects": 1,
       "get_knowledge_graph": 1,
-      "get_mock_orchestrator": 1,
       "get_or_create_ui_spec": 1,
       "get_project_root": 1,
       "get_state": 1,
@@ -11919,42 +11795,10 @@
       "resolve_project_path": 12,
       "set_active_project": 1,
       "set_appspec_data": 1,
-      "set_mock_orchestrator": 1,
       "set_project_root": 2,
       "set_ui_spec": 1
     },
     "mi_rank": "A"
-  },
-  "dazzle/mcp/server/tool_handlers.py": {
-    "functions": {
-      "analyze_patterns": 5,
-      "find_examples_handler": 1,
-      "generate_tests_from_stories_handler": 1,
-      "get_active_project_info": 8,
-      "get_cli_help_handler": 1,
-      "get_dnr_logs_handler": 18,
-      "get_dsl_spec_handler": 12,
-      "get_entities": 3,
-      "get_mcp_status_handler": 7,
-      "get_product_spec_handler": 4,
-      "get_stories_handler": 11,
-      "get_surfaces": 2,
-      "get_workflow_guide_handler": 2,
-      "inspect_entity": 10,
-      "inspect_surface": 7,
-      "lint_project": 2,
-      "list_modules": 2,
-      "list_projects": 4,
-      "load_appspec_for_project": 6,
-      "lookup_concept_handler": 2,
-      "lookup_inference_handler": 4,
-      "propose_stories_from_dsl_handler": 22,
-      "save_stories_handler": 11,
-      "select_project": 8,
-      "validate_all_projects": 8,
-      "validate_dsl": 2
-    },
-    "mi_rank": "B"
   },
   "dazzle/mcp/server/tools_consolidated.py": {
     "functions": {

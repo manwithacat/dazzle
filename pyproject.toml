@@ -112,11 +112,6 @@ dependencies = [
     # features downstream, prefer fastapi[standard-no-fastapi-cloud-cli]
     # which upstream provides specifically as the opt-out variant.
     "fastapi>=0.100.0",
-    # tomli_w serialises TOML back to text for dazzle quality bootstrap,
-    # which must read + merge-write pyproject.toml without losing unmanaged
-    # tables. tomllib (stdlib, read-only) handles the read side; tomli_w
-    # handles the write side. Pure-Python, zero transitive deps.
-    "tomli_w>=1.0",
 ]
 
 [project.optional-dependencies]

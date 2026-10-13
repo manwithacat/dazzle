@@ -15,7 +15,6 @@ import http.server
 import os
 import socketserver
 import tempfile
-from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -459,11 +458,6 @@ def _start_vendor_mocks(ctx: _ServeContext) -> None:
             mock_orch.start()
             for _name, mock in mock_orch.vendors.items():
                 typer.echo(f"  • Mock: {mock.provider} on :{mock.port} ({mock.env_var})")
-            # Mock orchestrator hookup is optional; absence of MCP state shouldn't fail serve (#smells-1.1).
-            with suppress(Exception):
-                from dazzle.mcp.server.state import set_mock_orchestrator
-
-                set_mock_orchestrator(mock_orch)
     except Exception as e:
         typer.echo(f"  Warning: Vendor mock setup failed: {e}", err=True)
 

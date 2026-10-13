@@ -43,6 +43,14 @@
     ]
   },
   {
+    "signature": "889e21d25dedd6c293bcea785dd69890",
+    "count": 2,
+    "names": [
+      "dazzle/cli/e2e/__init__.py::e2e_coverage",
+      "dazzle/cli/e2e/__init__.py::e2e_list_viewport_specs"
+    ]
+  },
+  {
     "signature": "c110390b0e47acf8a942164d3be42943",
     "count": 2,
     "names": [
@@ -76,12 +84,10 @@
   },
   {
     "signature": "exact:d9f74fd1a0ad560f55a2b670ba778a6c",
-    "count": 4,
+    "count": 2,
     "names": [
       "dazzle/cli/story.py::next_id",
-      "dazzle/cli/testing.py::next_story_id",
-      "dazzle/mcp/server/handlers/stories.py::next_id",
-      "dazzle/mcp/server/tool_handlers.py::next_id"
+      "dazzle/cli/testing.py::next_story_id"
     ]
   },
   {
@@ -1097,22 +1103,6 @@
     ]
   },
   {
-    "signature": "86e2c0b93bf724702508f420253faf6f",
-    "count": 2,
-    "names": [
-      "dazzle/mcp/server/handlers/project.py::load_appspec_for_project",
-      "dazzle/mcp/server/tool_handlers.py::load_appspec_for_project"
-    ]
-  },
-  {
-    "signature": "d4492c3056181776338c106a04a47708",
-    "count": 2,
-    "names": [
-      "dazzle/mcp/server/handlers/project.py::validate_all_projects",
-      "dazzle/mcp/server/tool_handlers.py::validate_all_projects"
-    ]
-  },
-  {
     "signature": "de23ddc05e3966ca0867b98060de6d41",
     "count": 2,
     "names": [
@@ -1134,14 +1124,6 @@
     "names": [
       "dazzle/mcp/server/handlers_consolidated.py::handle_agent",
       "dazzle/mcp/server/handlers_consolidated.py::handle_spec_analyze"
-    ]
-  },
-  {
-    "signature": "3ecedf5cf116cd7b87fc2df645389613",
-    "count": 2,
-    "names": [
-      "dazzle/mcp/server/tool_handlers.py::get_workflow_guide_handler",
-      "dazzle/mcp/server/tool_handlers.py::lookup_concept_handler"
     ]
   },
   {
@@ -1249,14 +1231,6 @@
     "names": [
       "dazzle/testing/walk/claims.py::__init__",
       "dazzle/testing/walk/loader.py::__init__"
-    ]
-  },
-  {
-    "signature": "889e21d25dedd6c293bcea785dd69890",
-    "count": 2,
-    "names": [
-      "dazzle/cli/e2e/__init__.py::e2e_coverage",
-      "dazzle/cli/e2e/__init__.py::e2e_list_viewport_specs"
     ]
   }
 ]

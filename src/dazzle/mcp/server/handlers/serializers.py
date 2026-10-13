@@ -81,12 +81,6 @@ _TD_FULL_FIELDS = frozenset(
 )
 
 
-def serialize_test_design_summary(td: Any) -> dict[str, Any]:
-    """Compact test design summary: ID, title, persona, status."""
-    result: dict[str, Any] = td.model_dump(mode="json", include=set(_TD_SUMMARY_FIELDS))
-    return result
-
-
 def serialize_test_design(td: Any) -> dict[str, Any]:
     """Full test design serialization with steps, outcomes, and metadata."""
     result: dict[str, Any] = td.model_dump(mode="json", include=set(_TD_FULL_FIELDS))
@@ -210,12 +204,5 @@ def serialize_surface_detail(surface: SurfaceSpec) -> dict[str, Any]:
 def list_response(items: list[Any], **extra: Any) -> str:
     """Build standard JSON list response with count."""
     payload: dict[str, Any] = {"count": len(items), "items": items}
-    payload.update(extra)
-    return json.dumps(payload, indent=2)
-
-
-def success_response(data: Any, **extra: Any) -> str:
-    """Build standard JSON success response."""
-    payload: dict[str, Any] = {"result": data}
     payload.update(extra)
     return json.dumps(payload, indent=2)

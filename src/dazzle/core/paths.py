@@ -14,11 +14,7 @@ MANIFEST_FILE = "dazzle.toml"
 # -- .dazzle runtime directory -----------------------------------------------
 DAZZLE_DIR = ".dazzle"
 
-# -- Database files ----------------------------------------------------------
-KG_DB_FILE = "knowledge_graph.db"
-
 # -- Subdirectory names under .dazzle ----------------------------------------
-DISCOVERY_DIR = "discovery"
 LOGS_DIR = "logs"
 TEST_RESULTS_DIR = "test_results"
 STORIES_DIR = "stories"
@@ -47,16 +43,6 @@ def project_dazzle_dir(project_root: Path) -> Path:
 def project_manifest(project_root: Path) -> Path:
     """Return the path to dazzle.toml for a project."""
     return project_root / MANIFEST_FILE
-
-
-def project_kg_db(project_root: Path) -> Path:
-    """Return the knowledge graph database path for a project."""
-    return project_dazzle_dir(project_root) / KG_DB_FILE
-
-
-def project_discovery_dir(project_root: Path) -> Path:
-    """Return the discovery reports directory for a project."""
-    return project_dazzle_dir(project_root) / DISCOVERY_DIR
 
 
 def project_log_dir(project_root: Path) -> Path:

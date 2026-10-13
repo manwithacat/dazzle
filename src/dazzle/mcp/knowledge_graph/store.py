@@ -24,7 +24,6 @@ from .activity import KnowledgeGraphActivity
 from .metadata import KnowledgeGraphMetadata
 from .models import Entity, Relation  # Entity/Relation used in this module's body
 from .query import KnowledgeGraphQuery
-from .test_results import KnowledgeGraphTestResults
 
 # `KnowledgeGraph` is this module's public surface. The dataclasses (Entity, Relation,
 # ActivityEvent, PathResult) live in `.models` — import them from there, not via store.
@@ -35,7 +34,6 @@ class KnowledgeGraph(
     KnowledgeGraphQuery,
     KnowledgeGraphMetadata,
     KnowledgeGraphActivity,
-    KnowledgeGraphTestResults,
 ):
     """
     SQLite-backed knowledge graph with graph traversal.
@@ -230,48 +228,6 @@ class KnowledgeGraph(
                 CREATE INDEX IF NOT EXISTS idx_ae_type ON activity_events(event_type);
                 CREATE INDEX IF NOT EXISTS idx_ae_created ON activity_events(created_at);
                 CREATE INDEX IF NOT EXISTS idx_ae_tool ON activity_events(tool);
-
-                CREATE TABLE IF NOT EXISTS test_runs (
-                    id TEXT PRIMARY KEY,
-                    project_name TEXT NOT NULL,
-                    dsl_hash TEXT NOT NULL,
-                    previous_dsl_hash TEXT,
-                    started_at REAL NOT NULL,
-                    completed_at REAL,
-                    total_tests INTEGER NOT NULL DEFAULT 0,
-                    passed INTEGER NOT NULL DEFAULT 0,
-                    failed INTEGER NOT NULL DEFAULT 0,
-                    skipped INTEGER NOT NULL DEFAULT 0,
-                    errors INTEGER NOT NULL DEFAULT 0,
-                    success_rate REAL,
-                    coverage_stable INTEGER DEFAULT 1,
-                    tests_generated INTEGER DEFAULT 0,
-                    trigger TEXT DEFAULT 'manual'
-                );
-                CREATE INDEX IF NOT EXISTS idx_tr_project ON test_runs(project_name);
-                CREATE INDEX IF NOT EXISTS idx_tr_dsl_hash ON test_runs(dsl_hash);
-                CREATE INDEX IF NOT EXISTS idx_tr_started ON test_runs(started_at);
-
-                CREATE TABLE IF NOT EXISTS test_cases (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    run_id TEXT NOT NULL,
-                    test_id TEXT NOT NULL,
-                    title TEXT NOT NULL,
-                    category TEXT NOT NULL,
-                    result TEXT NOT NULL,
-                    duration_ms REAL DEFAULT 0.0,
-                    error_message TEXT,
-                    failure_type TEXT,
-                    entities TEXT,
-                    persona TEXT,
-                    failed_step_json TEXT,
-                    FOREIGN KEY (run_id) REFERENCES test_runs(id) ON DELETE CASCADE
-                );
-                CREATE INDEX IF NOT EXISTS idx_tc_run ON test_cases(run_id);
-                CREATE INDEX IF NOT EXISTS idx_tc_test_id ON test_cases(test_id);
-                CREATE INDEX IF NOT EXISTS idx_tc_result ON test_cases(result);
-                CREATE INDEX IF NOT EXISTS idx_tc_failure_type ON test_cases(failure_type);
-                CREATE INDEX IF NOT EXISTS idx_tc_category ON test_cases(category);
             """
             )
             conn.commit()

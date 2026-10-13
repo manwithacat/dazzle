@@ -62,7 +62,7 @@ def handle_bootstrap(arguments: dict[str, Any], project_path: Path | None = None
                     ),
                     "on_response": (
                         "Write the user's response to spec.md, then call "
-                        "bootstrap(operation='analyze') to continue."
+                        "bootstrap(spec_path='spec.md') to continue."
                     ),
                 },
             },

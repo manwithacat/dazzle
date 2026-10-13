@@ -6,8 +6,10 @@ and inference pattern lookup.
 """
 
 import json
+from pathlib import Path
 from typing import Any
 
+from dazzle.core.spec_loader import get_spec_summary, load_spec
 from dazzle.mcp._graph_access import get_kg as _get_kg
 from dazzle.mcp.cli_help import get_cli_help, get_workflow_guide
 from dazzle.mcp.examples import search_examples
@@ -250,3 +252,56 @@ def counter_prior_handler(args: dict[str, Any]) -> str:
         )
 
     return error_response("counter_prior requires one of: id, query, code_shape, list_all")
+
+
+def get_product_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """
+    Load natural language product specification from spec/ directory or SPEC.md.
+
+    Supports flexible spec organization:
+    - spec/ directory with multiple markdown files (recommended for complex projects)
+    - SPEC.md single file (backward compatible)
+    """
+
+    include_sources = args.get("include_sources", True)
+    summary_only = args.get("summary_only", False)
+
+    if summary_only:
+        # Just return metadata about spec files
+        summary = get_spec_summary(project_root)
+        return json.dumps(
+            {
+                "project": str(project_root.name),
+                **summary,
+                "hint": "Use summary_only=false to get full content",
+            },
+            indent=2,
+        )
+
+    # Load full spec content
+    spec = load_spec(project_root, include_sources=include_sources)
+
+    if spec.is_empty:
+        return json.dumps(
+            {
+                "error": "No product specification found",
+                "project": str(project_root.name),
+                "searched": ["spec/ directory", "SPEC.md"],
+                "hint": (
+                    "Create a SPEC.md file or spec/ directory with markdown files "
+                    "describing your product requirements."
+                ),
+            },
+            indent=2,
+        )
+
+    return json.dumps(
+        {
+            "project": str(project_root.name),
+            "source_type": spec.source_type,
+            "file_count": spec.file_count,
+            "source_files": [str(f.relative_to(project_root)) for f in spec.source_files],
+            "content": spec.content,
+        },
+        indent=2,
+    )

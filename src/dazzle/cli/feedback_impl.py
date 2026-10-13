@@ -1,8 +1,8 @@
-"""Shared feedback operations for CLI and MCP handler.
+"""Feedback operations behind the MCP ``feedback`` tool.
 
-Calls the running Dazzle server's CRUD endpoints via httpx.
-Both the CLI (``dazzle feedback``) and MCP handler (``feedback`` tool)
-import from here.
+Calls the running Dazzle server's CRUD endpoints via httpx. The
+``dazzle feedback`` CLI group is gone (ADR-0057, ship J); the MCP handler
+(``mcp/server/handlers/feedback.py``) is the only caller.
 """
 
 import json

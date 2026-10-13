@@ -59,8 +59,8 @@ def analyze_patterns(project_root: Path, args: dict[str, Any] | None = None) -> 
     if has_incomplete:
         result["discovery_hint"] = (
             "Some entities have incomplete CRUD coverage. "
-            "Use discovery(operation='run', mode='entity_completeness') "
-            "for detailed gap analysis with targeted verification."
+            "Use discovery(operation='coherence') "
+            "to see which persona journeys the gaps break."
         )
 
     return json.dumps(result, indent=2)

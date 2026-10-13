@@ -52,25 +52,9 @@ Convention for data attributes in the Dazzle UI runtime that enable reliable E2E
 
 ## Capability Discovery
 
-Agent-driven capability discovery system that explores a running Dazzle app and identifies gaps between the DSL specification and the actual implementation. Uses the generic agent framework with three modes: persona (open-ended exploration as a role), entity_completeness (static CRUD coverage analysis plus targeted verification), and workflow_coherence (static process/story integrity analysis plus targeted verification). Access via the 'discovery' MCP tool.
+Static check of a project's app shape per persona: workspace binding, nav filtering, surface access, experience reachability and story coverage, scored 0-100 per persona. Use: discovery(operation='coherence'). CRUD coverage per entity is dsl(operation='analyze'); story-to-implementation coverage is story(operation='coverage').
 
-**Related:** [E2E Testing](testing.md#e2e-testing), [Entity Completeness](testing.md#entity-completeness), [Workflow Coherence](testing.md#workflow-coherence)
-
----
-
-## Entity Completeness
-
-Discovery mode that statically analyzes CRUD surface coverage for each entity and checks for state machine transition UI. Identifies missing list, create, edit, and view surfaces, then guides an agent to verify findings against the running app. Use: discovery(operation='run', mode='entity_completeness').
-
-**Related:** [Capability Discovery](testing.md#capability-discovery), [Workflow Coherence](testing.md#workflow-coherence)
-
----
-
-## Workflow Coherence
-
-Discovery mode that statically analyzes process and story integrity. Checks that process human_task steps reference existing surfaces, subprocess steps reference existing processes, triggers match entities with state machines, and stories have implementing processes. Use: discovery(operation='run', mode='workflow_coherence').
-
-**Related:** [Capability Discovery](testing.md#capability-discovery), [Entity Completeness](testing.md#entity-completeness)
+**Related:** [E2E Testing](testing.md#e2e-testing), [Rbac Validation](testing.md#rbac-validation)
 
 ---
 

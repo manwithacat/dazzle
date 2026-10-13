@@ -110,10 +110,9 @@ When helping users, use these MCP tools:
 - `lookup_concept("<pattern>")` - Get specific pattern (crud, dashboard, etc.)
 - `get_cli_help("<command>")` - CLI command documentation
 - `validate_dsl` - Check project for errors
-- `discovery(operation="status")` - Check if capability discovery is available
-- `discovery(operation="run", mode="entity_completeness")` - Find missing CRUD surfaces and state machine UI gaps
-- `discovery(operation="run", mode="workflow_coherence")` - Validate process/story integrity
-- `discovery(operation="run", mode="persona")` - Open-ended persona walkthrough to find UX gaps
+- `discovery(operation="coherence")` - Per-persona UX coherence score (workspace, nav, surface and story gaps)
+- `dsl(operation="analyze")` - CRUD coverage per entity
+- `story(operation="coverage")` - Which stories have an implementing process or surface
 
 ## Common User Requests → Tool to Use
 - "How do I start?" → get_workflow_guide("getting_started")
@@ -123,11 +122,9 @@ When helping users, use these MCP tools:
 - "What patterns exist?" → lookup_concept("patterns")
 - "Run the app" → get_cli_help("serve")
 - "Something is broken" → get_workflow_guide("troubleshoot")
-- "Find gaps in my app" → discovery(operation="run", mode="entity_completeness")
-- "Check CRUD coverage" → discovery(operation="run", mode="entity_completeness")
-- "Validate workflows" → discovery(operation="run", mode="workflow_coherence")
-- "Explore as a persona" → discovery(operation="run", mode="persona")
-- "Run discovery" → get_workflow_guide("run_discovery")
+- "Find gaps in my app" → discovery(operation="coherence")
+- "Check CRUD coverage" → dsl(operation="analyze")
+- "Validate workflows" → story(operation="coverage")
 """
 
 

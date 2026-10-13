@@ -4,7 +4,6 @@ MCP Server handlers for E2E testing.
 Provides tools for LLM agents to run and analyze E2E tests.
 """
 
-import json
 import logging
 import shutil
 from pathlib import Path
@@ -12,28 +11,11 @@ from typing import Any
 
 from dazzle.core.manifest import load_manifest
 
-from ..state import get_active_project_path, get_project_root
 from .common import (
-    extract_progress,
     load_project_appspec,
-    wrap_async_handler_errors,
-    wrap_handler_errors,
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _resolve_project_root(project_path: str | None) -> Path | str:
-    """Resolve project root from explicit path, active project, or auto-detect.
-
-    Returns Path on success, or JSON error string on failure.
-    """
-    if project_path:
-        return Path(project_path)
-    root = get_active_project_path() or get_project_root()
-    if root is None:
-        return json.dumps({"error": "No project path specified and no active project set"})
-    return root
 
 
 # ---------------------------------------------------------------------------
@@ -175,120 +157,9 @@ def check_test_infrastructure_impl() -> dict[str, Any]:
     return result
 
 
-@wrap_handler_errors
-def check_test_infrastructure_handler() -> str:
-    """
-    Check test infrastructure requirements.
-
-    Returns status of required dependencies and install instructions.
-    Use this BEFORE running E2E tests to ensure all dependencies are set up.
-
-    Returns:
-        JSON with infrastructure status and setup instructions
-    """
-    progress = extract_progress(None)
-    progress.log_sync("Checking test infrastructure...")
-    result = check_test_infrastructure_impl()
-    return json.dumps(result, indent=2)
-
-
 # ---------------------------------------------------------------------------
 # run
 # ---------------------------------------------------------------------------
-
-
-def run_e2e_tests_impl(
-    project_path: Path,
-    priority: str | None,
-    tag: str | None,
-    headless: bool,
-) -> dict[str, Any]:
-    """Run E2E tests for the project. Returns result dict."""
-    from dazzle.testing.e2e_runner import E2ERunner, E2ERunOptions
-
-    runner = E2ERunner(project_path)
-
-    # Check Playwright
-    playwright_ok, playwright_msg = runner.ensure_playwright()
-    if not playwright_ok:
-        return {
-            "error": playwright_msg,
-            "status": "error",
-            "hint": "pip install playwright && playwright install chromium",
-        }
-
-    options = E2ERunOptions(
-        headless=headless,
-        priority=priority,
-        tag=tag,
-    )
-
-    result = runner.run_all(options)
-
-    if result.error:
-        return {
-            "status": "error",
-            "error": result.error,
-            "project": result.project_name,
-        }
-
-    failures = [
-        {"flow_id": f.flow_id, "error": f.error} for f in result.flows if f.status == "failed"
-    ]
-
-    return {
-        "status": "passed" if result.failed == 0 else "failed",
-        "project": result.project_name,
-        "total": result.total,
-        "passed": result.passed,
-        "failed": result.failed,
-        "success_rate": result.success_rate,
-        "failures": failures,
-        "duration_seconds": (result.completed_at - result.started_at).total_seconds()
-        if result.completed_at
-        else None,
-    }
-
-
-@wrap_handler_errors
-def run_e2e_tests_handler(
-    project_path: str | None = None,
-    priority: str | None = None,
-    tag: str | None = None,
-    headless: bool = True,
-) -> str:
-    """
-    Run E2E tests for the project.
-
-    This handler starts the the Dazzle runtime server, runs Playwright-based E2E tests,
-    and returns the results.
-
-    Args:
-        project_path: Optional path to project (uses active project if not specified)
-        priority: Filter by priority (high, medium, low)
-        tag: Filter by tag
-        headless: Run browser in headless mode (default: True)
-
-    Returns:
-        JSON string with test results
-    """
-    progress = extract_progress(None)
-    progress.log_sync("Running E2E tests...")
-    resolved = _resolve_project_root(project_path)
-    if isinstance(resolved, str):
-        return resolved
-    root = resolved
-
-    result = run_e2e_tests_impl(
-        project_path=root,
-        priority=priority,
-        tag=tag,
-        headless=headless,
-    )
-    passed = result.get("passed", 0)
-    failed = result.get("failed", 0)
-    progress.log_sync(f"E2E tests done: {passed} passed, {failed} failed")
-    return json.dumps(result, indent=2)
 
 
 # ---------------------------------------------------------------------------
@@ -349,32 +220,6 @@ def get_e2e_test_coverage_impl(project_path: Path) -> dict[str, Any]:
     }
 
 
-@wrap_handler_errors
-def get_e2e_test_coverage_handler(
-    project_path: str | None = None,
-) -> str:
-    """
-    Get E2E test coverage report for the project.
-
-    Analyzes the generated E2ETestSpec to show what's covered.
-
-    Args:
-        project_path: Optional path to project (uses active project if not specified)
-
-    Returns:
-        JSON string with coverage report
-    """
-    progress = extract_progress(None)
-    progress.log_sync("Analyzing E2E test coverage...")
-    resolved = _resolve_project_root(project_path)
-    if isinstance(resolved, str):
-        return resolved
-    root = resolved
-
-    coverage = get_e2e_test_coverage_impl(root)
-    return json.dumps(coverage, indent=2)
-
-
 # ---------------------------------------------------------------------------
 # list_flows
 # ---------------------------------------------------------------------------
@@ -429,146 +274,9 @@ def list_e2e_flows_impl(
     }
 
 
-@wrap_handler_errors
-def list_e2e_flows_handler(
-    project_path: str | None = None,
-    priority: str | None = None,
-    tag: str | None = None,
-    limit: int = 20,
-) -> str:
-    """
-    List available E2E test flows.
-
-    Args:
-        project_path: Optional path to project
-        priority: Filter by priority
-        tag: Filter by tag
-        limit: Maximum number of flows to return
-
-    Returns:
-        JSON string with flow list
-    """
-    progress = extract_progress(None)
-    progress.log_sync("Listing E2E test flows...")
-    resolved = _resolve_project_root(project_path)
-    if isinstance(resolved, str):
-        return resolved
-    root = resolved
-
-    result = list_e2e_flows_impl(
-        project_path=root,
-        priority=priority,
-        tag=tag,
-        limit=limit,
-    )
-    return json.dumps(result, indent=2)
-
-
 # ---------------------------------------------------------------------------
 # run_agent
 # ---------------------------------------------------------------------------
-
-
-async def run_agent_e2e_tests_impl(
-    project_path: Path,
-    test_ids: list[str] | None,
-    headless: bool,
-    model: str | None,
-) -> dict[str, Any]:
-    """Run E2E tests using an LLM agent. Returns result dict."""
-    from dazzle.testing.agent_e2e import run_agent_tests
-
-    results = await run_agent_tests(
-        project_path=project_path,
-        test_ids=test_ids,
-        headless=headless,
-        model=model,
-    )
-
-    if not results:
-        return {
-            "status": "skipped",
-            "message": "No E2E tests found to run",
-            "project": project_path.name,
-        }
-
-    passed = sum(1 for r in results if r.passed)
-    failed = len(results) - passed
-
-    result_list = [
-        {
-            "test_id": r.test_id,
-            "passed": r.passed,
-            "steps": len(r.steps),
-            "duration_ms": r.duration_ms,
-            "reasoning": r.reasoning,
-            "error": r.error,
-        }
-        for r in results
-    ]
-
-    return {
-        "status": "passed" if failed == 0 else "failed",
-        "project": project_path.name,
-        "total": len(results),
-        "passed": passed,
-        "failed": failed,
-        "success_rate": round(passed / len(results) * 100, 1) if results else 0,
-        "results": result_list,
-    }
-
-
-@wrap_async_handler_errors
-async def run_agent_e2e_tests_handler(
-    project_path: str | None = None,
-    test_id: str | None = None,
-    headless: bool = True,
-    model: str | None = None,
-) -> str:
-    """
-    Run E2E tests using an LLM agent.
-
-    The agent uses Claude to observe pages, decide actions, and verify outcomes.
-    This enables testing of complex UI flows that require visual understanding.
-
-    Args:
-        project_path: Optional path to project (uses active project if not specified)
-        test_id: Specific test ID to run (default: all E2E tests)
-        headless: Run browser in headless mode (default: True)
-        model: LLM model to use (default: dazzle.core.model_defaults.DEFAULT_JUDGMENT_MODEL)
-
-    Returns:
-        JSON string with test results including:
-        - status: overall pass/fail
-        - results: list of test results with steps and reasoning
-        - duration_seconds: total execution time
-    """
-    progress = extract_progress(None)
-    progress.log_sync("Running agent E2E tests...")
-    try:
-        resolved = _resolve_project_root(project_path)
-        if isinstance(resolved, str):
-            return resolved
-        root = resolved
-
-        test_ids = [test_id] if test_id else None
-
-        result = await run_agent_e2e_tests_impl(
-            project_path=root,
-            test_ids=test_ids,
-            headless=headless,
-            model=model,
-        )
-        return json.dumps(result, indent=2)
-
-    except ImportError as e:
-        return json.dumps(
-            {
-                "status": "error",
-                "error": str(e),
-                "hint": "pip install playwright anthropic && playwright install chromium",
-            }
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -698,13 +406,3 @@ def get_test_tier_guidance_impl(scenario: str) -> dict[str, Any]:
             },
         },
     }
-
-
-@wrap_handler_errors
-def get_test_tier_guidance_handler(arguments: dict[str, Any]) -> str:
-    """Provide guidance on which test tier to use for a scenario."""
-    progress = extract_progress(arguments)
-    progress.log_sync("Analyzing test tier...")
-    scenario = arguments.get("scenario", "")
-    result = get_test_tier_guidance_impl(scenario)
-    return json.dumps(result, indent=2)

@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
 SEED_SCHEMA_VERSION = (
-    43  # v41: MCP tools removed (ship I); v40: display modes gone (ship G), events parked (F)
+    44  # v41: MCP tools removed (ship I); v40: display modes gone (ship G), events parked (F)
 )
 
 

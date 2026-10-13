@@ -533,33 +533,3 @@ class TestModeRouting:
         discovery_tool = next(t for t in tools if t.name == "discovery")
         ops = discovery_tool.input_schema["properties"]["operation"]["enum"]
         assert "coherence" in ops
-
-    def test_unknown_mode_error(self) -> None:
-        """Verify that an unknown mode returns an error via the handler."""
-        import asyncio
-        import json
-        import sys
-        from pathlib import Path
-        from unittest.mock import MagicMock, patch
-
-        # Pre-mock mcp modules
-        for _mod in ("mcp", "mcp.server", "mcp.server.fastmcp", "mcp.server.stdio", "mcp.types"):
-            sys.modules.setdefault(_mod, MagicMock(pytest_plugins=[]))
-
-        from dazzle.mcp.server.handlers.discovery import run_discovery_handler
-
-        # Mock load_project_appspec since we don't have a real project
-        with patch(
-            "dazzle.mcp.server.handlers.discovery.missions.load_project_appspec"
-        ) as mock_load:
-            result_str = asyncio.run(
-                run_discovery_handler(
-                    Path("/fake/path"),
-                    {"mode": "invalid_mode"},
-                )
-            )
-            result = json.loads(result_str)
-            assert "error" in result
-            assert "invalid_mode" in result["error"]
-            # load_project_appspec should not have been called
-            mock_load.assert_not_called()

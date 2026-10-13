@@ -180,7 +180,7 @@ def scope_fidelity_impl(
     if not stories:
         return {
             "error": "No stories found in project",
-            "hint": "Define stories in DSL, or use story(operation='propose') to generate them.",
+            "hint": "Define stories in DSL, or run `dazzle story propose` to draft them.",
         }
 
     # Load processes (DSL + persisted)

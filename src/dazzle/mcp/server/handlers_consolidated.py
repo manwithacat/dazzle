@@ -416,13 +416,12 @@ def handle_status(arguments: dict[str, Any]) -> str:
 # =============================================================================
 
 _MOD_KNOW = "dazzle.mcp.server.handlers.knowledge"
-_MOD_KNOW_TOOL = "dazzle.mcp.server.tool_handlers"
 
 _knowledge_standalone: Callable[[dict[str, Any]], str] = _make_standalone_handler(
     "knowledge",
     {
         "concept": f"{_MOD_KNOW}:lookup_concept_handler",
-        "examples": f"{_MOD_KNOW_TOOL}:find_examples_handler",
+        "examples": f"{_MOD_KNOW}:find_examples_handler",
         "cli_help": f"{_MOD_KNOW}:get_cli_help_handler",
         "workflow": f"{_MOD_KNOW}:get_workflow_guide_handler",
         "inference": f"{_MOD_KNOW}:lookup_inference_handler",
@@ -434,7 +433,7 @@ _knowledge_standalone: Callable[[dict[str, Any]], str] = _make_standalone_handle
 _knowledge_project: Callable[[dict[str, Any]], str] = _make_project_handler(
     "knowledge",
     {
-        "get_spec": f"{_MOD_KNOW_TOOL}:get_product_spec_handler",
+        "get_spec": f"{_MOD_KNOW}:get_product_spec_handler",
     },
 )
 

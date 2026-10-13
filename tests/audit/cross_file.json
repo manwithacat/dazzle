@@ -107,7 +107,7 @@
         "tests/unit/test_day_timeline_card_body_1146.py",
         "tests/unit/test_day_timeline_data_resolution.py"
       ],
-      "size": 11,
+      "size": 13,
       "samples": [
         "tests/unit/test_day_timeline_as_of_1146.py::test_as_of_field_composes_with_per_row_date",
         "tests/unit/test_day_timeline_as_of_1146.py::test_as_of_accepts_time_objects",
@@ -189,29 +189,6 @@
     },
     {
       "class_name": "(module)",
-      "assertion_shape": "('in',)",
-      "public_target": [
-        "dazzle.core.appspec_loader.load_project_appspec",
-        "dazzle.http.runtime.page_routes.create_page_routes",
-        "dazzle.http.runtime.renderers.init.register_default_renderers",
-        "dazzle.http.runtime.services.RuntimeServices"
-      ],
-      "files": [
-        "tests/integration/test_examples_fragment_http.py",
-        "tests/integration/test_simple_task_chrome_smoke.py"
-      ],
-      "size": 9,
-      "samples": [
-        "tests/integration/test_examples_fragment_http.py::test_simple_task_create_form_str_field_renders_as_text_input",
-        "tests/integration/test_examples_fragment_http.py::test_fragment_chrome_emits_dz_page_body_class",
-        "tests/integration/test_examples_fragment_http.py::test_fragment_chrome_default_off_unchanged_behaviour",
-        "tests/integration/test_examples_fragment_http.py::test_fragment_chrome_custom_js_scripts_override",
-        "tests/integration/test_examples_fragment_http.py::test_fragment_chrome_theme_override_emits_data_theme_name_attr",
-        "tests/integration/test_examples_fragment_http.py::test_fragment_chrome_topbar_carries_app_name"
-      ]
-    },
-    {
-      "class_name": "(module)",
       "assertion_shape": "('eq',)",
       "public_target": [
         "dazzle.core.manifest.load_manifest"
@@ -230,26 +207,6 @@
         "tests/unit/test_manifest_app_scripts.py::test_app_scripts_parsed_in_order",
         "tests/unit/test_manifest_capabilities.py::test_capabilities_default_empty",
         "tests/unit/test_manifest_capabilities.py::test_capabilities_parsed"
-      ]
-    },
-    {
-      "class_name": "(module)",
-      "assertion_shape": "('in',)",
-      "public_target": [
-        "dazzle.render.fragment.FragmentRenderer"
-      ],
-      "files": [
-        "tests/unit/test_form_field_parity_phase3b.py",
-        "tests/unit/test_raw_data_honesty_1d.py"
-      ],
-      "size": 6,
-      "samples": [
-        "tests/unit/test_form_field_parity_phase3b.py::test_number_default_seeds_value_on_create",
-        "tests/unit/test_form_field_parity_phase3b.py::test_enum_default_selects_option_on_create",
-        "tests/unit/test_raw_data_honesty_1d.py::test_core_datetime_branch",
-        "tests/unit/test_raw_data_honesty_1d.py::test_core_number_branch_rounds",
-        "tests/unit/test_raw_data_honesty_1d.py::test_core_default_summarises_dict_not_ref_mangle",
-        "tests/unit/test_raw_data_honesty_1d.py::test_core_default_rounds_bare_float"
       ]
     },
     {
@@ -296,26 +253,6 @@
       "class_name": "(module)",
       "assertion_shape": "('eq',)",
       "public_target": [
-        "dazzle.cli.app"
-      ],
-      "files": [
-        "tests/unit/test_build_css_compat_shim.py",
-        "tests/unit/test_cli_inspect.py",
-        "tests/unit/test_perf_cli_trace.py"
-      ],
-      "size": 5,
-      "samples": [
-        "tests/unit/test_build_css_compat_shim.py::test_build_css_invocation_succeeds",
-        "tests/unit/test_cli_inspect.py::test_inspect_renderers_exits_2_when_no_dazzle_toml",
-        "tests/unit/test_perf_cli_trace.py::test_traceable_page_urls_filters_to_getable_pages",
-        "tests/unit/test_perf_cli_trace.py::test_trace_all_surfaces_alone_is_valid",
-        "tests/unit/test_perf_cli_trace.py::test_stamp_run_ended_does_not_overwrite"
-      ]
-    },
-    {
-      "class_name": "(module)",
-      "assertion_shape": "('eq',)",
-      "public_target": [
         "dazzle.core.ir.surfaces.SurfaceMode",
         "dazzle.http.runtime.renderers.fragment_adapter.FragmentSurfaceAdapter",
         "dazzle.render.context.ColumnContext",
@@ -337,7 +274,7 @@
     },
     {
       "class_name": "(module)",
-      "assertion_shape": "('in', 'notin')",
+      "assertion_shape": "('in',)",
       "public_target": [
         "dazzle.render.fragment.FragmentRenderer"
       ],
@@ -347,11 +284,11 @@
       ],
       "size": 5,
       "samples": [
-        "tests/unit/test_form_field_parity_phase3b.py::test_required_enum_has_disabled_placeholder_selected",
-        "tests/unit/test_form_field_parity_phase3b.py::test_edit_value_wins_over_default",
-        "tests/unit/test_form_field_parity_phase3b.py::test_date_input_suppresses_placeholder",
-        "tests/unit/test_raw_data_honesty_1d.py::test_detail_datetime_humanised_with_time",
-        "tests/unit/test_raw_data_honesty_1d.py::test_detail_number_rounds_float"
+        "tests/unit/test_form_field_parity_phase3b.py::test_number_default_seeds_value_on_create",
+        "tests/unit/test_form_field_parity_phase3b.py::test_enum_default_selects_option_on_create",
+        "tests/unit/test_raw_data_honesty_1d.py::test_core_number_branch_rounds",
+        "tests/unit/test_raw_data_honesty_1d.py::test_core_default_summarises_dict_not_ref_mangle",
+        "tests/unit/test_raw_data_honesty_1d.py::test_core_default_rounds_bare_float"
       ]
     },
     {
@@ -401,29 +338,12 @@
     },
     {
       "class_name": "(module)",
-      "assertion_shape": "('eq',)",
-      "public_target": [
-        "dazzle.http.runtime.auth.store.AuthStore"
-      ],
-      "files": [
-        "tests/integration/test_membership_events_pg.py",
-        "tests/integration/test_org_settings_pg.py"
-      ],
-      "size": 4,
-      "samples": [
-        "tests/integration/test_membership_events_pg.py::test_suspend_when_already_suspended_is_noop_no_duplicate_event",
-        "tests/integration/test_org_settings_pg.py::test_org_settings_roundtrip_pg",
-        "tests/integration/test_org_settings_pg.py::test_org_settings_default_empty_pg",
-        "tests/integration/test_org_settings_pg.py::test_org_settings_missing_org_pg"
-      ]
-    },
-    {
-      "class_name": "(module)",
       "assertion_shape": "('lt',)",
       "public_target": [
         "dazzle.core.appspec_loader.load_project_appspec",
         "dazzle.http.runtime.page_routes.create_page_routes",
         "dazzle.http.runtime.renderers.init.register_default_renderers",
+        "dazzle.http.runtime.route_validator.iter_http_route_contexts",
         "dazzle.http.runtime.services.RuntimeServices"
       ],
       "files": [
@@ -436,6 +356,42 @@
         "tests/integration/test_simple_task_no_jinja_when_chrome_on.py::test_primary_surface_routes_render_zero_jinja_templates",
         "tests/integration/test_simple_task_no_jinja_when_chrome_on.py::test_taskcomment_routes_render_zero_jinja_templates",
         "tests/integration/test_simple_task_no_jinja_when_chrome_on.py::test_simple_task_chrome_zero_jinja_across_every_route"
+      ]
+    },
+    {
+      "class_name": "(module)",
+      "assertion_shape": "('eq',)",
+      "public_target": [
+        "dazzle.cli.app"
+      ],
+      "files": [
+        "tests/unit/test_cli_inspect.py",
+        "tests/unit/test_perf_cli_trace.py"
+      ],
+      "size": 4,
+      "samples": [
+        "tests/unit/test_cli_inspect.py::test_inspect_renderers_exits_2_when_no_dazzle_toml",
+        "tests/unit/test_perf_cli_trace.py::test_traceable_page_urls_filters_to_getable_pages",
+        "tests/unit/test_perf_cli_trace.py::test_trace_all_surfaces_alone_is_valid",
+        "tests/unit/test_perf_cli_trace.py::test_stamp_run_ended_does_not_overwrite"
+      ]
+    },
+    {
+      "class_name": "(module)",
+      "assertion_shape": "('in', 'notin')",
+      "public_target": [
+        "dazzle.render.fragment.FragmentRenderer"
+      ],
+      "files": [
+        "tests/unit/test_form_field_parity_phase3b.py",
+        "tests/unit/test_raw_data_honesty_1d.py"
+      ],
+      "size": 4,
+      "samples": [
+        "tests/unit/test_form_field_parity_phase3b.py::test_required_enum_has_disabled_placeholder_selected",
+        "tests/unit/test_form_field_parity_phase3b.py::test_edit_value_wins_over_default",
+        "tests/unit/test_form_field_parity_phase3b.py::test_date_input_suppresses_placeholder",
+        "tests/unit/test_raw_data_honesty_1d.py::test_detail_number_rounds_float"
       ]
     },
     {
@@ -460,6 +416,25 @@
       "class_name": "(module)",
       "assertion_shape": "('eq', 'eq')",
       "public_target": [
+        "dazzle.core.ir"
+      ],
+      "files": [
+        "tests/unit/test_ir.py",
+        "tests/unit/test_repository_temporal_retry.py",
+        "tests/unit/test_rhythm_ir_integration.py"
+      ],
+      "size": 4,
+      "samples": [
+        "tests/unit/test_ir.py::test_api",
+        "tests/unit/test_repository_temporal_retry.py::test_end_date_fallback_resolves_after_rollback",
+        "tests/unit/test_repository_temporal_retry.py::test_first_attempt_success_does_not_roll_back",
+        "tests/unit/test_rhythm_ir_integration.py::test_module_fragment_with_rhythm"
+      ]
+    },
+    {
+      "class_name": "(module)",
+      "assertion_shape": "('eq', 'eq')",
+      "public_target": [
         "dazzle.core.lexer.TokenType",
         "dazzle.core.lexer.tokenize"
       ],
@@ -478,22 +453,31 @@
   ],
   "impl_mirror_candidates": [
     {
-      "file": "tests/unit/test_agent_core.py",
-      "tests": 29,
+      "file": "tests/unit/test_cli_db_ops.py",
+      "tests": 24,
       "mirror_share": 0.0,
-      "avg_mocks": 2.0,
-      "avg_body_lines": 19.0,
-      "avg_asserts": 2.4,
-      "private_imports_per_test": 0.0
+      "avg_mocks": 2.5,
+      "avg_body_lines": 16.7,
+      "avg_asserts": 2.2,
+      "private_imports_per_test": 0.4
     },
     {
-      "file": "tests/unit/test_cli_db_ops.py",
-      "tests": 23,
-      "mirror_share": 0.0,
+      "file": "tests/unit/test_qa/test_cli_signing_wiring.py",
+      "tests": 22,
+      "mirror_share": 0.23,
       "avg_mocks": 2.4,
-      "avg_body_lines": 16.2,
-      "avg_asserts": 2.1,
-      "private_imports_per_test": 0.4
+      "avg_body_lines": 17.0,
+      "avg_asserts": 2.6,
+      "private_imports_per_test": 1.0
+    },
+    {
+      "file": "tests/unit/test_playwright_executor_enrichment.py",
+      "tests": 17,
+      "mirror_share": 0.0,
+      "avg_mocks": 2.9,
+      "avg_body_lines": 14.1,
+      "avg_asserts": 2.9,
+      "private_imports_per_test": 0.1
     },
     {
       "file": "tests/unit/test_domain_user_attributes.py",
@@ -505,20 +489,11 @@
       "private_imports_per_test": 0.5
     },
     {
-      "file": "tests/unit/test_composition_styles.py",
-      "tests": 12,
-      "mirror_share": 0.0,
-      "avg_mocks": 4.9,
-      "avg_body_lines": 19.0,
-      "avg_asserts": 2.1,
-      "private_imports_per_test": 0.0
-    },
-    {
       "file": "tests/unit/test_email_verification_routes.py",
       "tests": 12,
       "mirror_share": 0.0,
       "avg_mocks": 2.2,
-      "avg_body_lines": 12.7,
+      "avg_body_lines": 12.8,
       "avg_asserts": 2.0,
       "private_imports_per_test": 0.2
     },
@@ -529,6 +504,15 @@
       "avg_mocks": 2.4,
       "avg_body_lines": 17.2,
       "avg_asserts": 1.9,
+      "private_imports_per_test": 0.0
+    },
+    {
+      "file": "tests/unit/test_cli_tenant.py",
+      "tests": 11,
+      "mirror_share": 0.0,
+      "avg_mocks": 4.2,
+      "avg_body_lines": 14.9,
+      "avg_asserts": 2.7,
       "private_imports_per_test": 0.0
     },
     {
@@ -545,36 +529,9 @@
       "tests": 10,
       "mirror_share": 0.0,
       "avg_mocks": 2.2,
-      "avg_body_lines": 20.4,
+      "avg_body_lines": 20.6,
       "avg_asserts": 2.6,
       "private_imports_per_test": 0.0
-    },
-    {
-      "file": "tests/unit/test_worker_postgres_wiring.py",
-      "tests": 10,
-      "mirror_share": 0.1,
-      "avg_mocks": 2.0,
-      "avg_body_lines": 23.8,
-      "avg_asserts": 1.7,
-      "private_imports_per_test": 0.4
-    },
-    {
-      "file": "tests/unit/test_cli_tenant.py",
-      "tests": 9,
-      "mirror_share": 0.0,
-      "avg_mocks": 4.2,
-      "avg_body_lines": 12.3,
-      "avg_asserts": 2.4,
-      "private_imports_per_test": 0.0
-    },
-    {
-      "file": "tests/unit/test_github_issues.py",
-      "tests": 9,
-      "mirror_share": 0.0,
-      "avg_mocks": 2.4,
-      "avg_body_lines": 11.3,
-      "avg_asserts": 2.0,
-      "private_imports_per_test": 0.4
     },
     {
       "file": "tests/unit/test_interaction_server_fixture.py",
@@ -597,226 +554,146 @@
   ],
   "twin_pairs": [
     {
-      "file_a": "tests/unit/test_parser.py",
-      "file_b": "tests/unit/test_rbac_verifier.py",
-      "tests_a": 143,
-      "tests_b": 59,
-      "shared_shape_count": 45,
-      "overlap_ratio": 0.76
-    },
-    {
-      "file_a": "tests/unit/render/fragment/test_data_primitives.py",
+      "file_a": "tests/unit/http_runtime/test_query_builder.py",
       "file_b": "tests/unit/test_parser.py",
-      "tests_a": 46,
-      "tests_b": 143,
-      "shared_shape_count": 42,
-      "overlap_ratio": 0.91
-    },
-    {
-      "file_a": "tests/unit/test_fidelity_scorer.py",
-      "file_b": "tests/unit/test_rbac_verifier.py",
-      "tests_a": 36,
-      "tests_b": 59,
-      "shared_shape_count": 35,
-      "overlap_ratio": 0.97
+      "tests_a": 55,
+      "tests_b": 132,
+      "shared_shape_count": 41,
+      "overlap_ratio": 0.75
     },
     {
       "file_a": "tests/unit/test_pdf_viewer_component.py",
       "file_b": "tests/unit/test_region_adapter.py",
-      "tests_a": 49,
-      "tests_b": 143,
-      "shared_shape_count": 35,
-      "overlap_ratio": 0.71
-    },
-    {
-      "file_a": "tests/unit/test_composition_audit.py",
-      "file_b": "tests/unit/test_dsl_emitter.py",
-      "tests_a": 89,
-      "tests_b": 48,
-      "shared_shape_count": 34,
-      "overlap_ratio": 0.71
-    },
-    {
-      "file_a": "tests/unit/test_fidelity_scorer.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 36,
-      "tests_b": 143,
-      "shared_shape_count": 34,
-      "overlap_ratio": 0.94
+      "tests_a": 52,
+      "tests_b": 121,
+      "shared_shape_count": 38,
+      "overlap_ratio": 0.73
     },
     {
       "file_a": "tests/unit/test_mapping_executor.py",
       "file_b": "tests/unit/test_parser.py",
-      "tests_a": 40,
-      "tests_b": 143,
-      "shared_shape_count": 31,
-      "overlap_ratio": 0.78
+      "tests_a": 49,
+      "tests_b": 132,
+      "shared_shape_count": 36,
+      "overlap_ratio": 0.73
     },
     {
-      "file_a": "tests/unit/sentinel/test_agent_business_logic.py",
-      "file_b": "tests/unit/test_persona_journey.py",
-      "tests_a": 29,
-      "tests_b": 56,
-      "shared_shape_count": 29,
-      "overlap_ratio": 1.0
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 40,
-      "tests_b": 143,
-      "shared_shape_count": 29,
-      "overlap_ratio": 0.72
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
+      "file_a": "tests/unit/test_parser.py",
       "file_b": "tests/unit/test_rbac_verifier.py",
-      "tests_a": 40,
-      "tests_b": 59,
-      "shared_shape_count": 29,
-      "overlap_ratio": 0.72
+      "tests_a": 132,
+      "tests_b": 43,
+      "shared_shape_count": 36,
+      "overlap_ratio": 0.84
+    },
+    {
+      "file_a": "tests/unit/render/fragment/test_data_primitives.py",
+      "file_b": "tests/unit/test_parser.py",
+      "tests_a": 37,
+      "tests_b": 132,
+      "shared_shape_count": 34,
+      "overlap_ratio": 0.92
+    },
+    {
+      "file_a": "tests/unit/test_fidelity_scorer.py",
+      "file_b": "tests/unit/test_parser.py",
+      "tests_a": 39,
+      "tests_b": 132,
+      "shared_shape_count": 34,
+      "overlap_ratio": 0.87
     },
     {
       "file_a": "tests/unit/test_region_adapter.py",
       "file_b": "tests/unit/test_two_factor_views.py",
-      "tests_a": 143,
-      "tests_b": 30,
-      "shared_shape_count": 29,
-      "overlap_ratio": 0.97
+      "tests_a": 121,
+      "tests_b": 35,
+      "shared_shape_count": 31,
+      "overlap_ratio": 0.89
     },
     {
-      "file_a": "tests/unit/render/fragment/test_data_primitives.py",
-      "file_b": "tests/unit/sentinel/test_agent_business_logic.py",
-      "tests_a": 46,
-      "tests_b": 29,
-      "shared_shape_count": 28,
-      "overlap_ratio": 0.97
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_business_logic.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 29,
-      "tests_b": 143,
-      "shared_shape_count": 28,
-      "overlap_ratio": 0.97
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_business_logic.py",
+      "file_a": "tests/unit/test_fidelity_scorer.py",
       "file_b": "tests/unit/test_rbac_verifier.py",
-      "tests_a": 29,
-      "tests_b": 59,
-      "shared_shape_count": 28,
-      "overlap_ratio": 0.97
+      "tests_a": 39,
+      "tests_b": 43,
+      "shared_shape_count": 29,
+      "overlap_ratio": 0.74
     },
     {
-      "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
-      "file_b": "tests/unit/test_fidelity_scorer.py",
-      "tests_a": 40,
-      "tests_b": 36,
-      "shared_shape_count": 28,
-      "overlap_ratio": 0.78
+      "file_a": "tests/unit/test_parser.py",
+      "file_b": "tests/unit/test_workspace_layout_prefs.py",
+      "tests_a": 132,
+      "tests_b": 31,
+      "shared_shape_count": 29,
+      "overlap_ratio": 0.94
     },
     {
-      "file_a": "tests/unit/test_composition_audit.py",
-      "file_b": "tests/unit/test_qa_trial.py",
-      "tests_a": 89,
-      "tests_b": 39,
+      "file_a": "tests/unit/test_datatable_handler.py",
+      "file_b": "tests/unit/test_parser.py",
+      "tests_a": 30,
+      "tests_b": 132,
       "shared_shape_count": 28,
-      "overlap_ratio": 0.72
-    },
-    {
-      "file_a": "tests/unit/test_docker_generation.py",
-      "file_b": "tests/unit/test_region_adapter.py",
-      "tests_a": 35,
-      "tests_b": 143,
-      "shared_shape_count": 28,
-      "overlap_ratio": 0.8
+      "overlap_ratio": 0.93
     },
     {
       "file_a": "tests/unit/test_parser.py",
       "file_b": "tests/unit/test_structured_content.py",
-      "tests_a": 143,
+      "tests_a": 132,
       "tests_b": 32,
       "shared_shape_count": 28,
       "overlap_ratio": 0.88
     },
     {
-      "file_a": "tests/unit/sentinel/test_agent_auth.py",
-      "file_b": "tests/unit/test_persona_journey.py",
-      "tests_a": 28,
-      "tests_b": 56,
+      "file_a": "tests/unit/http_runtime/test_query_builder.py",
+      "file_b": "tests/unit/render/fragment/test_data_primitives.py",
+      "tests_a": 55,
+      "tests_b": 37,
       "shared_shape_count": 27,
-      "overlap_ratio": 0.96
+      "overlap_ratio": 0.73
     },
     {
-      "file_a": "tests/unit/sentinel/test_agent_business_logic.py",
-      "file_b": "tests/unit/test_expression_lang.py",
-      "tests_a": 29,
-      "tests_b": 83,
-      "shared_shape_count": 27,
-      "overlap_ratio": 0.93
-    },
-    {
-      "file_a": "tests/unit/test_composition_audit.py",
-      "file_b": "tests/unit/test_rbac_enforcement.py",
-      "tests_a": 89,
-      "tests_b": 36,
-      "shared_shape_count": 27,
-      "overlap_ratio": 0.75
-    },
-    {
-      "file_a": "tests/unit/test_docker_generation.py",
-      "file_b": "tests/unit/test_pdf_viewer_component.py",
-      "tests_a": 35,
-      "tests_b": 49,
-      "shared_shape_count": 27,
-      "overlap_ratio": 0.77
+      "file_a": "tests/unit/http_runtime/test_auth.py",
+      "file_b": "tests/unit/test_access_control.py",
+      "tests_a": 80,
+      "tests_b": 35,
+      "shared_shape_count": 26,
+      "overlap_ratio": 0.74
     },
     {
       "file_a": "tests/unit/render/fragment/test_data_primitives.py",
-      "file_b": "tests/unit/test_fidelity_scorer.py",
-      "tests_a": 46,
-      "tests_b": 36,
+      "file_b": "tests/unit/test_expression_lang.py",
+      "tests_a": 37,
+      "tests_b": 83,
       "shared_shape_count": 26,
-      "overlap_ratio": 0.72
+      "overlap_ratio": 0.7
     },
     {
-      "file_a": "tests/unit/sentinel/test_agent_business_logic.py",
-      "file_b": "tests/unit/sentinel/test_agent_performance_resource.py",
-      "tests_a": 29,
-      "tests_b": 40,
-      "shared_shape_count": 26,
-      "overlap_ratio": 0.9
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_data_integrity.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 29,
-      "tests_b": 143,
-      "shared_shape_count": 26,
-      "overlap_ratio": 0.9
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_data_integrity.py",
+      "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
       "file_b": "tests/unit/test_persona_journey.py",
-      "tests_a": 29,
+      "tests_a": 33,
       "tests_b": 56,
       "shared_shape_count": 26,
-      "overlap_ratio": 0.9
+      "overlap_ratio": 0.79
     },
     {
-      "file_a": "tests/unit/test_composition_audit.py",
-      "file_b": "tests/unit/test_narrative_compiler.py",
-      "tests_a": 89,
-      "tests_b": 31,
+      "file_a": "tests/unit/test_datatable_handler.py",
+      "file_b": "tests/unit/test_expression_lang.py",
+      "tests_a": 30,
+      "tests_b": 83,
       "shared_shape_count": 26,
-      "overlap_ratio": 0.84
+      "overlap_ratio": 0.87
+    },
+    {
+      "file_a": "tests/unit/test_datatable_handler.py",
+      "file_b": "tests/unit/test_mapping_executor.py",
+      "tests_a": 30,
+      "tests_b": 49,
+      "shared_shape_count": 26,
+      "overlap_ratio": 0.87
     },
     {
       "file_a": "tests/unit/test_events.py",
       "file_b": "tests/unit/test_parser.py",
       "tests_a": 36,
-      "tests_b": 143,
+      "tests_b": 132,
       "shared_shape_count": 26,
       "overlap_ratio": 0.72
     },
@@ -829,172 +706,252 @@
       "overlap_ratio": 0.72
     },
     {
-      "file_a": "tests/unit/test_predicate_compiler.py",
-      "file_b": "tests/unit/test_region_adapter.py",
-      "tests_a": 34,
-      "tests_b": 143,
+      "file_a": "tests/unit/test_expression_lang.py",
+      "file_b": "tests/unit/test_rbac_ui_fixes.py",
+      "tests_a": 83,
+      "tests_b": 30,
       "shared_shape_count": 26,
+      "overlap_ratio": 0.87
+    },
+    {
+      "file_a": "tests/unit/test_persona_journey.py",
+      "file_b": "tests/unit/test_ux_contract_checker.py",
+      "tests_a": 56,
+      "tests_b": 36,
+      "shared_shape_count": 26,
+      "overlap_ratio": 0.72
+    },
+    {
+      "file_a": "tests/integration/test_scim_routes.py",
+      "file_b": "tests/unit/test_parser.py",
+      "tests_a": 33,
+      "tests_b": 132,
+      "shared_shape_count": 25,
       "overlap_ratio": 0.76
     },
     {
-      "file_a": "tests/unit/render/fragment/test_data_primitives.py",
-      "file_b": "tests/unit/sentinel/test_agent_auth.py",
-      "tests_a": 46,
-      "tests_b": 28,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.89
-    },
-    {
       "file_a": "tests/unit/sentinel/test_agent_auth.py",
-      "file_b": "tests/unit/sentinel/test_agent_business_logic.py",
-      "tests_a": 28,
-      "tests_b": 29,
+      "file_b": "tests/unit/test_persona_journey.py",
+      "tests_a": 26,
+      "tests_b": 56,
       "shared_shape_count": 25,
-      "overlap_ratio": 0.89
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_auth.py",
-      "file_b": "tests/unit/test_expression_lang.py",
-      "tests_a": 28,
-      "tests_b": 83,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.89
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_auth.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 28,
-      "tests_b": 143,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.89
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_auth.py",
-      "file_b": "tests/unit/test_ux_contract_checker.py",
-      "tests_a": 28,
-      "tests_b": 35,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.89
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_business_logic.py",
-      "file_b": "tests/unit/test_fidelity_scorer.py",
-      "tests_a": 29,
-      "tests_b": 36,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.86
+      "overlap_ratio": 0.96
     },
     {
       "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
       "file_b": "tests/unit/test_ux_contract_checker.py",
-      "tests_a": 40,
-      "tests_b": 35,
+      "tests_a": 33,
+      "tests_b": 36,
       "shared_shape_count": 25,
-      "overlap_ratio": 0.71
+      "overlap_ratio": 0.76
+    },
+    {
+      "file_a": "tests/unit/test_datatable_handler.py",
+      "file_b": "tests/unit/test_rbac_verifier.py",
+      "tests_a": 30,
+      "tests_b": 43,
+      "shared_shape_count": 25,
+      "overlap_ratio": 0.83
+    },
+    {
+      "file_a": "tests/unit/test_parser.py",
+      "file_b": "tests/unit/test_rbac_ui_fixes.py",
+      "tests_a": 132,
+      "tests_b": 30,
+      "shared_shape_count": 25,
+      "overlap_ratio": 0.83
+    },
+    {
+      "file_a": "tests/unit/test_predicate_compiler.py",
+      "file_b": "tests/unit/test_region_adapter.py",
+      "tests_a": 34,
+      "tests_b": 121,
+      "shared_shape_count": 25,
+      "overlap_ratio": 0.74
+    },
+    {
+      "file_a": "tests/unit/http_runtime/test_auth.py",
+      "file_b": "tests/unit/test_rbac_ui_fixes.py",
+      "tests_a": 80,
+      "tests_b": 30,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.8
+    },
+    {
+      "file_a": "tests/unit/http_runtime/test_auth.py",
+      "file_b": "tests/unit/test_structured_content.py",
+      "tests_a": 80,
+      "tests_b": 32,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.75
+    },
+    {
+      "file_a": "tests/unit/http_runtime/test_query_builder.py",
+      "file_b": "tests/unit/test_workspace_layout_prefs.py",
+      "tests_a": 55,
+      "tests_b": 31,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.77
+    },
+    {
+      "file_a": "tests/unit/render/fragment/test_data_primitives.py",
+      "file_b": "tests/unit/test_workspace_layout_prefs.py",
+      "tests_a": 37,
+      "tests_b": 31,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.77
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_auth.py",
+      "file_b": "tests/unit/test_ux_contract_checker.py",
+      "tests_a": 26,
+      "tests_b": 36,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.92
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_data_integrity.py",
+      "file_b": "tests/unit/test_parser.py",
+      "tests_a": 26,
+      "tests_b": 132,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.92
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_data_integrity.py",
+      "file_b": "tests/unit/test_persona_journey.py",
+      "tests_a": 26,
+      "tests_b": 56,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.92
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
+      "file_b": "tests/unit/test_expression_lang.py",
+      "tests_a": 33,
+      "tests_b": 83,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.73
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
+      "file_b": "tests/unit/test_mapping_executor.py",
+      "tests_a": 33,
+      "tests_b": 49,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.73
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
+      "file_b": "tests/unit/test_parser.py",
+      "tests_a": 33,
+      "tests_b": 132,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.73
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
+      "file_b": "tests/unit/test_rbac_verifier.py",
+      "tests_a": 33,
+      "tests_b": 43,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.73
     },
     {
       "file_a": "tests/unit/test_curl_test_generator.py",
       "file_b": "tests/unit/test_region_adapter.py",
       "tests_a": 28,
-      "tests_b": 143,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.89
-    },
-    {
-      "file_a": "tests/unit/test_list_chrome_parity_phase1.py",
-      "file_b": "tests/unit/test_region_adapter.py",
-      "tests_a": 32,
-      "tests_b": 143,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.78
+      "tests_b": 121,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.86
     },
     {
       "file_a": "tests/unit/test_narrative_compiler.py",
       "file_b": "tests/unit/test_peek_when_empty_1494.py",
       "tests_a": 31,
       "tests_b": 50,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.81
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.77
     },
     {
-      "file_a": "tests/unit/test_persona_journey.py",
-      "file_b": "tests/unit/test_ux_contract_checker.py",
-      "tests_a": 56,
-      "tests_b": 35,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.71
+      "file_a": "tests/unit/test_parser.py",
+      "file_b": "tests/unit/test_ses_adapter.py",
+      "tests_a": 132,
+      "tests_b": 31,
+      "shared_shape_count": 24,
+      "overlap_ratio": 0.77
     },
     {
-      "file_a": "tests/integration/test_scim_routes.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 32,
-      "tests_b": 143,
+      "file_a": "tests/unit/test_parser.py",
+      "file_b": "tests/unit/test_sla_manager.py",
+      "tests_a": 132,
+      "tests_b": 32,
       "shared_shape_count": 24,
       "overlap_ratio": 0.75
     },
     {
-      "file_a": "tests/unit/sentinel/test_agent_auth.py",
-      "file_b": "tests/unit/sentinel/test_agent_multi_tenancy.py",
-      "tests_a": 28,
-      "tests_b": 24,
-      "shared_shape_count": 24,
-      "overlap_ratio": 1.0
+      "file_a": "tests/unit/http_runtime/test_auth.py",
+      "file_b": "tests/unit/test_narrative_compiler.py",
+      "tests_a": 80,
+      "tests_b": 31,
+      "shared_shape_count": 23,
+      "overlap_ratio": 0.74
+    },
+    {
+      "file_a": "tests/unit/http_runtime/test_auth.py",
+      "file_b": "tests/unit/test_otp_store.py",
+      "tests_a": 80,
+      "tests_b": 28,
+      "shared_shape_count": 23,
+      "overlap_ratio": 0.82
     },
     {
       "file_a": "tests/unit/sentinel/test_agent_auth.py",
-      "file_b": "tests/unit/sentinel/test_agent_performance_resource.py",
-      "tests_a": 28,
-      "tests_b": 40,
-      "shared_shape_count": 24,
-      "overlap_ratio": 0.86
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_auth.py",
-      "file_b": "tests/unit/test_rbac_verifier.py",
-      "tests_a": 28,
-      "tests_b": 59,
-      "shared_shape_count": 24,
-      "overlap_ratio": 0.86
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_business_logic.py",
-      "file_b": "tests/unit/test_ux_contract_checker.py",
-      "tests_a": 29,
-      "tests_b": 35,
-      "shared_shape_count": 24,
-      "overlap_ratio": 0.83
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_data_integrity.py",
       "file_b": "tests/unit/test_expression_lang.py",
-      "tests_a": 29,
+      "tests_a": 26,
       "tests_b": 83,
-      "shared_shape_count": 24,
-      "overlap_ratio": 0.83
+      "shared_shape_count": 23,
+      "overlap_ratio": 0.88
     },
     {
-      "file_a": "tests/unit/sentinel/test_agent_data_integrity.py",
+      "file_a": "tests/unit/sentinel/test_agent_auth.py",
+      "file_b": "tests/unit/test_parser.py",
+      "tests_a": 26,
+      "tests_b": 132,
+      "shared_shape_count": 23,
+      "overlap_ratio": 0.88
+    },
+    {
+      "file_a": "tests/unit/test_datatable_handler.py",
       "file_b": "tests/unit/test_fidelity_scorer.py",
-      "tests_a": 29,
-      "tests_b": 36,
-      "shared_shape_count": 24,
-      "overlap_ratio": 0.83
+      "tests_a": 30,
+      "tests_b": 39,
+      "shared_shape_count": 23,
+      "overlap_ratio": 0.77
     },
     {
-      "file_a": "tests/unit/sentinel/test_agent_data_integrity.py",
-      "file_b": "tests/unit/test_ux_contract_checker.py",
-      "tests_a": 29,
-      "tests_b": 35,
-      "shared_shape_count": 24,
-      "overlap_ratio": 0.83
-    },
-    {
-      "file_a": "tests/unit/sentinel/test_agent_multi_tenancy.py",
+      "file_a": "tests/unit/test_datatable_handler.py",
       "file_b": "tests/unit/test_persona_journey.py",
-      "tests_a": 24,
+      "tests_a": 30,
       "tests_b": 56,
-      "shared_shape_count": 24,
-      "overlap_ratio": 1.0
+      "shared_shape_count": 23,
+      "overlap_ratio": 0.77
+    },
+    {
+      "file_a": "tests/unit/test_expression_lang.py",
+      "file_b": "tests/unit/test_sla_manager.py",
+      "tests_a": 83,
+      "tests_b": 32,
+      "shared_shape_count": 23,
+      "overlap_ratio": 0.72
+    },
+    {
+      "file_a": "tests/unit/test_workspace_layout_prefs.py",
+      "file_b": "tests/unit/test_workspace_rendering.py",
+      "tests_a": 31,
+      "tests_b": 46,
+      "shared_shape_count": 23,
+      "overlap_ratio": 0.74
     }
   ]
 }

@@ -53,19 +53,6 @@ EXIT_REGRESSION = 1
 EXIT_SETUP_FAILURE = 2
 
 
-def _default_workspace_path(page: Page) -> str:
-    """Return the path of the first workspace we should drive.
-
-    Reads ``window.location.pathname`` after ``goto("/")`` — typically
-    redirects to the persona's default workspace. Falls back to
-    ``/app`` if the redirect didn't happen.
-    """
-    current = page.evaluate("() => window.location.pathname")
-    if isinstance(current, str) and current.startswith("/app"):
-        return current
-    return "/app"
-
-
 def _layout_card_ids_and_catalog(page: Page) -> tuple[list[str], list[str], bool]:
     """Extract the workspace's card ids + catalog region names + edit flag.
 

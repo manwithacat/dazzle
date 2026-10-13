@@ -19,7 +19,6 @@ from dazzle.mcp.server.mcp_session import mcp_activity_log_path, mcp_kg_db_path
 if TYPE_CHECKING:
     from dazzle.mcp.knowledge_graph import KnowledgeGraph
     from dazzle.mcp.server.activity_log import ActivityLog, ActivityStore
-    from dazzle.testing.vendor_mock.orchestrator import MockOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +46,6 @@ class ServerState:
         self.graph_db_path: Path | None = None
         self.activity_log: ActivityLog | None = None
         self.activity_store: ActivityStore | None = None
-        self.mock_orchestrator: MockOrchestrator | None = None
         self.appspec_data: dict[str, Any] | None = None
         self.ui_spec: dict[str, Any] | None = None
         self.pack_cache: dict[str, Any] = {}
@@ -69,7 +67,6 @@ class ServerState:
         self.graph_db_path = None
         self.activity_log = None
         self.activity_store = None
-        self.mock_orchestrator = None
         self.appspec_data = None
         self.ui_spec = None
         self.pack_cache.clear()
@@ -471,24 +468,9 @@ def get_activity_store() -> ActivityStore | None:
     return _state.activity_store
 
 
-def get_mock_orchestrator() -> MockOrchestrator | None:
-    """Get the mock orchestrator instance (if running)."""
-    return _state.mock_orchestrator
-
-
-def set_mock_orchestrator(orch: MockOrchestrator | None) -> None:
-    """Store the mock orchestrator for MCP tool access."""
-    _state.mock_orchestrator = orch
-
-
 def set_appspec_data(spec: dict[str, Any] | None) -> None:
     """Store the active AppSpec data on the server state."""
     _state.appspec_data = spec
-
-
-def get_appspec_data() -> dict[str, Any] | None:
-    """Return the current AppSpec data, or None if none is loaded."""
-    return _state.appspec_data
 
 
 def set_ui_spec(spec: dict[str, Any] | None) -> None:

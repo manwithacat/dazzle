@@ -146,7 +146,7 @@ def test_every_reference_page_is_linked_from_index() -> None:
 def _cli_group_names() -> set[str]:
     """Registered CLI command-group names (every `add_typer(..., name=...)`)."""
     text = (REPO_ROOT / "src" / "dazzle" / "cli" / "__init__.py").read_text()
-    return set(re.findall(r'add_typer\([a-z_]+_app,\s*name="([a-z0-9-]+)"', text))
+    return set(re.findall(r'add_typer\([a-z0-9_]+_app,\s*name="([a-z0-9-]+)"', text))
 
 
 def test_cli_md_documents_every_command_group() -> None:

@@ -13,25 +13,14 @@ Factory:
 - ProcessConfig: Configuration for backend selection
 """
 
-from .adapter import (
-    ProcessAdapter,
-    ProcessRun,
-    ProcessStatus,
-    ProcessTask,
-    TaskStatus,
-)
-from .context import ProcessContext
+from .adapter import ProcessStatus, ProcessTask, TaskStatus
 from .factory import ProcessConfig, create_adapter, get_backend_info
 
 __all__ = [
-    # Adapter interface
-    "ProcessAdapter",
-    "ProcessRun",
+    # Adapter types (import ProcessAdapter / ProcessRun from .adapter)
     "ProcessStatus",
     "ProcessTask",
     "TaskStatus",
-    # Context
-    "ProcessContext",
     # Factory
     "ProcessConfig",
     "create_adapter",

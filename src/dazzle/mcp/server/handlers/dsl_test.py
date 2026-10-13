@@ -11,7 +11,7 @@ from typing import Any
 from dazzle.core.manifest import resolve_api_url
 from dazzle.core.project import load_project
 
-from .common import error_response, extract_progress, wrap_async_handler_errors, wrap_handler_errors
+from .common import error_response, extract_progress, wrap_handler_errors
 
 logger = logging.getLogger(__name__)
 
@@ -101,75 +101,6 @@ def dsl_test_generate_impl(
     return result
 
 
-def dsl_test_run_impl(
-    project_root: Path,
-    *,
-    base_url: str | None = None,
-    regenerate: bool = False,
-    category: str | None = None,
-    entity: str | None = None,
-    test_id: str | None = None,
-    persona: str | None = None,
-    on_progress: Any = None,
-) -> dict[str, Any]:
-    """Run DSL-driven tests against a running server.
-
-    Returns structured result dict.
-    """
-    from dazzle.testing.unified_runner import UnifiedTestRunner
-
-    runner = UnifiedTestRunner(project_root, base_url=base_url)
-    result = runner.run_all(
-        generate=True,
-        force_generate=regenerate,
-        category=category,
-        entity=entity,
-        test_id=test_id,
-        persona=persona,
-        on_progress=on_progress,
-    )
-
-    response: dict[str, Any] = {
-        "project": result.project_name,
-        "summary": result.get_summary(),
-        "dsl_hash": result.dsl_hash[:12],
-        "tests_generated": result.tests_generated,
-    }
-    if persona:
-        response["persona"] = persona
-
-    failed_tests: list[dict[str, Any]] = []
-    passed_tests: list[str] = []
-
-    if result.crud_result:
-        for tc in result.crud_result.tests:
-            if tc.result.value in ("failed", "error"):
-                entry: dict[str, Any] = {
-                    "test_id": tc.test_id,
-                    "title": tc.title,
-                    "result": tc.result.value,
-                    "error": tc.error_message,
-                }
-                for step in tc.steps:
-                    if step.result.value in ("failed", "error"):
-                        entry["failed_step"] = {
-                            "action": step.action,
-                            "target": step.target,
-                            "message": step.message,
-                        }
-                        break
-                failed_tests.append(entry)
-            elif tc.result.value == "passed":
-                passed_tests.append(tc.test_id)
-
-    if failed_tests:
-        response["failed_tests"] = failed_tests
-    if passed_tests:
-        response["passed_tests"] = passed_tests
-
-    return response
-
-
 def dsl_test_run_all_impl(
     project_root: Path,
     *,
@@ -254,17 +185,6 @@ def dsl_test_run_all_impl(
     if failed_tests:
         response["failed_tests"] = failed_tests
     response["passed_count"] = len(passed_tests)
-
-    # Persist to knowledge graph (best-effort)
-    try:
-        run_id = _persist_test_results(
-            result, by_category, failed_tests, passed_tests, trigger="run_all"
-        )
-        if run_id:
-            response["run_id"] = run_id
-    except Exception:
-        logger.warning("Failed to persist test results", exc_info=True)
-        response["persistence_error"] = "Test results could not be saved to knowledge graph"
 
     return response
 
@@ -359,63 +279,6 @@ def dsl_test_coverage_impl(
             }
 
     return result
-
-
-def dsl_test_list_impl(
-    project_root: Path,
-    *,
-    category: str | None = None,
-    entity: str | None = None,
-) -> dict[str, Any]:
-    """List available DSL-driven tests, optionally filtered."""
-    from dazzle.testing.dsl_test_generator import generate_tests_from_dsl
-
-    test_suite = generate_tests_from_dsl(project_root)
-
-    def get_category(design: dict[str, Any]) -> str:
-        tags = design.get("tags", [])
-        return next((t for t in tags if t not in ("generated", "dsl-derived")), "other")
-
-    def get_entities(design: dict[str, Any]) -> list[str]:
-        entities = design.get("entities", [])
-        return entities if isinstance(entities, list) else []
-
-    designs = test_suite.designs
-    if category:
-        designs = [d for d in designs if get_category(d) == category]
-    if entity:
-        designs = [d for d in designs if entity in get_entities(d)]
-
-    by_category: dict[str, list[dict[str, Any]]] = {}
-    for design in designs:
-        cat = get_category(design)
-        if cat not in by_category:
-            by_category[cat] = []
-        by_category[cat].append(
-            {
-                "test_id": design.get("test_id", ""),
-                "title": design.get("title", ""),
-                "description": design.get("description", ""),
-                "entities": get_entities(design),
-            }
-        )
-
-    all_categories = {get_category(d) for d in test_suite.designs}
-    all_entities: set[str] = set()
-    for d in test_suite.designs:
-        all_entities.update(get_entities(d))
-
-    return {
-        "project": test_suite.project_name,
-        "total_tests": len(designs),
-        "filters_applied": {
-            "category": category,
-            "entity": entity,
-        },
-        "available_categories": sorted(all_categories),
-        "available_entities": sorted(all_entities),
-        "tests_by_category": by_category,
-    }
 
 
 def dsl_test_verify_story_impl(
@@ -528,192 +391,14 @@ def dsl_test_verify_story_impl(
     return response
 
 
-async def dsl_test_diff_personas_impl(
-    project_root: Path,
-    *,
-    base_url: str | None = None,
-    route: str | None = None,
-    routes: list[str] | None = None,
-    persona_ids: list[str] | None = None,
-) -> dict[str, Any]:
-    """Compare route responses across personas."""
-    from dazzle.testing.session_manager import SessionManager
-
-    manager = SessionManager(project_root, base_url=base_url)
-
-    if route:
-        result = await manager.diff_route(route, persona_ids)
-        return result
-    else:
-        results = await manager.diff_routes(routes or [], persona_ids)
-        return {"diffs": results}
-
-
 # ---------------------------------------------------------------------------
 # Private helpers (unchanged)
 # ---------------------------------------------------------------------------
 
 
-def _generate_bash_tests(project_root: Path, args: dict[str, Any]) -> str:
-    """Generate bash/curl smoke test script."""
-    from dazzle.testing.curl_test_generator import CurlTestGenerator
-
-    appspec = load_project(project_root)
-    base_url = args.get("base_url") or resolve_api_url()
-    generator = CurlTestGenerator(appspec, base_url=base_url, project_root=project_root)
-    script = generator.generate()
-
-    save = args.get("save", False)
-    if save:
-        output_dir = project_root / "dsl" / "tests"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / "smoke_test.sh"
-        output_file.write_text(script, encoding="utf-8")
-        output_file.chmod(0o755)
-        return json.dumps(
-            {
-                "format": "bash",
-                "saved_to": str(output_file),
-                "script_lines": len(script.splitlines()),
-            },
-            indent=2,
-        )
-
-    return script
-
-
-def _persist_test_results(
-    result: Any,
-    by_category: dict[str, dict[str, int]],
-    failed_tests: list[dict[str, Any]],
-    passed_tests: list[str],
-    trigger: str = "manual",
-) -> str | None:
-    """Persist test run results to the knowledge graph. Returns run_id or None."""
-    import time
-    import uuid
-
-    from ..state import get_knowledge_graph
-
-    graph = get_knowledge_graph()
-    if graph is None:
-        return None
-
-    from dazzle.mcp.knowledge_graph.failure_classifier import classify_failure
-
-    run_id = str(uuid.uuid4())
-    total = len(passed_tests) + len(failed_tests)
-    passed_count = len(passed_tests)
-    failed_count = len(failed_tests)
-    success_rate = (passed_count / total * 100) if total > 0 else 0.0
-
-    previous_runs = graph.get_test_runs(project_name=result.project_name, limit=1)
-    previous_dsl_hash = previous_runs[0]["dsl_hash"] if previous_runs else None
-
-    now = time.time()
-    graph.save_test_run(
-        run_id=run_id,
-        project_name=result.project_name,
-        dsl_hash=result.dsl_hash,
-        previous_dsl_hash=previous_dsl_hash,
-        started_at=now,
-        completed_at=now,
-        total_tests=total,
-        passed=passed_count,
-        failed=failed_count,
-        success_rate=success_rate,
-        tests_generated=result.tests_generated,
-        trigger=trigger,
-    )
-
-    cases: list[dict[str, Any]] = []
-
-    for test_id in passed_tests:
-        cases.append(
-            {
-                "test_id": test_id,
-                "title": test_id,
-                "category": _infer_category(test_id),
-                "result": "passed",
-            }
-        )
-
-    for ft in failed_tests:
-        failed_step = ft.get("failed_step")
-        failure_type = classify_failure(
-            test_id=ft.get("test_id", ""),
-            category=ft.get("category", "other"),
-            error_message=ft.get("error", ""),
-            failed_step=failed_step,
-        )
-        cases.append(
-            {
-                "test_id": ft.get("test_id", ""),
-                "title": ft.get("title", ft.get("test_id", "")),
-                "category": ft.get("category", "other"),
-                "result": ft.get("result", "failed"),
-                "error_message": ft.get("error"),
-                "failure_type": failure_type,
-                "entities": ft.get("entities"),
-                "failed_step_json": json.dumps(failed_step) if failed_step else None,
-            }
-        )
-
-    if cases:
-        graph.save_test_cases_batch(run_id, cases)
-
-    return run_id
-
-
-def _infer_category(test_id: str) -> str:
-    """Infer test category from test_id prefix."""
-    if test_id.startswith("CRUD_"):
-        return "crud"
-    if test_id.startswith("SM_"):
-        return "state_machine"
-    if test_id.startswith("VAL_"):
-        return "validation"
-    if test_id.startswith("ACL_"):
-        return "persona"
-    if test_id.startswith("WS_"):
-        return "workspace"
-    return "other"
-
-
 # ---------------------------------------------------------------------------
 # MCP handler wrappers — delegate to impl functions
 # ---------------------------------------------------------------------------
-
-
-@wrap_handler_errors
-def verify_story_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Verify a story by mapping it to entity tests, running them, and returning a verdict."""
-    try:
-        story_id = args.get("story_id")
-        story_ids_list: list[str] = args.get("story_ids") or []
-        if story_id:
-            story_ids_list = [story_id]
-        if not story_ids_list:
-            return error_response("story_id or story_ids is required")
-
-        base_url = args.get("base_url")
-
-        if base_url:
-            from .preflight import check_server_reachable
-
-            preflight_err = check_server_reachable(base_url)
-            if preflight_err:
-                return preflight_err
-
-        result = dsl_test_verify_story_impl(
-            project_root,
-            story_ids=story_ids_list,
-            base_url=base_url,
-        )
-        return json.dumps(result, indent=2)
-
-    except ImportError as e:
-        return error_response(f"Testing module not available: {e}")
 
 
 @wrap_handler_errors
@@ -780,135 +465,11 @@ def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
 
 
 @wrap_handler_errors
-def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Run DSL-driven tests against a running the Dazzle runtime server."""
-    try:
-        progress = extract_progress(args)
-        regenerate = args.get("regenerate", False)
-        base_url = args.get("base_url")
-
-        if base_url:
-            from .preflight import check_server_reachable
-
-            progress.log_sync("Checking server reachability...")
-            preflight_err = check_server_reachable(base_url)
-            if preflight_err:
-                return preflight_err
-
-        category = args.get("category")
-        entity = args.get("entity")
-        test_id = args.get("test_id")
-        persona = args.get("persona")
-
-        filters = [f for f in [category, entity, test_id, persona] if f]
-        progress.log_sync(
-            f"Running tests{' (filtered: ' + ', '.join(filters) + ')' if filters else ''}..."
-        )
-
-        result = dsl_test_run_impl(
-            project_root,
-            base_url=base_url,
-            regenerate=regenerate,
-            category=category,
-            entity=entity,
-            test_id=test_id,
-            persona=persona,
-            on_progress=lambda msg: progress.log_sync(msg),
-        )
-
-        passed_count = len(result.get("passed_tests", []))
-        failed_count = len(result.get("failed_tests", []))
-        progress.log_sync(f"Tests complete: {passed_count} passed, {failed_count} failed")
-
-        return json.dumps(result, indent=2)
-
-    except ImportError as e:
-        return error_response(f"Testing module not available: {e}")
-
-
-@wrap_async_handler_errors
-async def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Create authenticated sessions for all DSL-defined personas."""
-    try:
-        from dazzle.testing.session_manager import SessionManager
-
-        base_url = args.get("base_url") or resolve_api_url()
-        force = args.get("force", False)
-
-        appspec = load_project(project_root)
-        manager = SessionManager(project_root, base_url=base_url)
-        manifest = await manager.create_all_sessions(appspec, force=force)
-
-        return json.dumps(
-            {
-                "project": manifest.project_name,
-                "base_url": manifest.base_url,
-                "created_at": manifest.created_at,
-                "personas": {
-                    pid: {
-                        "user_id": s.user_id,
-                        "email": s.email,
-                        "role": s.role,
-                        "has_token": bool(s.session_token),
-                    }
-                    for pid, s in manifest.sessions.items()
-                },
-                "total_sessions": len(manifest.sessions),
-            },
-            indent=2,
-        )
-
-    except ImportError as e:
-        return error_response(f"Session manager not available: {e}")
-
-
-@wrap_async_handler_errors
-async def diff_personas_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Compare route responses across personas."""
-    try:
-        base_url: str = args.get("base_url") or resolve_api_url()
-        route: str | None = args.get("route")
-        routes: list[str] | None = args.get("routes")
-        persona_ids: list[str] | None = args.get("persona_ids")
-
-        if not route and not routes:
-            return json.dumps(
-                {"error": "Either 'route' or 'routes' parameter is required"},
-                indent=2,
-            )
-
-        result = await dsl_test_diff_personas_impl(
-            project_root,
-            base_url=base_url,
-            route=route,
-            routes=routes,
-            persona_ids=persona_ids,
-        )
-        return json.dumps(result, indent=2)
-
-    except ImportError as e:
-        return error_response(f"Session manager not available: {e}")
-
-
-@wrap_handler_errors
 def get_dsl_test_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Get test coverage for DSL constructs."""
     try:
         detailed = args.get("detailed", False)
         result = dsl_test_coverage_impl(project_root, detailed=detailed)
-        return json.dumps(result, indent=2)
-
-    except ImportError as e:
-        return error_response(f"Testing module not available: {e}")
-
-
-@wrap_handler_errors
-def list_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """List available DSL-driven tests."""
-    try:
-        category = args.get("category")
-        entity = args.get("entity")
-        result = dsl_test_list_impl(project_root, category=category, entity=entity)
         return json.dumps(result, indent=2)
 
     except ImportError as e:

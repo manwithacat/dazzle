@@ -4,7 +4,7 @@ import importlib.util
 import json
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -120,10 +120,7 @@ _stories = _import_stories()
 
 # Get references to the functions we need
 get_dsl_spec_handler = _stories.get_dsl_spec_handler
-propose_stories_from_dsl_handler = _stories.propose_stories_from_dsl_handler
-save_stories_handler = _stories.save_stories_handler
 get_stories_handler = _stories.get_stories_handler
-generate_tests_from_stories_handler = _stories.generate_tests_from_stories_handler
 # Serializers are in the shared serializers module (loaded during _import_stories)
 _ser = sys.modules["dazzle.mcp.server.handlers.serializers"]
 _serialize_story_summary = _ser.serialize_story_summary
@@ -132,8 +129,6 @@ _serialize_entity_summary = _ser.serialize_entity_summary
 _serialize_entity_detail = _ser.serialize_entity_detail
 _serialize_surface_summary = _ser.serialize_surface_summary
 _serialize_surface_detail = _ser.serialize_surface_detail
-_extract_entity_from_condition = _stories._extract_entity_from_condition
-_extract_target_from_condition = _stories._extract_target_from_condition
 
 
 # =============================================================================
@@ -373,54 +368,6 @@ class TestSerializeSurfaceDetail:
 # =============================================================================
 
 
-class TestExtractEntityFromCondition:
-    """Tests for entity extraction from conditions."""
-
-    @pytest.mark.parametrize(
-        ("condition", "scope", "expected"),
-        [
-            ("Task.status is 'pending'", ["Task", "User"], "Task"),
-            ("Order.total is greater than 100", [], "Order"),
-            ("something happens", ["Customer", "Order"], "Customer"),
-            ("some generic condition", [], "entity"),
-        ],
-        ids=[
-            "test_finds_entity_in_scope",
-            "test_uses_dot_notation",
-            "test_defaults_to_first_scope",
-            "test_empty_scope",
-        ],
-    )
-    def test_extract_entity(self, condition: str, scope: list, expected: str) -> None:
-        result = _extract_entity_from_condition(condition, scope)
-        assert result == expected
-
-
-class TestExtractTargetFromCondition:
-    """Tests for target extraction from conditions."""
-
-    def test_extracts_quoted_string(self) -> None:
-        """Test extracting quoted target."""
-        condition = "click the 'submit' button"
-
-        result = _extract_target_from_condition(condition)
-        assert result == "submit"
-
-    def test_extracts_the_pattern(self) -> None:
-        """Test extracting 'the X' pattern."""
-        condition = "click the button"
-
-        result = _extract_target_from_condition(condition)
-        assert result == "button"
-
-    def test_defaults_to_button(self) -> None:
-        """Test default return value."""
-        condition = "some action"
-
-        result = _extract_target_from_condition(condition)
-        assert result == "button"
-
-
 # =============================================================================
 # Handler Tests
 # =============================================================================
@@ -456,77 +403,6 @@ class TestGetDslSpecHandler:
         missing_project.mkdir()
 
         result = get_dsl_spec_handler(missing_project, {})
-        data = json.loads(result)
-
-        assert "error" in data
-
-
-class TestSaveStoriesHandler:
-    """Tests for save_stories_handler."""
-
-    def test_requires_stories(self, temp_project) -> None:
-        """Test that stories are required."""
-        result = save_stories_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert "error" in data
-        assert "No stories provided" in data["error"]
-
-    def test_saves_valid_story(self, temp_project) -> None:
-        """Test saving a valid story with Gherkin fields."""
-        stories = [
-            {
-                "story_id": "ST-001",
-                "title": "Test Story",
-                "actor": "User",
-                "trigger": "form_submitted",
-                "scope": ["Task"],
-                "given": ["User has permission"],
-                "then": ["Task is saved"],
-                "status": "draft",
-            }
-        ]
-
-        result = save_stories_handler(temp_project, {"stories": stories})
-        data = json.loads(result)
-
-        assert data.get("status") == "saved"
-        assert data.get("saved_count") == 1
-        # Verify DSL file was created
-        stories_file = Path(data["file"])
-        assert stories_file.exists()
-
-    def test_saves_story_with_legacy_fields(self, temp_project) -> None:
-        """Test backward compat: legacy preconditions/happy_path_outcome converted to given/then."""
-        stories = [
-            {
-                "story_id": "ST-001",
-                "title": "Test Story",
-                "actor": "User",
-                "trigger": "form_submitted",
-                "scope": ["Task"],
-                "preconditions": ["User has permission"],
-                "happy_path_outcome": ["Task is saved"],
-                "status": "draft",
-            }
-        ]
-
-        result = save_stories_handler(temp_project, {"stories": stories})
-        data = json.loads(result)
-
-        assert data.get("status") == "saved"
-        assert data.get("saved_count") == 1
-
-    def test_validates_story_structure(self, temp_project) -> None:
-        """Test that invalid stories are rejected."""
-        stories = [
-            {
-                "story_id": "ST-001",
-                # Missing required fields
-            }
-        ]
-
-        result = save_stories_handler(temp_project, {"stories": stories})
         data = json.loads(result)
 
         assert "error" in data
@@ -594,162 +470,3 @@ story ST-001 "Test Story":
         # Full details should include Gherkin fields
         assert "given" in story
         assert len(story["given"]) == 1
-
-
-class TestProposeStoriesHandler:
-    """Tests for propose_stories_from_dsl_handler."""
-
-    def test_proposes_stories_from_entity(self, temp_project) -> None:
-        """Test proposing stories from entity definition."""
-        result = propose_stories_from_dsl_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert "proposed_count" in data
-        assert data["proposed_count"] >= 1
-        assert "stories" in data
-
-    def test_respects_max_stories(self, temp_project) -> None:
-        """Test max_stories limit."""
-        result = propose_stories_from_dsl_handler(temp_project, {"max_stories": 2})
-        data = json.loads(result)
-
-        assert data["proposed_count"] <= 2
-
-    def test_filters_by_entities(self, temp_project) -> None:
-        """Test filtering by entity names."""
-        result = propose_stories_from_dsl_handler(temp_project, {"entities": ["Task"]})
-        data = json.loads(result)
-
-        assert "stories" in data
-        # All stories should be scoped to Task
-        for story in data["stories"]:
-            assert "Task" in story["entities"]
-
-    def test_planning_inversion_generates_stories_from_unmapped_scenes(self, tmp_path) -> None:
-        """Unmapped scenes in rhythms produce stories via planning inversion."""
-        from dazzle.core.ir.rhythm import PhaseSpec, RhythmSpec, SceneSpec
-
-        project = tmp_path / "proj"
-        project.mkdir()
-
-        # Build a minimal mock appspec with a rhythm containing an unmapped scene
-        app_spec = MagicMock()
-        app_spec.domain.entities = []
-        app_spec.workspaces = []
-        app_spec.personas = []
-        app_spec.stories = []
-
-        rhythm = RhythmSpec(
-            name="r1",
-            title="Journey",
-            persona="user",
-            phases=[
-                PhaseSpec(
-                    name="active",
-                    scenes=[
-                        SceneSpec(
-                            name="check_inbox",
-                            surface="inbox",
-                            actions=["browse"],
-                            # no story= reference — unmapped
-                        ),
-                    ],
-                ),
-            ],
-        )
-        app_spec.rhythms = [rhythm]
-
-        with patch(
-            "dazzle.mcp.server.handlers.stories.load_project_appspec",
-            return_value=app_spec,
-        ):
-            result = propose_stories_from_dsl_handler(project, {})
-
-        data = json.loads(result)
-        assert data["proposed_count"] >= 1
-        titles = [s["title"] for s in data["stories"]]
-        assert any("inbox" in t for t in titles)
-
-
-class TestGenerateTestsHandler:
-    """Tests for generate_tests_from_stories_handler."""
-
-    def test_requires_accepted_stories(self, temp_project) -> None:
-        """Test that no tests generated without accepted stories."""
-        result = generate_tests_from_stories_handler(temp_project, {})
-        data = json.loads(result)
-
-        # Should indicate no stories found
-        assert data.get("status") == "no_stories" or "error" in data or data.get("count", 0) == 0
-
-    def test_generates_tests_from_accepted_stories(self, temp_project) -> None:
-        """Test generating tests from accepted stories."""
-        # Write accepted story to DSL
-        dsl_dir = temp_project / "dsl"
-        stories_dsl = dsl_dir / "stories.dsl"
-        stories_dsl.write_text(
-            """
-story ST-001 "User creates Task":
-  status: accepted
-  persona: User
-  trigger: form_submitted
-  entities: [Task]
-  given:
-    - "User has permission"
-  then:
-    - "Task is saved"
-"""
-        )
-
-        result = generate_tests_from_stories_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert data.get("status") == "generated"
-        assert data.get("count", 0) >= 1
-
-    def test_include_draft_option(self, temp_project) -> None:
-        """Test including draft stories in test generation."""
-        # Write a draft story to DSL
-        dsl_dir = temp_project / "dsl"
-        stories_dsl = dsl_dir / "stories.dsl"
-        stories_dsl.write_text(
-            """
-story ST-001 "Draft Story":
-  persona: User
-  trigger: form_submitted
-  entities: [Task]
-"""
-        )
-
-        result = generate_tests_from_stories_handler(temp_project, {"include_draft": True})
-        data = json.loads(result)
-
-        assert data.get("status") == "generated"
-        assert data.get("count", 0) >= 1
-
-    def test_filters_by_story_ids(self, temp_project) -> None:
-        """Test filtering test generation by story IDs."""
-        # Write multiple accepted stories to DSL
-        dsl_dir = temp_project / "dsl"
-        stories_dsl = dsl_dir / "stories.dsl"
-        stories_dsl.write_text(
-            """
-story ST-001 "Story 1":
-  status: accepted
-  persona: User
-  trigger: form_submitted
-  entities: [Task]
-
-story ST-002 "Story 2":
-  status: accepted
-  persona: User
-  trigger: form_submitted
-  entities: [Task]
-"""
-        )
-
-        result = generate_tests_from_stories_handler(temp_project, {"story_ids": ["ST-001"]})
-        data = json.loads(result)
-
-        # Should only generate one test
-        assert data.get("count", 0) == 1

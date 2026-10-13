@@ -85,6 +85,7 @@ there requires a row here.
 | `dazzle docs` | Documentation generation, validation, and maintenance |
 | `dazzle fitness` | Framework structural-fitness ratchets (complexity, clones) |
 | `dazzle inspect` | Introspect framework extension points and the public API surface |
+| `dazzle i18n` | Internationalisation tools — `extract` a .pot, `init` and `compile` locale catalogues, `stats` |
 | `dazzle mcp` | MCP (Model Context Protocol) server commands |
 | `dazzle perf` | On-demand local OpenTelemetry tracing |
 | `dazzle pipeline` | Run the deterministic quality pipeline |

@@ -300,25 +300,6 @@ def list_all_patterns() -> dict[str, Any]:
     return result
 
 
-def get_pattern_by_id(pattern_id: str) -> dict[str, Any] | None:
-    """Get a specific pattern by its ID (full detail)."""
-    graph = _get_kg()
-    if graph is None:
-        return None
-
-    # Search inference entities for matching ID in metadata
-    inference_entities = graph.list_entities(entity_type="inference", limit=500)
-    for entity in inference_entities:
-        meta = entity.metadata
-        if meta.get("id") == pattern_id:
-            return {
-                "category": meta.get("category", "unknown"),
-                **{k: v for k, v in meta.items() if k != "source"},
-            }
-
-    return None
-
-
 def reload_inference_kb() -> dict[str, Any]:
     """Re-seed the inference knowledge from TOML into the KG."""
     graph = _get_kg()

@@ -81,20 +81,6 @@ def _iter_source_files(roots: Iterable[Path], extensions: tuple[str, ...]) -> It
             yield path
 
 
-def _extract_msgids(text: str) -> list[str]:
-    """Return every ``_("...")`` msgid in *text*. Order-preserving,
-    duplicates kept (caller dedupes with location tracking).
-    """
-    out: list[str] = []
-    for match in _GETTEXT_CALL_RE.finditer(text):
-        literal = match.group(1)
-        # Strip surrounding quotes; unescape common backslash sequences.
-        unquoted = literal[1:-1]
-        unquoted = unquoted.encode("utf-8").decode("unicode_escape")
-        out.append(unquoted)
-    return out
-
-
 def _line_of(text: str, offset: int) -> int:
     """1-based line number of *offset* in *text*."""
     return text.count("\n", 0, offset) + 1

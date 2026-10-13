@@ -5,11 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .common import (
-    error_response,
-    extract_progress,
     load_project_appspec,
-    unknown_op_response,
-    wrap_handler_errors,
 )
 
 # ---------------------------------------------------------------------------
@@ -68,39 +64,6 @@ def run_viewport_tests_impl(
     return result.to_json()
 
 
-@wrap_handler_errors
-def run_viewport_tests_handler(
-    project_path: str,
-    headless: bool = True,
-    viewports: list[str] | None = None,
-    persona_id: str | None = None,
-    capture_screenshots: bool = False,
-    update_baselines: bool = False,
-) -> str:
-    """Run viewport assertions against a running app.
-
-    Loads the AppSpec, derives responsive patterns, then launches Playwright
-    to check computed CSS properties at each viewport size.
-
-    Returns JSON report.
-    """
-    progress = extract_progress(None)
-    progress.log_sync("Running viewport tests...")
-
-    project = Path(project_path)
-    if not project.is_dir():
-        return error_response(f"Project directory not found: {project_path}")
-
-    return run_viewport_tests_impl(
-        project_path=project,
-        headless=headless,
-        viewports=viewports,
-        persona_id=persona_id,
-        capture_screenshots=capture_screenshots,
-        update_baselines=update_baselines,
-    )
-
-
 # ---------------------------------------------------------------------------
 # list_viewport_specs / save_viewport_specs
 # ---------------------------------------------------------------------------
@@ -132,44 +95,3 @@ def save_viewport_specs_impl(
         "path": str(path),
         "count": len(entries),
     }
-
-
-@wrap_handler_errors
-def manage_viewport_specs_handler(
-    project_path: str,
-    operation: str,
-    specs: list[dict[str, Any]] | None = None,
-    to_dsl: bool = True,
-) -> str:
-    """Manage custom viewport specs (list/save).
-
-    Parameters
-    ----------
-    project_path:
-        Path to the project directory.
-    operation:
-        "list_viewport_specs" or "save_viewport_specs".
-    specs:
-        Specs to save (for save operation).
-    to_dsl:
-        Save to dsl/ directory (version-controlled).
-
-    Returns JSON response.
-    """
-    progress = extract_progress(None)
-    progress.log_sync("Managing viewport specs...")
-
-    project = Path(project_path)
-    if not project.is_dir():
-        return error_response(f"Project directory not found: {project_path}")
-
-    if operation == "list_viewport_specs":
-        result = list_viewport_specs_impl(project)
-        return json.dumps(result, indent=2)
-    elif operation == "save_viewport_specs":
-        if not specs:
-            return error_response("No specs provided")
-        result = save_viewport_specs_impl(project, specs, to_dsl=to_dsl)
-        return json.dumps(result)
-    else:
-        return unknown_op_response(operation, "viewport spec")

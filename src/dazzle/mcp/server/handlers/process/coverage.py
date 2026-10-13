@@ -128,9 +128,7 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps(
             {
                 "error": "No stories found in project",
-                "hint": (
-                    "Define stories in DSL, or use story(operation='propose') to generate them."
-                ),
+                "hint": ("Define stories in DSL, or run `dazzle story propose` to draft them."),
             }
         )
 
@@ -253,8 +251,8 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
     if uncovered_count > 0:
         result["discovery_hint"] = (
             f"{uncovered_count} stories have no implementing process. "
-            "Use discovery(operation='run', mode='workflow_coherence') "
-            "to analyze process/story integrity and find workflow gaps."
+            "Use discovery(operation='coherence') "
+            "to see which persona journeys those gaps break."
         )
 
     return json.dumps(result, indent=2)
