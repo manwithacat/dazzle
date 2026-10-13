@@ -27,7 +27,7 @@ class SecurityProfile(StrEnum):
         STANDARD: Production SaaS. Auth required by default, HSTS enabled,
             same-origin CORS. Admin workspace adds: sessions, processes.
         STRICT: Regulated / multi-tenant SaaS. Everything in STANDARD plus
-            CSP headers and tenant database isolation (when multi_tenant=True).
+            CSP headers.
     """
 
     BASIC = "basic"
@@ -48,20 +48,14 @@ class TwoFactorConfig(BaseModel):
     Attributes:
         enabled: Whether 2FA is available for users
         methods: Allowed 2FA methods
-        otp_length: Number of digits in OTP codes
-        otp_expiry_seconds: How long OTP codes remain valid
         recovery_code_count: Number of recovery codes to generate
-        enforce_for_roles: Roles that must enable 2FA (empty = optional for all)
     """
 
     model_config = ConfigDict(frozen=True)
 
     enabled: bool = False
     methods: list[TwoFactorMethod] = [TwoFactorMethod.EMAIL_OTP, TwoFactorMethod.TOTP]
-    otp_length: int = 6
-    otp_expiry_seconds: int = 300
     recovery_code_count: int = 8
-    enforce_for_roles: list[str] = []
 
 
 class SecurityConfig(BaseModel):
@@ -76,7 +70,6 @@ class SecurityConfig(BaseModel):
         enable_hsts: Enable HTTP Strict Transport Security header
         enable_csp: Enable Content Security Policy header
         require_auth_by_default: Whether surfaces require auth unless opt-out
-        tenant_isolation: Enable tenant database isolation
     """
 
     profile: SecurityProfile = SecurityProfile.BASIC
@@ -84,7 +77,6 @@ class SecurityConfig(BaseModel):
     enable_hsts: bool = False
     enable_csp: bool = False
     require_auth_by_default: bool = False
-    tenant_isolation: bool = False
     # 2FA policy knobs. Disabled by default; downstream apps opt in by
     # constructing a TwoFactorConfig with enabled=True and threading it
     # here through SecurityConfig.from_profile or a direct SecurityConfig().
@@ -100,7 +92,6 @@ class SecurityConfig(BaseModel):
         cls,
         profile: SecurityProfile,
         *,
-        multi_tenant: bool = False,
         cors_origins: list[str] | None = None,
     ) -> SecurityConfig:
         """
@@ -108,7 +99,6 @@ class SecurityConfig(BaseModel):
 
         Args:
             profile: The security profile level
-            multi_tenant: Whether the app is multi-tenant
             cors_origins: Custom CORS origins (overrides profile default)
 
         Returns:
@@ -121,7 +111,6 @@ class SecurityConfig(BaseModel):
                 enable_hsts=False,
                 enable_csp=False,
                 require_auth_by_default=False,
-                tenant_isolation=False,
             )
         elif profile == SecurityProfile.STANDARD:
             # Post-#833: CSP is enabled at the IR level for `standard`.
@@ -134,7 +123,6 @@ class SecurityConfig(BaseModel):
                 enable_hsts=True,
                 enable_csp=True,
                 require_auth_by_default=True,
-                tenant_isolation=False,
             )
         else:  # STRICT
             return cls(
@@ -143,5 +131,4 @@ class SecurityConfig(BaseModel):
                 enable_hsts=True,
                 enable_csp=True,
                 require_auth_by_default=True,
-                tenant_isolation=multi_tenant,
             )

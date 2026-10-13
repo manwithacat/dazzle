@@ -9,14 +9,25 @@ entity. Searchable fields are drawn from:
 
 Both sources are pre-computed into ``entity_search_fields`` by
 ``app_factory.build_entity_search_fields`` and passed into the runtime.
+
+Access (ship P): each entity is searched under the LIST enforcement its list
+endpoint applies — the Cedar LIST permit gate and `scope: list:` rules, via
+:func:`access.gated.list_scope_filters`. An entity the caller may not list, or
+whose scope matches no rule for the caller (including any anonymous caller on an
+entity with access rules), is left out of the results rather than read unscoped.
 """
 
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 
+from dazzle.http.runtime.access.gated import (
+    AccessForbidden,
+    access_context_from,
+    list_scope_filters,
+)
 from dazzle.http.runtime.auth.auth_views import leftover_honest_auth_error
 
 logger = logging.getLogger(__name__)
@@ -42,12 +53,23 @@ def create_search_routes(
     repositories: dict[str, Any],
     entity_search_fields: dict[str, list[str]],
     per_entity_limit: int = 10,
+    *,
+    cedar_access_specs: dict[str, Any] | None = None,
+    fk_graph: Any = None,
+    optional_auth_dep: Any = None,
+    admin_personas: list[str] | None = None,
 ) -> APIRouter | None:
     """Build an APIRouter with ``GET /_dazzle/search`` if any entity is searchable.
 
     Returns ``None`` when no entity declares searchable fields — in that
     case no endpoint is registered, keeping the OpenAPI surface clean.
+
+    ``cedar_access_specs`` / ``fk_graph`` / ``admin_personas`` are the inputs
+    the list routes are generated from; ``optional_auth_dep`` resolves the
+    caller (``None`` when the app has auth disabled — then, as on the list
+    routes, no Cedar enforcement applies).
     """
+    access_specs = cedar_access_specs or {}
     searchable = {
         name: fields
         for name, fields in entity_search_fields.items()
@@ -57,6 +79,9 @@ def create_search_routes(
         return None
 
     router = APIRouter(prefix="/_dazzle/search", tags=["Search"])
+
+    async def _no_auth() -> None:
+        return None
 
     @router.get("")
     async def cross_entity_search(
@@ -68,6 +93,7 @@ def create_search_routes(
             le=100,
             description="Max results returned per entity",
         ),
+        auth_context: Any = Depends(optional_auth_dep or _no_auth),
     ) -> JSONResponse:
         """Fan search across every searchable entity; group results by entity.
 
@@ -86,10 +112,28 @@ def create_search_routes(
             repo = repositories.get(entity_name)
             if repo is None:
                 continue
+            cedar_spec = access_specs.get(entity_name) if optional_auth_dep else None
+            scope_filters: dict[str, Any] | None = {}
+            if cedar_spec is not None:
+                access = access_context_from(
+                    auth_context=auth_context,
+                    entity_name=entity_name,
+                    cedar_access_spec=cedar_spec,
+                    fk_graph=fk_graph,
+                    admin_personas=admin_personas,
+                )
+                try:
+                    scope_filters = list_scope_filters(access)
+                except AccessForbidden:
+                    scope_filters = None
+            if scope_filters is None:
+                # Not listable by this caller — leave the entity out entirely.
+                continue
             try:
                 page = await repo.list(
                     page=1,
                     page_size=limit,
+                    filters=scope_filters or None,
                     search=q,
                     search_fields=fields,
                 )

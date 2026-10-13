@@ -1,6 +1,6 @@
 """Tests for v0.34.0 platform capability features.
 
-Covers: soft delete, searchable fields, bulk import/export,
+Covers: soft delete, searchable fields,
 search on surfaces, and date-range reporting.
 """
 
@@ -11,10 +11,7 @@ import pytest
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.errors import ParseError
 from dazzle.core.ir import (
-    BulkConfig,
-    BulkFormat,
     ManagedBy,
-    TimeBucket,
 )
 
 
@@ -230,70 +227,6 @@ surface task_list "Tasks":
 
 
 # =============================================================================
-# Bulk import/export
-# =============================================================================
-
-
-class TestBulkConfig:
-    @pytest.mark.parametrize(
-        ("bulk_clause", "import_enabled", "export_enabled"),
-        [
-            ("  bulk: all\n", True, True),
-            ("  bulk: import\n", True, False),
-            ("  bulk: export\n", False, True),
-            ("  bulk: true\n", True, True),
-            ("  bulk:\n    import: false\n    export: true\n", False, True),
-        ],
-        ids=[
-            "test_bulk_all",
-            "test_bulk_import_only",
-            "test_bulk_export_only",
-            "test_bulk_true",
-            "test_bulk_block_import_disabled",
-        ],
-    )
-    def test_bulk_modes(self, bulk_clause: str, import_enabled: bool, export_enabled: bool) -> None:
-        dsl = 'module test\nentity Task "Task":\n  id: uuid pk\n  title: str(200)\n' + bulk_clause
-        frag = _parse(dsl)
-        entity = frag.entities[0]
-        assert entity.bulk is not None
-        assert entity.bulk.import_enabled is import_enabled
-        assert entity.bulk.export_enabled is export_enabled
-
-    def test_bulk_block_with_formats(self):
-        frag = _parse(
-            """\
-module test
-entity Task "Task":
-  id: uuid pk
-  title: str(200)
-  bulk:
-    import: true
-    export: true
-    formats: [csv, json, xlsx]
-"""
-        )
-        entity = frag.entities[0]
-        assert entity.bulk is not None
-        assert entity.bulk.import_enabled is True
-        assert entity.bulk.export_enabled is True
-        assert BulkFormat.CSV in entity.bulk.formats
-        assert BulkFormat.JSON in entity.bulk.formats
-        assert BulkFormat.XLSX in entity.bulk.formats
-
-    def test_no_bulk_default(self):
-        frag = _parse(
-            """\
-module test
-entity Task "Task":
-  id: uuid pk
-  title: str(200)
-"""
-        )
-        assert frag.entities[0].bulk is None
-
-
-# =============================================================================
 # Audit trail enhancement
 # =============================================================================
 
@@ -314,12 +247,6 @@ entity Task "Task":
         assert entity.audit.enabled is True
         assert entity.audit.include_field_changes is True
 
-    def test_audit_config_model(self):
-        config = BulkConfig()
-        assert config.import_enabled is True
-        assert config.export_enabled is True
-        assert config.formats == [BulkFormat.CSV]
-
 
 # =============================================================================
 # Date-range reporting on views
@@ -327,35 +254,19 @@ entity Task "Task":
 
 
 class TestDateRangeViews:
-    def test_view_date_field_and_time_bucket(self):
+    def test_view_date_field(self):
         frag = _parse(
             """\
 module test
 view MonthlySales "Monthly Sales":
   source: Order
   date_field: created_at
-  time_bucket: month
   fields:
     total: sum(amount)
 """
         )
         view = frag.views[0]
         assert view.date_field == "created_at"
-        assert view.time_bucket == TimeBucket.MONTH
-
-    def test_view_quarterly_bucket(self):
-        frag = _parse(
-            """\
-module test
-view QuarterlyRevenue "Quarterly Revenue":
-  source: Invoice
-  date_field: issued_at
-  time_bucket: quarter
-"""
-        )
-        view = frag.views[0]
-        assert view.date_field == "issued_at"
-        assert view.time_bucket == TimeBucket.QUARTER
 
     def test_view_no_date_range_default(self):
         frag = _parse(
@@ -367,7 +278,6 @@ view SimpleView "Simple":
         )
         view = frag.views[0]
         assert view.date_field is None
-        assert view.time_bucket is None
 
 
 # =============================================================================
@@ -423,13 +333,12 @@ workspace dashboard "Dashboard":
 
 class TestCombinedFeatures:
     def test_entity_with_all_new_features(self):
-        """Entity using soft_delete, searchable, bulk, and audit together."""
+        """Entity using soft_delete, searchable, and audit together."""
         frag = _parse(
             """\
 module test
 entity Contact "Contact":
   soft_delete
-  bulk: all
   audit: all
   id: uuid pk
   name: str(200) required searchable
@@ -439,8 +348,6 @@ entity Contact "Contact":
         )
         entity = frag.entities[0]
         assert entity.soft_delete is True
-        assert entity.bulk is not None
-        assert entity.bulk.import_enabled is True
         assert entity.audit is not None
         assert entity.audit.enabled is True
         assert entity.audit.include_field_changes is True

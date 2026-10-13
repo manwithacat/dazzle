@@ -209,7 +209,7 @@ class TestScopePredicate:
     def test_scope_predicate_anded_into_where(self):
         repo = _build_repo()
         scope = ('"school_id" = %s', ["sch-42"])
-        asyncio.run(repo.fts_search(_spec(), "hello", scope_predicate=scope))
+        asyncio.run(repo.fts_search(_spec(), "hello", filters={"__scope_predicate": scope}))
         items_sql = repo.db.cursor_obj.queries[1][0]
         items_params = repo.db.cursor_obj.queries[1][1]
         assert '"school_id" = %s' in items_sql
@@ -222,7 +222,7 @@ class TestScopePredicate:
         # the global match count.
         repo = _build_repo(count=2)
         scope = ('"school_id" = %s', ["sch-42"])
-        asyncio.run(repo.fts_search(_spec(), "hello", scope_predicate=scope))
+        asyncio.run(repo.fts_search(_spec(), "hello", filters={"__scope_predicate": scope}))
         count_sql = repo.db.cursor_obj.queries[0][0]
         assert '"school_id" = %s' in count_sql
 
@@ -230,7 +230,7 @@ class TestScopePredicate:
         # The predicate compiler returns ('', []) for tautologies
         # (no filter needed). Must not blow up the WHERE clause.
         repo = _build_repo()
-        asyncio.run(repo.fts_search(_spec(), "hello", scope_predicate=("", [])))
+        asyncio.run(repo.fts_search(_spec(), "hello", filters={"__scope_predicate": ("", [])}))
         items_sql = repo.db.cursor_obj.queries[1][0]
         # No spurious AND () in the WHERE clause
         assert "AND ()" not in items_sql

@@ -156,14 +156,6 @@
     ]
   },
   {
-    "signature": "4a2d23dfa463e85718744a66aec00d41",
-    "count": 2,
-    "names": [
-      "dazzle/core/dsl_parser_impl/base.py::parse_module_name",
-      "dazzle/core/dsl_parser_impl/integration.py::_parse_dotted_name"
-    ]
-  },
-  {
     "signature": "e5cd28cca9c439803b54126e5def01e7",
     "count": 2,
     "names": [

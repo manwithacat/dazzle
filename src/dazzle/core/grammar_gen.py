@@ -641,7 +641,6 @@ persona_directive
                 | "purpose" ":" STRING NEWLINE
                 | "show" ":" field_list NEWLINE
                 | "hide" ":" field_list NEWLINE
-                | "show_aggregate" ":" IDENT ("," IDENT)* NEWLINE
                 | "action_primary" ":" IDENT NEWLINE
                 | "read_only" ":" BOOLEAN NEWLINE
                 | "focus" ":" field_list NEWLINE
@@ -813,7 +812,6 @@ sync_decl     ::= "sync" IDENT ":" NEWLINE
                   INDENT
                     "mode" ":" ("scheduled" | "event_driven") NEWLINE
                     ("schedule" ":" STRING NEWLINE)?
-                    "from" IDENT "." IDENT "as" IDENT NEWLINE
                     "into" "entity" IDENT NEWLINE
                     ("match" "on" ":" NEWLINE INDENT
                       (IDENT "<->" IDENT NEWLINE)+ DEDENT)?
@@ -930,8 +928,7 @@ step_body     ::= ("service" ":" IDENT NEWLINE)?
                   ("human_task" ":" NEWLINE INDENT human_task_body DEDENT)?
                   ("condition" ":" condition_expr NEWLINE)?
                   ("on_true" ":" IDENT NEWLINE)?
-                  ("on_false" ":" IDENT NEWLINE)?
-                  ("sets" ":" NEWLINE INDENT (IDENT ":" (literal | field_path) NEWLINE)+ DEDENT)? ;
+                  ("on_false" ":" IDENT NEWLINE)? ;
 
 mapping_line  ::= IDENT ":" (literal | field_path) NEWLINE ;
 
@@ -991,8 +988,6 @@ llm_model_decl
                     ("tier" ":" IDENT NEWLINE)?
                     ("model_id" ":" STRING NEWLINE)?
                     ("max_tokens" ":" NUMBER NEWLINE)?
-                    ("cost_per_1k_input" ":" NUMBER NEWLINE)?
-                    ("cost_per_1k_output" ":" NUMBER NEWLINE)?
                   DEDENT ;
 
 llm_config_decl

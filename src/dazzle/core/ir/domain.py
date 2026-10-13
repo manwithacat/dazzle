@@ -203,35 +203,6 @@ class AuditConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class BulkFormat(StrEnum):
-    """Supported formats for bulk import/export (v0.34.0)."""
-
-    CSV = "csv"
-    JSON = "json"
-    XLSX = "xlsx"
-
-
-class BulkConfig(BaseModel):
-    """
-    Bulk import/export configuration for an entity (v0.34.0).
-
-    Attributes:
-        import_enabled: Whether bulk import is enabled
-        export_enabled: Whether bulk export is enabled
-        formats: Supported file formats
-        import_fields: Fields to include in import (empty = all writable fields)
-        export_fields: Fields to include in export (empty = all non-sensitive fields)
-    """
-
-    import_enabled: bool = True
-    export_enabled: bool = True
-    formats: list[BulkFormat] = Field(default_factory=lambda: [BulkFormat.CSV])
-    import_fields: list[str] = Field(default_factory=list)
-    export_fields: list[str] = Field(default_factory=list)
-
-    model_config = ConfigDict(frozen=True)
-
-
 class ExampleRecord(BaseModel):
     """
     Example data record for an entity.
@@ -506,8 +477,6 @@ class EntitySpec(BaseModel):
     # Resolution is constrained to the same regex as signing_validator
     # so a build-time DSL declaration is the only way in.
     signing_template: str | None = None
-    # v0.34.0: Bulk import/export
-    bulk: BulkConfig | None = None
     state_machine: StateMachineSpec | None = None
     # ADR-0020: Lifecycle evidence predicates (orthogonal to state_machine)
     lifecycle: LifecycleSpec | None = None

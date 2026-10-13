@@ -9,7 +9,7 @@ DAZZLE supports declarative LLM job definitions for AI-powered tasks such as cla
 
 ## Llm Model
 
-LLM provider and model configuration. Defines provider, model ID, performance tier, token limits, and optional cost tracking per 1K tokens. Providers: anthropic, openai, google, local. Tiers: fast (low latency), balanced (default), quality (best output).
+LLM provider and model configuration. Defines provider, model ID, performance tier and token limits. Providers: anthropic, openai, google, local. Tiers: fast (low latency), balanced (default), quality (best output).
 
 ### Syntax
 
@@ -19,8 +19,6 @@ llm_model <name> "<Title>":
   model_id: <model_identifier>
   [tier: <fast|balanced|quality>]
   [max_tokens: <int>]
-  [cost_per_1k_input: <decimal>]
-  [cost_per_1k_output: <decimal>]
 ```
 
 ### Example
@@ -39,8 +37,6 @@ llm_model claude_sonnet "Claude Sonnet (Balanced)":
   model_id: claude-3-5-sonnet-20241022
   tier: balanced
   max_tokens: 4096
-  cost_per_1k_input: 0.003
-  cost_per_1k_output: 0.015
 
 # Alternative provider
 llm_model gpt4o_mini "GPT-4o Mini":
@@ -56,15 +52,13 @@ llm_model gpt4o_mini "GPT-4o Mini":
 
 ## Llm Config
 
-Global LLM configuration for the application. Sets default model, default provider, artifact storage (local/s3/gcs), logging policy, per-model rate limits (requests per minute), per-model concurrency limits (max concurrent requests), and budget alerts.
+Global LLM configuration for the application. Sets default model, artifact storage (local/s3/gcs), logging policy, per-model rate limits (requests per minute) and per-model concurrency limits (max concurrent requests).
 
 ### Syntax
 
 ```dsl
 llm_config:
   [default_model: <llm_model_name>]
-  [default_provider: <anthropic|openai|google|local>]
-  [budget_alert_usd: <decimal>]
   [artifact_store: <local|s3|gcs>]
   [logging:]
     [log_prompts: true|false]
@@ -82,7 +76,6 @@ llm_config:
 llm_config:
   default_model: claude_sonnet
   artifact_store: local
-  budget_alert_usd: 50.00
   logging:
     log_prompts: true
     log_completions: true
@@ -114,7 +107,6 @@ llm_intent <name> "<Title>":
   [description: "<text>"]
   [output_schema: <EntityName>]
   [timeout: <seconds>]
-  [vision: true|false]
   [retry:]
     [max_attempts: <int>]
     [backoff: <linear|exponential>]
@@ -268,7 +260,6 @@ llm_config:
 - Set concurrency lower than rate_limits to leave headroom
 - Fast-tier models (haiku) can handle higher concurrency
 - Quality-tier models should have lower concurrency to manage costs
-- Monitor budget_alert_usd to catch runaway LLM usage
 
 **Related:** [Llm Config](llm.md#llm-config), [Llm Model](llm.md#llm-model), [Llm Intent](llm.md#llm-intent)
 

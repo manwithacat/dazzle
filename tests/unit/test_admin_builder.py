@@ -25,9 +25,9 @@ from dazzle.db.virtual import VIRTUAL_ENTITY_NAMES
 # ---------------------------------------------------------------------------
 
 
-def _make_security(profile: SecurityProfile, *, multi_tenant: bool = False) -> SecurityConfig:
+def _make_security(profile: SecurityProfile) -> SecurityConfig:
     """Construct a SecurityConfig from a profile shortcut."""
-    return SecurityConfig.from_profile(profile, multi_tenant=multi_tenant)
+    return SecurityConfig.from_profile(profile)
 
 
 # ---------------------------------------------------------------------------
@@ -225,7 +225,7 @@ class TestBuildAdminWorkspaces:
         """
         from dazzle.core.admin_builder import _build_admin_workspaces
 
-        security = _make_security(SecurityProfile.STANDARD, multi_tenant=True)
+        security = _make_security(SecurityProfile.STANDARD)
         workspaces = _build_admin_workspaces(security, multi_tenant=True, feedback_enabled=True)
         names = {w.name for w in workspaces}
         assert names == {"_platform_admin", "_tenant_admin"}
@@ -402,7 +402,7 @@ class TestBuildAdminInfrastructure:
         """Multi-tenant app generates _platform_admin and _tenant_admin."""
         from dazzle.core.admin_builder import build_admin_infrastructure
 
-        security = _make_security(SecurityProfile.STANDARD, multi_tenant=True)
+        security = _make_security(SecurityProfile.STANDARD)
         app_config = AppConfigSpec(security_profile="standard", multi_tenant=True)
         _, _, workspaces = build_admin_infrastructure(
             entities=[],

@@ -113,7 +113,6 @@ class TokenType(Enum):
     FOR = "for"
     SCOPE = "scope"
     HIDE = "hide"
-    SHOW_AGGREGATE = "show_aggregate"
     ACTION_PRIMARY = "action_primary"
     READ_ONLY = "read_only"
     SEARCH_FIRST = "search_first"
@@ -127,11 +126,6 @@ class TokenType(Enum):
     REFERENCE_LINES = "reference_lines"  # v0.61.26: Horizontal markers on line/area charts (#883)
     REFERENCE_BANDS = "reference_bands"  # v0.61.26: Shaded bands on line/area charts (#883)
     OVERLAY_SERIES = "overlay_series"  # v0.61.33: Additional series on line/area charts (#883)
-    BINS = "bins"  # v0.61.27: Histogram bin count — int or "auto" (#882)
-    SHOW_OUTLIERS = "show_outliers"  # v0.61.29: Box plot outlier toggle (#881)
-    BULLET_LABEL = "bullet_label"  # v0.61.30: Bullet chart row label column (#880)
-    BULLET_ACTUAL = "bullet_actual"  # v0.61.30: Bullet chart bar value column (#880)
-    BULLET_TARGET = "bullet_target"  # v0.61.30: Bullet chart target tick column (#880)
     CSS_CLASS = "class"  # v0.61.52: region-level class hook for project CSS (#894)
     TRACK_MAX = "track_max"  # v0.61.53 (#893): bar_track fill denominator
     TRACK_FORMAT = "track_format"  # v0.61.53 (#893): bar_track value format spec
@@ -202,15 +196,11 @@ class TokenType(Enum):
     SUBTYPE_PANEL = "subtype_panel"
     DISPLAY_FIELD = "display_field"
     SEARCHABLE = "searchable"
-    BULK = "bulk"
-    IMPORT = "import"
-    EXPORT = "export"
     NOTIFY = "notify"
     RANKING = "ranking"  # #954
     HIGHLIGHT = "highlight"  # #954
     TOKENIZER = "tokenizer"  # #954
     DATE_RANGE = "date_range"
-    TIME_BUCKET = "time_bucket"
     DATE_FIELD = "date_field"
 
     # v0.44.0 Heatmap / Progress / Activity Feed region keywords
@@ -358,7 +348,6 @@ class TokenType(Enum):
     COMPENSATE = "compensate"
     ON_SUCCESS = "on_success"
     ON_FAILURE = "on_failure"
-    ON_ANY_FAILURE = "on_any_failure"
     OVERLAP = "overlap"
     CATCH_UP = "catch_up"
     GOTO = "goto"
@@ -394,8 +383,6 @@ class TokenType(Enum):
     LLM_INTENT = "llm_intent"
     TIER = "tier"
     MAX_TOKENS = "max_tokens"
-    COST_PER_1K_INPUT = "cost_per_1k_input"
-    COST_PER_1K_OUTPUT = "cost_per_1k_output"
     MODEL_ID = "model_id"
     ARTIFACT_STORE = "artifact_store"
     LOGGING = "logging"
@@ -414,9 +401,6 @@ class TokenType(Enum):
     INITIAL_DELAY_MS = "initial_delay_ms"
     MAX_DELAY_MS = "max_delay_ms"
     SCAN = "scan"
-    DEFAULT_PROVIDER = "default_provider"
-    BUDGET_ALERT_USD = "budget_alert_usd"
-    VISION = "vision"
     # Note: 'model' is NOT a keyword - it's a common field name.
     # Within llm_intent blocks, 'model:' is parsed as an identifier.
     # Note: PIIAction values (warn, redact, reject) and RetryBackoff values

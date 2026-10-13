@@ -7,7 +7,6 @@ DSL Syntax (v0.25.0):
 
     view MonthlySales "Monthly Sales Summary":
       source: Order
-      filter: status = completed
       group_by: [customer, month(created_at)]
       fields:
         customer: ref Customer
@@ -38,7 +37,6 @@ class ViewParserMixin:
         current_token: Any
         file: Any
         parse_type_spec: Any
-        parse_condition_expr: Any
         _parse_construct_header: Any
 
     def parse_view(self) -> ir.ViewSpec:
@@ -48,7 +46,6 @@ class ViewParserMixin:
         Grammar:
             view IDENTIFIER STRING? COLON NEWLINE INDENT
               source COLON IDENTIFIER NEWLINE
-              [filter COLON condition_expr NEWLINE]
               [group_by COLON LBRACKET identifier_list RBRACKET NEWLINE]
               [fields COLON NEWLINE INDENT
                 (IDENTIFIER COLON (type | computed_expr) NEWLINE)*
@@ -61,11 +58,9 @@ class ViewParserMixin:
         name, title, _ = self._parse_construct_header(TokenType.VIEW, allow_keyword_name=True)
 
         source_entity = ""
-        filter_condition = None
         group_by: list[str] = []
         fields: list[ir.ViewFieldSpec] = []
         date_field: str | None = None
-        time_bucket: ir.TimeBucket | None = None
 
         while not self.match(TokenType.DEDENT, TokenType.EOF):
             self.skip_newlines()
@@ -76,12 +71,6 @@ class ViewParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 source_entity = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            elif self.match(TokenType.FILTER):
-                self.advance()
-                self.expect(TokenType.COLON)
-                filter_condition = self.parse_condition_expr()
                 self.skip_newlines()
 
             elif self.match(TokenType.GROUP_BY):
@@ -95,14 +84,6 @@ class ViewParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 date_field = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-
-            # time_bucket: month
-            elif self.match(TokenType.TIME_BUCKET):
-                self.advance()
-                self.expect(TokenType.COLON)
-                bucket_token = self.expect_identifier_or_keyword()
-                time_bucket = self.enum_from_token(ir.TimeBucket, bucket_token)
                 self.skip_newlines()
 
             elif self.match(TokenType.FIELD):
@@ -143,11 +124,9 @@ class ViewParserMixin:
             name=name,
             title=title,
             source_entity=source_entity,
-            filter_condition=filter_condition,
             group_by=group_by,
             fields=fields,
             date_field=date_field,
-            time_bucket=time_bucket,
         )
 
     def _parse_view_identifier_list(self) -> list[str]:

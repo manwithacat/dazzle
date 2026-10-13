@@ -705,7 +705,6 @@ Use: get_workflow_guide('add_personas') for step-by-step instructions.
     as admin:
       scope: all
       action_primary: user_create
-      show_aggregate: total_users, active_count
 
     # Manager sees their department
     as manager:
@@ -742,7 +741,6 @@ Use: get_workflow_guide('add_personas') for step-by-step instructions.
                 "purpose": "Persona-specific purpose statement",
                 "show": "Fields to display",
                 "hide": "Fields to hide",
-                "show_aggregate": "Metrics to display",
                 "action_primary": "Default action surface",
                 "read_only": "Disable editing (true/false)",
             },

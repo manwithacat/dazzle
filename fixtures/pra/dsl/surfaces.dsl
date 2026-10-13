@@ -59,7 +59,6 @@
 # - [x] purpose: "..."
 # - [x] show: field1, field2
 # - [x] hide: field1, field2
-# - [x] show_aggregate: metric1, metric2
 # - [x] action_primary: surface_name
 # - [x] read_only: true/false
 # - [x] defaults: block
@@ -382,7 +381,6 @@ surface project_list "Projects":
       scope: all
       purpose: "Manage all department projects"
       show: name, code, status, budget, project_manager, tech_lead
-      show_aggregate: active_count, budget_total
       action_primary: project_create
 
     # Persona variant for executives
@@ -390,7 +388,6 @@ surface project_list "Projects":
       scope: all
       purpose: "Executive dashboard view"
       show: name, status, budget
-      show_aggregate: total_budget, project_count
       focus: summary, metrics
 
 # =============================================================================
@@ -428,7 +425,6 @@ surface task_kanban "Task Board":
       scope: all
       purpose: "All team tasks"
       show: title, status, priority, assignee, due_date
-      show_aggregate: urgent_count, blocked_count
 
     # Admin sees all tasks
     as admin:
@@ -513,19 +509,16 @@ surface analytics_dashboard "Analytics Dashboard":
     as marketing:
       purpose: "Marketing performance metrics"
       focus: metrics
-      show_aggregate: total
 
     # Sales focuses on revenue
     as sales:
       purpose: "Sales metrics and pipeline"
       focus: metrics, details
-      show_aggregate: total
 
     # Executive sees high-level summary
     as executive:
       purpose: "Executive summary"
       focus: metrics
-      show_aggregate: total
 
 # =============================================================================
 # SURFACE WITHOUT TITLE
@@ -629,14 +622,12 @@ surface order_management "Order Management":
       scope: all
       purpose: "Handle customer inquiries about orders"
       show: order_number, status, order_date
-      show_aggregate: pending_count, issues_count
       read_only: true
 
     as admin:
       scope: all
       purpose: "Full order management"
       show: order_number, status, order_date, created_at
-      show_aggregate: total_orders, total_revenue, pending_count
       focus: metrics, orders
 
 # Placeholder surfaces for order management

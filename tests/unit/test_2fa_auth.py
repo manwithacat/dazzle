@@ -81,35 +81,26 @@ class TestTwoFactorConfig:
     """Tests for the TwoFactorConfig Pydantic model in the IR layer."""
 
     def test_default_values(self) -> None:
-        """Default config: disabled, both methods, 6-digit OTP, 300s expiry, 8 codes."""
+        """Default config: disabled, both methods, 8 recovery codes."""
         cfg = TwoFactorConfig()
 
         assert cfg.enabled is False
         assert TwoFactorMethod.EMAIL_OTP in cfg.methods
         assert TwoFactorMethod.TOTP in cfg.methods
         assert len(cfg.methods) == 2
-        assert cfg.otp_length == 6
-        assert cfg.otp_expiry_seconds == 300
         assert cfg.recovery_code_count == 8
-        assert cfg.enforce_for_roles == []
 
     def test_custom_values(self) -> None:
         """Custom values are stored correctly."""
         cfg = TwoFactorConfig(
             enabled=True,
             methods=[TwoFactorMethod.TOTP],
-            otp_length=8,
-            otp_expiry_seconds=600,
             recovery_code_count=12,
-            enforce_for_roles=["admin", "manager"],
         )
 
         assert cfg.enabled is True
         assert cfg.methods == [TwoFactorMethod.TOTP]
-        assert cfg.otp_length == 8
-        assert cfg.otp_expiry_seconds == 600
         assert cfg.recovery_code_count == 12
-        assert cfg.enforce_for_roles == ["admin", "manager"]
 
     def test_frozen_model(self) -> None:
         """TwoFactorConfig is immutable (frozen=True)."""

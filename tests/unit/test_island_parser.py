@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle.core.ir.islands import IslandEventSpec, IslandPropSpec, IslandSpec
+from dazzle.core.ir.islands import IslandSpec
 
 
 class TestIslandParsing:
@@ -27,8 +27,6 @@ island chart_widget:
         assert island.entity is None
         assert island.src is None
         assert island.fallback == "Loading..."
-        assert island.props == []
-        assert island.events == []
 
     def test_island_with_title(self):
         """Test island with a title string."""
@@ -46,7 +44,7 @@ island task_chart "Task Progress Chart":
         assert island.title == "Task Progress Chart"
 
     def test_island_with_all_properties(self):
-        """Test island with entity, src, fallback, props, and events."""
+        """Test island with entity, src and fallback."""
         dsl = """
 module test.core
 app MyApp "My App"
@@ -59,10 +57,6 @@ island task_chart "Task Progress Chart":
   entity: Task
   src: "islands/task-chart/index.js"
   fallback: "Loading task chart..."
-  prop chart_type: str = "bar"
-  prop date_range: str = "30d"
-  event chart_clicked:
-    detail: [task_id, series]
 """
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
@@ -73,88 +67,6 @@ island task_chart "Task Progress Chart":
         assert island.entity == "Task"
         assert island.src == "islands/task-chart/index.js"
         assert island.fallback == "Loading task chart..."
-
-        # Props
-        assert len(island.props) == 2
-        assert island.props[0].name == "chart_type"
-        assert island.props[0].type == "str"
-        assert island.props[0].default == "bar"
-        assert island.props[1].name == "date_range"
-        assert island.props[1].type == "str"
-        assert island.props[1].default == "30d"
-
-        # Events
-        assert len(island.events) == 1
-        assert island.events[0].name == "chart_clicked"
-        assert island.events[0].detail_fields == ["task_id", "series"]
-
-    def test_island_props_with_different_types(self):
-        """Test island props with various types and defaults."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-island settings_panel "Settings":
-  prop name: str = "default"
-  prop count: int = 10
-  prop enabled: bool = true
-  prop ratio: float = 3.14
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        island = fragment.islands[0]
-        assert len(island.props) == 4
-
-        assert island.props[0].name == "name"
-        assert island.props[0].type == "str"
-        assert island.props[0].default == "default"
-
-        assert island.props[1].name == "count"
-        assert island.props[1].type == "int"
-        assert island.props[1].default == 10
-
-        assert island.props[2].name == "enabled"
-        assert island.props[2].type == "bool"
-        assert island.props[2].default is True
-
-        assert island.props[3].name == "ratio"
-        assert island.props[3].type == "float"
-        assert island.props[3].default == 3.14
-
-    def test_island_prop_without_default(self):
-        """Test island prop with no default value."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-island widget "Widget":
-  prop label: str
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        island = fragment.islands[0]
-        assert len(island.props) == 1
-        assert island.props[0].name == "label"
-        assert island.props[0].type == "str"
-        assert island.props[0].default is None
-
-    def test_island_event_with_detail_fields(self):
-        """Test event with detail fields."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-island map_view "Map View":
-  event pin_clicked:
-    detail: [lat, lng, label]
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        island = fragment.islands[0]
-        assert len(island.events) == 1
-        event = island.events[0]
-        assert event.name == "pin_clicked"
-        assert event.detail_fields == ["lat", "lng", "label"]
 
     def test_multiple_islands(self):
         """Test parsing multiple islands in one module."""
@@ -215,18 +127,6 @@ class TestIslandIRModels:
         assert spec.entity is None
         assert spec.src is None
         assert spec.fallback is None
-        assert spec.props == []
-        assert spec.events == []
-
-    def test_island_prop_spec_defaults(self):
-        """Test IslandPropSpec default values."""
-        prop = IslandPropSpec(name="x", type="str")
-        assert prop.default is None
-
-    def test_island_event_spec_defaults(self):
-        """Test IslandEventSpec default values."""
-        event = IslandEventSpec(name="click")
-        assert event.detail_fields == []
 
     def test_island_spec_frozen(self):
         """Test IslandSpec is immutable (frozen)."""

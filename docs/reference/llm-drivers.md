@@ -172,9 +172,7 @@ Optional `GOOGLE_API_KEY` still selects the Gemini **Developer API**
 (AI Studio) when no `project` is set — fine for personal experiments,
 not the production Vertex path.
 
-Cost on `AIJob` is `NULL` until a model is priced in `costing.py` (or
-you set `cost_per_1k_*` on the `llm_model` for display-only rates —
-executor still uses the costing module for live usage).
+Cost on `AIJob` is `NULL` until a model is priced in `costing.py`.
 
 ### Example intent
 

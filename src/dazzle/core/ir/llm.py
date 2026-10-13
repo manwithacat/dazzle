@@ -7,7 +7,6 @@ enabling model definitions, job intents, and configuration.
 Part of Issue #33: LLM Jobs as First-Class Events.
 """
 
-from decimal import Decimal
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -129,8 +128,6 @@ class LLMModelSpec(BaseModel):
         model_id: Provider-specific model identifier
         tier: Performance/cost tier classification
         max_tokens: Maximum tokens for completion
-        cost_per_1k_input: Cost per 1000 input tokens (optional)
-        cost_per_1k_output: Cost per 1000 output tokens (optional)
         base_url: OpenAI-compatible API base URL (openai/local only).
             Examples: ``https://api.openai.com/v1``,
             ``http://localhost:11434/v1``, Azure OpenAI resource URL.
@@ -150,8 +147,6 @@ class LLMModelSpec(BaseModel):
     model_id: str
     tier: ModelTier = ModelTier.BALANCED
     max_tokens: int = Field(default=4096, gt=0, le=200000)
-    cost_per_1k_input: Decimal | None = Field(default=None, ge=Decimal("0"))
-    cost_per_1k_output: Decimal | None = Field(default=None, ge=Decimal("0"))
     base_url: str | None = None
     project: str | None = None
     location: str | None = None
@@ -190,8 +185,6 @@ class LLMConfigSpec(BaseModel):
 
     Attributes:
         default_model: Default model to use when not specified
-        default_provider: Default LLM provider when not specified per-model
-        budget_alert_usd: USD threshold for budget alert notifications
         artifact_store: Storage backend for prompts/completions
         logging: Logging policy configuration
         rate_limits: Rate limits per model (requests per minute)
@@ -199,8 +192,6 @@ class LLMConfigSpec(BaseModel):
     """
 
     default_model: str | None = None
-    default_provider: LLMProvider | None = None
-    budget_alert_usd: Decimal | None = Field(default=None, ge=Decimal("0"))
     artifact_store: ArtifactStore = ArtifactStore.LOCAL
     logging: LoggingPolicySpec = Field(default_factory=LoggingPolicySpec)
     rate_limits: dict[str, int] | None = None
@@ -262,7 +253,6 @@ class LLMIntentSpec(BaseModel):
         prompt_template: Jinja2 template for the prompt (optional for routing-only intents)
         output_schema: Entity name for structured output (optional)
         timeout_seconds: Maximum time for job completion
-        vision: Whether this intent uses vision/image input
         retry: Retry policy for failures
         pii: PII handling policy
         triggers: Entity event triggers that fire this intent
@@ -275,48 +265,9 @@ class LLMIntentSpec(BaseModel):
     prompt_template: str = ""
     output_schema: str | None = None
     timeout_seconds: int = Field(default=30, ge=1, le=300)
-    vision: bool = False
     retry: RetryPolicySpec | None = None
     pii: PIIPolicySpec | None = None
     triggers: list[LLMTriggerSpec] = Field(default_factory=list)
-
-    model_config = ConfigDict(frozen=True)
-
-
-# =============================================================================
-# Artifact Specs
-# =============================================================================
-
-
-class ArtifactKind(StrEnum):
-    """Type of LLM artifact."""
-
-    PROMPT = "prompt"
-    COMPLETION = "completion"
-    TOOL_CALL = "tool_call"
-    TOOL_RESULT = "tool_result"
-
-
-class ArtifactRefSpec(BaseModel):
-    """
-    Reference to an externalized LLM artifact.
-
-    Artifacts store prompts and completions externally to avoid
-    bloating event payloads and enable analysis.
-
-    Attributes:
-        artifact_id: Unique identifier for the artifact
-        content_hash: SHA-256 hash of content for integrity
-        storage_uri: URI to the stored artifact
-        kind: Type of artifact (prompt, completion, etc.)
-        byte_size: Size of artifact in bytes
-    """
-
-    artifact_id: str
-    content_hash: str
-    storage_uri: str
-    kind: ArtifactKind
-    byte_size: int = Field(ge=0)
 
     model_config = ConfigDict(frozen=True)
 

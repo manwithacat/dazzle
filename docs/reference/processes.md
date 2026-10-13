@@ -125,7 +125,6 @@ steps:
 
       # For WAIT:
       wait_duration_seconds: <int>
-      wait_for_signal: "<signal_name>"
 
       # For HUMAN_TASK:
       human_task:
@@ -134,8 +133,6 @@ steps:
         outcomes:
           - <name> ["<Label>"]:
               goto: <next_step|complete|fail>
-              [sets:]
-                [- <Entity>.<field> -> <value>]
               [style: <primary|danger|...>]
 
       # For CONDITION:

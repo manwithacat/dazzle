@@ -1,10 +1,8 @@
 """Tests for AI cost tracking and gateway (#376).
 
-Tests the new LLM IR fields (budget_alert_usd, default_provider, vision,
-description), DSL parsing of those fields, and AIJob auto-generation.
+Tests DSL parsing of llm_config / llm_intent fields and AIJob auto-generation.
 """
 
-from decimal import Decimal
 from pathlib import Path
 from textwrap import dedent
 
@@ -116,70 +114,24 @@ class TestBuildAIJobEntity:
 class TestParseLLMConfigNewFields:
     """Tests for parsing new llm_config fields."""
 
-    def test_budget_alert_usd(self) -> None:
+    def test_config_fields(self) -> None:
         dsl = dedent("""\
             module test_app
             app test "Test"
 
             llm_config:
-              default_model: claude_sonnet
-              budget_alert_usd: 50.00
-        """)
-        fragment = _parse(dsl)
-        config = fragment.llm_config
-        assert config is not None
-        assert config.budget_alert_usd == Decimal("50.00")
-
-    def test_default_provider(self) -> None:
-        dsl = dedent("""\
-            module test_app
-            app test "Test"
-
-            llm_config:
-              default_provider: anthropic
-              default_model: claude_sonnet
-        """)
-        fragment = _parse(dsl)
-        config = fragment.llm_config
-        assert config is not None
-        assert config.default_provider == ir.LLMProvider.ANTHROPIC
-
-    def test_all_new_config_fields(self) -> None:
-        dsl = dedent("""\
-            module test_app
-            app test "Test"
-
-            llm_config:
-              default_provider: openai
               default_model: gpt4o
-              budget_alert_usd: 100.00
               artifact_store: s3
         """)
         fragment = _parse(dsl)
         config = fragment.llm_config
         assert config is not None
-        assert config.default_provider == ir.LLMProvider.OPENAI
         assert config.default_model == "gpt4o"
-        assert config.budget_alert_usd == Decimal("100.00")
         assert config.artifact_store == ir.ArtifactStore.S3
 
 
 class TestParseLLMIntentNewFields:
     """Tests for parsing new llm_intent fields."""
-
-    def test_vision_flag(self) -> None:
-        dsl = dedent("""\
-            module test_app
-            app test "Test"
-
-            llm_intent verify_doc "Verify Document":
-              model: claude_sonnet
-              prompt: "Verify this document"
-              vision: true
-        """)
-        fragment = _parse(dsl)
-        intent = fragment.llm_intents[0]
-        assert intent.vision is True
 
     def test_description_field(self) -> None:
         dsl = dedent("""\
@@ -204,12 +156,10 @@ class TestParseLLMIntentNewFields:
             llm_intent classify_doc "Classify Document":
               model: claude_haiku
               description: "Classify uploaded document type"
-              vision: true
         """)
         fragment = _parse(dsl)
         intent = fragment.llm_intents[0]
         assert intent.prompt_template == ""
-        assert intent.vision is True
         assert intent.description == "Classify uploaded document type"
 
     def test_max_tokens_on_intent(self) -> None:
@@ -238,21 +188,15 @@ class TestParseLLMIntentNewFields:
               model_id: "claude-haiku-4-5-20251001"
               tier: fast
               max_tokens: 500
-              cost_per_1k_input: 0.00025
-              cost_per_1k_output: 0.00125
 
             llm_model claude_sonnet "Claude Sonnet":
               provider: anthropic
               model_id: "claude-sonnet-4-20250514"
               tier: balanced
               max_tokens: 4096
-              cost_per_1k_input: 0.003
-              cost_per_1k_output: 0.015
 
             llm_config:
-              default_provider: anthropic
               default_model: claude_sonnet
-              budget_alert_usd: 50.00
 
             llm_intent classify_document "Classify Document":
               model: claude_haiku
@@ -262,8 +206,7 @@ class TestParseLLMIntentNewFields:
 
             llm_intent verify_identity "Verify Identity":
               model: claude_sonnet
-              description: "KYC document verification with vision"
-              vision: true
+              description: "KYC document verification"
               prompt: "Verify this identity document"
               max_tokens: 2000
 
@@ -277,23 +220,18 @@ class TestParseLLMIntentNewFields:
 
         # Config
         assert fragment.llm_config is not None
-        assert fragment.llm_config.default_provider == ir.LLMProvider.ANTHROPIC
-        assert fragment.llm_config.budget_alert_usd == Decimal("50.00")
 
         # Models
         assert len(fragment.llm_models) == 2
         haiku = next(m for m in fragment.llm_models if m.name == "claude_haiku")
         assert haiku.tier == ir.ModelTier.FAST
-        assert haiku.cost_per_1k_input == Decimal("0.00025")
 
         # Intents
         assert len(fragment.llm_intents) == 3
         verify = next(i for i in fragment.llm_intents if i.name == "verify_identity")
-        assert verify.vision is True
-        assert verify.description == "KYC document verification with vision"
+        assert verify.description == "KYC document verification"
 
         classify = next(i for i in fragment.llm_intents if i.name == "classify_document")
-        assert classify.vision is False
         assert classify.model_ref == "claude_haiku"
 
 

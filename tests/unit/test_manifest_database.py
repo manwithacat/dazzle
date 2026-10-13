@@ -178,34 +178,8 @@ class TestResolveDatabaseUrl:
 
 
 # ---------------------------------------------------------------------------
-# [infra] and [stack] config parsing
+# [stack] config parsing
 # ---------------------------------------------------------------------------
-
-
-class TestLoadManifestInfra:
-    def test_infra_section_parsed(self, tmp_path: Path) -> None:
-        toml_path = _write_toml(
-            tmp_path,
-            textwrap.dedent("""\
-
-                [infra]
-                backends = ["terraform"]
-
-                [infra.terraform]
-                cloud_provider = "gcp"
-                region = "us-east1"
-            """),
-        )
-        mf = load_manifest(toml_path)
-        assert mf.infra is not None
-        assert mf.infra.terraform.cloud_provider == "gcp"
-        assert mf.infra.terraform.region == "us-east1"
-        assert mf.infra.backends == ["terraform"]
-
-    def test_no_infra_section(self, tmp_path: Path) -> None:
-        toml_path = _write_toml(tmp_path)
-        mf = load_manifest(toml_path)
-        assert mf.infra is None
 
 
 class TestLoadManifestStack:

@@ -29,13 +29,11 @@
 # - [x] - step name: with service
 # - [x] - step name: with channel/message (SEND)
 # - [x] - step name: with wait: duration
-# - [x] - step name: with wait: signal_name
 # - [x] - step name: with human_task
 # - [x] - step name: with subprocess
 # - [x] - step name: with condition/on_true/on_false
 # - [x] - parallel block
 # - [x] inputs: mappings
-# - [x] output: mapping
 # - [x] timeout: duration
 # - [x] retry: block (max_attempts, backoff, interval)
 # - [x] on_success: step_name
@@ -62,9 +60,6 @@
 # - [x] overlap: cancel_previous
 # - [x] overlap: allow
 #
-# PROCESS EVENTS:
-# - [x] emits: on_start, on_complete, on_failure
-#
 # SCHEDULE BASICS:
 # - [x] schedule name "Title":
 # - [x] cron: "expression"
@@ -74,17 +69,11 @@
 # - [x] overlap: policy
 # - [x] steps: block
 # - [x] timeout: duration
-# - [x] emits: block
 #
 # RETRY BACKOFF STRATEGIES:
 # - [x] backoff: fixed
 # - [x] backoff: exponential
 # - [x] backoff: linear
-#
-# PARALLEL POLICIES:
-# - [x] on_any_failure: fail_fast
-# - [x] on_any_failure: wait_all
-# - [x] on_any_failure: rollback
 #
 # =============================================================================
 
@@ -151,11 +140,6 @@ process order_fulfillment "Order Fulfillment":
 
   timeout: 2h
   overlap: skip
-
-  emits:
-    on_start: OrderFulfillmentStarted
-    on_complete: OrderFulfillmentCompleted
-    on_failure: OrderFulfillmentFailed
 
 # =============================================================================
 # PROCESS: ENTITY CREATED TRIGGER
@@ -353,7 +337,7 @@ process delayed_notification "Delayed Notification":
         timeout: 30s
 
     - step wait_for_signal:
-        wait: task_completed
+        wait: 1d
 
     - step final_notification:
         channel: notifications
@@ -392,26 +376,20 @@ process expense_approval "Expense Report Approval":
             - approve "Approve Expense":
                 label: "Approve"
                 goto: process_reimbursement
-                sets:
-                  - Invoice.status -> approved
                 style: primary
 
             - reject "Reject Expense":
                 label: "Reject"
                 goto: notify_rejection
-                sets:
-                  - Invoice.status -> rejected
                 confirm: "Are you sure you want to reject this expense?"
                 style: danger
 
             - request_info "Request Information":
                 label: "Need More Info"
                 goto: wait_for_info
-                sets:
-                  - Invoice.status -> needs_info
 
     - step wait_for_info:
-        wait: additional_info_provided
+        wait: 2d
 
     - step process_reimbursement:
         service: process_payment
@@ -506,8 +484,6 @@ process parallel_notifications "Parallel Notifications":
             message: OrderConfirmedShipping
             timeout: 30s
 
-        on_any_failure: fail_fast
-
     - step log_completion:
         service: simple_operation
         timeout: 10s
@@ -536,8 +512,6 @@ process parallel_validation "Parallel Validation":
             service: validate_order
             timeout: 30s
 
-        on_any_failure: wait_all
-
     - step summarize:
         service: simple_operation
         timeout: 30s
@@ -563,8 +537,6 @@ process parallel_saga "Parallel Saga":
             service: process_payment
             timeout: 1m
             compensate: release_payment
-
-        on_any_failure: rollback
 
     - step finalize:
         service: simple_operation
@@ -683,14 +655,12 @@ process data_transformation "Data Transformation":
         inputs:
           - source_id -> id
           - target_format -> format
-        output: extracted_data
 
     - step transform:
         service: simple_operation
         timeout: 5m
         inputs:
           - extracted_data -> input_data
-        output: transformed_data
 
     - step load:
         service: sync_to_external
@@ -719,8 +689,6 @@ process approval_chain "Multi-Level Approval":
                 goto: check_amount
             - reject "Reject":
                 goto: complete
-                sets:
-                  - Invoice.status -> rejected
 
     - step check_amount:
         condition: Invoice.total > 10000
@@ -735,12 +703,8 @@ process approval_chain "Multi-Level Approval":
           outcomes:
             - approve "Final Approve":
                 goto: finalize
-                sets:
-                  - Invoice.status -> approved
             - reject "Final Reject":
                 goto: complete
-                sets:
-                  - Invoice.status -> rejected
 
     - step finalize:
         service: simple_operation
@@ -826,11 +790,6 @@ schedule full_sync "Full Data Sync":
 
   timeout: 3h
 
-  emits:
-    on_start: FullSyncStarted
-    on_complete: FullSyncCompleted
-    on_failure: FullSyncFailed
-
 # =============================================================================
 # SCHEDULE: CATCH UP DISABLED
 # =============================================================================
@@ -905,8 +864,6 @@ schedule comprehensive_backup "Comprehensive Backup":
             service: simple_operation
             timeout: 5m
 
-        on_any_failure: wait_all
-
     - step verify_backups:
         service: validate_order
         timeout: 15m
@@ -917,7 +874,3 @@ schedule comprehensive_backup "Comprehensive Backup":
         timeout: 30s
 
   timeout: 2h
-
-  emits:
-    on_complete: BackupCompleted
-    on_failure: BackupFailed

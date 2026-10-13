@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 289 BaseModels, 107 Enums, 17 other (functions / typealiases / constants)
+# Counts: 283 BaseModels, 103 Enums, 17 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -176,15 +176,6 @@ ir_class: ArithmeticExpr
     - right: AggregateCall | FieldReference | ArithmeticExpr | LiteralValue
   optional: (none)
 
-ir_class: ArtifactRefSpec
-  required:
-    - artifact_id: str
-    - byte_size: int
-    - content_hash: str
-    - kind: ArtifactKind
-    - storage_uri: str
-  optional: (none)
-
 ir_class: AttentionMapSpec
   required: (none)
   optional:
@@ -305,15 +296,6 @@ ir_class: BulkActionSpec
     - name: str
     - target_value: str
   optional: (none)
-
-ir_class: BulkConfig
-  required: (none)
-  optional:
-    - export_enabled: bool = True
-    - export_fields: list[str] = []
-    - formats: list[BulkFormat] = <factory:BulkConfig.<lambda>>
-    - import_enabled: bool = True
-    - import_fields: list[str] = []
 
 ir_class: BusinessHoursSpec
   required: (none)
@@ -637,7 +619,6 @@ ir_class: EntitySpec
     - archetype_kind: ArchetypeKind | None = None
     - audit: AuditConfig | None = None
     - auth_identity: AuthIdentitySpec | None = None
-    - bulk: BulkConfig | None = None
     - computed_fields: list[ComputedFieldSpec] = []
     - constraints: list[Constraint] = []
     - display_field: str | None = None
@@ -676,7 +657,6 @@ ir_class: ErasureSpec
     - entity: str
     - policy: ErasurePolicy
   optional:
-    - cascade: bool = False
     - field: str | None = None
 
 ir_class: ErrorStrategy
@@ -736,8 +716,6 @@ ir_class: ExperienceStep
 ir_class: Expression
   required: (none)
   optional:
-    - func_args: list[Expression] = []
-    - func_name: str | None = None
     - literal: str | int | float | bool | None = None
     - path: str | None = None
 
@@ -1075,7 +1053,6 @@ ir_class: HumanTaskOutcome
     - name: str
   optional:
     - confirm: str | None = None
-    - sets: list[FieldAssignment] = []
     - style: str = 'primary'
 
 ir_class: HumanTaskSpec
@@ -1085,7 +1062,6 @@ ir_class: HumanTaskSpec
     - assignee_expression: str | None = None
     - assignee_role: str | None = None
     - entity_path: str | None = None
-    - escalation_timeout_seconds: int | None = None
     - outcomes: list[HumanTaskOutcome] = []
     - timeout_seconds: int = 604800
 
@@ -1119,7 +1095,6 @@ ir_class: IntegrationAction
   optional:
     - call_mapping: list[MappingRule] = []
     - response_entity: str | None = None
-    - response_foreign_model: str | None = None
     - response_mapping: list[MappingRule] = []
 
 ir_class: IntegrationMapping
@@ -1128,13 +1103,10 @@ ir_class: IntegrationMapping
   optional:
     - cache_ttl: int | None = None
     - entity_ref: str = ''
-    - on_conflict: str = ''
     - on_error: ErrorStrategy | None = None
     - request: HttpRequestSpec | None = None
     - request_mapping: list[MappingRule] = []
     - response_mapping: list[MappingRule] = []
-    - source_ref: str = ''
-    - transform: list[MappingRule] = []
     - triggers: list[MappingTriggerSpec] = []
 
 ir_class: IntegrationSpec
@@ -1154,9 +1126,6 @@ ir_class: IntegrationSpec
 
 ir_class: IntegrationSync
   required:
-    - from_foreign_model: str
-    - from_operation: str
-    - from_service: str
     - into_entity: str
     - mode: SyncMode
     - name: str
@@ -1188,27 +1157,12 @@ ir_class: InvariantSpec
     - invariant_expr: Literal | FieldRef | DurationLiteral | BinaryExpr | UnaryExpr | FuncCall | InExpr | IfExpr | None = None
     - message: str | None = None
 
-ir_class: IslandEventSpec
-  required:
-    - name: str
-  optional:
-    - detail_fields: list[str] = []
-
-ir_class: IslandPropSpec
-  required:
-    - name: str
-  optional:
-    - default: str | int | float | bool | None = None
-    - type: str = 'str'
-
 ir_class: IslandSpec
   required:
     - name: str
   optional:
     - entity: str | None = None
-    - events: list[IslandEventSpec] = []
     - fallback: str | None = None
-    - props: list[IslandPropSpec] = []
     - src: str | None = None
     - title: str | None = None
 
@@ -1216,10 +1170,8 @@ ir_class: LLMConfigSpec
   required: (none)
   optional:
     - artifact_store: ArtifactStore = <ArtifactStore.LOCAL: 'local'>
-    - budget_alert_usd: Decimal | None = None
     - concurrency: dict[str, int] | None = None
     - default_model: str | None = None
-    - default_provider: LLMProvider | None = None
     - logging: LoggingPolicySpec = <factory:LoggingPolicySpec>
     - rate_limits: dict[str, int] | None = None
 
@@ -1236,7 +1188,6 @@ ir_class: LLMIntentSpec
     - timeout_seconds: int = 30
     - title: str | None = None
     - triggers: list[LLMTriggerSpec] = []
-    - vision: bool = False
 
 ir_class: LLMModelSpec
   required:
@@ -1246,8 +1197,6 @@ ir_class: LLMModelSpec
   optional:
     - api_key_env: str | None = None
     - base_url: str | None = None
-    - cost_per_1k_input: Decimal | None = None
-    - cost_per_1k_output: Decimal | None = None
     - location: str | None = None
     - max_tokens: int = 4096
     - project: str | None = None
@@ -1654,7 +1603,6 @@ ir_class: PersonaVariant
     - scope: ConditionExpr | None = None
     - scope_all: bool = False
     - show: list[str] = []
-    - show_aggregate: list[str] = []
 
 ir_class: PhaseSpec
   required:
@@ -1679,7 +1627,6 @@ ir_class: PoliciesSpec
   optional:
     - audit_access: bool = True
     - classifications: list[ClassificationSpec] = []
-    - default_retention: RetentionPolicy = <RetentionPolicy.MEDIUM: 'medium'>
     - erasures: list[ErasureSpec] = []
 
 ir_class: PricingTier
@@ -1692,13 +1639,6 @@ ir_class: PricingTier
     - features: list[str] = []
     - highlighted: bool = False
     - period: str = 'month'
-
-ir_class: ProcessEventEmission
-  required: (none)
-  optional:
-    - on_complete: str | None = None
-    - on_failure: str | None = None
-    - on_start: str | None = None
 
 ir_class: ProcessInputField
   required:
@@ -1723,7 +1663,6 @@ ir_class: ProcessSpec
   optional:
     - compensations: list[CompensationSpec] = []
     - description: str | None = None
-    - events: ProcessEventEmission = <factory:ProcessEventEmission>
     - implements: list[str] = []
     - inputs: list[ProcessInputField] = []
     - outputs: list[ProcessOutputField] = []
@@ -1754,8 +1693,6 @@ ir_class: ProcessStepSpec
     - on_false: str | None = None
     - on_success: str | None = None
     - on_true: str | None = None
-    - output_mapping: str | None = None
-    - parallel_policy: ParallelFailurePolicy = <ParallelFailurePolicy.FAIL_FAST: 'fail_fast'>
     - parallel_steps: list[ProcessStepSpec] = []
     - query_entity: str | None = None
     - query_filter: dict[str, Any] | None = None
@@ -1766,7 +1703,6 @@ ir_class: ProcessStepSpec
     - subprocess: str | None = None
     - timeout_seconds: int = 30
     - wait_duration_seconds: int | None = None
-    - wait_for_signal: str | None = None
 
 ir_class: ProcessTriggerSpec
   required:
@@ -1926,7 +1862,6 @@ ir_class: ScheduleSpec
     - catch_up: bool = False
     - cron: Any = None
     - description: str | None = None
-    - events: ProcessEventEmission = <factory:ProcessEventEmission>
     - implements: list[str] = []
     - interval_seconds: int | None = None
     - overlap: OverlapPolicy = <OverlapPolicy.SKIP: 'skip'>
@@ -1983,8 +1918,7 @@ ir_class: SecurityConfig
     - enable_hsts: bool = False
     - profile: SecurityProfile = <SecurityProfile.BASIC: 'basic'>
     - require_auth_by_default: bool = False
-    - tenant_isolation: bool = False
-    - two_factor: TwoFactorConfig = TwoFactorConfig(enabled=False, methods=[<TwoFactorMethod.EMAIL_OTP: 'email_otp'>, <TwoFactorMethod.TOTP: 'totp'>], otp_length=6, otp_expiry_seconds=300, recovery_code_count=8, enforce_for_roles=[])
+    - two_factor: TwoFactorConfig = TwoFactorConfig(enabled=False, methods=[<TwoFactorMethod.EMAIL_OTP: 'email_otp'>, <TwoFactorMethod.TOTP: 'totp'>], recovery_code_count=8)
 
 ir_class: SeedFieldTemplate
   required:
@@ -2323,7 +2257,6 @@ ir_class: TenancySpec
     - entities_excluded: list[str] = []
     - isolation: TenantIsolationSpec = <factory:TenantIsolationSpec>
     - per_tenant_config: dict[str, str] = {}
-    - provisioning: TenantProvisioningSpec = <factory:TenantProvisioningSpec>
 
 ir_class: TenantBlueprint
   required:
@@ -2351,18 +2284,9 @@ ir_class: TenantHostSpec
 ir_class: TenantIsolationSpec
   required: (none)
   optional:
-    - cross_tenant_access: bool = False
-    - enforce_in_queries: bool = True
     - mode: TenancyMode = <TenancyMode.SHARED_SCHEMA: 'shared_schema'>
     - partition_key: str = 'tenant_id'
     - topic_namespace: TopicNamespaceMode = <TopicNamespaceMode.SHARED: 'shared'>
-
-ir_class: TenantProvisioningSpec
-  required: (none)
-  optional:
-    - auto_create: bool = True
-    - default_limits: dict[str, int] = {}
-    - require_approval: bool = False
 
 ir_class: TestDesignSpec
   required:
@@ -2548,10 +2472,8 @@ ir_class: ViewSpec
   optional:
     - date_field: str | None = None
     - fields: list[ViewFieldSpec] = []
-    - filter_condition: ConditionExpr | None = None
     - group_by: list[str] = []
     - source_entity: str = ''
-    - time_bucket: TimeBucket | None = None
     - title: str | None = None
 
 ir_class: VisibilityRule
@@ -2684,13 +2606,6 @@ enum: ArithmeticOperator
     - MULTIPLY = '*'
     - SUBTRACT = '-'
 
-enum: ArtifactKind
-  members:
-    - COMPLETION = 'completion'
-    - PROMPT = 'prompt'
-    - TOOL_CALL = 'tool_call'
-    - TOOL_RESULT = 'tool_result'
-
 enum: ArtifactStore
   members:
     - GCS = 'gcs'
@@ -2746,12 +2661,6 @@ enum: BoolOp
     - AND = 'and'
     - NOT = 'not'
     - OR = 'or'
-
-enum: BulkFormat
-  members:
-    - CSV = 'csv'
-    - JSON = 'json'
-    - XLSX = 'xlsx'
 
 enum: BusinessPriority
   members:
@@ -3228,12 +3137,6 @@ enum: PageKind
     - PRICING = 'pricing'
     - REDIRECT = 'redirect'
 
-enum: ParallelFailurePolicy
-  members:
-    - FAIL_FAST = 'fail_fast'
-    - ROLLBACK = 'rollback'
-    - WAIT_ALL = 'wait_all'
-
 enum: PeekMode
   members:
     - EXPAND = 'expand'
@@ -3497,14 +3400,6 @@ enum: ThemeKind
     - CUSTOM = 'custom'
     - MINIMAL = 'minimal'
     - SAAS_DEFAULT = 'saas-default'
-
-enum: TimeBucket
-  members:
-    - DAY = 'day'
-    - MONTH = 'month'
-    - QUARTER = 'quarter'
-    - WEEK = 'week'
-    - YEAR = 'year'
 
 enum: TimeUnit
   members:

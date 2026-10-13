@@ -17,8 +17,6 @@
 # - [x] tier: balanced
 # - [x] tier: quality
 # - [x] max_tokens: number
-# - [x] cost_per_1k_input: decimal
-# - [x] cost_per_1k_output: decimal
 #
 # LLM_CONFIG:
 # - [x] llm_config:
@@ -70,24 +68,18 @@ llm_model claude_haiku "Claude Haiku":
   model_id: claude-3-haiku-20240307
   tier: fast
   max_tokens: 4096
-  cost_per_1k_input: 0.00025
-  cost_per_1k_output: 0.00125
 
 llm_model claude_sonnet "Claude Sonnet":
   provider: anthropic
   model_id: claude-3-5-sonnet-20241022
   tier: balanced
   max_tokens: 8192
-  cost_per_1k_input: 0.003
-  cost_per_1k_output: 0.015
 
 llm_model claude_opus "Claude Opus":
   provider: anthropic
   model_id: claude-3-opus-20240229
   tier: quality
   max_tokens: 4096
-  cost_per_1k_input: 0.015
-  cost_per_1k_output: 0.075
 
 # =============================================================================
 # LLM_MODEL: OPENAI PROVIDER
@@ -98,24 +90,18 @@ llm_model gpt4o "GPT-4o":
   model_id: gpt-4o-2024-08-06
   tier: balanced
   max_tokens: 16384
-  cost_per_1k_input: 0.005
-  cost_per_1k_output: 0.015
 
 llm_model gpt4o_mini "GPT-4o Mini":
   provider: openai
   model_id: gpt-4o-mini
   tier: fast
   max_tokens: 16384
-  cost_per_1k_input: 0.00015
-  cost_per_1k_output: 0.0006
 
 llm_model gpt4_turbo "GPT-4 Turbo":
   provider: openai
   model_id: gpt-4-turbo-2024-04-09
   tier: quality
   max_tokens: 128000
-  cost_per_1k_input: 0.01
-  cost_per_1k_output: 0.03
 
 # =============================================================================
 # LLM_MODEL: GOOGLE PROVIDER
@@ -126,16 +112,12 @@ llm_model gemini_flash "Gemini Flash":
   model_id: gemini-1.5-flash
   tier: fast
   max_tokens: 8192
-  cost_per_1k_input: 0.0001
-  cost_per_1k_output: 0.0004
 
 llm_model gemini_pro "Gemini Pro":
   provider: google
   model_id: gemini-1.5-pro
   tier: balanced
   max_tokens: 32768
-  cost_per_1k_input: 0.00125
-  cost_per_1k_output: 0.005
 
 # =============================================================================
 # LLM_MODEL: LOCAL PROVIDER

@@ -20,9 +20,6 @@ island <name> "<Title>":
   entity: <EntityName>
   src: "<path/to/island.js>"
   fallback: "<HTML shown before JS loads>"
-  prop <name>: <type> [= default]
-  event <name>:
-    detail: [field1, field2]
 ```
 
 All fields except `name` are optional.
@@ -37,31 +34,6 @@ All fields except `name` are optional.
 | `src` | No | JavaScript entry point. Defaults to `/static/islands/{name}/index.js` |
 | `fallback` | No | HTML rendered server-side before JavaScript loads |
 
-### Props
-
-Typed properties passed to the JavaScript component:
-
-```dsl
-prop chart_type: str = "bar"
-prop count: int = 10
-prop enabled: bool = true
-prop ratio: float = 3.14
-prop label: str                  # no default
-```
-
-Supported types: `str`, `int`, `bool`, `float`. Props are serialized to JSON and passed to the mount function.
-
-### Events
-
-Document the CustomEvents the island may emit:
-
-```dsl
-event chart_clicked:
-  detail: [task_id, series_index]
-```
-
-Events are informational — they document the contract for consumers. The actual event emission is handled by the island's JavaScript code.
-
 ## JavaScript Contract
 
 Each island module must export a `mount` function:
@@ -70,7 +42,7 @@ Each island module must export a `mount` function:
 // islands/my-component/index.js
 export function mount({ el, props, apiBase }) {
   // el:      HTMLElement — the <div data-island="..."> mount point
-  // props:   object     — parsed props with defaults applied
+  // props:   object     — parsed `data-island-props` JSON
   // apiBase: string     — base URL for API endpoints ("" if no entity)
 
   // ... initialize component ...
@@ -142,8 +114,6 @@ island task_chart "Task Progress":
   entity: Task
   src: "islands/task-chart/index.js"
   fallback: "Loading chart..."
-  prop chart_type: str = "bar"
-  prop period: str = "week"
 ```
 
 ```javascript
@@ -154,8 +124,6 @@ export async function mount({ el, props, apiBase }) {
 
   renderChart(el, {
     items: data.items,
-    type: props.chart_type,
-    period: props.period,
   });
 }
 ```
@@ -176,32 +144,6 @@ export function mount({ el }) {
   el.appendChild(button);
 
   return () => button.remove();
-}
-```
-
-### Event-Emitting Island
-
-```dsl
-island timeline_editor "Timeline Editor":
-  entity: Event
-  src: "islands/timeline/index.js"
-  event time_updated:
-    detail: [event_id, new_time]
-  event event_deleted:
-    detail: [event_id]
-```
-
-```javascript
-export function mount({ el, props, apiBase }) {
-  el.addEventListener("click", (e) => {
-    if (e.target.dataset.action === "delete") {
-      el.dispatchEvent(
-        new CustomEvent("event_deleted", {
-          detail: { event_id: e.target.dataset.id },
-        })
-      );
-    }
-  });
 }
 ```
 

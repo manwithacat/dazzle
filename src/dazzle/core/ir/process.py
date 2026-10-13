@@ -66,14 +66,6 @@ class OverlapPolicy(StrEnum):
     ALLOW = "allow"  # Allow concurrent runs
 
 
-class ParallelFailurePolicy(StrEnum):
-    """Policy for handling parallel step failures."""
-
-    FAIL_FAST = "fail_fast"  # Stop all on first failure
-    WAIT_ALL = "wait_all"  # Wait for all to complete
-    ROLLBACK = "rollback"  # Run compensations on any failure
-
-
 class RetryConfig(BaseModel):
     """Retry configuration for a step."""
 
@@ -170,9 +162,6 @@ class HumanTaskOutcome(BaseModel):
 
     name: str = Field(..., description="Outcome identifier (e.g., 'approve')")
     label: str = Field(..., description="Button text (e.g., 'Approve Expense')")
-    sets: list[FieldAssignment] = Field(
-        default_factory=list, description="Field changes on this outcome"
-    )
     goto: str = Field(..., description="Next step name, 'complete', or 'fail'")
     confirm: str | None = Field(default=None, description="Optional confirmation prompt")
     style: str = Field(default="primary", description="Button style hint")
@@ -190,9 +179,6 @@ class HumanTaskSpec(BaseModel):
         default=None, description="Expression to determine assignee"
     )
     timeout_seconds: int = Field(default=604800, description="Task timeout (default 7 days)")
-    escalation_timeout_seconds: int | None = Field(
-        default=None, description="When to escalate if not completed"
-    )
     outcomes: list[HumanTaskOutcome] = Field(
         default_factory=list, description="Possible task outcomes"
     )
@@ -253,7 +239,6 @@ class ProcessStepSpec(BaseModel):
 
     # For WAIT steps
     wait_duration_seconds: int | None = Field(default=None, description="Duration to wait")
-    wait_for_signal: str | None = Field(default=None, description="Signal name to wait for")
 
     # For HUMAN_TASK steps
     human_task: HumanTaskSpec | None = Field(default=None, description="Human task configuration")
@@ -265,7 +250,6 @@ class ProcessStepSpec(BaseModel):
     parallel_steps: list[ProcessStepSpec] = Field(
         default_factory=list, description="Steps to run in parallel"
     )
-    parallel_policy: ParallelFailurePolicy = Field(default=ParallelFailurePolicy.FAIL_FAST)
 
     # For CONDITION steps
     condition: str | None = Field(default=None, description="Condition expression")
@@ -288,11 +272,10 @@ class ProcessStepSpec(BaseModel):
         default_factory=list, description="Sub-steps to execute for each item"
     )
 
-    # Input/output mappings
+    # Input mappings
     inputs: list[InputMapping] = Field(
         default_factory=list, description="Input mappings for the step"
     )
-    output_mapping: str | None = Field(default=None, description="Where to store step output")
 
     # Timeout and retry
     timeout_seconds: int = Field(default=30, description="Step timeout in seconds")
@@ -333,16 +316,6 @@ class CompensationSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class ProcessEventEmission(BaseModel):
-    """HLESS event emissions from a process."""
-
-    on_start: str | None = Field(default=None, description="Event type on process start")
-    on_complete: str | None = Field(default=None, description="Event type on successful completion")
-    on_failure: str | None = Field(default=None, description="Event type on failure")
-
-    model_config = ConfigDict(frozen=True)
-
-
 class ProcessSpec(BaseModel):
     """
     Specification for a durable workflow process.
@@ -352,7 +325,6 @@ class ProcessSpec(BaseModel):
     - Steps (activities to execute)
     - Compensation (saga rollback handlers)
     - Timeouts and retries
-    - HLESS event emission
     """
 
     name: str = Field(..., description="Process identifier")
@@ -391,11 +363,6 @@ class ProcessSpec(BaseModel):
         description="Policy for overlapping runs",
     )
 
-    # Event emission
-    events: ProcessEventEmission = Field(
-        default_factory=ProcessEventEmission,
-        description="HLESS events to emit",
-    )
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
 
@@ -459,9 +426,6 @@ class ScheduleSpec(BaseModel):
 
     # Timeouts
     timeout_seconds: Any = Field(default=3600)  # int | ParamRef
-
-    # Event emission
-    events: ProcessEventEmission = Field(default_factory=ProcessEventEmission)
 
     model_config = ConfigDict(frozen=True)
 

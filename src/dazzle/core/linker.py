@@ -801,10 +801,7 @@ def _build_security_config(app_config: ir.AppConfigSpec | None) -> SecurityConfi
         profile = SecurityProfile.BASIC
 
     # Build config with profile defaults
-    return SecurityConfig.from_profile(
-        profile,
-        multi_tenant=app_config.multi_tenant,
-    )
+    return SecurityConfig.from_profile(profile)
 
 
 def _parse_field_type(type_str: str) -> FieldType:

@@ -21,7 +21,7 @@ from pydantic import BaseModel, ValidationError
 from dazzle.core import ir
 from dazzle.core.archetype_expander import _to_snake_case
 from dazzle.core.ir import FieldTypeKind
-from dazzle.http.runtime.query_builder import quote_identifier
+from dazzle.http.runtime.query_builder import QueryBuilder, quote_identifier
 from dazzle.http.specs.entity import (
     ComputedFieldSpec,
     EntitySpec,
@@ -555,8 +555,6 @@ def _safe_text_field_names(entity_spec: Any, search_spec: Any) -> _list[str]:
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from dazzle.http.runtime.relation_loader import RelationLoader
 
 
@@ -1184,7 +1182,6 @@ class Repository[T: BaseModel]:
         # empty result; a future cycle can wire a runtime-state
         # provider per virtual entity.
         from dazzle.db.virtual import is_virtual_entity
-        from dazzle.http.runtime.query_builder import QueryBuilder
 
         if self.entity_spec is not None and is_virtual_entity(self.entity_spec):
             return {
@@ -1546,7 +1543,7 @@ class Repository[T: BaseModel]:
         *,
         page: int = 1,
         page_size: int = 20,
-        scope_predicate: tuple[str, Sequence[Any]] | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Run a tsvector-backed full-text search (#954 cycle 3).
 
@@ -1563,11 +1560,12 @@ class Repository[T: BaseModel]:
                 ``{items: [], total: 0}``.
             page: 1-indexed page number.
             page_size: Per-page result count.
-            scope_predicate: ``(sql, params)`` tuple from the predicate
-                compiler. ANDed into the WHERE clause so RBAC stays
-                correct on the FTS endpoint without re-implementing
-                the scope path. ``None`` means no scope filter
-                (unauthenticated public search).
+            filters: The access filters the list path would apply for the
+                same caller (``access.gated.list_scope_filters``), including
+                the ``__scope_predicate`` key. Compiled by the same
+                :class:`QueryBuilder` ``list`` uses and ANDed into the WHERE
+                clause, so search and list see the same rows. ``None`` or
+                ``{}`` means no row filter.
 
         Returns:
             ``{"items": [{"id", "rank", **row}, ...], "total": N,
@@ -1594,11 +1592,13 @@ class Repository[T: BaseModel]:
             f"search_vector @@ websearch_to_tsquery('{config}', {ph})",
         ]
         params: list[Any] = [q]
-        if scope_predicate is not None:
-            scope_sql, scope_params = scope_predicate
-            if scope_sql:
-                where_parts.append(f"({scope_sql})")
-                params.extend(scope_params)
+        if filters:
+            builder = QueryBuilder(table_name=self.table_name, placeholder_style=ph)
+            builder.add_filters(filters)
+            filter_where, filter_params = builder.build_where_clause()
+            if filter_where:
+                where_parts.append(f"({filter_where.removeprefix('WHERE ')})")
+                params.extend(filter_params)
         where_clause = " AND ".join(where_parts)
 
         # Count first so pagination metadata is correct.

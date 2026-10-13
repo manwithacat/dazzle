@@ -121,6 +121,30 @@ class TestCrossEntitySearchHandler:
         body = json.loads(response.content)
         assert [r["entity"] for r in body["results"]] == ["Work"]
 
+    def test_anonymous_caller_skips_entities_with_access_rules(self) -> None:
+        """Ship P: an entity carrying access rules is left out for an anonymous
+        caller instead of being read unscoped; an open entity is still searched."""
+        from types import SimpleNamespace
+
+        from dazzle.http.runtime.search_routes import create_search_routes
+
+        async def _anonymous() -> Any:
+            return SimpleNamespace(is_authenticated=False, user=None)
+
+        router = create_search_routes(
+            repositories={
+                "Work": _FakeRepo([{"id": "w1", "title": "Hello"}]),
+                "Node": _FakeRepo([{"id": "n1", "title": "Hello"}]),
+            },
+            entity_search_fields={"Work": ["title"], "Node": ["title"]},
+            cedar_access_specs={"Work": SimpleNamespace(permissions=[], scopes=[])},
+            optional_auth_dep=_anonymous,
+        )
+        assert router is not None
+
+        body = json.loads(_mount(router).get("/_dazzle/search", params={"q": "hello"}).content)
+        assert [r["entity"] for r in body["results"]] == ["Node"]
+
     def test_unknown_entity_param_stays_put(self) -> None:
         from dazzle.http.runtime.search_routes import create_search_routes
 

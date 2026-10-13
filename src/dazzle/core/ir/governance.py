@@ -93,7 +93,6 @@ class ErasureSpec(BaseModel):
     entity: str
     field: str | None = None  # None means entire entity
     policy: ErasurePolicy
-    cascade: bool = False  # Cascade to related entities
 
     model_config = ConfigDict(frozen=True)
 
@@ -112,7 +111,6 @@ class PoliciesSpec(BaseModel):
 
     classifications: list[ClassificationSpec] = Field(default_factory=list)
     erasures: list[ErasureSpec] = Field(default_factory=list)
-    default_retention: RetentionPolicy = RetentionPolicy.MEDIUM
     audit_access: bool = True  # Log all access to classified fields
 
     model_config = ConfigDict(frozen=True)
@@ -153,28 +151,6 @@ class TenantIsolationSpec(BaseModel):
     mode: TenancyMode = TenancyMode.SHARED_SCHEMA
     partition_key: str = "tenant_id"
     topic_namespace: TopicNamespaceMode = TopicNamespaceMode.SHARED
-    enforce_in_queries: bool = True  # Auto-add tenant filter to queries
-    cross_tenant_access: bool = False  # Allow cross-tenant data access
-
-    model_config = ConfigDict(frozen=True)
-
-
-class TenantProvisioningSpec(BaseModel):
-    """
-    Tenant provisioning configuration.
-
-    DSL syntax:
-        tenancy:
-          provisioning:
-            auto_create: true
-            default_limits:
-              users: 100
-              storage_gb: 10
-    """
-
-    auto_create: bool = True
-    require_approval: bool = False
-    default_limits: dict[str, int] = Field(default_factory=dict)
 
     model_config = ConfigDict(frozen=True)
 
@@ -193,12 +169,9 @@ class TenancySpec(BaseModel):
             locale: str
             theme: str
             feature_billing: bool
-          provisioning:
-            auto_create: true
 
     Attributes:
         isolation: How tenants are separated (mode + partition key etc).
-        provisioning: How new tenants get created.
         entities_excluded: Entities that are not tenant-scoped (e.g.
             framework-shared catalogues).
         admin_personas: Persona names whose grants bypass the tenant
@@ -212,7 +185,6 @@ class TenancySpec(BaseModel):
     """
 
     isolation: TenantIsolationSpec = Field(default_factory=TenantIsolationSpec)
-    provisioning: TenantProvisioningSpec = Field(default_factory=TenantProvisioningSpec)
     entities_excluded: list[str] = Field(default_factory=list)  # Entities not tenant-scoped
     # #957 cycle 1: persona-bypass + per-tenant config declarations
     admin_personas: list[str] = Field(default_factory=list)

@@ -650,7 +650,6 @@ surface ticket_list "Support Tickets":
     as admin:
       scope: all
       action_primary: ticket_assign
-      show_aggregate: total, open, resolved_today
 
     # Agents see assigned + unassigned
     as agent:

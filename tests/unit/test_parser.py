@@ -752,8 +752,10 @@ process OrderWithWait "Order With Wait":
         assert step.kind.value == "wait"
         assert step.wait_duration_seconds == 86400  # 24 hours in seconds
 
-    def test_process_with_wait_for_signal(self):
-        """Test process with WAIT step waiting for signal."""
+    def test_process_wait_rejects_non_duration(self):
+        """``wait:`` takes a duration only — a bare name is a parse error."""
+        from dazzle.core.errors import ParseError
+
         dsl = """
 module test.core
 app MyApp "My App"
@@ -767,11 +769,8 @@ process OrderWithSignalWait "Order With Signal Wait":
     - step WaitForPayment:
         wait: PaymentReceived
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        step = fragment.processes[0].steps[0]
-        assert step.kind.value == "wait"
-        assert step.wait_for_signal == "PaymentReceived"
+        with pytest.raises(ParseError, match="wait: expects a duration"):
+            parse_dsl(dsl, Path("test.dsl"))
 
     def test_process_with_human_task(self):
         """Test process with HUMAN_TASK step."""
@@ -1435,29 +1434,6 @@ view OrderSummary "Order Summary":
         assert v.fields[0].name == "total_amount"
         assert v.fields[0].expression is not None
         assert v.fields[1].name == "order_count"
-
-    def test_view_with_filter(self):
-        """Test view with filter condition."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-  status: enum[draft,completed]=draft
-  amount: decimal(10,2) required
-
-view CompletedOrders "Completed Orders":
-  source: Order
-  filter: status = completed
-  fields:
-    total: sum(amount)
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        v = fragment.views[0]
-        assert v.filter_condition is not None
-        assert v.source_entity == "Order"
 
     def test_view_with_function_group_by(self):
         """Test view with function call in group_by: month(created_at)."""

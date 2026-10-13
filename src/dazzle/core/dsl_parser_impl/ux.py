@@ -342,8 +342,8 @@ class UXParserMixin:
 
         Refactored to dispatch-table style (follow-on to #1098). Body is
         a header parse → ``parse_block_with_dispatch`` → ``_build_persona_variant``
-        builder. The 10 keyword branches (scope/purpose/show/hide/
-        show_aggregate/action_primary/read_only/defaults/focus/empty)
+        builder. The 9 keyword branches (scope/purpose/show/hide/
+        action_primary/read_only/defaults/focus/empty)
         live as ``_pv_kw_*`` module-level free functions.
 
         Syntax::
@@ -353,7 +353,6 @@ class UXParserMixin:
               purpose: "..."
               show: field1, field2
               hide: field1, field2
-              show_aggregate: metric1, metric2
               action_primary: surface_name
               read_only: true|false
               empty: "..."
@@ -398,7 +397,6 @@ class _PersonaVariantState:
     purpose: str | None = None
     show: list[str] = field(default_factory=list)
     hide: list[str] = field(default_factory=list)
-    show_aggregate: list[str] = field(default_factory=list)
     action_primary: str | None = None
     read_only: bool = False
     defaults: dict[str, Any] = field(default_factory=dict)
@@ -439,13 +437,6 @@ def _pv_kw_hide(parser: Any, state: _PersonaVariantState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
     state.hide = parser.parse_field_list()
-    parser.skip_newlines()
-
-
-def _pv_kw_show_aggregate(parser: Any, state: _PersonaVariantState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.show_aggregate = parser.parse_field_list()
     parser.skip_newlines()
 
 
@@ -524,7 +515,6 @@ _PERSONA_VARIANT_KEYWORDS: dict[TokenType, KeywordParser[_PersonaVariantState]] 
     TokenType.PURPOSE: _pv_kw_purpose,
     TokenType.SHOW: _pv_kw_show,
     TokenType.HIDE: _pv_kw_hide,
-    TokenType.SHOW_AGGREGATE: _pv_kw_show_aggregate,
     TokenType.ACTION_PRIMARY: _pv_kw_action_primary,
     TokenType.READ_ONLY: _pv_kw_read_only,
     TokenType.DEFAULTS: _pv_kw_defaults,
@@ -542,7 +532,6 @@ def _build_persona_variant(persona: str, state: _PersonaVariantState) -> ir.Pers
         purpose=state.purpose,
         show=state.show,
         hide=state.hide,
-        show_aggregate=state.show_aggregate,
         action_primary=state.action_primary,
         read_only=state.read_only,
         defaults=state.defaults,

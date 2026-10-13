@@ -11,9 +11,9 @@ mapping blocks with triggers, HTTP requests, and error strategies.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from .location import SourceLocation
 
@@ -25,30 +25,17 @@ class Expression(BaseModel):
     """
     Simple expression for mappings.
 
-    Supports paths (form.vrn, entity.id), literals, and function calls.
+    Supports paths (form.vrn, entity.id) and literals.
 
     Attributes:
         path: Dotted path (e.g., "form.vrn", "entity.client_id")
         literal: Literal value (string, number, boolean)
-        func_name: Function name for transform calls (e.g., "money")
-        func_args: Arguments to the function call
     """
 
     path: str | None = None
     literal: str | int | float | bool | None = None
-    func_name: str | None = None
-    func_args: list[Expression] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
-
-    @field_validator("path", "literal")
-    @classmethod
-    def validate_one_set(
-        cls, v: str | int | float | bool | None, info: Any
-    ) -> str | int | float | bool | None:
-        """Ensure exactly one of path, literal, or func_name is set."""
-        # This is simplified; full validation would check all three fields
-        return v
 
 
 class MappingRule(BaseModel):
@@ -78,7 +65,6 @@ class IntegrationAction(BaseModel):
         call_service: Service to call
         call_operation: Operation name on service
         call_mapping: Mapping for call parameters
-        response_foreign_model: Foreign model for response
         response_entity: Entity to map response to
         response_mapping: Mapping for response fields
     """
@@ -88,7 +74,6 @@ class IntegrationAction(BaseModel):
     call_service: str
     call_operation: str
     call_mapping: list[MappingRule] = Field(default_factory=list)
-    response_foreign_model: str | None = None
     response_entity: str | None = None
     response_mapping: list[MappingRule] = Field(default_factory=list)
 
@@ -125,9 +110,6 @@ class IntegrationSync(BaseModel):
         name: Sync identifier
         mode: Sync mode (scheduled or event_driven)
         schedule: Cron expression (if scheduled)
-        from_service: Service to sync from
-        from_operation: Operation to call
-        from_foreign_model: Foreign model to use
         into_entity: Entity to sync into
         match_rules: Rules for matching foreign records to entities
     """
@@ -135,9 +117,6 @@ class IntegrationSync(BaseModel):
     name: str
     mode: SyncMode
     schedule: str | None = None  # cron expression
-    from_service: str
-    from_operation: str
-    from_foreign_model: str
     into_entity: str
     match_rules: list[MatchRule] = Field(default_factory=list)
 
@@ -267,26 +246,20 @@ class IntegrationMapping(BaseModel):
         name: Mapping identifier
         entity_ref: Entity this mapping operates on (set via ``on Entity``
             header or ``target:`` directive)
-        source_ref: External data source (API resource / foreign model path)
         triggers: List of triggers that activate this mapping
         request: HTTP request specification
         request_mapping: Fields mapped into the request body (for POST/PUT)
         response_mapping: Fields mapped from the response to the entity
-        transform: Transform rules with function-call expressions (v0.33.1)
         on_error: Error handling strategy
-        on_conflict: Field name for upsert/dedup matching (v0.33.1)
     """
 
     name: str
     entity_ref: str = ""
-    source_ref: str = ""
     triggers: list[MappingTriggerSpec] = Field(default_factory=list)
     request: HttpRequestSpec | None = None
     request_mapping: list[MappingRule] = Field(default_factory=list)
     response_mapping: list[MappingRule] = Field(default_factory=list)
-    transform: list[MappingRule] = Field(default_factory=list)
     on_error: ErrorStrategy | None = None
-    on_conflict: str = ""
     cache_ttl: int | None = None  # seconds; None = use executor default
 
     model_config = ConfigDict(frozen=True)
@@ -297,8 +270,6 @@ def _rebuild_integration_types() -> None:
     from .expressions import Expr
 
     MappingTriggerSpec.model_rebuild(_types_namespace={"Expr": Expr})
-    # Expression self-references via func_args
-    Expression.model_rebuild()
 
 
 _rebuild_integration_types()

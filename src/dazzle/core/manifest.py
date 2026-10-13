@@ -176,24 +176,6 @@ class AuthConfig:
     audit_enabled: bool = True
 
 
-@dataclass
-class TerraformConfig:
-    """Terraform infrastructure configuration."""
-
-    root_module: str = "./infra/terraform"
-    cloud_provider: str = "aws"  # "aws", "gcp", "azure"
-    environments: list[str] = field(default_factory=lambda: ["dev", "staging", "prod"])
-    region: str | None = None
-
-
-@dataclass
-class InfraConfig:
-    """Infrastructure configuration from manifest."""
-
-    backends: list[str] = field(default_factory=list)
-    terraform: TerraformConfig = field(default_factory=TerraformConfig)
-
-
 # =============================================================================
 # Theme Configuration
 # =============================================================================
@@ -600,7 +582,7 @@ class ProjectManifest:
     """
     Project manifest loaded from dazzle.toml.
 
-    Contains project metadata, module paths, and optional infrastructure,
+    Contains project metadata, module paths, and optional
     stack, shell, theme, and authentication configuration.
 
     Project Types:
@@ -615,7 +597,6 @@ class ProjectManifest:
     project_root: str
     module_paths: list[str]
     project_type: str = "example"  # example | benchmark | test | internal
-    infra: InfraConfig | None = None
     stack: StackConfig | None = None
     shell: ShellConfig = field(default_factory=ShellConfig)
     theme: ThemeConfig = field(default_factory=ThemeConfig)
@@ -792,25 +773,7 @@ def load_manifest(path: Path) -> ProjectManifest:
 
     project = data.get("project", {})
     modules = data.get("modules", {})
-    infra_data = data.get("infra", {})
     stack_data = data.get("stack", {})
-
-    # Parse infra config if present
-    infra_config = None
-    if infra_data:
-        terraform_data = infra_data.get("terraform", {})
-
-        terraform_config = TerraformConfig(
-            root_module=terraform_data.get("root_module", "./infra/terraform"),
-            cloud_provider=terraform_data.get("cloud_provider", "aws"),
-            environments=terraform_data.get("environments", ["dev", "staging", "prod"]),
-            region=terraform_data.get("region"),
-        )
-
-        infra_config = InfraConfig(
-            backends=infra_data.get("backends", []),
-            terraform=terraform_config,
-        )
 
     # Parse stack config if present
     stack_config = None
@@ -1100,7 +1063,6 @@ def load_manifest(path: Path) -> ProjectManifest:
         project_root=project.get("root", ""),
         module_paths=modules.get("paths", ["./dsl"]),
         project_type=project.get("type", "example"),
-        infra=infra_config,
         stack=stack_config,
         shell=shell_config,
         theme=theme_config,

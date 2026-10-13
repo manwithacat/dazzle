@@ -615,22 +615,6 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                     f"sentinel that the framework reads."
                 )
 
-        # v0.34.0: Validate bulk config field references
-        if entity.bulk:
-            field_names = {f.name for f in entity.fields}
-            for imp_f in entity.bulk.import_fields:
-                if imp_f not in field_names:
-                    errors.append(
-                        f"Entity '{entity.name}' bulk import_fields references "
-                        f"unknown field '{imp_f}'"
-                    )
-            for exp_f in entity.bulk.export_fields:
-                if exp_f not in field_names:
-                    errors.append(
-                        f"Entity '{entity.name}' bulk export_fields references "
-                        f"unknown field '{exp_f}'"
-                    )
-
         # v0.45.0: Entities with permit: blocks must also have scope: blocks (#595).
         # Without scope: blocks, the API list endpoint default-denies all rows.
         # Use `scope: all as: *` for intentionally public entities (`as:`

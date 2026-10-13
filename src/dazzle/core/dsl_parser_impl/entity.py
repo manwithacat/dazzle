@@ -29,7 +29,7 @@ class _EntityParseContext:
     examples: list[ir.ExampleRecord] = field(default_factory=list)
     # Semantic archetype (v0.10.3)
     archetype_kind: ir.ArchetypeKind | None = None
-    # Soft delete and bulk config (v0.34.0)
+    # Soft delete (v0.34.0)
     soft_delete: bool = False
     # #1675 reporting grain
     legal_entity: bool = False
@@ -54,7 +54,6 @@ class _EntityParseContext:
     api_expose: tuple[str, ...] | None = None
     # ADR-0039 (#778/#1398): auth↔domain bridge binding (None = no bridge, default)
     auth_identity: ir.AuthIdentitySpec | None = None
-    bulk_config: ir.BulkConfig | None = None
     # Seed template (v0.38.0)
     seed_template: ir.SeedTemplateSpec | None = None
     # Display field (v0.44.0)
@@ -634,12 +633,6 @@ class EntityParserMixin:
         self.advance()
         self.expect(TokenType.COLON)
         return self._parse_audit_directive()
-
-    def _parse_entity_bulk(self) -> ir.BulkConfig:
-        """Parse ``bulk:`` block."""
-        self.advance()
-        self.expect(TokenType.COLON)
-        return self._parse_bulk_config()
 
     _TEMPORAL_VALID_KEYS: tuple[str, ...] = (
         "start_field",
@@ -1334,7 +1327,6 @@ class EntityParserMixin:
             signing_template=ctx.signing_template,
             subtype_of=ctx.subtype_of,
             temporal=ctx.temporal,
-            bulk=ctx.bulk_config,
             state_machine=state_machine,
             lifecycle=ctx.lifecycle,
             fitness=ctx.fitness_spec,
@@ -1880,92 +1872,6 @@ class EntityParserMixin:
                 tok.line,
                 tok.column,
             )
-
-    def _parse_bulk_config(self) -> ir.BulkConfig:
-        """
-        Parse bulk: block.
-
-        Syntax:
-            bulk: all                          # import + export, csv
-            bulk: import                       # import only
-            bulk: export                       # export only
-            bulk:
-              import: true
-              export: true
-              formats: [csv, json, xlsx]
-        """
-        # Simple forms: bulk: all / bulk: import / bulk: export
-        if self.match(TokenType.ALL):
-            self.advance()
-            return ir.BulkConfig(import_enabled=True, export_enabled=True)
-
-        if self.match(TokenType.IMPORT):
-            self.advance()
-            return ir.BulkConfig(import_enabled=True, export_enabled=False)
-
-        if self.match(TokenType.EXPORT):
-            self.advance()
-            return ir.BulkConfig(import_enabled=False, export_enabled=True)
-
-        if self.match(TokenType.TRUE):
-            self.advance()
-            return ir.BulkConfig(import_enabled=True, export_enabled=True)
-
-        # Block form
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
-
-        import_enabled = True
-        export_enabled = True
-        formats: list[ir.BulkFormat] = [ir.BulkFormat.CSV]
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            key = self.expect_identifier_or_keyword().value
-            self.expect(TokenType.COLON)
-
-            if key == "import":
-                if self.match(TokenType.TRUE):
-                    self.advance()
-                    import_enabled = True
-                elif self.match(TokenType.FALSE):
-                    self.advance()
-                    import_enabled = False
-                else:
-                    import_enabled = True
-
-            elif key == "export":
-                if self.match(TokenType.TRUE):
-                    self.advance()
-                    export_enabled = True
-                elif self.match(TokenType.FALSE):
-                    self.advance()
-                    export_enabled = False
-                else:
-                    export_enabled = True
-
-            elif key == "formats":
-                formats = []
-                self.expect(TokenType.LBRACKET)
-                while not self.match(TokenType.RBRACKET):
-                    fmt_token = self.expect_identifier_or_keyword()
-                    formats.append(self.enum_from_token(ir.BulkFormat, fmt_token))
-                    if self.match(TokenType.COMMA):
-                        self.advance()
-                self.expect(TokenType.RBRACKET)
-
-            self.skip_newlines()
-
-        self.expect(TokenType.DEDENT)
-
-        return ir.BulkConfig(
-            import_enabled=import_enabled,
-            export_enabled=export_enabled,
-            formats=formats,
-        )
 
     def _parse_seed_template(self) -> ir.SeedTemplateSpec:
         """
@@ -3069,10 +2975,6 @@ def _kw_was(p: Any, s: _EntityParseContext) -> None:
     s.renamed_from = p._parse_was_hint()
 
 
-def _kw_bulk(p: Any, s: _EntityParseContext) -> None:
-    s.bulk_config = p._parse_entity_bulk()
-
-
 def _kw_graph_edge(p: Any, s: _EntityParseContext) -> None:
     s.graph_edge = p._parse_entity_graph_edge()
 
@@ -3150,7 +3052,6 @@ _ENTITY_KEYWORDS: dict[TokenType, KeywordParser[_EntityParseContext]] = {
     TokenType.TEMPORAL: _kw_temporal,
     TokenType.SUBTYPE_OF: _kw_subtype_of,
     TokenType.WAS: _kw_was,
-    TokenType.BULK: _kw_bulk,
     TokenType.GRAPH_EDGE: _kw_graph_edge,
     TokenType.GRAPH_NODE: _kw_graph_node,
     TokenType.TRANSITIONS: _kw_transitions,

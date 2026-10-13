@@ -18,7 +18,6 @@
           'archetype_kind': None,
           'audit': None,
           'auth_identity': None,
-          'bulk': None,
           'computed_fields': list([
           ]),
           'constraints': list([
@@ -248,7 +247,6 @@
           'archetype_kind': None,
           'audit': None,
           'auth_identity': None,
-          'bulk': None,
           'computed_fields': list([
           ]),
           'constraints': list([
@@ -506,7 +504,6 @@
           'archetype_kind': None,
           'audit': None,
           'auth_identity': None,
-          'bulk': None,
           'computed_fields': list([
           ]),
           'constraints': list([
@@ -786,7 +783,6 @@
           'archetype_kind': None,
           'audit': None,
           'auth_identity': None,
-          'bulk': None,
           'computed_fields': list([
           ]),
           'constraints': list([
@@ -1135,17 +1131,12 @@
       'enable_hsts': False,
       'profile': <SecurityProfile.BASIC: 'basic'>,
       'require_auth_by_default': False,
-      'tenant_isolation': False,
       'two_factor': dict({
         'enabled': False,
-        'enforce_for_roles': list([
-        ]),
         'methods': list([
           <TwoFactorMethod.EMAIL_OTP: 'email_otp'>,
           <TwoFactorMethod.TOTP: 'totp'>,
         ]),
-        'otp_expiry_seconds': 300,
-        'otp_length': 6,
         'recovery_code_count': 8,
       }),
     }),

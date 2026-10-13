@@ -5,11 +5,13 @@ Exposes ``GET /_dazzle/fts/{entity}?q=...`` backed by the cycle-2
 :meth:`Repository.fts_search` so all the indexed-FTS work happens
 in one place.
 
-Scope-aware filtering: when the entity carries `scope:` rules with
-field conditions, the predicate compiler (used by the regular list
-endpoint) produces a ``(sql, params)`` tuple that's ANDed into the
-FTS WHERE clause. This keeps RBAC correct on the search endpoint
-without re-implementing the scope path.
+Access: the route applies exactly the LIST enforcement the entity's list
+endpoint applies for the same caller — the Cedar LIST permit gate and the
+`scope: list:` rules, via :func:`access.gated.list_scope_filters` (the
+same ``_resolve_scope_filters`` call ``gated_list`` makes). The resulting
+filters are ANDed into the FTS WHERE clause, so search never returns a row
+the list would hide. (Before ship P the route looked the access spec up on
+a non-existent ``AppSpec`` attribute and applied no scope at all.)
 
 Cycle 3 scope:
   * Single-entity search via the route param.
@@ -27,11 +29,15 @@ Out of scope here (cycle 4+):
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from dazzle.core import ir
-from dazzle.core.access import AccessOperationKind
+from dazzle.http.runtime.access.gated import (
+    AccessForbidden,
+    access_context_from,
+    list_scope_filters,
+)
 from dazzle.http.runtime.http_errors import require_found
 from dazzle.render.breadcrumbs import (
     clerk_empty_search_title,
@@ -50,6 +56,7 @@ def create_fts_routes(
     repositories: dict[str, Any],
     fk_graph: Any,
     auth_dep: Any,
+    cedar_access_specs: dict[str, Any] | None = None,
     admin_personas: list[str] | None = None,
 ) -> APIRouter | None:
     """Build the FTS router. Returns ``None`` when the AppSpec has no
@@ -61,6 +68,8 @@ def create_fts_routes(
         repositories: ``{entity_name: Repository}`` from the runtime.
         fk_graph: For predicate compilation (FK traversal).
         auth_dep: FastAPI dependency that resolves the current user.
+        cedar_access_specs: ``{entity_name: EntityAccessSpec}`` — the same
+            map the list routes are generated from.
         admin_personas: Tenant-admin persona allow-list — bypass scope
             for these (mirrors the list endpoint's behaviour).
     """
@@ -88,29 +97,36 @@ def create_fts_routes(
         spec = require_found(spec_by_entity.get(entity), f"No search spec for entity {entity!r}")
         repo = require_found(repositories.get(entity), f"No repository for entity {entity!r}")
 
-        # Compile scope predicate per request — same path the list
-        # endpoint takes. Skipped when the entity has no scope rules
-        # or the user is a tenant admin.
-        scope_pred: tuple[str, list[Any]] | None = None
-        cedar_spec = _find_cedar_spec(appspec, entity)
-        user_id = _resolve_user_id(auth_context)
-        if cedar_spec is not None and user_id is not None:
-            scope_pred = _compile_scope(
-                cedar_spec=cedar_spec,
-                entity_name=entity,
-                fk_graph=fk_graph,
-                user_id=user_id,
-                auth_context=auth_context,
-                admin_personas=admin_personas,
-            )
-
-        result = await repo.fts_search(
-            spec,
-            q,
-            page=page,
-            page_size=page_size,
-            scope_predicate=scope_pred,
+        # Same LIST enforcement as the entity's list endpoint: permit gate,
+        # then `scope: list:` rules for this caller's roles.
+        access = access_context_from(
+            auth_context=auth_context,
+            entity_name=entity,
+            cedar_access_spec=(cedar_access_specs or {}).get(entity),
+            fk_graph=fk_graph,
+            admin_personas=admin_personas,
         )
+        try:
+            scope_filters = list_scope_filters(access)
+        except AccessForbidden:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        if scope_filters is None:
+            # Default-deny: no scope rule matched this caller — nothing visible.
+            result: dict[str, Any] = {
+                "items": [],
+                "total": 0,
+                "page": page,
+                "page_size": page_size,
+            }
+        else:
+            result = await repo.fts_search(
+                spec,
+                q,
+                page=page,
+                page_size=page_size,
+                filters=scope_filters,
+            )
         if html:
             return _render_results_html(
                 entity,
@@ -245,78 +261,6 @@ def _render_results_html(
 
     body = f'{count_html}<ul class="dz-search-box-result-list" role="list">{"".join(rows)}</ul>'
     return HTMLResponse(body)  # nosemgrep: direct-use-of-jinja2
-
-
-def _find_cedar_spec(appspec: Any, entity_name: str) -> Any | None:
-    """Look up the cedar/access spec for an entity. Returns None when
-    no scope rules are declared (open access)."""
-    for spec in getattr(appspec, "cedar_access_specs", None) or {}:
-        if spec == entity_name:
-            return appspec.cedar_access_specs[spec]
-    return None
-
-
-def _resolve_user_id(auth_context: Any) -> str | None:
-    """Pull the entity-id of the current user, or None when unauth."""
-    if auth_context is None:
-        return None
-    user = getattr(auth_context, "user", None)
-    if user is None:
-        return None
-    return getattr(user, "id", None) or getattr(user, "entity_id", None)
-
-
-def _compile_scope(
-    *,
-    cedar_spec: Any,
-    entity_name: str,
-    fk_graph: Any,
-    user_id: str,
-    auth_context: Any,
-    admin_personas: list[str] | None,
-) -> tuple[str, list[Any]] | None:
-    """Wrap the route_generator helper to produce a scope predicate
-    suitable for ``Repository.fts_search``.
-
-    Returns ``None`` when no scope filter applies (admin bypass, or
-    no field-level scope rules). Returns the ``(sql, params)`` tuple
-    otherwise.
-    """
-    try:
-        from dazzle.http.runtime.scope_filters import _resolve_predicate_filters
-    except ImportError:
-        logger.debug("route_generator scope compiler unavailable", exc_info=True)
-        return None
-
-    # Find a list-permission scope predicate on the cedar spec.
-    # Cedar specs carry per-operation predicates compiled by the
-    # linker; LIST is the right one for search (returning matching rows).
-
-    list_rules = [
-        r
-        for r in getattr(cedar_spec, "permissions", []) or []
-        if getattr(r, "operation", None) == AccessOperationKind.LIST
-    ]
-    predicates = [p for p in (getattr(r, "predicate", None) for r in list_rules) if p is not None]
-    if not predicates:
-        return None
-
-    # Cycle 3 simplification: when multiple LIST rules carry predicates,
-    # use the first. Multi-predicate OR composition is what the list
-    # endpoint does; the FTS endpoint will follow once the same
-    # composition helper lands as a public API.
-    filters = _resolve_predicate_filters(
-        predicate=predicates[0],
-        entity_name=entity_name,
-        fk_graph=fk_graph,
-        user_id=user_id,
-        auth_context=auth_context,
-        admin_personas=admin_personas,
-    )
-    if not filters or "__scope_predicate" not in filters:
-        return None
-    sql, params = filters["__scope_predicate"]
-    return (str(sql), list(params))
 
 
 __all__ = ["create_fts_routes"]

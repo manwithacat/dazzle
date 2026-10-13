@@ -17,9 +17,9 @@ never zero. The non-DSL scanners are text matches: they over-count rather than m
 
 | Measure | Value |
 |---|---:|
-| Framework source lines (`src/dazzle`) | 355,016 |
-| Test lines (`tests/`) | 357,479 |
-| Documentation lines (`docs/**/*.md`) | 47,283 |
+| Framework source lines (`src/dazzle`) | 354,074 |
+| Test lines (`tests/`) | 356,711 |
+| Documentation lines (`docs/**/*.md`) | 47,203 |
 | Top-level DSL constructs | 31 |
 | Constructs with zero consumer use | 1 |
 
@@ -78,9 +78,9 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | Subpackage | Source lines | Test lines (name-matched) |
 |---|---:|---:|
 | `http` | 101,012 | 649 |
-| `core` | 76,488 | 2,097 |
+| `core` | 75,550 | 2,097 |
 | `render` | 29,168 | 5,984 |
-| `mcp` | 28,039 | 5,499 |
+| `mcp` | 28,035 | 5,499 |
 | `testing` | 26,019 | 68 |
 | `cli` | 25,298 | 8,544 |
 | `page` | 13,186 | 2,501 |
@@ -95,7 +95,7 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `conformance` | 1,650 | 4,107 |
 | `services` | 1,632 | 98 |
 | `agent_loop` | 1,541 | 154 |
-| `llm` | 1,528 | 2,615 |
+| `llm` | 1,528 | 2,537 |
 | `perf` | 1,217 | 2,203 |
 | `e2e` | 1,095 | 1,990 |
 | `i18n` | 1,086 | 851 |
@@ -345,7 +345,7 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 
 | Directory | Markdown lines |
 |---|---:|
-| `docs/reference/` | 17,401 |
+| `docs/reference/` | 17,321 |
 | `docs/adr/` | 5,978 |
 | `docs/proposals/` | 4,679 |
 | `docs/plans/` | 4,047 |

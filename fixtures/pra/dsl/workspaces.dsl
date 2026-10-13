@@ -443,7 +443,6 @@ workspace enhanced_dashboard "Enhanced Dashboard":
       scope: all
       purpose: "View all team tasks"
       show: title, status, priority, assignee
-      show_aggregate: urgent_count, blocked_count
 
 # =============================================================================
 # COMPLEX COMBINED WORKSPACE
@@ -506,7 +505,6 @@ workspace operations_center "Operations Center":
       scope: all
       purpose: "Full operational visibility"
       show: alerts, task_board, revenue_metrics, activity, order_funnel
-      show_aggregate: alert_count, task_count, revenue_total
       focus: alerts, revenue_metrics
 
     as support:
@@ -520,7 +518,6 @@ workspace operations_center "Operations Center":
     as admin:
       scope: all
       purpose: "System administration view"
-      show_aggregate: alert_count, user_count, system_health
 
 # Placeholder surfaces for workspace actions
 surface employee_edit "Edit Employee":

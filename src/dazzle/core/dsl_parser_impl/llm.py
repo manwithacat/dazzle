@@ -6,7 +6,6 @@ Part of Issue #33: LLM Jobs as First-Class Events.
 """
 
 from dataclasses import dataclass, field
-from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
@@ -34,10 +33,10 @@ class LLMParserMixin:
     def parse_llm_model(self) -> ir.LLMModelSpec:
         """Parse a ``llm_model <name> "Title"?:`` declaration.
 
-        Refactored to dispatch-table style (follow-on to #1098). 6
-        token-keyed `_lm_kw_*` parsers (provider/model_id/tier/max_tokens/
-        cost_per_1k_input/cost_per_1k_output) + a `_build_llm_model`
-        builder enforcing the required `provider` + `model_id` fields.
+        Refactored to dispatch-table style (follow-on to #1098). 4
+        token-keyed `_lm_kw_*` parsers (provider/model_id/tier/max_tokens)
+        + a `_build_llm_model` builder enforcing the required `provider`
+        + `model_id` fields.
 
         Syntax::
 
@@ -46,8 +45,6 @@ class LLMParserMixin:
               model_id: claude-sonnet-4-6
               tier: balanced
               max_tokens: 4096
-              cost_per_1k_input: 0.003
-              cost_per_1k_output: 0.015
         """
         self.expect(TokenType.LLM_MODEL)
         name = self.expect_identifier_or_keyword().value
@@ -91,7 +88,7 @@ class LLMParserMixin:
     def parse_llm_config(self) -> ir.LLMConfigSpec:
         """Parse a top-level ``llm_config:`` block.
 
-        Refactored to dispatch-table style (follow-on to #1098). 6
+        Refactored to dispatch-table style (follow-on to #1098). 4
         token-keyed `_lc_kw_*` + 1 IDENT-text-matched (`concurrency`)
         + a `_build_llm_config` builder.
 
@@ -201,7 +198,7 @@ class LLMParserMixin:
     def parse_llm_intent(self) -> ir.LLMIntentSpec:
         """Parse a ``llm_intent <name> "Title":`` declaration.
 
-        Refactored to dispatch-table style (follow-on to #1098). 9
+        Refactored to dispatch-table style (follow-on to #1098). 8
         token-keyed `_li_kw_*` parsers + 1 IDENT-text-matched (`model`
         — IDENT-keyed because ``model`` is also a top-level
         ``llm_model`` constructor) + a `_build_llm_intent` builder.
@@ -562,7 +559,7 @@ class LLMParserMixin:
 # ============================================================ #
 #
 # The 140-line monolith was replaced (v0.70.23) with the dispatch
-# pattern shipped in #1097. 9 token-keyed `_li_kw_*` parsers + 1
+# pattern shipped in #1097. 8 token-keyed `_li_kw_*` parsers + 1
 # IDENT-text-matched (`model`) + a `_build_llm_intent` builder.
 
 
@@ -575,7 +572,6 @@ class _LLMIntentState:
     description: str | None = None
     output_schema: str | None = None
     timeout_seconds: int = 30
-    vision: bool = False
     retry: ir.RetryPolicySpec | None = None
     pii: ir.PIIPolicySpec | None = None
     triggers: list[ir.LLMTriggerSpec] = field(default_factory=list)
@@ -624,13 +620,6 @@ def _li_kw_max_tokens(parser: Any, state: _LLMIntentState) -> None:
     parser.skip_newlines()
 
 
-def _li_kw_vision(parser: Any, state: _LLMIntentState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.vision = parser._parse_boolean()
-    parser.skip_newlines()
-
-
 def _li_kw_retry(parser: Any, state: _LLMIntentState) -> None:
     """``retry:`` — nested policy block (max_attempts/backoff/delays)."""
     parser.advance()
@@ -675,7 +664,6 @@ _LLM_INTENT_KEYWORDS: dict[TokenType, KeywordParser[_LLMIntentState]] = {
     TokenType.OUTPUT_SCHEMA: _li_kw_output_schema,
     TokenType.TIMEOUT: _li_kw_timeout,
     TokenType.MAX_TOKENS: _li_kw_max_tokens,
-    TokenType.VISION: _li_kw_vision,
     TokenType.RETRY: _li_kw_retry,
     TokenType.PII: _li_kw_pii,
     TokenType.TRIGGER: _li_kw_trigger,
@@ -702,7 +690,6 @@ def _build_llm_intent(name: str, title: str | None, state: _LLMIntentState) -> i
         prompt_template=state.prompt_template,
         output_schema=state.output_schema,
         timeout_seconds=state.timeout_seconds,
-        vision=state.vision,
         retry=state.retry,
         pii=state.pii,
         triggers=state.triggers,
@@ -714,7 +701,7 @@ def _build_llm_intent(name: str, title: str | None, state: _LLMIntentState) -> i
 # ============================================================ #
 #
 # The 133-line monolith was replaced (v0.70.25) with the dispatch
-# pattern shipped in #1097. 6 token-keyed `_lm_kw_*` parsers + a
+# pattern shipped in #1097. 4 token-keyed `_lm_kw_*` parsers + a
 # `_build_llm_model` builder enforcing the required `provider` and
 # `model_id` fields.
 
@@ -727,8 +714,6 @@ class _LLMModelState:
     model_id: str | None = None
     tier: ir.ModelTier = ir.ModelTier.BALANCED
     max_tokens: int = 4096
-    cost_per_1k_input: Decimal | None = None
-    cost_per_1k_output: Decimal | None = None
     base_url: str | None = None
     project: str | None = None
     location: str | None = None
@@ -793,20 +778,6 @@ def _lm_kw_max_tokens(parser: Any, state: _LLMModelState) -> None:
     parser.skip_newlines()
 
 
-def _lm_kw_cost_per_1k_input(parser: Any, state: _LLMModelState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.cost_per_1k_input = Decimal(parser.expect(TokenType.NUMBER).value)
-    parser.skip_newlines()
-
-
-def _lm_kw_cost_per_1k_output(parser: Any, state: _LLMModelState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.cost_per_1k_output = Decimal(parser.expect(TokenType.NUMBER).value)
-    parser.skip_newlines()
-
-
 def _lm_ident_string_field(parser: Any, *, allow_hyphenated: bool = False) -> str:
     """``field: "value"`` or bare identifier — return the string value.
 
@@ -854,8 +825,6 @@ _LLM_MODEL_KEYWORDS: dict[TokenType, KeywordParser[_LLMModelState]] = {
     TokenType.MODEL_ID: _lm_kw_model_id,
     TokenType.TIER: _lm_kw_tier,
     TokenType.MAX_TOKENS: _lm_kw_max_tokens,
-    TokenType.COST_PER_1K_INPUT: _lm_kw_cost_per_1k_input,
-    TokenType.COST_PER_1K_OUTPUT: _lm_kw_cost_per_1k_output,
 }
 
 
@@ -902,8 +871,6 @@ def _build_llm_model(
         model_id=state.model_id,
         tier=state.tier,
         max_tokens=state.max_tokens,
-        cost_per_1k_input=state.cost_per_1k_input,
-        cost_per_1k_output=state.cost_per_1k_output,
         base_url=state.base_url,
         project=state.project,
         location=state.location,
@@ -916,7 +883,7 @@ def _build_llm_model(
 # ============================================================ #
 #
 # The 122-line monolith was replaced (v0.70.26) with the dispatch
-# pattern shipped in #1097. 6 token-keyed `_lc_kw_*` + 1 IDENT-keyed
+# pattern shipped in #1097. 4 token-keyed `_lc_kw_*` + 1 IDENT-keyed
 # (`concurrency`) + a `_build_llm_config` builder.
 
 
@@ -925,8 +892,6 @@ class _LLMConfigState:
     """Accumulator for :meth:`LLMParserMixin.parse_llm_config`."""
 
     default_model: str | None = None
-    default_provider: ir.LLMProvider | None = None
-    budget_alert_usd: Decimal | None = None
     artifact_store: ir.ArtifactStore = ir.ArtifactStore.LOCAL
     logging: ir.LoggingPolicySpec = field(default_factory=ir.LoggingPolicySpec)
     rate_limits: dict[str, int] | None = None
@@ -940,31 +905,6 @@ def _lc_kw_default_model(parser: Any, state: _LLMConfigState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
     state.default_model = parser.expect_identifier_or_keyword().value
-    parser.skip_newlines()
-
-
-def _lc_kw_default_provider(parser: Any, state: _LLMConfigState) -> None:
-    """``default_provider: anthropic | openai | google | local`` — validated."""
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    provider_str = parser.expect_identifier_or_keyword().value
-    try:
-        state.default_provider = ir.LLMProvider(provider_str)
-    except ValueError:
-        token = parser.current_token()
-        raise make_parse_error(
-            f"Invalid LLM provider: {provider_str}. Must be: anthropic, openai, google, or local",
-            parser.file,
-            token.line,
-            token.column,
-        )
-    parser.skip_newlines()
-
-
-def _lc_kw_budget_alert_usd(parser: Any, state: _LLMConfigState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.budget_alert_usd = Decimal(parser.expect(TokenType.NUMBER).value)
     parser.skip_newlines()
 
 
@@ -1018,8 +958,6 @@ def _lc_kw_concurrency(parser: Any, state: _LLMConfigState) -> None:
 
 _LLM_CONFIG_KEYWORDS: dict[TokenType, KeywordParser[_LLMConfigState]] = {
     TokenType.DEFAULT_MODEL: _lc_kw_default_model,
-    TokenType.DEFAULT_PROVIDER: _lc_kw_default_provider,
-    TokenType.BUDGET_ALERT_USD: _lc_kw_budget_alert_usd,
     TokenType.ARTIFACT_STORE: _lc_kw_artifact_store,
     TokenType.LOGGING: _lc_kw_logging,
     TokenType.RATE_LIMITS: _lc_kw_rate_limits,
@@ -1040,8 +978,6 @@ def _on_unknown_llm_config(parser: Any) -> None:
 def _build_llm_config(state: _LLMConfigState) -> ir.LLMConfigSpec:
     return ir.LLMConfigSpec(
         default_model=state.default_model,
-        default_provider=state.default_provider,
-        budget_alert_usd=state.budget_alert_usd,
         artifact_store=state.artifact_store,
         logging=state.logging,
         rate_limits=state.rate_limits,

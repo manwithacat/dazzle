@@ -19,7 +19,6 @@ as <persona_name>:
   purpose: "<persona-specific purpose>"
   [show: <field1>, <field2>, ...]
   [hide: <field1>, <field2>, ...]
-  [show_aggregate: <metric1>, <metric2>, ...]
   [action_primary: <surface_name>]
   [read_only: true|false]
 ```
@@ -30,7 +29,6 @@ as <persona_name>:
 as admin:
   scope: all
   purpose: "Full user management"
-  show_aggregate: total_users, active_count
   action_primary: user_create
 
 as manager:
@@ -300,7 +298,6 @@ ux:
     [purpose: "<persona purpose>"]
     [show: <fields>]
     [hide: <fields>]
-    [show_aggregate: <metrics>]
     [action_primary: <surface>]
     [read_only: true|false]
 ```

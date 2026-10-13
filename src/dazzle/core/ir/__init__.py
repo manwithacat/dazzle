@@ -95,8 +95,6 @@ from .domain import (
     AuditConfig,
     AuthContext,
     AuthIdentitySpec,
-    BulkConfig,
-    BulkFormat,
     Constraint,
     ConstraintKind,
     DomainSpec,
@@ -219,7 +217,6 @@ from .governance import (
     TenancyMode,
     TenancySpec,
     TenantIsolationSpec,
-    TenantProvisioningSpec,
     TopicNamespaceMode,
 )
 
@@ -272,8 +269,6 @@ from .invariant import (
 
 # Islands (UI Islands)
 from .islands import (
-    IslandEventSpec,
-    IslandPropSpec,
     IslandSpec,
 )
 
@@ -290,8 +285,6 @@ from .lifecycle import (
 # LLM - Large Language Model (v0.21.0 - Issue #33)
 from .llm import (
     AI_JOB_FIELDS,
-    ArtifactKind,
-    ArtifactRefSpec,
     ArtifactStore,
     LLMConfigSpec,
     LLMIntentSpec,
@@ -383,8 +376,6 @@ from .process import (
     HumanTaskSpec,
     InputMapping,
     OverlapPolicy,
-    ParallelFailurePolicy,
-    ProcessEventEmission,
     ProcessInputField,
     ProcessOutputField,
     ProcessSpec,
@@ -608,7 +599,6 @@ from .ux import (
 
 # Views (v0.25.0, v0.34.0 date-range reporting)
 from .views import (
-    TimeBucket,
     ViewFieldSpec,
     ViewSpec,
 )
@@ -701,8 +691,6 @@ __all__ = [
     "ViaBinding",
     "ViaCondition",
     # Domain
-    "BulkConfig",
-    "BulkFormat",
     "ConstraintKind",
     "Constraint",
     "ManagedBy",
@@ -921,8 +909,6 @@ __all__ = [
     "HumanTaskSpec",
     "InputMapping",
     "OverlapPolicy",
-    "ParallelFailurePolicy",
-    "ProcessEventEmission",
     "ProcessInputField",
     "ProcessOutputField",
     "ProcessRetryBackoff",
@@ -982,8 +968,6 @@ __all__ = [
     "to_money",
     # LLM - Large Language Model (v0.21.0 - Issue #33)
     "AI_JOB_FIELDS",
-    "ArtifactKind",
-    "ArtifactRefSpec",
     "ArtifactStore",
     "LLMConfigSpec",
     "LLMIntentSpec",
@@ -1007,7 +991,6 @@ __all__ = [
     "TenancyMode",
     "TenancySpec",
     "TenantIsolationSpec",
-    "TenantProvisioningSpec",
     "TopicNamespaceMode",
     # ThemeSpec YAML (v0.25.0 Declarative Theme)
     "AttentionMapSpec",
@@ -1043,7 +1026,6 @@ __all__ = [
     "HintDismiss",
     "HintSpec",
     # Views (v0.25.0, v0.34.0 date-range)
-    "TimeBucket",
     "ViewFieldSpec",
     "ViewSpec",
     # Runtime Parameters (v0.44.0)
@@ -1079,8 +1061,6 @@ __all__ = [
     "SLASpec",
     "SLATierSpec",
     # Islands (UI Islands)
-    "IslandEventSpec",
-    "IslandPropSpec",
     "IslandSpec",
     # SiteSpec (v0.16.0 Public Site Shell)
     "AuthEntrySpec",

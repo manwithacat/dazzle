@@ -709,7 +709,6 @@
           'prompt_template': 'Summarize the following text: {{ input.text }}',
           'timeout_seconds': 30,
           'title': 'Summarize Text',
-          'vision': False,
         }),
         dict({
           'model_ref': 'gpt4o',
@@ -717,7 +716,6 @@
           'prompt_template': 'Extract named entities (people, places, organizations) from: {{ input.text }}',
           'timeout_seconds': 60,
           'title': 'Extract Named Entities',
-          'vision': False,
         }),
         dict({
           'model_ref': 'claude_sonnet',
@@ -736,7 +734,6 @@
           }),
           'timeout_seconds': 45,
           'title': 'Classify Support Ticket',
-          'vision': False,
         }),
       ]),
       'llm_models': list([

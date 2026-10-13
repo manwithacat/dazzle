@@ -2088,8 +2088,8 @@ class DazzleBackendApp:
         self._mount_document_routes(
             cedar_access_specs, _fk_graph, optional_auth_dep, _admin_personas
         )
-        self._mount_search_routes()
-        self._mount_fts_routes(auth_dep)
+        self._mount_search_routes(cedar_access_specs, _fk_graph, optional_auth_dep, _admin_personas)
+        self._mount_fts_routes(auth_dep, cedar_access_specs, _fk_graph, _admin_personas)
         self._mount_signing_routes()
         self._mount_bulk_routes(cedar_access_specs, _fk_graph, optional_auth_dep, _admin_personas)
         self._mount_parent_graph_routes(node_graph_specs)
@@ -2247,27 +2247,37 @@ class DazzleBackendApp:
                 require_auth_by_default=_files_auth_posture,
             )
 
-    def _mount_search_routes(self) -> None:
+    def _mount_search_routes(
+        self, cedar_access_specs: Any, _fk_graph: Any, optional_auth_dep: Any, _admin_personas: Any
+    ) -> None:
         assert self._app is not None
         # Cross-entity search endpoint (#782) — registered only when any
         # entity has declared search fields (surface search_fields: or
-        # entity `searchable` modifiers).
+        # entity `searchable` modifiers). Applies each entity's LIST
+        # permit + scope like the list routes (ship P).
         if self._entity_search_fields and self._repositories:
             from dazzle.http.runtime.search_routes import create_search_routes
 
             search_router = create_search_routes(
                 repositories=self._repositories,
                 entity_search_fields=self._entity_search_fields,
+                cedar_access_specs=cedar_access_specs,
+                fk_graph=_fk_graph,
+                optional_auth_dep=optional_auth_dep,
+                admin_personas=_admin_personas,
             )
             if search_router is not None:
                 self._app.include_router(search_router)
 
-    def _mount_fts_routes(self, auth_dep: Any) -> None:
+    def _mount_fts_routes(
+        self, auth_dep: Any, cedar_access_specs: Any, _fk_graph: Any, _admin_personas: Any
+    ) -> None:
         assert self._app is not None
         # #954 cycle 3 — tsvector-backed search endpoint(s). Registered
         # only when the AppSpec declares `search on <Entity>:` blocks.
-        # The endpoint queries the cycle-2 search_vector column with
-        # scope-aware filtering — RBAC-correct on day one.
+        # The endpoint queries the cycle-2 search_vector column with the
+        # entity's LIST permit + scope applied (ship P: these used to be read
+        # off non-existent attributes, so no scope was applied).
         if getattr(self._appspec, "searches", None) and self._repositories:
             try:
                 from dazzle.http.runtime.fts_routes import create_fts_routes
@@ -2275,9 +2285,10 @@ class DazzleBackendApp:
                 fts_router = create_fts_routes(
                     appspec=self._appspec,
                     repositories=self._repositories,
-                    fk_graph=getattr(self, "_fk_graph", None),
+                    fk_graph=_fk_graph,
                     auth_dep=auth_dep,
-                    admin_personas=getattr(self, "_admin_personas", None),
+                    cedar_access_specs=cedar_access_specs,
+                    admin_personas=_admin_personas,
                 )
                 if fts_router is not None:
                     self._app.include_router(fts_router)

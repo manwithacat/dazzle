@@ -4,14 +4,10 @@ Unit tests for LLM IR types.
 Tests the IR types defined in src/dazzle/core/ir/llm.py for Issue #33.
 """
 
-from decimal import Decimal
-
 import pytest
 from pydantic import ValidationError
 
 from dazzle.core.ir import (
-    ArtifactKind,
-    ArtifactRefSpec,
     ArtifactStore,
     LLMConfigSpec,
     LLMIntentSpec,
@@ -145,8 +141,6 @@ class TestLLMModelSpec:
         assert model.model_id == "claude-3-5-sonnet-20241022"
         assert model.tier == ModelTier.BALANCED
         assert model.max_tokens == 4096
-        assert model.cost_per_1k_input is None
-        assert model.cost_per_1k_output is None
 
     def test_full_model(self):
         """Test full model definition with all fields."""
@@ -157,8 +151,6 @@ class TestLLMModelSpec:
             model_id="gpt-4o",
             tier=ModelTier.QUALITY,
             max_tokens=8192,
-            cost_per_1k_input=Decimal("0.005"),
-            cost_per_1k_output=Decimal("0.015"),
         )
 
         assert model.name == "gpt4o"
@@ -166,8 +158,6 @@ class TestLLMModelSpec:
         assert model.provider == LLMProvider.OPENAI
         assert model.tier == ModelTier.QUALITY
         assert model.max_tokens == 8192
-        assert model.cost_per_1k_input == Decimal("0.005")
-        assert model.cost_per_1k_output == Decimal("0.015")
 
     def test_all_providers(self):
         """Test all provider enum values work."""
@@ -239,8 +229,6 @@ class TestLLMConfigSpec:
         config = LLMConfigSpec()
 
         assert config.default_model is None
-        assert config.default_provider is None
-        assert config.budget_alert_usd is None
         assert config.artifact_store == ArtifactStore.LOCAL
         assert config.logging is not None
         assert config.logging.log_prompts is True
@@ -259,17 +247,6 @@ class TestLLMConfigSpec:
         assert config.artifact_store == ArtifactStore.S3
         assert config.logging.log_prompts is False
         assert config.rate_limits == {"claude_sonnet": 60, "gpt4o": 30}
-
-    def test_budget_alert_default_provider_and_negative_rejection(self):
-        """Positive budget accepted, negative rejected, default_provider field round-trips."""
-        config = LLMConfigSpec(budget_alert_usd=Decimal("50.00"))
-        assert config.budget_alert_usd == Decimal("50.00")
-
-        with pytest.raises(ValidationError):
-            LLMConfigSpec(budget_alert_usd=Decimal("-1"))
-
-        config2 = LLMConfigSpec(default_provider=LLMProvider.ANTHROPIC)
-        assert config2.default_provider == LLMProvider.ANTHROPIC
 
 
 # =============================================================================
@@ -294,7 +271,6 @@ class TestLLMIntentSpec:
         assert intent.prompt_template == "Summarize: {{ input.text }}"
         assert intent.output_schema is None
         assert intent.timeout_seconds == 30
-        assert intent.vision is False
         assert intent.retry is None
         assert intent.pii is None
 
@@ -304,13 +280,11 @@ class TestLLMIntentSpec:
             name="classify_document",
             description="Classify uploaded document type",
             model_ref="claude_haiku",
-            vision=True,
         )
 
         assert intent.name == "classify_document"
         assert intent.prompt_template == ""
         assert intent.description == "Classify uploaded document type"
-        assert intent.vision is True
 
     def test_full_intent(self):
         """Test full intent definition."""
@@ -322,7 +296,6 @@ class TestLLMIntentSpec:
             prompt_template="Extract entities from: {{ input.text }}",
             output_schema="EntityList",
             timeout_seconds=60,
-            vision=False,
             retry=RetryPolicySpec(max_attempts=5),
             pii=PIIPolicySpec(scan=True, action=PIIAction.REDACT),
         )
@@ -333,7 +306,6 @@ class TestLLMIntentSpec:
         assert intent.model_ref == "claude_sonnet"
         assert intent.output_schema == "EntityList"
         assert intent.timeout_seconds == 60
-        assert intent.vision is False
         assert intent.retry is not None
         assert intent.retry.max_attempts == 5
         assert intent.pii is not None
@@ -378,50 +350,6 @@ class TestLLMIntentSpec:
 
 
 # =============================================================================
-# ArtifactRefSpec Tests
-# =============================================================================
-
-
-class TestArtifactRefSpec:
-    """Tests for ArtifactRefSpec."""
-
-    def test_artifact_ref(self):
-        """Test artifact reference creation."""
-        ref = ArtifactRefSpec(
-            artifact_id="art_123456",
-            content_hash="sha256:abc123...",
-            storage_uri="s3://bucket/prompts/art_123456",
-            kind=ArtifactKind.PROMPT,
-            byte_size=1024,
-        )
-
-        assert ref.artifact_id == "art_123456"
-        assert ref.content_hash == "sha256:abc123..."
-        assert ref.storage_uri == "s3://bucket/prompts/art_123456"
-        assert ref.kind == ArtifactKind.PROMPT
-        assert ref.byte_size == 1024
-
-    def test_all_artifact_kinds(self):
-        """Test all artifact kind values."""
-        kinds = [
-            ArtifactKind.PROMPT,
-            ArtifactKind.COMPLETION,
-            ArtifactKind.TOOL_CALL,
-            ArtifactKind.TOOL_RESULT,
-        ]
-
-        for kind in kinds:
-            ref = ArtifactRefSpec(
-                artifact_id="test",
-                content_hash="test",
-                storage_uri="test",
-                kind=kind,
-                byte_size=0,
-            )
-            assert ref.kind == kind
-
-
-# =============================================================================
 # Enum Tests
 # =============================================================================
 
@@ -455,9 +383,3 @@ class TestEnums:
         assert ArtifactStore.LOCAL.value == "local"
         assert ArtifactStore.S3.value == "s3"
         assert ArtifactStore.GCS.value == "gcs"
-
-        # ArtifactKind
-        assert ArtifactKind.PROMPT.value == "prompt"
-        assert ArtifactKind.COMPLETION.value == "completion"
-        assert ArtifactKind.TOOL_CALL.value == "tool_call"
-        assert ArtifactKind.TOOL_RESULT.value == "tool_result"

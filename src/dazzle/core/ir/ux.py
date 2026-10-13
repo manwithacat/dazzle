@@ -67,7 +67,6 @@ class PersonaVariant(BaseModel):
         purpose: Persona-specific purpose description
         show: Fields to explicitly show (overrides base)
         hide: Fields to hide from base
-        show_aggregate: Aggregate metrics to display (e.g., critical_count)
         action_primary: Primary action surface for this persona
         read_only: Whether mutations are disabled
         defaults: Default field values for forms (e.g., {"assigned_to": "current_user"})
@@ -87,7 +86,6 @@ class PersonaVariant(BaseModel):
     purpose: str | None = None
     show: list[str] = Field(default_factory=list)
     hide: list[str] = Field(default_factory=list)
-    show_aggregate: list[str] = Field(default_factory=list)
     action_primary: str | None = None  # Surface reference
     read_only: bool = False
     defaults: dict[str, Any] = Field(default_factory=dict)  # Field default values

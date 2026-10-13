@@ -431,9 +431,7 @@ def infer_multi_tenancy(appspec: ir.AppSpec) -> dict[str, Any]:
                 "description": "Add tenancy configuration to your DSL",
                 "dsl_snippet": """tenancy:
   mode: shared_schema
-  partition_key: tenant_id
-  provisioning:
-    auto_create: true""",
+  partition_key: tenant_id""",
                 "priority": "high",
             }
         )

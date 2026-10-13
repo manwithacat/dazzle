@@ -229,6 +229,39 @@ def _resolve_list_scope(
     return sql_filters
 
 
+def list_scope_filters(access: AccessContext) -> dict[str, Any] | None:
+    """The LIST enforcement ``gated_list`` applies, for a caller that issues its own
+    query (the full-text search routes): the Cedar LIST permit gate, then the scope
+    merge. Raises ``AccessForbidden`` when permit denies; returns ``None`` when no
+    scope rule matched the caller (default-deny, the caller returns nothing), else
+    the filters dict to AND into the query (``{}`` when no row filter applies).
+
+    Unlike the list route, these callers have no ``require_auth_by_default`` 401 in
+    front of them, so an anonymous caller on an entity that declares access rules is
+    denied here rather than read unscoped.
+    """
+    auth_context = access.auth_context
+    is_authenticated = bool(auth_context and auth_context.is_authenticated)
+    user_id = (
+        str(auth_context.user.id) if auth_context and getattr(auth_context, "user", None) else None
+    )
+    if access.cedar_access_spec is not None and not (is_authenticated and user_id):
+        return None
+    _apply_list_permit_gate(
+        access.cedar_access_spec, auth_context, is_authenticated, access.entity_name
+    )
+    scoped = _resolve_list_scope(
+        access,
+        is_authenticated=is_authenticated,
+        user_id=user_id,
+        ref_targets=None,
+        sql_filters=None,
+    )
+    if scoped is _SCOPE_DEFAULT_DENY:
+        return None
+    return dict(scoped or {})
+
+
 def _parse_temporal_filters(
     service: Any, *, temporal_as_of_raw: str | None, temporal_include_closed: bool
 ) -> dict[str, Any]:

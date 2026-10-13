@@ -402,7 +402,6 @@ workspace complex_nested "Complex Nested":
       scope: all
       purpose: "Admin view"
       show: region_a, region_b
-      show_aggregate: total, amount
 
 # =============================================================================
 # RESERVED WORD ADJACENT

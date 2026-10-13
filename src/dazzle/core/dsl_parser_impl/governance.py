@@ -71,7 +71,6 @@ class GovernanceParserMixin:
 
         classifications: list[ir.ClassificationSpec] = []
         erasures: list[ir.ErasureSpec] = []
-        default_retention = ir.RetentionPolicy.MEDIUM
         audit_access = True
 
         while not self.match(TokenType.DEDENT):
@@ -86,17 +85,10 @@ class GovernanceParserMixin:
                 erasure = self._parse_erasure()
                 erasures.append(erasure)
             elif self.match(TokenType.IDENTIFIER):
-                # Handle config options like "default_retention: long"
+                # Handle config options like "audit_access: true"
                 key = self.current_token().value
                 self.advance()
-                if key == "default_retention" and self.match(TokenType.COLON):
-                    self.advance()  # consume COLON
-                    retention_value = self.expect_identifier_or_keyword().value
-                    try:
-                        default_retention = ir.RetentionPolicy(retention_value)
-                    except ValueError:
-                        pass  # Keep default
-                elif key == "audit_access" and self.match(TokenType.COLON):
+                if key == "audit_access" and self.match(TokenType.COLON):
                     self.advance()  # consume COLON
                     value = self.expect_identifier_or_keyword().value
                     audit_access = value.lower() in ("true", "yes", "on")
@@ -110,7 +102,6 @@ class GovernanceParserMixin:
         return ir.PoliciesSpec(
             classifications=classifications,
             erasures=erasures,
-            default_retention=default_retention,
             audit_access=audit_access,
         )
 
@@ -166,7 +157,7 @@ class GovernanceParserMixin:
 
         DSL syntax:
             erasure Entity: POLICY
-            erasure Entity.field: POLICY [cascade]
+            erasure Entity.field: POLICY
         """
         # Consume the ERASURE token
         self.expect(TokenType.ERASURE)
@@ -185,17 +176,7 @@ class GovernanceParserMixin:
         except ValueError:
             policy = ir.ErasurePolicy.ANONYMIZE
 
-        cascade = False
-        if self.match(TokenType.CASCADE):
-            self.advance()
-            cascade = True
-
-        return ir.ErasureSpec(
-            entity=entity,
-            field=field,
-            policy=policy,
-            cascade=cascade,
-        )
+        return ir.ErasureSpec(entity=entity, field=field, policy=policy)
 
     # =========================================================================
     # Tenancy Section Parsing
@@ -204,11 +185,11 @@ class GovernanceParserMixin:
     def parse_tenancy(self) -> ir.TenancySpec:
         """Parse a ``tenancy:`` declaration.
 
-        Refactored to dispatch-table style (follow-on to #1098). All 9
+        Refactored to dispatch-table style (follow-on to #1098). All 7
         keys are IDENT-text-matched (no dedicated lexer tokens) — they're
         routed through :data:`_TENANCY_IDENT_KEYWORDS`. Builder assembles
-        :class:`ir.TenantIsolationSpec` + :class:`ir.TenantProvisioningSpec`
-        + :class:`ir.TenancySpec` from the accumulated state.
+        :class:`ir.TenantIsolationSpec` + :class:`ir.TenancySpec` from the
+        accumulated state.
 
         DSL syntax::
 
@@ -216,8 +197,6 @@ class GovernanceParserMixin:
               mode: shared_schema
               partition_key: tenant_id
               topics: namespace_per_tenant
-              provisioning:
-                auto_create: true
         """
         self.expect(TokenType.TENANCY)
         self.expect(TokenType.COLON)
@@ -241,13 +220,10 @@ class GovernanceParserMixin:
 # ================================================================ #
 #
 # The 170-line monolith was replaced (v0.70.19) with the dispatch
-# pattern shipped in #1097. All 9 keys are IDENT-text-matched (no
+# pattern shipped in #1097. All 7 keys are IDENT-text-matched (no
 # dedicated lexer tokens) — they live in :data:`_TENANCY_IDENT_KEYWORDS`.
-# Builder assembles the nested IsolationSpec + ProvisioningSpec from
+# Builder assembles the nested IsolationSpec from
 # the flat state.
-
-
-_TRUTHY = ("true", "yes", "on")
 
 
 @dataclass
@@ -255,17 +231,12 @@ class _TenancyState:
     """Accumulator for :meth:`GovernanceParserMixin.parse_tenancy`.
 
     Flat mirror of the legacy monolith's locals (which are then sliced
-    into the nested IsolationSpec + ProvisioningSpec by the builder).
+    into the nested IsolationSpec by the builder).
     """
 
     mode: ir.TenancyMode = ir.TenancyMode.SHARED_SCHEMA
     partition_key: str = "tenant_id"
     topic_namespace: ir.TopicNamespaceMode = ir.TopicNamespaceMode.SHARED
-    enforce_in_queries: bool = True
-    cross_tenant_access: bool = False
-    auto_create: bool = True
-    require_approval: bool = False
-    default_limits: dict[str, int] = field(default_factory=dict)
     entities_excluded: list[str] = field(default_factory=list)
     admin_personas: list[str] = field(default_factory=list)
     per_tenant_config: dict[str, str] = field(default_factory=dict)
@@ -300,44 +271,6 @@ def _t_kw_topics(parser: Any, state: _TenancyState) -> None:
         state.topic_namespace = ir.TopicNamespaceMode(value.lower())
     except ValueError:
         pass
-
-
-def _t_kw_enforce_in_queries(parser: Any, state: _TenancyState) -> None:
-    """``enforce_in_queries: true|yes|on`` — anything else → False."""
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.enforce_in_queries = parser.expect_identifier_or_keyword().value.lower() in _TRUTHY
-
-
-def _t_kw_cross_tenant_access(parser: Any, state: _TenancyState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.cross_tenant_access = parser.expect_identifier_or_keyword().value.lower() in _TRUTHY
-
-
-def _t_kw_provisioning(parser: Any, state: _TenancyState) -> None:
-    """Nested ``provisioning:`` block: ``auto_create``, ``require_approval``."""
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    parser.skip_newlines()
-    if not parser.match(TokenType.INDENT):
-        return
-    while not parser.match(TokenType.DEDENT):
-        parser.skip_newlines()
-        if parser.match(TokenType.DEDENT):
-            break
-        if parser.match(TokenType.IDENTIFIER):
-            pkey = parser.current_token().value
-            parser.advance()
-            if parser.match(TokenType.COLON):
-                parser.advance()
-                pvalue = parser.expect_identifier_or_keyword().value
-                if pkey == "auto_create":
-                    state.auto_create = pvalue.lower() in _TRUTHY
-                elif pkey == "require_approval":
-                    state.require_approval = pvalue.lower() in _TRUTHY
-        parser.skip_newlines()
-    parser.expect(TokenType.DEDENT)
 
 
 def _t_kw_exclude(parser: Any, state: _TenancyState) -> None:
@@ -421,9 +354,6 @@ _TENANCY_IDENT_KEYWORDS: dict[str, KeywordParser[_TenancyState]] = {
     "mode": _t_kw_mode,
     "partition_key": _t_kw_partition_key,
     "topics": _t_kw_topics,
-    "enforce_in_queries": _t_kw_enforce_in_queries,
-    "cross_tenant_access": _t_kw_cross_tenant_access,
-    "provisioning": _t_kw_provisioning,
     # #1447 B2: the canonical keyword matches the IR field + runtime reader; the
     # original parser only knew the short ``exclude`` form, so the natural
     # ``entities_excluded`` was silently dropped → excluded entities got fenced.
@@ -448,22 +378,14 @@ def _on_unknown_tenancy(parser: Any) -> None:
 
 
 def _build_tenancy(state: _TenancyState) -> ir.TenancySpec:
-    """Assemble the nested IsolationSpec + ProvisioningSpec from flat state."""
+    """Assemble the nested IsolationSpec from flat state."""
     isolation = ir.TenantIsolationSpec(
         mode=state.mode,
         partition_key=state.partition_key,
         topic_namespace=state.topic_namespace,
-        enforce_in_queries=state.enforce_in_queries,
-        cross_tenant_access=state.cross_tenant_access,
-    )
-    provisioning = ir.TenantProvisioningSpec(
-        auto_create=state.auto_create,
-        require_approval=state.require_approval,
-        default_limits=state.default_limits,
     )
     return ir.TenancySpec(
         isolation=isolation,
-        provisioning=provisioning,
         entities_excluded=state.entities_excluded,
         admin_personas=state.admin_personas,
         per_tenant_config=state.per_tenant_config,

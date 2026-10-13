@@ -3,7 +3,7 @@ Integration parsing for DAZZLE DSL.
 
 Handles integration declarations including actions, syncs, and mappings.
 v0.30.0: Added declarative mapping blocks with triggers, HTTP requests, and error strategies.
-v0.33.1: Added transform blocks, function-call expressions, source/target directives.
+v0.33.1: Added the target directive.
 """
 
 from dataclasses import dataclass, field
@@ -250,10 +250,10 @@ class IntegrationParserMixin:
     def _parse_mapping_block(self) -> ir.IntegrationMapping:
         """Parse a ``mapping <name> [on Entity]:`` block.
 
-        Refactored to dispatch-table style (follow-on to #1098). 3
-        token-keyed (trigger/source/target) + 8 IDENT-text-matched
-        (request/cache/map_request/map_response/transform/on_conflict/
-        on_error/headers) + a `_build_mapping` builder.
+        Refactored to dispatch-table style (follow-on to #1098). 2
+        token-keyed (trigger/target) + 6 IDENT-text-matched
+        (request/cache/map_request/map_response/on_error/headers) + a
+        `_build_mapping` builder.
 
         Syntax (original — with ``on Entity``)::
 
@@ -263,15 +263,6 @@ class IntegrationParserMixin:
               map_response:
                 field <- source
               on_error: ignore
-
-        Syntax (v0.33.1 — with source/target/transform)::
-
-            mapping financial_snapshot:
-              source: Reports.ProfitAndLoss
-              target: XeroIntegration
-              transform:
-                last_revenue: money(source.base_currency, source.Revenue)
-              on_conflict: xero_invoice_id
         """
         self.expect(TokenType.MAPPING)
         mapping_name = self.expect_identifier_or_keyword().value
@@ -449,38 +440,6 @@ class IntegrationParserMixin:
 
         return rules
 
-    def _parse_colon_mapping_rules(self) -> list[ir.MappingRule]:
-        """Parse mapping rules with colon syntax (v0.33.1 transform blocks).
-
-        Syntax:
-            target_field: source.path
-            target_field: money(source.currency, source.amount)
-            target_field: "literal"
-        """
-        rules: list[ir.MappingRule] = []
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            target = self.expect_identifier_or_keyword().value
-            self.expect(TokenType.COLON)
-            source = self._parse_expression()
-
-            rules.append(ir.MappingRule(target_field=target, source=source))
-            self.skip_newlines()
-
-        return rules
-
-    def _parse_dotted_name(self) -> str:
-        """Parse a dotted identifier path (e.g., Reports.ProfitAndLoss)."""
-        parts = [self.expect_identifier_or_keyword().value]
-        while self.match(TokenType.DOT):
-            self.advance()
-            parts.append(self.expect_identifier_or_keyword().value)
-        return ".".join(parts)
-
     def _parse_larrow_target(self) -> str:
         """A ``map_request`` / ``map_response`` target.
 
@@ -557,7 +516,6 @@ class IntegrationParserMixin:
         call_service = None
         call_operation = None
         call_mapping: list[ir.MappingRule] = []
-        response_foreign_model = None
         response_entity = None
         response_mapping: list[ir.MappingRule] = []
 
@@ -596,16 +554,10 @@ class IntegrationParserMixin:
                     call_mapping = self._parse_mapping_rules()
                     self.expect(TokenType.DEDENT)
 
-            # response foreign <name>
+            # response entity <name>
             elif self.match(TokenType.RESPONSE):
                 self.advance()
-                if self.match(TokenType.FOREIGN):
-                    self.advance()
-                    response_foreign_model = self.expect(TokenType.IDENTIFIER).value
-                    self.skip_newlines()
-
-                # response entity <name>
-                elif self.match(TokenType.ENTITY):
+                if self.match(TokenType.ENTITY):
                     self.advance()
                     response_entity = self.expect(TokenType.IDENTIFIER).value
                     self.skip_newlines()
@@ -629,7 +581,6 @@ class IntegrationParserMixin:
             call_service=call_service or "unknown",
             call_operation=call_operation or "unknown",
             call_mapping=call_mapping,
-            response_foreign_model=response_foreign_model,
             response_entity=response_entity,
             response_mapping=response_mapping,
         )
@@ -638,9 +589,6 @@ class IntegrationParserMixin:
         """Parse the body of a sync block."""
         mode = ir.SyncMode.SCHEDULED
         schedule = None
-        from_service = None
-        from_operation = None
-        from_foreign_model = None
         into_entity = None
         match_rules: list[ir.MatchRule] = []
 
@@ -662,26 +610,6 @@ class IntegrationParserMixin:
                     self.advance()
                     mode = ir.SyncMode.EVENT_DRIVEN
                 self.skip_newlines()
-
-            # from service <name>
-            elif self.match(TokenType.FROM):
-                self.advance()
-                if self.match(TokenType.SERVICE):
-                    self.advance()
-                    from_service = self.expect(TokenType.IDENTIFIER).value
-                    self.skip_newlines()
-
-                # from operation <path>
-                elif self.match(TokenType.OPERATION):
-                    self.advance()
-                    from_operation = self._parse_operation_path()
-                    self.skip_newlines()
-
-                # from foreign <name>
-                elif self.match(TokenType.FOREIGN):
-                    self.advance()
-                    from_foreign_model = self.expect(TokenType.IDENTIFIER).value
-                    self.skip_newlines()
 
             # into entity <name>
             elif self.match(TokenType.INTO):
@@ -708,9 +636,6 @@ class IntegrationParserMixin:
             name=sync_name,
             mode=mode,
             schedule=schedule,
-            from_service=from_service or "unknown",
-            from_operation=from_operation or "unknown",
-            from_foreign_model=from_foreign_model or "unknown",
             into_entity=into_entity or "unknown",
             match_rules=match_rules,
         )
@@ -780,12 +705,7 @@ class IntegrationParserMixin:
         return rules
 
     def _parse_expression(self) -> ir.Expression:
-        """Parse an expression (path, literal, or function call).
-
-        Function call syntax (v0.33.1):
-            money(source.CurrencyCode, source.Amount)
-            concat(source.first_name, " ", source.last_name)
-        """
+        """Parse a mapping expression: a literal or a dotted path."""
         token = self.current_token()
 
         # Literals first — check before identifiers since true/false are
@@ -803,8 +723,8 @@ class IntegrationParserMixin:
         if self.match(TokenType.TRUE) or self.match(TokenType.FALSE):
             return ir.Expression(literal=self.advance().value == "true")
 
-        # Identifiers and keyword tokens that serve as path roots or function
-        # names in mapping expressions.  Rather than maintaining an exhaustive
+        # Identifiers and keyword tokens that serve as path roots in mapping
+        # expressions.  Rather than maintaining an exhaustive
         # allow-list, we accept any token that is NOT a structural delimiter.
         _structural = {
             TokenType.COLON,
@@ -821,17 +741,6 @@ class IntegrationParserMixin:
         }
         if token.type not in _structural:
             first = self.advance().value
-
-            # Function call: identifier followed by (
-            if self.match(TokenType.LPAREN):
-                self.advance()  # consume (
-                args: list[ir.Expression] = []
-                while not self.match(TokenType.RPAREN):
-                    if args:
-                        self.expect(TokenType.COMMA)
-                    args.append(self._parse_expression())
-                self.advance()  # consume )
-                return ir.Expression(func_name=first, func_args=args)
 
             # Dotted path
             parts = [first]
@@ -855,9 +764,9 @@ class IntegrationParserMixin:
 # ================================================================ #
 #
 # The 146-line monolith was replaced (v0.70.31) with the dispatch
-# pattern shipped in #1097. 3 token-keyed (trigger/source/target)
-# + 8 IDENT-text-matched (request/cache/map_request/map_response/
-# transform/on_conflict/on_error/headers) + a `_build_mapping` builder.
+# pattern shipped in #1097. 2 token-keyed (trigger/target)
+# + 6 IDENT-text-matched (request/cache/map_request/map_response/
+# on_error/headers) + a `_build_mapping` builder.
 
 
 @dataclass
@@ -869,14 +778,11 @@ class _MappingState:
     """
 
     entity_ref: str = ""
-    source_ref: str = ""
     triggers: list[ir.MappingTriggerSpec] = field(default_factory=list)
     request: ir.HttpRequestSpec | None = None
     request_mapping: list[ir.MappingRule] = field(default_factory=list)
     response_mapping: list[ir.MappingRule] = field(default_factory=list)
-    transform: list[ir.MappingRule] = field(default_factory=list)
     on_error: ir.ErrorStrategy | None = None
-    on_conflict: str = ""
     cache_ttl: int | None = None
     headers: dict[str, str] = field(default_factory=dict)
 
@@ -889,14 +795,6 @@ def _m_kw_trigger(parser: Any, state: _MappingState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
     state.triggers.append(parser._parse_mapping_trigger())
-    parser.skip_newlines()
-
-
-def _m_kw_source(parser: Any, state: _MappingState) -> None:
-    """``source: DottedName`` (v0.33.1)"""
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.source_ref = parser._parse_dotted_name()
     parser.skip_newlines()
 
 
@@ -1003,24 +901,6 @@ def _m_kw_map_response(parser: Any, state: _MappingState) -> None:
     parser.expect(TokenType.DEDENT)
 
 
-def _m_kw_transform(parser: Any, state: _MappingState) -> None:
-    """``transform:`` — indented block of ``target: expr`` rules (v0.33.1)."""
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    parser.skip_newlines()
-    parser.expect(TokenType.INDENT)
-    state.transform = parser._parse_colon_mapping_rules()
-    parser.expect(TokenType.DEDENT)
-
-
-def _m_kw_on_conflict(parser: Any, state: _MappingState) -> None:
-    """``on_conflict: field_name`` (v0.33.1)"""
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.on_conflict = parser.expect_identifier_or_keyword().value
-    parser.skip_newlines()
-
-
 def _m_kw_on_error(parser: Any, state: _MappingState) -> None:
     """``on_error: ignore | set f = "v", log_warning | ...``"""
     parser.advance()
@@ -1034,7 +914,6 @@ def _m_kw_on_error(parser: Any, state: _MappingState) -> None:
 
 _MAPPING_KEYWORDS: dict[TokenType, KeywordParser[_MappingState]] = {
     TokenType.TRIGGER: _m_kw_trigger,
-    TokenType.SOURCE: _m_kw_source,
     TokenType.TARGET: _m_kw_target,
 }
 
@@ -1044,8 +923,6 @@ _MAPPING_IDENT_KEYWORDS: dict[str, KeywordParser[_MappingState]] = {
     "cache": _m_kw_cache,
     "map_request": _m_kw_map_request,
     "map_response": _m_kw_map_response,
-    "transform": _m_kw_transform,
-    "on_conflict": _m_kw_on_conflict,
     "on_error": _m_kw_on_error,
     "headers": _m_kw_headers,
 }
@@ -1055,13 +932,10 @@ def _build_mapping(mapping_name: str, state: _MappingState) -> ir.IntegrationMap
     return ir.IntegrationMapping(
         name=mapping_name,
         entity_ref=state.entity_ref,
-        source_ref=state.source_ref,
         triggers=state.triggers,
         request=state.request,
         request_mapping=state.request_mapping,
         response_mapping=state.response_mapping,
-        transform=state.transform,
         on_error=state.on_error,
-        on_conflict=state.on_conflict,
         cache_ttl=state.cache_ttl,
     )

@@ -24,7 +24,6 @@ def test_security_config_combined() -> None:
     - BASIC profile is permissive (no HSTS/CSP/auth, cors=*).
     - STANDARD enables HSTS + CSP (Report-Only) + auth.
     - STRICT enables HSTS + CSP + auth.
-    - STRICT + multi_tenant=True enables tenant_isolation.
     - Custom cors_origins override profile defaults.
     """
     from dazzle.core.ir.security import SecurityConfig, SecurityProfile
@@ -41,7 +40,6 @@ def test_security_config_combined() -> None:
     assert basic.enable_hsts is False
     assert basic.enable_csp is False
     assert basic.require_auth_by_default is False
-    assert basic.tenant_isolation is False
 
     # STANDARD — same-origin, HSTS + CSP, auth on.
     standard = SecurityConfig.from_profile(SecurityProfile.STANDARD)
@@ -50,7 +48,6 @@ def test_security_config_combined() -> None:
     assert standard.enable_hsts is True
     assert standard.enable_csp is True  # #833 — runtime emits Report-Only
     assert standard.require_auth_by_default is True
-    assert standard.tenant_isolation is False
 
     # STRICT defaults.
     strict = SecurityConfig.from_profile(SecurityProfile.STRICT)
@@ -58,10 +55,6 @@ def test_security_config_combined() -> None:
     assert strict.enable_hsts is True
     assert strict.enable_csp is True
     assert strict.require_auth_by_default is True
-
-    # STRICT + multi_tenant.
-    strict_mt = SecurityConfig.from_profile(SecurityProfile.STRICT, multi_tenant=True)
-    assert strict_mt.tenant_isolation is True
 
     # Custom cors_origins override.
     custom = ["https://app.example.com", "https://admin.example.com"]

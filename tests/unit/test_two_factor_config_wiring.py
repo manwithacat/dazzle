@@ -26,15 +26,11 @@ class TestSecurityConfigComposition:
         tf = TwoFactorConfig(
             enabled=True,
             methods=[TwoFactorMethod.TOTP],
-            otp_length=8,
-            otp_expiry_seconds=600,
             recovery_code_count=12,
-            enforce_for_roles=["admin"],
         )
         cfg = SecurityConfig(two_factor=tf)
         assert cfg.two_factor.enabled is True
         assert cfg.two_factor.recovery_code_count == 12
-        assert cfg.two_factor.enforce_for_roles == ["admin"]
 
     def test_profile_builders_carry_default_two_factor(self) -> None:
         """from_profile doesn't override two_factor — callers compose separately."""

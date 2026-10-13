@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from dazzle.core.ir.islands import IslandPropSpec, IslandSpec
+from dazzle.core.ir.islands import IslandSpec
 from dazzle.render.context import IslandContext
 
 
@@ -55,11 +55,10 @@ class TestIslandContextCompilation:
         """Compile an IslandSpec into an IslandContext."""
         src = spec.src or f"/static/islands/{spec.name}/index.js"
         api_base = f"/_dazzle/islands/{spec.name}" if spec.entity else ""
-        props = {p.name: p.default for p in spec.props if p.default is not None}
         return IslandContext(
             name=spec.name,
             src=src,
-            props_json=json.dumps(props),
+            props_json="{}",
             api_base=api_base,
             fallback=spec.fallback,
         )
@@ -87,21 +86,6 @@ class TestIslandContextCompilation:
         spec = IslandSpec(name="confetti")
         ctx = self.compile_island(spec)
         assert ctx.api_base == ""
-
-    def test_props_serialization(self):
-        """Test props with defaults are serialized to JSON."""
-        spec = IslandSpec(
-            name="chart",
-            props=[
-                IslandPropSpec(name="type", type="str", default="bar"),
-                IslandPropSpec(name="count", type="int", default=5),
-                IslandPropSpec(name="label", type="str"),  # no default
-            ],
-        )
-        ctx = self.compile_island(spec)
-        parsed = json.loads(ctx.props_json)
-        assert parsed == {"type": "bar", "count": 5}
-        assert "label" not in parsed
 
 
 class TestIslandLoaderJS:

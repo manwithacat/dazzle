@@ -98,7 +98,7 @@ module: qa_secure_routes
 
 module: search_routes
   GET | (root)
-    handler: cross_entity_search(q: str = Query(..., description='Search query string', min_length=1), entity: str | None = Query(None, description='Restrict search to a single entity name'), limit: int = Query(per_entity_limit, ge=1, le=100, description='Max results returned per entity')) -> JSONResponse
+    handler: cross_entity_search(q: str = Query(..., description='Search query string', min_length=1), entity: str | None = Query(None, description='Restrict search to a single entity name'), limit: int = Query(per_entity_limit, ge=1, le=100, description='Max results returned per entity'), auth_context: Any = Depends(optional_auth_dep or _no_auth)) -> JSONResponse
 
 module: signing_routes
   POST | /api/sign/{entity_name}/{record_id}

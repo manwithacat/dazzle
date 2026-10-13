@@ -61,7 +61,6 @@ class _ProcessParseContext:
     compensations: list[ir.CompensationSpec] = field(default_factory=list)
     timeout_seconds: int = 86400  # Default 24h
     overlap_policy: ir.OverlapPolicy = ir.OverlapPolicy.SKIP
-    events: ir.ProcessEventEmission = field(default_factory=ir.ProcessEventEmission)
 
 
 @dataclass
@@ -77,7 +76,6 @@ class _ScheduleParseContext:
     overlap: ir.OverlapPolicy = ir.OverlapPolicy.SKIP
     steps: list[ir.ProcessStepSpec] = field(default_factory=list)
     timeout_seconds: int | ir.ParamRef = 3600  # Default 1h
-    events: ir.ProcessEventEmission = field(default_factory=ir.ProcessEventEmission)
 
 
 def parse_duration(s: str, *, parser: Any = None) -> int:
@@ -132,11 +130,9 @@ class _StepFields:
         "channel",
         "message",
         "wait_duration_seconds",
-        "wait_for_signal",
         "human_task",
         "subprocess",
         "inputs",
-        "output_mapping",
         "timeout_seconds",
         "retry",
         "on_success",
@@ -156,11 +152,9 @@ class _StepFields:
         self.channel: str | None = None
         self.message: str | None = None
         self.wait_duration_seconds: int | None = None
-        self.wait_for_signal: str | None = None
         self.human_task: ir.HumanTaskSpec | None = None
         self.subprocess: str | None = None
         self.inputs: list[ir.InputMapping] = []
-        self.output_mapping: str | None = None
         self.timeout_seconds: int = 30
         self.retry: ir.RetryConfig | None = None
         self.on_success: str | None = None
@@ -217,7 +211,6 @@ class ProcessParserMixin:
             compensations=ctx.compensations,
             timeout_seconds=ctx.timeout_seconds,
             overlap_policy=ctx.overlap_policy,
-            events=ctx.events,
             source=loc,
         )
 
@@ -265,11 +258,6 @@ class ProcessParserMixin:
             overlap_str = self.expect_identifier_or_keyword().value
             ctx.overlap_policy = self._parse_overlap_policy(str(overlap_str))
             self.skip_newlines()
-        elif self.match(TokenType.EMITS):
-            self.advance()
-            self.expect(TokenType.COLON)
-            self.skip_newlines()
-            ctx.events = self._parse_process_emits()
         else:
             self.advance()
             if self.match(TokenType.COLON):
@@ -305,7 +293,6 @@ class ProcessParserMixin:
             overlap=ctx.overlap,
             steps=ctx.steps,
             timeout_seconds=ctx.timeout_seconds,
-            events=ctx.events,
         )
 
     def _parse_schedule_field(self, ctx: _ScheduleParseContext) -> None:
@@ -350,11 +337,6 @@ class ProcessParserMixin:
             ctx.steps = self._parse_process_steps()
         elif self.match(TokenType.TIMEOUT):
             self._parse_schedule_timeout_field(ctx)
-        elif self.match(TokenType.EMITS):
-            self.advance()
-            self.expect(TokenType.COLON)
-            self.skip_newlines()
-            ctx.events = self._parse_process_emits()
         else:
             self.advance()
             if self.match(TokenType.COLON):
@@ -732,14 +714,12 @@ class ProcessParserMixin:
             channel=fields.channel,
             message=fields.message,
             wait_duration_seconds=fields.wait_duration_seconds,
-            wait_for_signal=fields.wait_for_signal,
             human_task=fields.human_task,
             subprocess=fields.subprocess,
             condition=fields.condition,
             on_true=fields.on_true,
             on_false=fields.on_false,
             inputs=fields.inputs,
-            output_mapping=fields.output_mapping,
             timeout_seconds=fields.timeout_seconds,
             retry=fields.retry,
             on_success=fields.on_success,
@@ -790,12 +770,7 @@ class ProcessParserMixin:
         self.advance()
         self.expect(TokenType.COLON)
         f.kind = ir.ProcessStepKind.WAIT
-        # Could be duration or signal
-        wait_val = self._parse_duration_or_signal()
-        if isinstance(wait_val, int):
-            f.wait_duration_seconds = wait_val
-        else:
-            f.wait_for_signal = wait_val
+        f.wait_duration_seconds = self._parse_wait_duration()
         self.skip_newlines()
 
     def _parse_step_human_task_field(self, f: _StepFields) -> None:
@@ -876,12 +851,6 @@ class ProcessParserMixin:
         self.skip_newlines()
         f.inputs = self._parse_input_mappings()
 
-    def _parse_step_output_field(self, f: _StepFields) -> None:
-        self.advance()
-        self.expect(TokenType.COLON)
-        f.output_mapping = str(self.expect_identifier_or_keyword().value)
-        self.skip_newlines()
-
     def _parse_step_effects_field(self, f: _StepFields) -> None:
         self.advance()
         self.expect(TokenType.COLON)
@@ -902,7 +871,6 @@ class ProcessParserMixin:
         Grammar:
             parallel IDENTIFIER COLON NEWLINE INDENT
               (- step IDENTIFIER COLON NEWLINE step_block)*
-              [on_any_failure COLON IDENTIFIER NEWLINE]
             DEDENT
         """
         self.expect(TokenType.PARALLEL)
@@ -912,7 +880,6 @@ class ProcessParserMixin:
         self.expect(TokenType.INDENT)
 
         parallel_steps: list[ir.ProcessStepSpec] = []
-        parallel_policy: ir.ParallelFailurePolicy = ir.ParallelFailurePolicy.FAIL_FAST
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -927,12 +894,6 @@ class ProcessParserMixin:
                 else:
                     # Skip unknown
                     self.advance()
-            elif self.match(TokenType.ON_ANY_FAILURE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                policy_str = str(self.expect_identifier_or_keyword().value)
-                parallel_policy = self._parse_parallel_policy(policy_str)
-                self.skip_newlines()
             else:
                 # Skip unknown token
                 self.advance()
@@ -943,7 +904,6 @@ class ProcessParserMixin:
             name=name,
             kind=ir.ProcessStepKind.PARALLEL,
             parallel_steps=parallel_steps,
-            parallel_policy=parallel_policy,
         )
 
     def _parse_compensations(self) -> list[ir.CompensationSpec]:
@@ -1028,7 +988,6 @@ class ProcessParserMixin:
         assignee_role: str | None = None
         assignee_expression: str | None = None
         timeout_seconds: int = 604800  # Default 7 days
-        escalation_timeout_seconds: int | None = None
         outcomes: list[ir.HumanTaskOutcome] = []
 
         if self.match(TokenType.INDENT):
@@ -1063,7 +1022,6 @@ class ProcessParserMixin:
             assignee_role=assignee_role,
             assignee_expression=assignee_expression,
             timeout_seconds=timeout_seconds,
-            escalation_timeout_seconds=escalation_timeout_seconds,
             outcomes=outcomes,
         )
 
@@ -1142,7 +1100,6 @@ class ProcessParserMixin:
         name = str(self.expect_identifier_or_keyword().value)
         label = name  # Default label is the name
         goto = "complete"
-        sets: list[ir.FieldAssignment] = []
         confirm: str | None = None
         style: str = "primary"
 
@@ -1175,12 +1132,6 @@ class ProcessParserMixin:
                     goto = str(self.expect_identifier_or_keyword().value)
                     self.skip_newlines()
 
-                elif field == "sets" or self.match(TokenType.SETS):
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    self.skip_newlines()
-                    sets = self._parse_field_assignments()
-
                 elif field == "confirm" or self.match(TokenType.CONFIRM):
                     self.advance()
                     self.expect(TokenType.COLON)
@@ -1203,7 +1154,6 @@ class ProcessParserMixin:
             name=name,
             label=label,
             goto=goto,
-            sets=sets,
             confirm=confirm,
             style=style,
         )
@@ -1443,53 +1393,6 @@ class ProcessParserMixin:
             max_interval_seconds=max_interval_seconds,
         )
 
-    def _parse_process_emits(self) -> ir.ProcessEventEmission:
-        """Parse process event emission configuration."""
-        on_start: str | None = None
-        on_complete: str | None = None
-        on_failure: str | None = None
-
-        if self.match(TokenType.INDENT):
-            self.expect(TokenType.INDENT)
-
-            while not self.match(TokenType.DEDENT):
-                self.skip_newlines()
-                if self.match(TokenType.DEDENT):
-                    break
-
-                token = self.current_token()
-                field = str(token.value).lower()
-
-                if field == "on_start":
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    on_start = str(self.expect_identifier_or_keyword().value)
-                    self.skip_newlines()
-
-                elif field == "on_complete":
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    on_complete = str(self.expect_identifier_or_keyword().value)
-                    self.skip_newlines()
-
-                elif field == "on_failure":
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    on_failure = str(self.expect_identifier_or_keyword().value)
-                    self.skip_newlines()
-
-                else:
-                    # Skip unknown
-                    self.advance()
-
-            self.expect(TokenType.DEDENT)
-
-        return ir.ProcessEventEmission(
-            on_start=on_start,
-            on_complete=on_complete,
-            on_failure=on_failure,
-        )
-
     # Helper methods
 
     def _parse_duration_value(self) -> str:
@@ -1501,20 +1404,22 @@ class ProcessParserMixin:
             self.advance()
         return "".join(parts)
 
-    def _parse_duration_or_signal(self) -> int | str:
-        """Parse either a duration or a signal name."""
+    def _parse_wait_duration(self) -> int:
+        """Parse a ``wait:`` duration (e.g. ``30m``)."""
+        from ..errors import make_parse_error
         from ._lexical import is_short_duration_token
 
         token = self.current_token()
         val = str(token.value)
-
-        if is_short_duration_token(val):
-            self.advance()
-            return parse_duration(val, parser=self)
-
-        # Otherwise treat as signal name
+        if not is_short_duration_token(val):
+            raise make_parse_error(
+                f"wait: expects a duration (e.g. 30m, 2h), got '{val}'",
+                self.file,
+                token.line,
+                token.column,
+            )
         self.advance()
-        return val
+        return parse_duration(val, parser=self)
 
     def _parse_overlap_policy(self, policy_str: str) -> ir.OverlapPolicy:
         """Parse overlap policy string."""
@@ -1525,15 +1430,6 @@ class ProcessParserMixin:
             "allow": ir.OverlapPolicy.ALLOW,
         }
         return policy_map.get(policy_str.lower(), ir.OverlapPolicy.SKIP)
-
-    def _parse_parallel_policy(self, policy_str: str) -> ir.ParallelFailurePolicy:
-        """Parse parallel failure policy string."""
-        policy_map = {
-            "fail_fast": ir.ParallelFailurePolicy.FAIL_FAST,
-            "wait_all": ir.ParallelFailurePolicy.WAIT_ALL,
-            "rollback": ir.ParallelFailurePolicy.ROLLBACK,
-        }
-        return policy_map.get(policy_str.lower(), ir.ParallelFailurePolicy.FAIL_FAST)
 
     def _parse_backoff_strategy(self, backoff_str: str) -> ir.ProcessRetryBackoff:
         """Parse backoff strategy string."""
@@ -1604,7 +1500,6 @@ class ProcessParserMixin:
             TokenType.COMPENSATIONS,
             TokenType.TIMEOUT,
             TokenType.OVERLAP,
-            TokenType.EMITS,
             TokenType.DEDENT,
             TokenType.EOF,
         ):
@@ -1726,10 +1621,6 @@ def _sf_inputs(p: Any, s: _StepFields) -> None:
     p._parse_step_inputs_field(s)
 
 
-def _sf_output(p: Any, s: _StepFields) -> None:
-    p._parse_step_output_field(s)
-
-
 def _sf_effects(p: Any, s: _StepFields) -> None:
     p._parse_step_effects_field(s)
 
@@ -1756,7 +1647,6 @@ _STEP_FIELD_KEYWORDS: dict[TokenType, KeywordParser[_StepFields]] = {
     TokenType.TIMEOUT: _sf_timeout,
     TokenType.RETRY: _sf_retry,
     TokenType.INPUTS: _sf_inputs,
-    TokenType.OUTPUT: _sf_output,
     TokenType.EFFECTS: _sf_effects,
 }
 

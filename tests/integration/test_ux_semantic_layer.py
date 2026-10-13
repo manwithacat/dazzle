@@ -79,7 +79,6 @@ surface task_list "Task Queue":
         as coordinator:
             scope: all
             purpose: "Manage all tasks and assignments"
-            show_aggregate: critical_count, pending_count
             action_primary: task_assign
 
 surface task_detail "Task Details":
@@ -220,7 +219,6 @@ class TestUXParsing:
 
         coordinator = next(p for p in personas if p.persona == "coordinator")
         assert coordinator.scope_all is True
-        assert "critical_count" in coordinator.show_aggregate
 
     def test_parse_workspace(self):
         """Test parsing workspace declarations."""
