@@ -4,19 +4,161 @@ Grant management API routes.
 Exposes CRUD endpoints for runtime RBAC grants so that ``has_grant()``
 transition guards become reachable.  Mounted at ``/_dazzle/grants/*``.
 
-Authorization: only roles listed in the matching ``GrantSchemaSpec.granted_by``
-field may create or manage grants.
+Authorization: only roles listed in the relation's ``granted_by`` may create,
+cancel or revoke grants. When the relation declares ``approved_by``, only those
+roles may approve or reject a pending grant (otherwise ``granted_by`` decides).
+
+Declared relation clauses enforced on create (ADR-0057, flense ship Q):
+
+- ``expiry: required`` — ``expires_at`` must be supplied; ``expiry: none`` —
+  ``expires_at`` must not be supplied; ``expiry: optional`` — either.
+- ``max_duration: <Nd|Nh|Nm|Ns>`` (or ``param("…")``) — ``expires_at`` must be
+  supplied and no later than ``now + max_duration``. There is no implicit
+  default expiry: the grammar does not declare one, so a missing value is
+  rejected rather than invented.
+- ``confirmation: "…"`` — the create body must carry ``"confirmed": true``
+  (the acknowledgement of the declared confirmation text).
+
+``principal_label`` and ``revoke_verb`` are presentation-only and are not read
+here (no grant UI renders them yet).
 """
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from dazzle.core import ir
+from dazzle.core.dsl_parser_impl._lexical import short_duration_seconds
+from dazzle.core.ir.grants import GrantExpiryMode
+from dazzle.core.ir.params import ParamRef
 from dazzle.http.runtime.auth import AuthContext
+from dazzle.http.runtime.param_store import resolve_value
+
+
+def _parse_expires_at(raw: Any) -> datetime | None:
+    """Parse a request ``expires_at`` (ISO-8601 string or datetime) to aware UTC.
+
+    A naive timestamp is read as UTC. Raises 422 on an unparseable value.
+    """
+    if raw is None or raw == "":
+        return None
+    if isinstance(raw, datetime):
+        parsed = raw
+    elif isinstance(raw, str):
+        try:
+            parsed = datetime.fromisoformat(raw)
+        except ValueError:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid expires_at '{raw}': expected an ISO-8601 timestamp",
+            )
+    else:
+        raise HTTPException(
+            status_code=422, detail="Invalid expires_at: expected an ISO-8601 timestamp"
+        )
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed
+
+
+def _max_duration_seconds(rel: Any, param_resolver: Any = None) -> int | None:
+    """Resolve a relation's ``max_duration`` (literal or ``param()``) to seconds.
+
+    Returns ``None`` when the relation declares no cap. A declared cap that does
+    not resolve to a ``30s``/``5m``/``2h``/``7d`` duration fails closed (500):
+    the declaration exists, so it must not silently stop limiting grants.
+    """
+    raw = getattr(rel, "max_duration", None)
+    if raw is None:
+        return None
+    value: Any = raw
+    if isinstance(raw, ParamRef):
+        try:
+            value = resolve_value(raw, param_resolver)
+        except KeyError:
+            value = raw.default
+    seconds = short_duration_seconds(str(value)) if value not in (None, "") else None
+    if seconds is None:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Grant relation '{rel.name}' declares max_duration {value!r}, which is not "
+                "a duration like '30d' — refusing to create an uncapped grant"
+            ),
+        )
+    return seconds
+
+
+def resolve_grant_expiry(
+    rel: Any,
+    raw_expires_at: Any,
+    *,
+    now: datetime | None = None,
+    param_resolver: Any = None,
+) -> datetime | None:
+    """Apply a relation's declared ``expiry`` / ``max_duration`` to a create request.
+
+    Returns the ``expires_at`` to store, or raises ``HTTPException(422)`` when
+    the request violates the declaration.
+    """
+    now = now or datetime.now(UTC)
+    expires_at = _parse_expires_at(raw_expires_at)
+    mode = GrantExpiryMode(str(getattr(rel, "expiry", GrantExpiryMode.REQUIRED)))
+
+    if mode == GrantExpiryMode.NONE:
+        if expires_at is not None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Relation '{rel.name}' declares 'expiry: none'; expires_at is not allowed",
+            )
+        return None
+
+    max_seconds = _max_duration_seconds(rel, param_resolver)
+
+    if expires_at is None:
+        if mode == GrantExpiryMode.REQUIRED:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Relation '{rel.name}' declares 'expiry: required'; expires_at is required",
+            )
+        if max_seconds is not None:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Relation '{rel.name}' declares 'max_duration: {rel.max_duration}'; "
+                    "expires_at is required"
+                ),
+            )
+        return None
+
+    if expires_at <= now:
+        raise HTTPException(status_code=422, detail="expires_at must be in the future")
+    if max_seconds is not None and expires_at > now + timedelta(seconds=max_seconds):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"expires_at exceeds the declared max_duration for relation '{rel.name}' "
+                f"(latest allowed: {(now + timedelta(seconds=max_seconds)).isoformat()})"
+            ),
+        )
+    return expires_at
+
+
+def require_grant_confirmation(rel: Any, body: dict[str, Any]) -> None:
+    """Reject a create that omits ``"confirmed": true`` on a relation declaring ``confirmation:``."""
+    text = getattr(rel, "confirmation", None)
+    if text and body.get("confirmed") is not True:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Relation '{rel.name}' requires confirmation (\"{text}\"); "
+                'resend with "confirmed": true'
+            ),
+        )
 
 
 def create_grant_routes(
@@ -105,6 +247,25 @@ def create_grant_routes(
         )
         return rel
 
+    def _check_approved_by(schema_name: str, relation_name: str, user_roles: set[str]) -> None:
+        """Verify the caller may decide (approve/reject) a pending grant.
+
+        A relation's ``approved_by`` names the deciding roles; without it the
+        ``granted_by`` roles decide (the pre-ship-Q behaviour).
+        """
+        rel = _get_relation_spec(schema_name, relation_name)
+        if getattr(rel, "approved_by", None) is None:
+            _check_granted_by(schema_name, relation_name, user_roles)
+            return
+        if not _extract_roles(rel.approved_by).intersection(user_roles):
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    f"Your role is not authorized to approve grants for "
+                    f"'{schema_name}.{relation_name}' (approved_by)"
+                ),
+            )
+
     def _check_granted_by(schema_name: str, relation_name: str, user_roles: set[str]) -> None:
         """Verify the caller has a role listed in granted_by for the relation."""
         rel = _get_relation_spec(schema_name, relation_name)
@@ -139,6 +300,7 @@ def create_grant_routes(
 
         @router.post("", summary="Create a grant", status_code=201)
         async def create_grant(
+            request: Request,
             body: dict[str, Any],
             auth_context: AuthContext = Depends(auth_dep),
         ) -> dict[str, Any]:
@@ -162,6 +324,12 @@ def create_grant_routes(
             # Look up approval mode from relation spec
             rel_spec = _get_relation_spec(schema_name, relation)
             approval_mode = str(rel_spec.approval) if rel_spec.approval else "auto"
+            require_grant_confirmation(rel_spec, body)
+            expires_at = resolve_grant_expiry(
+                rel_spec,
+                body.get("expires_at"),
+                param_resolver=getattr(request.app.state, "param_resolver", None),
+            )
 
             with _store() as store:
                 grant = store.create_grant(
@@ -172,7 +340,7 @@ def create_grant_routes(
                     scope_id=scope_id,
                     granted_by_id=user_id,
                     approval_mode=approval_mode,
-                    expires_at=body.get("expires_at"),
+                    expires_at=expires_at,
                 )
             return {"grant": grant}
 
@@ -189,7 +357,7 @@ def create_grant_routes(
                     raise HTTPException(status_code=404, detail="Grant not found")
 
                 user_roles = _get_user_roles(auth_context)
-                _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
+                _check_approved_by(grant["schema_name"], grant["relation"], user_roles)
 
                 try:
                     result = store.approve_grant(grant_id, user_id)
@@ -210,7 +378,7 @@ def create_grant_routes(
                     raise HTTPException(status_code=404, detail="Grant not found")
 
                 user_roles = _get_user_roles(auth_context)
-                _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
+                _check_approved_by(grant["schema_name"], grant["relation"], user_roles)
 
                 try:
                     result = store.reject_grant(grant_id, user_id)

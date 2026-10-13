@@ -2,8 +2,7 @@
 """Tests for UX verification report generation."""
 
 from dazzle.testing.ux.inventory import Interaction, InteractionClass
-from dazzle.testing.ux.report import generate_report
-from dazzle.testing.ux.structural import StructuralResult
+from dazzle.testing.ux.report import StructuralResult, generate_report
 
 
 class TestUXReport:

@@ -19,32 +19,8 @@
     "functions": {},
     "mi_rank": "A"
   },
-  "dazzle/agent/client_factory.py": {
-    "functions": {
-      "create_persona_client": 4
-    },
-    "mi_rank": "A"
-  },
   "dazzle/agent/compiler.py": {
     "functions": {
-      "NarrativeCompiler": 6,
-      "NarrativeCompiler.__init__": 1,
-      "NarrativeCompiler.compile": 4,
-      "NarrativeCompiler.report": 10,
-      "NarrativeCompiler.to_json": 7,
-      "Proposal": 2,
-      "Proposal.to_json": 1,
-      "_ObservationGroup": 3,
-      "_ObservationGroup.max_severity": 3,
-      "_ObservationGroup.priority_score": 1,
-      "_check_adjacency": 6,
-      "_collect_entities": 5,
-      "_collect_locations": 4,
-      "_collect_surfaces": 5,
-      "_generate_narrative": 13,
-      "_group_key": 10,
-      "_group_observations": 4,
-      "_infer_crud_action": 2,
       "infer_crud_action": 15
     },
     "mi_rank": "A"
@@ -76,48 +52,10 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/agent/emitter.py": {
-    "functions": {
-      "DslEmitter": 8,
-      "DslEmitter.__init__": 1,
-      "DslEmitter.emit": 5,
-      "DslEmitter.emit_batch": 2,
-      "DslEmitter.emit_report": 19,
-      "EmitContext": 1,
-      "EmitResult": 2,
-      "EmitResult.to_json": 1,
-      "EntityFieldInfo": 1,
-      "_attempt_fix": 12,
-      "_emit_full_crud_set": 7,
-      "_emit_generic": 4,
-      "_emit_missing_crud": 5,
-      "_emit_navigation_gap": 15,
-      "_emit_ux_issue": 8,
-      "_emit_workflow_gap": 2,
-      "_field_type_to_str": 12,
-      "_generate_surface_dsl": 3,
-      "_infer_missing_action": 1,
-      "_is_comment_only": 4,
-      "_primary_entity": 5,
-      "_sanitize_identifier": 2,
-      "_section_title_for_mode": 1,
-      "_select_fields_for_mode": 15,
-      "_unique_name": 4,
-      "_validate_dsl": 2,
-      "_wrap_for_validation": 5,
-      "build_emit_context": 9
-    },
-    "mi_rank": "A"
-  },
   "dazzle/agent/executor.py": {
     "functions": {
       "Executor": 2,
       "Executor.execute": 1,
-      "HttpExecutor": 9,
-      "HttpExecutor.__init__": 1,
-      "HttpExecutor._click": 16,
-      "HttpExecutor._navigate": 4,
-      "HttpExecutor.execute": 12,
       "PlaywrightExecutor": 12,
       "PlaywrightExecutor.__init__": 1,
       "PlaywrightExecutor._console_window": 2,
@@ -203,23 +141,9 @@
   },
   "dazzle/agent/missions/_shared.py": {
     "functions": {
-      "build_dsl_summary": 23,
       "get_surface_entity": 2,
       "is_step_kind": 3,
-      "is_trigger_kind": 3,
-      "make_observe_gap_tool": 1,
-      "make_query_dsl_tool": 1,
-      "make_stagnation_completion": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/agent/missions/discovery.py": {
-    "functions": {
-      "_auto_prefix": 6,
-      "_build_persona_context": 8,
-      "_make_check_adjacency_tool": 1,
-      "_make_list_surfaces_tool": 1,
-      "build_discovery_mission": 3
+      "is_trigger_kind": 3
     },
     "mi_rank": "A"
   },
@@ -231,10 +155,7 @@
       "EntityCoverageGap": 1,
       "_is_operation_forbidden": 8,
       "_is_system_managed": 4,
-      "_make_check_crud_coverage_tool": 1,
-      "_make_check_state_transitions_tool": 1,
-      "_static_entity_analysis": 34,
-      "build_entity_completeness_mission": 1
+      "_static_entity_analysis": 34
     },
     "mi_rank": "A"
   },
@@ -320,10 +241,7 @@
       "WorkflowCoherenceReport.gap_count": 1,
       "WorkflowCoherenceReport.to_summary": 3,
       "WorkflowGap": 1,
-      "_make_check_process_coverage_tool": 3,
-      "_make_list_workflow_gaps_tool": 1,
-      "_static_workflow_analysis": 22,
-      "build_workflow_coherence_mission": 1
+      "_static_workflow_analysis": 22
     },
     "mi_rank": "A"
   },
@@ -343,16 +261,6 @@
   },
   "dazzle/agent/observer.py": {
     "functions": {
-      "HttpObserver": 6,
-      "HttpObserver.__init__": 1,
-      "HttpObserver._extract_clickables": 9,
-      "HttpObserver._extract_dazzle_attributes": 8,
-      "HttpObserver._extract_inputs": 9,
-      "HttpObserver._extract_visible_text": 4,
-      "HttpObserver._observe_regex": 6,
-      "HttpObserver.current_url": 1,
-      "HttpObserver.navigate": 2,
-      "HttpObserver.observe": 5,
       "Observer": 2,
       "Observer.current_url": 1,
       "Observer.navigate": 1,
@@ -427,9 +335,7 @@
       "dsl_service_names": 4,
       "host_inventory": 13,
       "next_steps": 10,
-      "playbook_json": 1,
       "process_summary": 11,
-      "prove_json": 1,
       "prove_stories": 17,
       "runtime_truth": 5,
       "story_binding_summary": 9
@@ -1762,21 +1668,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/conformance/executor.py": {
-    "functions": {
-      "CaseResult": 3,
-      "CaseResult.__init__": 1,
-      "CaseResult.__repr__": 2,
-      "ConformanceExecutor": 5,
-      "ConformanceExecutor.__init__": 2,
-      "ConformanceExecutor._acquire_tokens": 5,
-      "ConformanceExecutor._seed_fixtures": 8,
-      "ConformanceExecutor.run_all": 3,
-      "ConformanceExecutor.setup": 3,
-      "ConformanceExecutor.teardown": 2
-    },
-    "mi_rank": "A"
-  },
   "dazzle/conformance/fixtures.py": {
     "functions": {
       "_build_entity_rows": 6,
@@ -1785,18 +1676,6 @@
       "_extract_real_personas": 3,
       "_resolve_count": 4,
       "generate_fixtures": 9
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/conformance/http_runner.py": {
-    "functions": {
-      "_build_create_payload": 5,
-      "_build_headers": 2,
-      "_pick_row_id": 6,
-      "_run_create": 2,
-      "_run_list": 7,
-      "_run_row_op": 6,
-      "run_case": 5
     },
     "mi_rank": "A"
   },
@@ -1810,44 +1689,11 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/conformance/monitor.py": {
-    "functions": {
-      "ConformanceMonitor": 3,
-      "ConformanceMonitor.__init__": 3,
-      "ConformanceMonitor.clear": 1,
-      "ConformanceMonitor.compare": 8,
-      "ConformanceMonitor.install": 1,
-      "ConformanceMonitor.records": 1,
-      "ConformanceMonitor.uninstall": 2,
-      "Discrepancy": 2,
-      "Discrepancy.__repr__": 1,
-      "MonitorReport": 3,
-      "MonitorReport.pass_rate": 2,
-      "MonitorReport.passed": 1,
-      "MonitorReport.to_dict": 2,
-      "_case_expects_allow": 1
-    },
-    "mi_rank": "A"
-  },
   "dazzle/conformance/plugin.py": {
     "functions": {
       "build_conformance_report": 3,
       "collect_conformance_cases": 2,
-      "pytest_configure": 1,
-      "run_conformance_session": 10
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/conformance/stage_invariants.py": {
-    "functions": {
-      "InvariantResult": 3,
-      "InvariantResult.all_passed": 2,
-      "StageVerification": 1,
-      "_resolve_markers": 6,
-      "verify_marker_resolution": 5,
-      "verify_predicate_build": 5,
-      "verify_round_trip": 4,
-      "verify_sql_compilation": 5
+      "pytest_configure": 1
     },
     "mi_rank": "A"
   },
@@ -14205,7 +14051,6 @@
       "DataIntegrityAgent.check_cascade_delete_missing": 5,
       "DataIntegrityAgent.check_cross_entity_computed": 6,
       "DataIntegrityAgent.check_dead_end_states": 13,
-      "DataIntegrityAgent.check_ledger_sync_target": 8,
       "DataIntegrityAgent.check_missing_primary_key": 4,
       "DataIntegrityAgent.check_missing_unique_constraint": 12,
       "DataIntegrityAgent.check_orphaned_ref": 7,
@@ -14218,11 +14063,7 @@
       "DeploymentStateAgent": 5,
       "DeploymentStateAgent.agent_id": 1,
       "DeploymentStateAgent.audit_access_disabled_sensitive": 7,
-      "DeploymentStateAgent.channel_without_throttle": 3,
-      "DeploymentStateAgent.pii_without_erasure": 8,
-      "DeploymentStateAgent.queue_direct_delivery": 5,
-      "DeploymentStateAgent.transaction_without_idempotency": 3,
-      "DeploymentStateAgent.transaction_without_validations": 3
+      "DeploymentStateAgent.pii_without_erasure": 8
     },
     "mi_rank": "A"
   },
@@ -14271,13 +14112,11 @@
       "PerformanceResourceAgent": 7,
       "PerformanceResourceAgent.agent_id": 1,
       "PerformanceResourceAgent.heavily_surfaced_entity": 8,
-      "PerformanceResourceAgent.high_topic_retention": 4,
       "PerformanceResourceAgent.large_entity_list_surface": 11,
       "PerformanceResourceAgent.n_plus_1_list_surface": 13,
       "PerformanceResourceAgent.process_allow_overlap": 3,
       "PerformanceResourceAgent.process_default_timeout": 4,
-      "PerformanceResourceAgent.ref_without_index": 10,
-      "PerformanceResourceAgent.sync_transaction": 3
+      "PerformanceResourceAgent.ref_without_index": 10
     },
     "mi_rank": "A"
   },
@@ -14701,9 +14540,6 @@
       "DSLTestGenerator._generate_entity_data": 1,
       "DSLTestGenerator._generate_entity_data_with_refs": 1,
       "DSLTestGenerator._generate_entity_tests": 1,
-      "DSLTestGenerator._generate_event_field_value": 9,
-      "DSLTestGenerator._generate_event_payload": 3,
-      "DSLTestGenerator._generate_event_tests": 1,
       "DSLTestGenerator._generate_field_value": 1,
       "DSLTestGenerator._generate_parent_setup_steps": 1,
       "DSLTestGenerator._generate_process_inputs": 10,
@@ -14774,46 +14610,6 @@
       "EntityClient.update_entity": 3
     },
     "mi_rank": "A"
-  },
-  "dazzle/testing/event_test_runner.py": {
-    "functions": {
-      "EventLogEntry": 2,
-      "EventLogEntry.to_dict": 1,
-      "EventTestCase": 1,
-      "EventTestCaseResult": 1,
-      "EventTestClient": 5,
-      "EventTestClient.__init__": 2,
-      "EventTestClient._create_entity": 1,
-      "EventTestClient._delete_entity": 1,
-      "EventTestClient._evaluate_condition": 16,
-      "EventTestClient._request": 4,
-      "EventTestClient._simulate_event_effect": 14,
-      "EventTestClient._update_entity": 1,
-      "EventTestClient.check_assertion": 7,
-      "EventTestClient.close": 1,
-      "EventTestClient.get_emitted_events": 3,
-      "EventTestClient.get_entities": 3,
-      "EventTestClient.get_entity": 3,
-      "EventTestClient.get_entity_count": 3,
-      "EventTestClient.get_process_status": 4,
-      "EventTestClient.ingest_event": 3,
-      "EventTestClient.reset": 2,
-      "EventTestResult": 1,
-      "EventTestRunResult": 4,
-      "EventTestRunResult.failed": 3,
-      "EventTestRunResult.passed": 3,
-      "EventTestRunner": 7,
-      "EventTestRunner.__init__": 1,
-      "EventTestRunner.close": 1,
-      "EventTestRunner.run_all": 5,
-      "EventTestRunner.run_test": 16,
-      "StateAssertion": 5,
-      "StateAssertion.describe": 4,
-      "_generate_entity_payload": 16,
-      "format_event_test_report": 9,
-      "generate_event_tests_from_appspec": 12
-    },
-    "mi_rank": "B"
   },
   "dazzle/testing/feedback.py": {
     "functions": {
@@ -14949,24 +14745,6 @@
       "MutationTarget": 1,
       "SuiteOutcome": 1,
       "suite_exit_code": 6
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/testing/playwright_codegen.py": {
-    "functions": {
-      "_auth_target_to_selector": 4,
-      "_generate_fixtures_dict": 6,
-      "_generate_step_code": 29,
-      "_generate_test_function": 11,
-      "_is_generated_conftest": 2,
-      "_parse_target": 2,
-      "_sanitize_test_name": 2,
-      "_target_to_route": 5,
-      "_target_to_selector": 12,
-      "generate_conftest": 1,
-      "generate_test_file": 3,
-      "generate_test_module": 11,
-      "generate_tests_for_app": 3
     },
     "mi_rank": "A"
   },
@@ -15195,7 +14973,6 @@
       "UnifiedTestRunner.generate_tests": 3,
       "UnifiedTestRunner.run_all": 16,
       "UnifiedTestRunner.run_crud_tests": 18,
-      "UnifiedTestRunner.run_event_tests": 5,
       "UnifiedTestRunner.start_server": 16,
       "UnifiedTestRunner.stop_server": 3,
       "format_unified_report": 8,
@@ -15474,19 +15251,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/testing/ux/structural.py": {
-    "functions": {
-      "StructuralResult": 1,
-      "_TagCollector": 3,
-      "_TagCollector.__init__": 1,
-      "_TagCollector.handle_starttag": 3,
-      "_parse": 1,
-      "check_detail_view": 13,
-      "check_form": 12,
-      "check_html": 9
-    },
-    "mi_rank": "A"
-  },
   "dazzle/testing/ux_catalogue.py": {
     "functions": {
       "_CatalogueRepo": 3,
@@ -15515,22 +15279,6 @@
     "functions": {},
     "mi_rank": "A"
   },
-  "dazzle/testing/vendor_mock/assertions.py": {
-    "functions": {
-      "RequestRecorder": 4,
-      "RequestRecorder.__init__": 1,
-      "RequestRecorder.assert_body_contains": 6,
-      "RequestRecorder.assert_called": 4,
-      "RequestRecorder.assert_not_called": 2,
-      "RequestRecorder.clear": 1,
-      "RequestRecorder.filter": 13,
-      "RequestRecorder.last_request": 2,
-      "RequestRecorder.request_count": 1,
-      "RequestRecorder.requests": 1,
-      "get_recorder": 1
-    },
-    "mi_rank": "A"
-  },
   "dazzle/testing/vendor_mock/data_generators.py": {
     "functions": {
       "DataGenerator": 4,
@@ -15550,14 +15298,6 @@
       "DataGenerator._next_counter": 1,
       "DataGenerator.generate_field": 4,
       "DataGenerator.generate_model": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/testing/vendor_mock/fixtures.py": {
-    "functions": {
-      "mock_vendor": 1,
-      "vendor_mocks": 1,
-      "vendor_mocks_from_appspec": 3
     },
     "mi_rank": "A"
   },
@@ -15626,30 +15366,6 @@
       "MockStateStore.get": 1,
       "MockStateStore.list": 5,
       "MockStateStore.update": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/testing/vendor_mock/webhooks.py": {
-    "functions": {
-      "DeliveryAttempt": 1,
-      "WebhookDispatcher": 4,
-      "WebhookDispatcher.__init__": 9,
-      "WebhookDispatcher._get_secret": 1,
-      "WebhookDispatcher._get_target_url": 1,
-      "WebhookDispatcher.build_payload": 10,
-      "WebhookDispatcher.clear": 1,
-      "WebhookDispatcher.deliveries": 1,
-      "WebhookDispatcher.delivery_count": 1,
-      "WebhookDispatcher.fire": 4,
-      "WebhookDispatcher.fire_sync": 3,
-      "WebhookDispatcher.last_delivery": 2,
-      "WebhookDispatcher.list_events": 5,
-      "WebhookDispatcher.sign_payload": 5,
-      "_deep_merge": 9,
-      "_set_nested": 4,
-      "load_events_from_packs": 8,
-      "load_signing_from_packs": 5,
-      "load_webhook_paths_from_packs": 7
     },
     "mi_rank": "A"
   },

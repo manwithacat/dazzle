@@ -3,15 +3,14 @@
 Why this exists
 ---------------
 The canonical rule is ``dazzle.core.strings.entity_slug`` —
-``name.lower().replace("_", "-")``. Five sites re-derived it, and three omitted
+``name.lower().replace("_", "-")``. Five sites re-derived it (three remain; the other two
+were deleted in flense ship M), and three omitted
 the ``.lower()`` entirely:
 
 - ``http/converters/surface_converter.py`` — the URL router
 - ``page/converters/workspace_converter.py`` — the route builder
-- ``agent/missions/discovery.py`` — the ``url_hint`` handed to agents
 - ``http/runtime/page_routes.py`` — the plural slug, built one line below an
   ``entity_slug`` call
-- ``testing/playwright_codegen.py`` — ``f"/{entity}"`` routes
 
 A mixed-case name therefore produced a **registered route that the breadcrumb
 link did not match** — the dead-link class of #1421/#1426. No example uses a
@@ -27,13 +26,13 @@ label. A gate that fires on those gets disabled inside a week, so it was not
 shipped. Catching the partial form in general needs a URL-context-aware check,
 which is separate work.
 
-Instead this pins the five *specific* production call sites, where the partial
+Instead this pins the three remaining *specific* production call sites, where the partial
 pattern is unambiguous because the result is interpolated into a URL. That is
 precise, has no false positives, and fails loudly if any of them regresses.
 
 What this does catch
 --------------------
-A re-introduced bare ``.replace("_", "-")`` in any of the five files.
+A re-introduced bare ``.replace("_", "-")`` in any of the three files.
 """
 
 from __future__ import annotations
@@ -54,9 +53,7 @@ _SRC = REPO / "src" / "dazzle"
 _URL_SLUG_SITES = [
     "http/converters/surface_converter.py",
     "page/converters/workspace_converter.py",
-    "agent/missions/discovery.py",
     "http/runtime/page_routes.py",
-    "testing/playwright_codegen.py",
 ]
 
 # A `.replace("_", "-")` that is NOT the full canonical formula.
@@ -92,7 +89,7 @@ def test_url_sites_do_not_rederive_the_slug(rel: str) -> None:
 
 @pytest.mark.parametrize("rel", _URL_SLUG_SITES)
 def test_url_sites_use_the_canonical_helper(rel: str) -> None:
-    """Each of the five actually calls `entity_slug`, so the pin above cannot be
+    """Each of the three actually calls `entity_slug`, so the pin above cannot be
     satisfied by simply deleting the slug."""
     text = (_SRC / rel).read_text(encoding="utf-8")
     assert "entity_slug" in text, (
@@ -163,7 +160,7 @@ def test_gate_scope_excludes_cli_flag_and_locale_files() -> None:
 
 
 def test_every_scoped_site_still_uses_the_canonical_helper() -> None:
-    """The scoping is only trustworthy if the five files really do use it."""
+    """The scoping is only trustworthy if the three files really do use it."""
     for rel in _URL_SLUG_SITES:
         text = (_SRC / rel).read_text(encoding="utf-8")
         assert "entity_slug" in text, f"{rel} does not reference entity_slug"

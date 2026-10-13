@@ -1094,26 +1094,6 @@ class TestRunHeadlessDiscovery:
         for obs in observations:
             assert obs.metadata.get("headless") is True
 
-    def test_observations_compatible_with_compiler(self) -> None:
-        from dazzle.agent.compiler import NarrativeCompiler
-        from dazzle.agent.missions.persona_journey import run_headless_discovery
-
-        appspec = _make_appspec(
-            entities=[_make_entity("Task")],
-            personas=[_make_persona("admin", default_workspace="main")],
-            workspaces=[_make_workspace("main", regions=[_make_region("sidebar")])],
-            surfaces=[],
-            stories=[_make_story("S1", actor="admin", title="Create task", scope=["Task"])],
-        )
-        report = run_headless_discovery(appspec)
-        observations = report.to_observations()
-        assert len(observations) > 0
-
-        compiler = NarrativeCompiler(persona="admin")
-        proposals = compiler.compile(observations)
-        # Should produce at least one proposal from the gaps
-        assert len(proposals) >= 1
-
     def test_persona_ids_filter_works(self) -> None:
         from dazzle.agent.missions.persona_journey import run_headless_discovery
 

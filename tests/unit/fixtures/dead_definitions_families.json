@@ -1,6 +1,4 @@
 {
-  "src/dazzle/agent_loop/core.py::playbook_json": "agent-and-loop-legacy",
-  "src/dazzle/agent_loop/core.py::prove_json": "agent-and-loop-legacy",
   "src/dazzle/api_kb/loader.py::get_all_env_vars": "semantics-and-kb-residue",
   "src/dazzle/compliance/analytics/consent_banner.py::render_consent_banner_from_state": "error-and-report-helpers",
   "src/dazzle/compliance/slicer.py::load_document_spec": "error-and-report-helpers",

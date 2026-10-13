@@ -62,7 +62,7 @@ module: grant_routes
   GET | (root)
     handler: list_grants(auth_context: AuthContext = Depends(auth_dep), scope_entity: str | None = Query(None), scope_id: str | None = Query(None), principal_id: str | None = Query(None), status: str | None = Query(None)) -> dict[str, Any]
   POST | (root)
-    handler: create_grant(body: dict[str, Any], auth_context: AuthContext = Depends(auth_dep)) -> dict[str, Any]
+    handler: create_grant(request: Request, body: dict[str, Any], auth_context: AuthContext = Depends(auth_dep)) -> dict[str, Any]
   DELETE | /{grant_id}
     handler: revoke_grant(grant_id: str, auth_context: AuthContext = Depends(auth_dep)) -> dict[str, Any]
   POST | /{grant_id}/approve

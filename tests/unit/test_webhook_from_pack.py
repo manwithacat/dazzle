@@ -2,9 +2,8 @@
 
 import textwrap
 from pathlib import Path
-from unittest.mock import MagicMock
 
-from dazzle.api_kb.loader import WebhookEventSpec, _load_pack_from_toml
+from dazzle.api_kb.loader import _load_pack_from_toml
 
 
 def _write_toml(tmp_path: Path, content: str) -> Path:
@@ -117,72 +116,3 @@ def test_stripe_pack_has_webhook_payloads() -> None:
     assert succeeded.signing == "stripe-v1"
     assert succeeded.signing_header == "Stripe-Signature"
     reset_state()
-
-
-def test_load_events_from_packs() -> None:
-    """load_events_from_packs extracts payload templates."""
-    from dazzle.testing.vendor_mock.webhooks import load_events_from_packs
-
-    # Create a mock pack with webhooks
-    pack = MagicMock()
-    pack.name = "test_vendor"
-    pack.webhooks = [
-        WebhookEventSpec(
-            name="event_a",
-            payload={"type": "event_a", "id": ""},
-        ),
-        WebhookEventSpec(
-            name="event_b",
-            payload={},  # Empty payload — should not be included
-        ),
-    ]
-
-    events = load_events_from_packs([pack])
-
-    assert "test_vendor" in events
-    assert "event_a" in events["test_vendor"]
-    assert events["test_vendor"]["event_a"] == {"type": "event_a", "id": ""}
-    # event_b has no payload, should not be in events
-    assert "event_b" not in events["test_vendor"]
-
-
-def test_load_signing_from_packs() -> None:
-    """load_signing_from_packs extracts signing config."""
-    from dazzle.testing.vendor_mock.webhooks import load_signing_from_packs
-
-    pack = MagicMock()
-    pack.name = "test_vendor"
-    pack.webhooks = [
-        WebhookEventSpec(
-            name="event_a",
-            signing="stripe-v1",
-            signing_header="Stripe-Signature",
-        ),
-    ]
-
-    signing = load_signing_from_packs([pack])
-
-    assert "test_vendor" in signing
-    assert signing["test_vendor"] == ("stripe-v1", "Stripe-Signature")
-
-
-def test_dispatcher_uses_pack_events() -> None:
-    """WebhookDispatcher uses pack-sourced events when available."""
-    from dazzle.testing.vendor_mock.webhooks import WebhookDispatcher
-
-    pack = MagicMock()
-    pack.name = "custom_vendor"
-    pack.webhooks = [
-        WebhookEventSpec(
-            name="custom_event",
-            signing="hmac-sha256",
-            signing_header="X-Webhook-Signature",
-            webhook_path="/webhooks/custom",
-            payload={"event": "custom_event", "data": "test"},
-        ),
-    ]
-
-    dispatcher = WebhookDispatcher(packs=[pack])
-    events = dispatcher.list_events("custom_vendor")
-
-    assert "custom_vendor/custom_event" in events

@@ -1,5 +1,4 @@
 {
-  "src/dazzle/agent/client_factory.py": 1,
   "src/dazzle/agent/missions/journey.py": 4,
   "src/dazzle/agent_loop/core.py": 5,
   "src/dazzle/agent_loop/runtime_prove.py": 1,
@@ -46,8 +45,6 @@
   "src/dazzle/cli/ux.py": 20,
   "src/dazzle/cli/ux_interactions.py": 3,
   "src/dazzle/compliance/evidence.py": 1,
-  "src/dazzle/conformance/executor.py": 1,
-  "src/dazzle/conformance/stage_invariants.py": 3,
   "src/dazzle/core/capabilities/cognition.py": 1,
   "src/dazzle/core/demo_blueprint_persistence.py": 2,
   "src/dazzle/core/discovery/engine.py": 1,
@@ -252,7 +249,6 @@
   "src/dazzle/testing/curl_test_generator.py": 1,
   "src/dazzle/testing/e2e_runner.py": 5,
   "src/dazzle/testing/fuzzer/__init__.py": 1,
-  "src/dazzle/testing/playwright_codegen.py": 1,
   "src/dazzle/testing/session_manager.py": 1,
   "src/dazzle/testing/test_runner.py": 1,
   "src/dazzle/testing/ux/contracts.py": 1,
@@ -260,8 +256,6 @@
   "src/dazzle/testing/ux/interactions/server_fixture.py": 3,
   "src/dazzle/testing/ux/reconciler.py": 1,
   "src/dazzle/testing/ux/runner.py": 3,
-  "src/dazzle/testing/vendor_mock/fixtures.py": 1,
   "src/dazzle/testing/vendor_mock/orchestrator.py": 1,
-  "src/dazzle/testing/vendor_mock/webhooks.py": 3,
   "src/dazzle/testing/viewport_runner.py": 6
 }

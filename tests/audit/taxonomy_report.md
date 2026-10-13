@@ -1,4 +1,4 @@
-# Test Suite Taxonomy — Pass 1 (17,543 test functions)
+# Test Suite Taxonomy — Pass 1 (17,090 test functions)
 
 Static classification per `docs/proposals/Suite Distillation Strategy.md`. No execution; AST + import-shape heuristics only. Confidence < 0.8 means the classifier could be wrong; see rationale field.
 
@@ -6,26 +6,25 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 
 | Archetype | Count | % | High-confidence count |
 |---|---:|---:|---:|
-| contract | 14,519 | 82.8% | 0 |
-| smoke | 1,934 | 11.0% | 879 |
-| parametric_cluster | 494 | 2.8% | 494 |
+| contract | 14,153 | 82.8% | 0 |
+| smoke | 1,881 | 11.0% | 863 |
+| parametric_cluster | 467 | 2.7% | 467 |
 | regression_pin | 450 | 2.6% | 450 |
-| implementation_mirror | 79 | 0.5% | 0 |
+| implementation_mirror | 72 | 0.4% | 0 |
 | property_based | 51 | 0.3% | 51 |
 | snapshot | 10 | 0.1% | 10 |
 | belt_and_braces | 6 | 0.0% | 0 |
 
 ## Action thresholds
 
-- **Definitely keep**: 15,524 (contract + regression_pin + parametric + snapshot + property_based)
+- **Definitely keep**: 15,131 (contract + regression_pin + parametric + snapshot + property_based)
 - **Property-based (fuzzable; the target archetype)**: 51
-- **Review for collapse/rewrite**: 85 (implementation_mirror + belt_and_braces)
-- **Smoke tests** (canary; keep but never as sole coverage): 1,934
+- **Review for collapse/rewrite**: 78 (implementation_mirror + belt_and_braces)
+- **Smoke tests** (canary; keep but never as sole coverage): 1,881
 
 ## Top 10 implementation-mirror files
 
 - `tests/unit/test_domain_user_attributes.py` — 7 likely-mirror tests
-- `tests/unit/test_narrative_compiler.py` — 7 likely-mirror tests
 - `tests/unit/test_qa/test_cli_signing_wiring.py` — 5 likely-mirror tests
 - `tests/unit/test_rbac_enforcement.py` — 5 likely-mirror tests
 - `tests/unit/test_audit_log_hash_chain.py` — 4 likely-mirror tests
@@ -34,6 +33,7 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 - `tests/unit/test_audit_log.py` — 3 likely-mirror tests
 - `tests/unit/test_rbac_login_json_1141.py` — 3 likely-mirror tests
 - `tests/unit/test_scope_via.py` — 3 likely-mirror tests
+- `tests/unit/test_cli_spec_status.py` — 2 likely-mirror tests
 
 ## Top 10 smoke-test files
 
@@ -42,11 +42,11 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 - `tests/unit/test_expression_lang.py` — 18 smoke tests
 - `tests/unit/test_invariant_evaluator.py` — 18 smoke tests
 - `tests/unit/test_parser.py` — 18 smoke tests
-- `tests/unit/test_access_control.py` — 17 smoke tests
 - `tests/unit/test_csrf_origin_gate_phase2.py` — 17 smoke tests
 - `tests/unit/test_aggregate_expression_l3.py` — 15 smoke tests
 - `tests/unit/test_llm_driver.py` — 15 smoke tests
 - `tests/unit/test_tenant_config.py` — 14 smoke tests
+- `tests/unit/test_workspace_live_refresh_1391.py` — 14 smoke tests
 
 ## Notes on the classifier
 

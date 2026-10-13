@@ -1,12 +1,9 @@
 """
-Entity completeness mission: static CRUD coverage analysis + targeted verification.
+Entity completeness: static CRUD coverage and state-machine UI analysis.
 
-Unlike the open-ended persona walkthrough, this mode:
-1. Statically analyzes the DSL to find missing CRUD surfaces and state machine UI
-2. Builds a focused mission that guides the agent to verify specific gaps
-
-The static pre-pass is deterministic. The agent verification is non-deterministic
-but bounded — it only checks what the static analysis flagged.
+Deterministic pass over the DSL that finds missing CRUD surfaces and missing
+state-transition UI; ``persona_journey.run_headless_discovery`` folds its gaps
+into ``discovery(operation=coherence)``.
 """
 
 from __future__ import annotations
@@ -15,20 +12,13 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from dazzle.core.ir.state_machine import state_name
 from dazzle.core.patterns import SYSTEM_MANAGED_PATTERNS
-
-from ..core import AgentTool, Mission
 
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
 from ._shared import (
-    build_dsl_summary,
     get_surface_entity,
     is_step_kind,
-    make_observe_gap_tool,
-    make_query_dsl_tool,
-    make_stagnation_completion,
 )
 
 logger = logging.getLogger(__name__)
@@ -273,220 +263,3 @@ def _static_entity_analysis(appspec: AppSpec) -> EntityCompletenessReport:
             )
 
     return report
-
-
-# =============================================================================
-# Mission Tools
-# =============================================================================
-
-
-def _make_check_crud_coverage_tool(appspec: AppSpec) -> AgentTool:
-    """Tool: check_crud_coverage — returns CRUD coverage for an entity."""
-    surfaces = appspec.surfaces
-
-    def check_crud_coverage(entity_name: str = "") -> dict[str, Any]:
-        if not entity_name:
-            return {"error": "entity_name is required"}
-
-        coverage: dict[str, list[str]] = {}
-        for surface in surfaces:
-            if get_surface_entity(surface) == entity_name:
-                mode = str(surface.mode)
-                coverage.setdefault(mode, []).append(surface.name)
-
-        return {
-            "entity": entity_name,
-            "list": bool(coverage.get("list")),
-            "create": bool(coverage.get("create")),
-            "edit": bool(coverage.get("edit")),
-            "view": bool(coverage.get("view")),
-            "surfaces": [s for modes in coverage.values() for s in modes],
-        }
-
-    return AgentTool(
-        name="check_crud_coverage",
-        description=(
-            "Check CRUD surface coverage for an entity. Returns which CRUD modes "
-            "(list, create, edit, view) have surfaces and lists all surfaces for the entity."
-        ),
-        schema={
-            "type": "object",
-            "properties": {
-                "entity_name": {
-                    "type": "string",
-                    "description": "Entity name to check coverage for",
-                },
-            },
-            "required": ["entity_name"],
-        },
-        handler=check_crud_coverage,
-    )
-
-
-def _make_check_state_transitions_tool(appspec: AppSpec) -> AgentTool:
-    """Tool: check_state_transitions — returns state transitions with UI status."""
-    entities = appspec.domain.entities
-    surfaces = appspec.surfaces
-
-    def check_state_transitions(entity_name: str = "") -> dict[str, Any]:
-        if not entity_name:
-            return {"error": "entity_name is required"}
-
-        # Find entity
-        entity = None
-        for e in entities:
-            if e.name == entity_name:
-                entity = e
-                break
-        if entity is None:
-            return {"error": f"Entity '{entity_name}' not found"}
-
-        sm = entity.state_machine
-        if not sm:
-            return {"entity": entity_name, "has_state_machine": False, "transitions": []}
-
-        # Check for surface actions
-        entity_surface_actions: set[str] = set()
-        for surface in surfaces:
-            if get_surface_entity(surface) == entity_name:
-                for action in surface.actions:
-                    if action.name:
-                        entity_surface_actions.add(action.name)
-
-        transitions = []
-        for t in sm.transitions:
-            from_state = t.from_state
-            to_state = t.to_state
-            transitions.append(
-                {
-                    "from": from_state,
-                    "to": to_state,
-                    "has_ui": bool(entity_surface_actions),
-                }
-            )
-
-        states = [state_name(s) for s in sm.states]
-
-        return {
-            "entity": entity_name,
-            "has_state_machine": True,
-            "states": states,
-            "transitions": transitions,
-            "has_any_transition_ui": bool(entity_surface_actions),
-        }
-
-    return AgentTool(
-        name="check_state_transitions",
-        description=(
-            "Check state machine transitions for an entity and whether they have UI. "
-            "Returns transition list with from/to states and UI availability."
-        ),
-        schema={
-            "type": "object",
-            "properties": {
-                "entity_name": {
-                    "type": "string",
-                    "description": "Entity name to check transitions for",
-                },
-            },
-            "required": ["entity_name"],
-        },
-        handler=check_state_transitions,
-    )
-
-
-# =============================================================================
-# System Prompt
-# =============================================================================
-
-ENTITY_COMPLETENESS_PROMPT = """You are an entity completeness verification agent for a Dazzle application.
-
-Your mission is to verify CRUD coverage and state machine UI for entities in the DSL.
-A static analysis has already identified potential gaps. Your job is to verify them
-against the running application.
-
-## Static Analysis Results
-{gap_summary}
-
-## DSL Specification Summary
-{dsl_summary}
-
-## Verification Strategy
-1. **Review gaps**: Use `check_crud_coverage` for each flagged entity to confirm coverage
-2. **Check state machines**: Use `check_state_transitions` for entities with state machines
-3. **Verify in app**: Navigate to surfaces and check they actually work
-4. **Record findings**: Use `observe_gap` for confirmed gaps with accurate severity
-5. **Query DSL**: Use `query_dsl` to get field details when needed
-
-## Severity Guidelines
-- **critical**: Entity has no CRUD surfaces at all; process references missing surface
-- **high**: Entity missing list or create surface; state machine has no transition UI
-- **medium**: Entity missing edit surface; transition UI incomplete
-- **low**: Entity missing dedicated view surface (often acceptable if list has detail)
-
-## Output Format
-Respond with ONLY a single JSON object for each action. No extra text."""
-
-
-# =============================================================================
-# Mission Builder
-# =============================================================================
-
-
-def build_entity_completeness_mission(
-    appspec: AppSpec,
-    base_url: str = "http://localhost:3000",
-    kg_store: Any | None = None,
-    max_steps: int = 30,
-    token_budget: int = 150_000,
-) -> Mission:
-    """
-    Build a Mission for entity completeness verification.
-
-    Runs static analysis first, then builds a focused mission to verify gaps.
-
-    Args:
-        appspec: Parsed AppSpec from the DSL
-        base_url: Base URL of the running application
-        kg_store: Optional KnowledgeGraphStore for adjacency checks
-        max_steps: Maximum verification steps
-        token_budget: Token budget for the LLM
-
-    Returns:
-        Mission configured for entity completeness verification
-    """
-    # Run static analysis
-    report = _static_entity_analysis(appspec)
-
-    # Build system prompt
-    dsl_summary = build_dsl_summary(appspec)
-    system_prompt = ENTITY_COMPLETENESS_PROMPT.format(
-        gap_summary=report.to_summary(),
-        dsl_summary=dsl_summary,
-    )
-
-    # Build tools
-    tools = [
-        make_observe_gap_tool(kg_store),
-        make_query_dsl_tool(appspec),
-        _make_check_crud_coverage_tool(appspec),
-        _make_check_state_transitions_tool(appspec),
-    ]
-
-    return Mission(
-        name="entity_completeness",
-        system_prompt=system_prompt,
-        tools=tools,
-        completion_criteria=make_stagnation_completion(6, "Entity completeness"),
-        max_steps=max_steps,
-        token_budget=token_budget,
-        start_url=base_url,
-        context={
-            "mode": "entity_completeness",
-            "app_name": appspec.name,
-            "static_analysis": {
-                "gaps_found": report.gap_count,
-                "entities_analyzed": len(report.entity_coverage),
-            },
-        },
-    )

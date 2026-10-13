@@ -105,3 +105,81 @@ entity AssessmentEvent "Assessment Event":
 
         result = evaluate_condition(condition_dict, record, context)
         assert result is False
+
+
+class TestDeclaredGrantClausesOverRoutes:
+    """ADR-0057 ship Q: expiry / max_duration / approved_by enforced through the real routes."""
+
+    def test_create_and_approve_respect_declared_clauses(self, pg_integration_conn):
+        from contextlib import contextmanager
+        from datetime import UTC, datetime, timedelta
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+
+        from fastapi import FastAPI, Request
+        from fastapi.testclient import TestClient
+
+        from dazzle.http.runtime.grant_routes import create_grant_routes
+
+        dsl = """module test_mod
+
+grant_schema department_delegation "Department Delegation":
+  scope: Department
+  relation acting_hod "Assign Acting Head of Department":
+    granted_by: role(school_admin)
+    approved_by: role(senior_leader)
+    approval: required
+    expiry: required
+    max_duration: 90d
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        schema = fragment.grant_schemas[0]
+        appspec = MagicMock()
+        appspec.get_grant_schema = lambda n: schema if n == schema.name else None
+
+        @contextmanager
+        def _conn():
+            yield pg_integration_conn
+
+        db = MagicMock()
+        db.connection = _conn
+
+        def auth_dep(request: Request):
+            return SimpleNamespace(
+                is_authenticated=True,
+                user_id=request.headers["x-user"],
+                user=SimpleNamespace(roles=[request.headers["x-role"]]),
+            )
+
+        app = FastAPI()
+        app.include_router(create_grant_routes(db_manager=db, appspec=appspec, auth_dep=auth_dep))
+        client = TestClient(app)
+        admin = {"x-user": str(uuid4()), "x-role": "school_admin"}
+        leader = {"x-user": str(uuid4()), "x-role": "senior_leader"}
+        body = {
+            "schema_name": "department_delegation",
+            "relation": "acting_hod",
+            "principal_id": str(uuid4()),
+            "scope_entity": "Department",
+            "scope_id": str(uuid4()),
+        }
+
+        assert client.post("/_dazzle/grants", json=body, headers=admin).status_code == 422
+        too_long = (datetime.now(UTC) + timedelta(days=91)).isoformat()
+        resp = client.post("/_dazzle/grants", json={**body, "expires_at": too_long}, headers=admin)
+        assert resp.status_code == 422
+        assert GrantStore(pg_integration_conn).list_grants() == []
+
+        ok = (datetime.now(UTC) + timedelta(days=30)).isoformat()
+        resp = client.post("/_dazzle/grants", json={**body, "expires_at": ok}, headers=admin)
+        assert resp.status_code == 201, resp.text
+        grant = resp.json()["grant"]
+        assert grant["status"] == "pending_approval"
+        assert grant["expires_at"] is not None
+
+        gid = grant["id"]
+        assert client.post(f"/_dazzle/grants/{gid}/approve", headers=admin).status_code == 403
+        resp = client.post(f"/_dazzle/grants/{gid}/approve", headers=leader)
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["grant"]["status"] == "active"
+        assert str(resp.json()["grant"]["approved_by_id"]) == leader["x-user"]

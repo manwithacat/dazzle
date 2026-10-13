@@ -124,10 +124,9 @@
   },
   {
     "signature": "exact:f35daa502beb4b7c129f115e149c6cbd",
-    "count": 3,
+    "count": 2,
     "names": [
       "dazzle/compliance/analytics/sinks/ga4.py::close",
-      "dazzle/conformance/executor.py::teardown",
       "dazzle/testing/walk/runner.py::__aexit__"
     ]
   },

@@ -1,6 +1,4 @@
 [
-  "src/dazzle/agent_loop/core.py::playbook_json",
-  "src/dazzle/agent_loop/core.py::prove_json",
   "src/dazzle/api_kb/loader.py::get_all_env_vars",
   "src/dazzle/compliance/analytics/consent_banner.py::render_consent_banner_from_state",
   "src/dazzle/compliance/slicer.py::load_document_spec",

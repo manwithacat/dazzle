@@ -1,14 +1,10 @@
 """
 Executor backends for the Dazzle Agent.
 
-Two implementations:
-- PlaywrightExecutor: Browser interactions via Playwright (for testing)
-- HttpExecutor: HTTP requests with HTMX support (for discovery)
-
-Both execute AgentActions and return ActionResults.
+PlaywrightExecutor performs browser interactions via Playwright; it executes
+AgentActions and returns ActionResults behind the Executor protocol.
 """
 
-import asyncio
 import hashlib
 import logging
 from typing import Any, Protocol, runtime_checkable
@@ -91,7 +87,7 @@ try:
     from playwright.async_api import TimeoutError as _PlaywrightTimeoutError
 
     _SETTLE_TIMEOUT_TYPES = (_PlaywrightTimeoutError, TimeoutError, OSError, RuntimeError)
-except ImportError:  # pragma: no cover — playwright optional for HttpExecutor-only hosts
+except ImportError:  # pragma: no cover — playwright is an optional extra
     pass
 
 
@@ -497,148 +493,3 @@ class PlaywrightExecutor:
         base.console_errors_during_action = samples
         base.console_error_count = n_console
         return base
-
-
-# =============================================================================
-# HTTP Executor
-# =============================================================================
-
-
-class HttpExecutor:
-    """
-    Execute actions via HTTP requests.
-
-    Use for discovery where you don't need a full browser. Follows
-    HTMX patterns (hx-target, hx-swap) and maintains cookie state.
-    """
-
-    def __init__(self, client: Any, base_url: str, observer: Any = None):
-        """
-        Args:
-            client: httpx.AsyncClient with cookies configured
-            base_url: Base URL of the application
-            observer: Optional HttpObserver to update after navigation
-        """
-        self._client = client
-        self._base_url = base_url.rstrip("/")
-        self._observer = observer
-
-    async def execute(self, action: AgentAction) -> ActionResult:
-        try:
-            if action.type == ActionType.NAVIGATE:
-                return await self._navigate(action.target or "/")
-
-            elif action.type == ActionType.CLICK:
-                return await self._click(action)
-
-            elif action.type == ActionType.TYPE:
-                # HTTP executor stores form state; actual submission on CLICK/submit
-                return ActionResult(
-                    message=f"Set field {action.target} = '{action.value}'",
-                    data={"field": action.target, "value": action.value},
-                )
-
-            elif action.type == ActionType.SELECT:
-                return ActionResult(
-                    message=f"Selected '{action.value}' for {action.target}",
-                    data={"field": action.target, "value": action.value},
-                )
-
-            elif action.type == ActionType.ASSERT:
-                # For HTTP executor, assert checks are based on last response content
-                return ActionResult(
-                    message=f"Assertion noted: {action.target}",
-                    data={"assertion": action.target},
-                )
-
-            elif action.type == ActionType.WAIT:
-                await asyncio.sleep(0.5)
-                return ActionResult(message="Waited")
-
-            elif action.type == ActionType.SCROLL:
-                return ActionResult(message="Scroll (no-op for HTTP)")
-
-            elif action.type == ActionType.DONE:
-                return ActionResult(message="Agent completed mission")
-
-            elif action.type == ActionType.TOOL:
-                return ActionResult(message=f"Tool invocation: {action.target}")
-
-            else:
-                return ActionResult(message="", error=f"Unknown action type: {action.type}")
-
-        except Exception as e:
-            return ActionResult(message="", error=str(e))
-
-    async def _navigate(self, url: str) -> ActionResult:
-        """Navigate via HTTP GET."""
-        if not url.startswith("http"):
-            url = self._base_url + url
-        response = await self._client.get(url, follow_redirects=True)
-        if self._observer:
-            self._observer._current_url = str(response.url)
-            self._observer._last_html = response.text
-        if response.status_code >= 400:
-            return ActionResult(
-                message=f"GET {url}",
-                error=f"HTTP {response.status_code}",
-            )
-        return ActionResult(message=f"Navigated to {response.url}")
-
-    async def _click(self, action: AgentAction) -> ActionResult:
-        """Handle click by following href or hx-get/hx-post.
-
-        The LLM typically sends a CSS selector as the target (e.g.
-        ``a[href="/login"]``).  We extract the URL from the selector so
-        the HTTP executor can follow the link instead of silently
-        no-op-ing.
-        """
-        import re
-
-        target = action.target or ""
-
-        # If the target looks like a URL or path, navigate
-        if target.startswith("/") or target.startswith("http"):
-            return await self._navigate(target)
-
-        # If value contains a URL/path, navigate to it
-        if action.value and (action.value.startswith("/") or action.value.startswith("http")):
-            return await self._navigate(action.value)
-
-        # Extract href from CSS selector (e.g. a[href="/login"])
-        href_match = re.search(r'href=["\']?([^"\')\]\s]+)', target)
-        if href_match:
-            return await self._navigate(href_match.group(1))
-
-        # Extract hx-get from CSS selector
-        hx_get_match = re.search(r'hx-get=["\']?([^"\')\]\s]+)', target)
-        if hx_get_match:
-            return await self._navigate(hx_get_match.group(1))
-
-        # For hx-post targets, submit a POST
-        if action.value and action.value.startswith("hx-post:"):
-            post_url = action.value.replace("hx-post:", "")
-            if not post_url.startswith("http"):
-                post_url = self._base_url + post_url
-            response = await self._client.post(post_url, follow_redirects=True)
-            if self._observer:
-                self._observer._current_url = str(response.url)
-                self._observer._last_html = response.text
-            return ActionResult(message=f"POST {post_url} -> {response.status_code}")
-
-        # Extract hx-post from CSS selector
-        hx_post_match = re.search(r'hx-post=["\']?([^"\')\]\s]+)', target)
-        if hx_post_match:
-            post_url = hx_post_match.group(1)
-            if not post_url.startswith("http"):
-                post_url = self._base_url + post_url
-            response = await self._client.post(post_url, follow_redirects=True)
-            if self._observer:
-                self._observer._current_url = str(response.url)
-                self._observer._last_html = response.text
-            return ActionResult(message=f"POST {post_url} -> {response.status_code}")
-
-        return ActionResult(
-            message=f"Click on {target}",
-            data={"note": "HTTP executor: click may need URL context"},
-        )

@@ -6,7 +6,15 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from dazzle.testing.ux.inventory import Interaction
-from dazzle.testing.ux.structural import StructuralResult
+
+
+@dataclass
+class StructuralResult:
+    """One structural HTML check outcome carried on the UX report."""
+
+    check_name: str
+    passed: bool
+    message: str = ""
 
 
 @dataclass

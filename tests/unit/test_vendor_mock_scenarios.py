@@ -8,7 +8,6 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from dazzle.testing.vendor_mock.assertions import get_recorder
 from dazzle.testing.vendor_mock.generator import create_mock_server
 from dazzle.testing.vendor_mock.scenarios import ScenarioEngine
 
@@ -328,7 +327,7 @@ class TestScenarioWithMockServer:
 
     def test_recorder_works_with_scenarios(self) -> None:
         client, engine = self._make_client("stripe_payments", "payment_succeeded")
-        recorder = get_recorder(client.app)
+        request_log = client.app.state.request_log
         auth = {"Authorization": "Bearer test-token"}
 
         client.post(
@@ -336,8 +335,9 @@ class TestScenarioWithMockServer:
             json={"amount": 100, "currency": "gbp"},
             headers=auth,
         )
-        assert recorder.request_count == 1
-        recorder.assert_called(method="POST", path="/payment_intents")
+        assert len(request_log) == 1
+        assert request_log[0]["method"] == "POST"
+        assert request_log[0]["path"] == "/payment_intents"
 
 
 # ---------------------------------------------------------------------------

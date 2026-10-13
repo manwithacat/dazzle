@@ -729,11 +729,3 @@ def _prove_journey_bundle(
 
 def context_json(project_root: Path) -> str:
     return json.dumps(build_context(project_root), indent=2, default=str)
-
-
-def prove_json(project_root: Path, *, story_id: str | None = None) -> str:
-    return json.dumps(prove_stories(project_root, story_id=story_id), indent=2, default=str)
-
-
-def playbook_json(name: str = "domain_logic") -> str:
-    return json.dumps(build_playbook(name), indent=2)

@@ -3773,36 +3773,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_access_control.py",
-    "class": "TestAccessPolicy",
-    "assertion_shape": "('is',)",
-    "size": 4,
-    "members": [
-      "test_public_policy",
-      "test_owner_based_denies_others",
-      "test_tenant_based_policy",
-      "test_no_rule_denies"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_access_control.py",
-    "class": "TestAccessEnforcer",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_check_create_allowed",
-      "test_check_create_injects_owner",
-      "test_check_create_injects_tenant",
-      "test_get_list_filters"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_agent_parser.py",
     "class": "TestParseActionTier2",
     "assertion_shape": "('eq', 'eq')",
@@ -4208,21 +4178,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_conformance_executor.py",
-    "class": "TestRunCase",
-    "assertion_shape": "('in', 'not')",
-    "size": 4,
-    "members": [
-      "test_list_wrong_status",
-      "test_list_wrong_row_count",
-      "test_unknown_operation",
-      "test_exception_handling"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_conformance_fixtures.py",
     "class": "TestFixtureEngine",
     "assertion_shape": "('eq',)",
@@ -4232,36 +4187,6 @@
       "test_expected_counts_filtered",
       "test_expected_counts_scope_excluded",
       "test_scope_excluded_cases_keep_zero"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_conformance_stage_invariants.py",
-    "class": "TestVerifyPredicateBuild",
-    "assertion_shape": "('expr',)",
-    "size": 4,
-    "members": [
-      "test_current_user_produces_user_attr_check",
-      "test_current_user_attr_produces_user_attr_check",
-      "test_no_expected_kind_still_passes",
-      "test_null_literal_produces_column_check"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_conformance_stage_invariants.py",
-    "class": "TestVerifySqlCompilation",
-    "assertion_shape": "('expr',)",
-    "size": 4,
-    "members": [
-      "test_contradiction_produces_false",
-      "test_user_attr_check_produces_placeholder",
-      "test_bool_composite_and",
-      "test_null_is_produces_is_null"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -5468,21 +5393,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_narrative_compiler.py",
-    "class": "TestCheckAdjacency",
-    "assertion_shape": "('is',)",
-    "size": 4,
-    "members": [
-      "test_no_kg_returns_true",
-      "test_no_entities_returns_true",
-      "test_entity_found_returns_true",
-      "test_entity_not_found_returns_false"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_nav_builder.py",
     "class": "(module)",
     "assertion_shape": "('eq',)",
@@ -6653,21 +6563,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_vendor_mock_fixtures.py",
-    "class": "TestRequestRecorder",
-    "assertion_shape": "('assert_called',)",
-    "size": 4,
-    "members": [
-      "test_assert_called_passes",
-      "test_assert_called_with_times",
-      "test_assert_called_fails",
-      "test_assert_called_wrong_times"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_vendor_mock_orchestrator.py",
     "class": "TestDiscoverPacks",
     "assertion_shape": "('eq',)",
@@ -6677,21 +6572,6 @@
       "test_ignores_non_pack_specs",
       "test_deduplicates",
       "test_empty_appspec"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_vendor_mock_webhooks.py",
-    "class": "TestTargetUrls",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_default_urls",
-      "test_custom_paths",
-      "test_unknown_vendor_fallback",
-      "test_trailing_slash_stripped"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -7199,34 +7079,6 @@
       "test_retrieve_file",
       "test_stream_file",
       "test_get_url"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/http_runtime/test_fts.py",
-    "class": "TestFTSConfig",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_default_table_name",
-      "test_custom_table_name",
-      "test_default_tokenizer"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/http_runtime/test_fts.py",
-    "class": "TestFTSSearch",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 3,
-    "members": [
-      "test_search_single_word",
-      "test_search_no_results",
-      "test_search_unregistered_entity"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -7877,34 +7729,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_access_control.py",
-    "class": "TestAccessPolicy",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_get_list_filters_owner",
-      "test_get_list_filters_tenant",
-      "test_get_list_filters_no_rule"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_access_control.py",
-    "class": "TestPolicyRegistry",
-    "assertion_shape": "('is',)",
-    "size": 3,
-    "members": [
-      "test_register_and_get",
-      "test_get_unknown_returns_none",
-      "test_default_policy"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_access_evaluator.py",
     "class": "TestRoleChecks",
     "assertion_shape": "('is',)",
@@ -8011,20 +7835,6 @@
       "test_page_returns_cursor_epoch_and_no_staleness",
       "test_a_cursor_from_a_previous_session_reads_as_stale_and_restarts",
       "test_recreated_database_invalidates_a_held_cursor"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_admin_personas_bypass.py",
-    "class": "TestRuleEvaluation",
-    "assertion_shape": "('is',)",
-    "size": 3,
-    "members": [
-      "test_tenant_rule_bypassed_for_admin_persona",
-      "test_tenant_rule_still_filters_for_non_admin",
-      "test_admin_bypass_works_without_tenant_id_in_context"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -9081,48 +8891,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_conformance_executor.py",
-    "class": "TestPickRowId",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_own_picks_row_0",
-      "test_other_picks_row_1",
-      "test_no_target_picks_row_0"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_conformance_monitor.py",
-    "class": "TestCaseExpectsAllow",
-    "assertion_shape": "('not',)",
-    "size": 3,
-    "members": [
-      "test_403_is_deny",
-      "test_401_is_deny",
-      "test_404_is_deny"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_conformance_monitor.py",
-    "class": "TestConformanceMonitor",
-    "assertion_shape": "('eq', 'expr')",
-    "size": 3,
-    "members": [
-      "test_compare_deny_expected_deny",
-      "test_compare_multiple_observations_uses_latest",
-      "test_compare_multiple_personas"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_conformance_plugin.py",
     "class": "TestConformancePlugin",
     "assertion_shape": "('eq', 'eq', 'eq')",
@@ -9131,62 +8899,6 @@
       "test_build_report_empty",
       "test_build_report_counts",
       "test_collect_report_round_trip"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_conformance_stage_invariants.py",
-    "class": "TestVerifyMarkerResolution",
-    "assertion_shape": "('expr',)",
-    "size": 3,
-    "members": [
-      "test_no_markers",
-      "test_user_attr_ref",
-      "test_current_user_ref"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_conformance_stage_invariants.py",
-    "class": "TestVerifyMarkerResolution",
-    "assertion_shape": "('in', 'not')",
-    "size": 3,
-    "members": [
-      "test_missing_attr_fails",
-      "test_missing_id_fails",
-      "test_wrong_resolved_value_fails"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_conformance_stage_invariants.py",
-    "class": "TestVerifyRoundTrip",
-    "assertion_shape": "('eq', 'expr')",
-    "size": 3,
-    "members": [
-      "test_tautology_round_trip",
-      "test_column_check_round_trip",
-      "test_user_attr_full_round_trip"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_conformance_stage_invariants.py",
-    "class": "TestVerifyRoundTrip",
-    "assertion_shape": "('eq', 'not')",
-    "size": 3,
-    "members": [
-      "test_stage1_failure_short_circuits",
-      "test_stage2_failure_short_circuits",
-      "test_marker_resolution_failure"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -9865,34 +9577,6 @@
     "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
   },
   {
-    "file": "tests/unit/test_dsl_emitter.py",
-    "class": "TestPrimaryEntity",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_finds_capitalized",
-      "test_skips_surface",
-      "test_fallback"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "fuzz",
-    "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
-  },
-  {
-    "file": "tests/unit/test_dsl_emitter.py",
-    "class": "TestUniqueName",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_no_conflict",
-      "test_conflict",
-      "test_multiple_conflicts"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "fuzz",
-    "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
-  },
-  {
     "file": "tests/unit/test_dsl_test_generator_fields.py",
     "class": "TestShortUniqueFields",
     "assertion_shape": "('eq',)",
@@ -10041,20 +9725,6 @@
       "test_complete_entity_has_no_crud_gaps",
       "test_process_referenced_entity_no_surface",
       "test_empty_appspec"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_entity_completeness.py",
-    "class": "TestBuildEntityCompletenessMission",
-    "assertion_shape": "('is',)",
-    "size": 3,
-    "members": [
-      "test_completion_on_done",
-      "test_stagnation_at_6_steps",
-      "test_no_stagnation_with_tool_calls"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -11937,20 +11607,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_parse_component_contract.py",
-    "class": "TestParseComponentContract",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_extracts_component_name_from_filename",
-      "test_extracts_five_quality_gates",
-      "test_gate_ids_are_unique"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_parser.py",
     "class": "TestWorkspaceDisplayModes",
     "assertion_shape": "('eq',)",
@@ -13211,34 +12867,6 @@
     "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
   },
   {
-    "file": "tests/unit/test_richtext_processor.py",
-    "class": "TestProcessInlineImages",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_no_storage_returns_unchanged",
-      "test_images_not_allowed_returns_unchanged",
-      "test_no_base64_images_returns_unchanged"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_richtext_processor.py",
-    "class": "TestRichTextService",
-    "assertion_shape": "('in',)",
-    "size": 3,
-    "members": [
-      "test_render_html_markdown",
-      "test_extract_text_markdown",
-      "test_extract_text_html"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_rls_runtime_context.py",
     "class": "(module)",
     "assertion_shape": "('not',)",
@@ -13905,20 +13533,6 @@
       "test_read_handler_authenticates_with_session",
       "test_read_handler_no_auth_required",
       "test_create_handler_authenticates_with_session"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_session_manager.py",
-    "class": "TestClientFactory",
-    "assertion_shape": "('call_isinstance', 'eq')",
-    "size": 3,
-    "members": [
-      "test_create_persona_client_no_persona",
-      "test_create_persona_client_with_session",
-      "test_create_persona_client_no_stored_session"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -14947,20 +14561,6 @@
     "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
   },
   {
-    "file": "tests/unit/test_vendor_mock_fixtures.py",
-    "class": "TestMockVendor",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_deterministic_seed",
-      "test_auth_token_validation",
-      "test_auth_missing_headers_rejected"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_vendor_mock_generator.py",
     "class": "TestNoAuthMockServer",
     "assertion_shape": "('eq', 'eq', 'eq')",
@@ -15061,6 +14661,20 @@
   {
     "file": "tests/unit/test_vendor_mock_scenarios.py",
     "class": "TestScenarioWithMockServer",
+    "assertion_shape": "('eq', 'eq', 'eq')",
+    "size": 3,
+    "members": [
+      "test_payment_succeeded_flow",
+      "test_error_injection_with_server",
+      "test_recorder_works_with_scenarios"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_vendor_mock_scenarios.py",
+    "class": "TestScenarioWithMockServer",
     "assertion_shape": "('eq', 'eq')",
     "size": 3,
     "members": [
@@ -15123,20 +14737,6 @@
       "test_merge_same_page_different_names",
       "test_merge_skips_duplicate_names",
       "test_merge_preserves_derived"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_viewport_suggestions.py",
-    "class": "TestSuggestFixesForReport",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_skips_passed",
-      "test_no_suggestion_for_unknown",
-      "test_mixed_results"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
