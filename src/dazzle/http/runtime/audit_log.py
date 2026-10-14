@@ -216,7 +216,6 @@ class AuditLogger:
                 f"audit_integrity must be 'none' or 'hash_chain', got {audit_integrity!r}"
             )
         self._database_url = database_url
-        self._max_queue_size = max_queue_size
         self._flush_interval = flush_interval
         self._audit_integrity = audit_integrity
         self._queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=max_queue_size)

@@ -73,7 +73,7 @@ jobs:
         # +test-full: the pure-pip optional subsystems (graph/signing/
         # sendgrid/observability + aiosqlite) whose tests otherwise
         # skip on this coverage-measuring job, undercounting coverage.
-        extras: dev,llm,mcp,mobile,postgres,perf,saml,test-full
+        extras: dev,llm,mcp,postgres,perf,saml,test-full
 
     - name: Build asset bundles
       # #1052: dist/dazzle.min.{css,js} + dazzle-icons.min.js are
@@ -144,7 +144,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,mobile,postgres,perf
+        extras: dev,sso,postgres,perf
         optional-pip: ""
 
     # NOTE: the security *unit* tests (test_jwt_security, test_input_sanitization,
@@ -308,7 +308,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,llm,mcp,mobile,postgres,i18n,viewport,perf
+        extras: dev,llm,mcp,postgres,i18n,viewport,perf
 
     - name: Run mypy
       # #1056 (v0.67.99): full mypy check across the merged dazzle/
@@ -325,7 +325,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,llm,mcp,mobile,perf,saml  # +saml: run test_saml_routes in CI (#1345)
+        extras: dev,llm,mcp,perf,saml  # +saml: run test_saml_routes in CI (#1345)
 
     - name: Build asset bundles
       # #1052: dist/dazzle.min.* are gitignored — built here for tests.
@@ -362,7 +362,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,llm,mcp,mobile,perf
+        extras: dev,llm,mcp,perf
         optional-pip: ""
 
     - name: Validate all example and fixture projects

@@ -2,7 +2,6 @@
 
 from dazzle.page.runtime.fragment_registry import (
     PARKING_LOT_FRAGMENTS,
-    get_fragment_info,
     get_fragment_registry,
 )
 
@@ -29,14 +28,6 @@ class TestFragmentRegistry:
             assert "params" in info, f"{name}: missing params"
             assert "description" in info, f"{name}: missing description"
             assert isinstance(info["params"], list), f"{name}: params not a list"
-
-    def test_get_fragment_info_found(self) -> None:
-        info = get_fragment_info("table_rows")
-        assert info is not None
-        assert "params" in info
-
-    def test_get_fragment_info_not_found(self) -> None:
-        assert get_fragment_info("nonexistent") is None
 
     def test_fragment_count(self) -> None:
         registry = get_fragment_registry()

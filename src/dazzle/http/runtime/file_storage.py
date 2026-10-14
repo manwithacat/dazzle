@@ -963,34 +963,3 @@ class FileService:
     ) -> list[FileMetadata]:
         """Get files associated with an entity."""
         return self.metadata_store.get_by_entity(entity_name, entity_id, field_name)
-
-
-# =============================================================================
-# Factory Functions
-# =============================================================================
-
-
-def create_local_file_service(
-    base_path: str | Path = ".dazzle/uploads",
-    base_url: str = "/files",
-    max_size: int = 10 * 1024 * 1024,
-    allowed_types: list[str] | None = None,
-    database_url: str | None = None,
-) -> FileService:
-    """
-    Create a file service with local storage.
-
-    Args:
-        base_path: Directory for file storage
-        base_url: Base URL for file access
-        max_size: Maximum file size
-        allowed_types: Allowed MIME types
-        database_url: PostgreSQL connection URL (required).
-
-    Returns:
-        Configured FileService
-    """
-    storage = LocalStorageBackend(base_path, base_url)
-    metadata_store = FileMetadataStore(database_url=database_url)
-    validator = FileValidator(max_size, allowed_types)
-    return FileService(storage, metadata_store, validator)

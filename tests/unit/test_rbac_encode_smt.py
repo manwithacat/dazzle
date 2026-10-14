@@ -32,7 +32,7 @@ from dazzle.core.ir.predicates import (  # noqa: E402
     ValueRef,
 )
 from dazzle.rbac import encode_smt as E  # noqa: E402
-from dazzle.rbac.ir import ALL_NODE_KINDS, predicate_kinds  # noqa: E402
+from dazzle.rbac.ir import ALL_NODE_KINDS, iter_nodes  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 # Corpus chosen to exercise every node kind: the kept example apps cover
@@ -73,6 +73,11 @@ def test_encoder_total_over_corpus(example: str) -> None:
     for p in preds:
         formula, sym = E.encode_predicate(p)  # must not raise EncodingError
         assert formula is not None
+
+
+def predicate_kinds(node: object) -> set[str]:
+    """The set of node `kind` discriminators present in a predicate tree."""
+    return {k for n in iter_nodes(node) if (k := getattr(n, "kind", None)) is not None}
 
 
 def test_corpus_exercises_every_relevant_node_kind() -> None:

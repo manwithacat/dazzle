@@ -6,7 +6,6 @@ from dazzle.http.runtime.renderers.site_section_builder import render_typed_sect
 from dazzle.http.runtime.renderers.site_section_override_loader import (
     SectionOverrideRegistry,
     discover_section_overrides,
-    write_section_overrides_readme,
 )
 
 
@@ -114,21 +113,3 @@ def test_render_typed_section_allows_override_for_new_type(tmp_path: Path) -> No
     reg.register("project_specific", lambda s: "<section class='ps'/>")
     html = render_typed_section({"type": "project_specific"}, overrides=reg)
     assert html == "<section class='ps'/>"
-
-
-def test_write_readme_creates_when_absent(tmp_path: Path) -> None:
-    path = write_section_overrides_readme(tmp_path)
-    assert path is not None
-    assert path == tmp_path / "site_sections" / "README.md"
-    assert "Project-local site section builders" in path.read_text()
-
-
-def test_write_readme_is_idempotent(tmp_path: Path) -> None:
-    """A custom README in site_sections/ survives the scaffold call."""
-    plugin_dir = tmp_path / "site_sections"
-    plugin_dir.mkdir()
-    readme = plugin_dir / "README.md"
-    readme.write_text("CUSTOM")
-    result = write_section_overrides_readme(tmp_path)
-    assert result is None  # not created — already existed
-    assert readme.read_text() == "CUSTOM"

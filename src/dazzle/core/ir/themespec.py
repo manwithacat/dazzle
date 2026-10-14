@@ -10,7 +10,6 @@ layout, imagery, meta.
 """
 
 from enum import StrEnum
-from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -411,20 +410,3 @@ class ThemeSpecYAML(BaseModel):
         default_factory=ThemeMetaSpec,
         description="Metadata about the theme specification",
     )
-
-    def get_field_value(self, dotted_path: str) -> Any:
-        """Get a value by dotted path (e.g. 'palette.brand_hue')."""
-        parts = dotted_path.split(".")
-        obj: Any = self
-        for part in parts:
-            if isinstance(obj, BaseModel):
-                obj = getattr(obj, part, None)
-            elif isinstance(obj, dict):
-                obj = obj.get(part)
-            else:
-                return None
-        return obj
-
-    def is_agent_editable(self, field_path: str) -> bool:
-        """Check if a field path is in the agent-editable list."""
-        return field_path in self.meta.agent_editable_fields

@@ -108,40 +108,6 @@ class TestConsentStateSerialization:
         assert s.undecided
 
 
-class TestConsentModeV2Mapping:
-    def test_granted_all_maps_to_granted_signals(self) -> None:
-        state = build_decided_state(
-            analytics=True, advertising=True, personalization=True, functional=True
-        )
-        cm = state.to_consent_mode_v2()
-        assert cm["analytics_storage"] == "granted"
-        assert cm["ad_storage"] == "granted"
-        assert cm["ad_user_data"] == "granted"
-        assert cm["ad_personalization"] == "granted"
-        assert cm["functionality_storage"] == "granted"
-        assert cm["security_storage"] == "granted"
-
-    def test_denied_all_maps_to_denied_except_security(self) -> None:
-        state = build_decided_state(
-            analytics=False, advertising=False, personalization=False, functional=True
-        )
-        cm = state.to_consent_mode_v2()
-        assert cm["analytics_storage"] == "denied"
-        assert cm["ad_storage"] == "denied"
-        # security_storage is always granted (essential).
-        assert cm["security_storage"] == "granted"
-
-    def test_advertising_denied_collapses_ad_personalization(self) -> None:
-        """If advertising is denied, ad_personalization is denied even if
-        personalization is granted — ad_personalization sits under the
-        advertising category gate."""
-        state = build_decided_state(
-            analytics=True, advertising=False, personalization=True, functional=True
-        )
-        cm = state.to_consent_mode_v2()
-        assert cm["ad_personalization"] == "denied"
-
-
 class TestIsGranted:
     def test_category_lookup(self) -> None:
         state = build_decided_state(

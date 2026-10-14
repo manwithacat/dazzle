@@ -448,7 +448,6 @@ class DazzleBackendApp:
         # with proper parameter precedence over config defaults
         # Process/workflow support (v0.24.0)
         self._enable_processes = config.enable_processes
-        self._process_adapter_class = config.process_adapter_class  # Custom adapter class
         self._process_specs: list[ProcessSpec] = config.process_specs
         self._schedule_specs: list[ScheduleSpec] = config.schedule_specs
         self._entity_status_fields: dict[str, str] = config.entity_status_fields

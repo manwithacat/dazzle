@@ -111,31 +111,6 @@ class ConsentState:
             return self.functional == "granted"
         raise ValueError(f"Unknown consent category: {key}")
 
-    def to_consent_mode_v2(self) -> dict[str, ConsentChoice]:
-        """Map Dazzle categories to Consent Mode v2 signal dict.
-
-        Used when emitting `gtag('consent','default',{...})` or
-        `gtag('consent','update',{...})`. Follows Google's published
-        category-to-signal mapping.
-        """
-        ad_linked: ConsentChoice = "granted" if self.advertising == "granted" else "denied"
-        ad_pers: ConsentChoice = (
-            "granted"
-            if self.advertising == "granted" and self.personalization == "granted"
-            else "denied"
-        )
-        security_always: ConsentChoice = "granted"
-        return {
-            "analytics_storage": self.analytics,
-            "ad_storage": ad_linked,
-            "ad_user_data": ad_linked,
-            "ad_personalization": ad_pers,
-            "functionality_storage": self.functional,
-            "personalization_storage": self.personalization,
-            # Security storage is always granted — essential for the service.
-            "security_storage": security_always,
-        }
-
     def serialize(self) -> str:
         """Return the cookie value string (JSON; caller URL-encodes for transport)."""
         return json.dumps(

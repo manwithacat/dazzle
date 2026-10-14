@@ -127,12 +127,6 @@ class MessageCatalogue:
                 return bundle.get(msgid)
         return None
 
-    def has_locale(self, locale: str) -> bool:
-        """Return True iff at least one msgid is registered for *locale*."""
-        if not locale:
-            return False
-        return locale.strip().lower() in self._messages
-
     def locales(self) -> list[str]:
         """Sorted list of locales for which at least one translation is registered."""
         return sorted(self._messages.keys())

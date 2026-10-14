@@ -344,23 +344,3 @@ class TestConcurrencyBound:
 
 
 # ── MCP State Integration ───────────────────────────────────────────
-
-
-class TestMCPStateIntegration:
-    def setup_method(self):
-        import dazzle.testing.browser_gate as mod
-
-        mod._gate = None
-
-    def test_init_browser_gate(self):
-        from dazzle.mcp.server.state import init_browser_gate
-
-        init_browser_gate(max_concurrent=5)
-
-        gate = get_browser_gate()
-        assert gate.max_concurrent == 5
-
-    def teardown_method(self):
-        import dazzle.testing.browser_gate as mod
-
-        mod._gate = None

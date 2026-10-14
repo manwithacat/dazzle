@@ -43,7 +43,7 @@ inputs:
     # `saml` (python3-saml; prebuilt xmlsec wheel) is in the default so the
     # SAML provider + IdP-metadata tests run in CI instead of skipping on a
     # missing `onelogin` import (#1345).
-    default: dev,llm,mcp,mobile,postgres,perf,saml
+    default: dev,llm,mcp,postgres,perf,saml
   optional-pip:
     description: |
       DEPRECATED — retained only for call-site compatibility. Space-separated

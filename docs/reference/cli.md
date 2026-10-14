@@ -41,7 +41,7 @@ Complete reference for the `dazzle` command-line interface.
 | Command | Description |
 |---------|-------------|
 | `dazzle test` | Multi-tier test runner (API, Playwright, LLM agent) |
-| `dazzle e2e` | Docker-based E2E testing with UX coverage |
+| `dazzle e2e` | Viewport assertions (`run-viewport`), persona journeys (`journey`) and the E2E environment (`env`) |
 | `dazzle story` | Story-driven test generation |
 
 ### Infrastructure

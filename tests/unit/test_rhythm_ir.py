@@ -56,7 +56,7 @@ def test_scene_spec_frozen():
 
 
 def test_phase_spec_and_evaluation_models():
-    """Combined: PhaseSpec, SceneDimensionScore (basic+with-root-cause), SceneEvaluation, Gap."""
+    """Combined: PhaseSpec, SceneDimensionScore, SceneEvaluation, Gap."""
     # PhaseSpec construction
     scenes = [
         SceneSpec(name="browse", surface="course_list"),
@@ -71,19 +71,9 @@ def test_phase_spec_and_evaluation_models():
         dimension="arrival",
         score="pass",
         evidence="Page loaded successfully",
-        root_cause=None,
     )
     assert score.dimension == "arrival"
     assert score.score == "pass"
-
-    # SceneDimensionScore — with root cause
-    score = SceneDimensionScore(
-        dimension="action",
-        score="fail",
-        evidence="Submit button not found",
-        root_cause="Missing story: create_task",
-    )
-    assert score.root_cause == "Missing story: create_task"
 
     # SceneEvaluation
     dims = [

@@ -45,31 +45,3 @@ class TestSchemaCreation:
             cfg = call_args[0][0]
             assert call_args[0][1] == "head"
             assert cfg.attributes["tenant_schema"] == "tenant_cyfuture"
-
-    @patch("dazzle.tenant.provisioner.psycopg")
-    def test_schema_exists_true(self, mock_psycopg: MagicMock) -> None:
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_conn.__enter__.return_value = mock_conn
-        mock_conn.__exit__.return_value = False
-        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
-        mock_conn.cursor.return_value.__exit__.return_value = False
-        mock_cursor.fetchone.return_value = {"exists": True}
-        mock_psycopg.connect.return_value = mock_conn
-
-        provisioner = TenantProvisioner("postgresql://localhost/test", MagicMock())
-        assert provisioner.schema_exists("tenant_cyfuture") is True
-
-    @patch("dazzle.tenant.provisioner.psycopg")
-    def test_schema_exists_false(self, mock_psycopg: MagicMock) -> None:
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_conn.__enter__.return_value = mock_conn
-        mock_conn.__exit__.return_value = False
-        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
-        mock_conn.cursor.return_value.__exit__.return_value = False
-        mock_cursor.fetchone.return_value = {"exists": False}
-        mock_psycopg.connect.return_value = mock_conn
-
-        provisioner = TenantProvisioner("postgresql://localhost/test", MagicMock())
-        assert provisioner.schema_exists("tenant_cyfuture") is False

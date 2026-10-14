@@ -18,7 +18,7 @@ stale_lock_minutes = 30
 
 [tools]
 mcp = ["dsl.validate", "story.get", "story.coverage"]
-cli = ["dazzle test run", "dazzle test coverage"]
+cli = ["dazzle test run", "dazzle test dsl-coverage"]
 
 [skill_template]
 file = "qa.md.j2"

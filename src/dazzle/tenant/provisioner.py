@@ -71,16 +71,3 @@ class TenantProvisioner:
         command.upgrade(cfg, "head")
 
         logger.info("Provisioned schema %s via Alembic", schema_name)
-
-    def schema_exists(self, schema_name: str) -> bool:
-        """Check if a schema exists in the database."""
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT EXISTS("
-                    "SELECT 1 FROM information_schema.schemata "
-                    "WHERE schema_name = %s) AS exists",
-                    (schema_name,),
-                )
-                row = cur.fetchone()
-        return bool(row and row.get("exists"))

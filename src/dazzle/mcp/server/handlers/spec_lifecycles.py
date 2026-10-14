@@ -220,40 +220,6 @@ def match_pattern_lifecycle(entity_name: str) -> tuple[list[str], str] | None:
     return list(states), "pattern_match"
 
 
-def resolve_lifecycle_for_name(
-    name: str,
-    life_by_entity: dict[str, list[str]],
-) -> list[str]:
-    """Exact then fuzzy lookup of lifecycle states for a domain noun.
-
-    Prefer life-map keys that are *stems* of the noun (Ticket → SupportTicket),
-    not the reverse (TicketClassification must not paint Classification).
-    """
-    if not name:
-        return []
-    if name in life_by_entity and life_by_entity[name]:
-        return list(life_by_entity[name])
-    nl = _norm(name)
-    best_states: list[str] = []
-    best_score = 0
-    for key, states in life_by_entity.items():
-        if not states or key in ("UNKNOWN", ""):
-            continue
-        kl = _norm(key)
-        if nl == kl:
-            return list(states)
-        # Key is a stem/token of the noun (SupportTicket ← Ticket)
-        if kl and kl != nl and (kl in nl or entity_matches_keyword(name, key)):
-            # Reject reverse containment (noun shorter than key)
-            if len(kl) > len(nl):
-                continue
-            score = len(kl)
-            if score > best_score:
-                best_score = score
-                best_states = list(states)
-    return best_states
-
-
 def _entity_names(entities: list[Any]) -> list[str]:
     names = [(e if isinstance(e, str) else str(e.get("name") or "")) for e in (entities or [])]
     return [n for n in names if n]

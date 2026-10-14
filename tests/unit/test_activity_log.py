@@ -234,51 +234,6 @@ class TestRecovery:
 # ── Entry factories ─────────────────────────────────────────────────────────
 
 
-class TestEntryFactories:
-    def test_entry_factories_combined(self):
-        """Combined: tool_start, tool_end success+failure, progress
-        (with current/total), log (no current), error."""
-        from dazzle.mcp.server.activity_log import (
-            make_error_entry,
-            make_progress_entry,
-            make_tool_end_entry,
-            make_tool_start_entry,
-        )
-
-        # tool_start
-        s = make_tool_start_entry("pipeline", "run")
-        assert s["type"] == "tool_start"
-        assert s["tool"] == "pipeline"
-        assert s["operation"] == "run"
-
-        # tool_end success (rounded duration)
-        ok = make_tool_end_entry("dsl", "validate", success=True, duration_ms=123.456)
-        assert ok["type"] == "tool_end"
-        assert ok["success"] is True
-        assert ok["duration_ms"] == 123.5
-
-        # tool_end failure
-        fail = make_tool_end_entry("dsl", "validate", success=False, error="boom")
-        assert fail["success"] is False
-        assert fail["error"] == "boom"
-
-        # progress
-        p = make_progress_entry("pipeline", "Running step 3", current=3, total=10)
-        assert p["type"] == "progress"
-        assert p["current"] == 3
-        assert p["total"] == 10
-
-        # log (progress without current/total)
-        log_entry = make_progress_entry("dsl", "Parsing modules")
-        assert log_entry["type"] == "log"
-        assert "current" not in log_entry
-
-        # error
-        err = make_error_entry("pipeline", "Step failed", operation="run")
-        assert err["type"] == "error"
-        assert err["level"] == "error"
-
-
 # ── Formatting ──────────────────────────────────────────────────────────────
 
 

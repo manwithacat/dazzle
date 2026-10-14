@@ -53,16 +53,6 @@ def _import_module():
 _import_module()
 
 
-def _build_guard_expression(guard_type, constraint_text, entity):
-    return _event_first_tools_module._build_guard_expression(guard_type, constraint_text, entity)
-
-
-def _match_transitions_to_constraint(constraint_text, state_machine):
-    return _event_first_tools_module._match_transitions_to_constraint(
-        constraint_text, state_machine
-    )
-
-
 def extract_guards(appspec):
     return _event_first_tools_module.extract_guards(appspec)
 
@@ -97,64 +87,6 @@ def _make_story(story_id, title="Test", scope=None, constraints=None):
     story.entities = scope or []
     story.constraints = constraints or []
     return story
-
-
-class TestMatchTransitions:
-    def test_matches_by_state_name(self):
-        sm = MagicMock()
-        t1 = MagicMock(from_state="draft", to_state="prepared")
-        t2 = MagicMock(from_state="prepared", to_state="reviewed")
-        sm.transitions = [t1, t2]
-
-        matches = _match_transitions_to_constraint("prepared by preparer", sm)
-        assert ("draft", "prepared") in matches
-        assert ("prepared", "reviewed") in matches
-
-    def test_no_match(self):
-        sm = MagicMock()
-        t1 = MagicMock(from_state="draft", to_state="submitted")
-        sm.transitions = [t1]
-
-        matches = _match_transitions_to_constraint("reviewer must differ", sm)
-        assert matches == []
-
-
-class TestBuildGuardExpression:
-    def test_requires_different_field_with_fields(self):
-        entity = _make_entity("VATReturn", ["preparer", "reviewer"], [])
-        expr = _build_guard_expression(
-            "requires_different_field",
-            "Reviewer must differ from preparer",
-            entity,
-        )
-        assert "requires_different_field(preparer, reviewer)" == expr
-
-    def test_requires_role(self):
-        entity = _make_entity("Task", [], [])
-        expr = _build_guard_expression(
-            "requires_role",
-            "Only reviewer can approve",
-            entity,
-        )
-        assert "requires_role(reviewer)" == expr
-
-    def test_requires_field(self):
-        entity = _make_entity("VATReturn", ["vrn"], [])
-        expr = _build_guard_expression(
-            "requires_field",
-            "Must have VRN set before filing",
-            entity,
-        )
-        assert "requires_field(vrn)" == expr
-
-    def test_requires_field_value(self):
-        entity = _make_entity("Task", [], [])
-        expr = _build_guard_expression(
-            "requires_field_value",
-            "status must be approved",
-            entity,
-        )
-        assert "requires(status=approved)" == expr
 
 
 class TestExtractGuards:

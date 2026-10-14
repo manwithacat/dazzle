@@ -43,11 +43,6 @@ class TestFuzzyEntityMatch:
         assert sl.match_pattern_lifecycle("Approver") is None
         assert sl.match_pattern_lifecycle("Requester") is None
 
-    def test_resolve_lifecycle_fuzzy(self) -> None:
-        life = {"Ticket": ["open", "closed"]}
-        assert sl.resolve_lifecycle_for_name("SupportTicket", life) == ["open", "closed"]
-        assert sl.resolve_lifecycle_for_name("Comment", life) == []
-
 
 class TestIdentifyLifecycles:
     def test_support_ticket_entity_gets_lifecycle(self) -> None:

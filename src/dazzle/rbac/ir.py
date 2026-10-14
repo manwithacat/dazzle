@@ -50,11 +50,6 @@ def iter_nodes(node: object) -> Iterator[object]:
         yield from iter_nodes(node.sub)
 
 
-def predicate_kinds(node: object) -> set[str]:
-    """The set of node `kind` discriminators present in a predicate tree."""
-    return {k for n in iter_nodes(node) if (k := getattr(n, "kind", None)) is not None}
-
-
 def has_data_dependent_node(node: object) -> bool:
     """True if the predicate's truth depends on data the static model abstracts.
 

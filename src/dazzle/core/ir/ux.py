@@ -227,30 +227,6 @@ class UXSpec(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    def empty_for(self, kind: str) -> str | None:
-        """Resolve the empty-state message for a given ``kind``.
-
-        Args:
-            kind: One of ``"collection"``, ``"filtered"``,
-                ``"forbidden"``. Anything else falls back to the
-                legacy single-string behaviour.
-
-        Returns:
-            The typed message if present, otherwise the legacy string
-            if ``empty_message`` is a plain ``str``, otherwise ``None``
-            (the template then picks a framework default).
-        """
-        em = self.empty_message
-        if isinstance(em, EmptyMessages):
-            case: str | None = getattr(em, kind, None)
-            if case is not None:
-                return case
-            # Fall through to None — template default.
-            return None
-        if isinstance(em, str):
-            return em
-        return None
-
     @property
     def has_attention_signals(self) -> bool:
         """Check if any attention signals are defined."""

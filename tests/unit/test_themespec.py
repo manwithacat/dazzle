@@ -67,15 +67,6 @@ class TestThemeSpecIR:
         assert rule.match_signal_level == "critical"
         assert rule.treatment.bg_token == "danger-bg"
 
-        # Field value lookup
-        assert ts.get_field_value("palette.brand_hue") == 260.0
-        assert ts.get_field_value("typography.ratio") == "major_third"
-        assert ts.get_field_value("nonexistent.path") is None
-
-        # Agent editable
-        assert ts.is_agent_editable("palette.brand_hue") is True
-        assert ts.is_agent_editable("meta.version") is False
-
         # Validation bounds
         with pytest.raises(ValidationError):
             PaletteSpec(brand_hue=400.0)

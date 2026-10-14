@@ -82,10 +82,5 @@ class ScenarioSpec(BaseModel):
                 return entry
         return None
 
-    def get_start_route(self, persona_id: str) -> str | None:
-        """Get the starting route for a persona in this scenario."""
-        entry = self.get_persona_entry(persona_id)
-        return entry.start_route if entry else None
-
     def __str__(self) -> str:
         return f"Scenario({self.id}: {self.name})"

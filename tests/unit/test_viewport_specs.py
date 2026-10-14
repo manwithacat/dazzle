@@ -5,13 +5,15 @@ from pathlib import Path
 
 from dazzle.testing.viewport import ComponentPattern, ViewportAssertion
 from dazzle.testing.viewport_specs import (
+    DSL_SPECS_DIR,
+    RUNTIME_SPECS_DIR,
+    SPECS_FILE,
     ViewportAssertionEntry,
     ViewportSpecEntry,
     ViewportSpecsContainer,
     convert_to_patterns,
     load_custom_viewport_specs,
     merge_patterns,
-    save_custom_viewport_specs,
 )
 
 
@@ -34,8 +36,18 @@ def _make_spec_entry(
     )
 
 
-class TestLoadSaveRoundtrip:
-    """Tests for load/save roundtrip."""
+def save_custom_viewport_specs(
+    project_root: Path, specs: list[ViewportSpecEntry], *, to_dsl: bool = True
+) -> Path:
+    """Write a specs file the way a project author would."""
+    path = project_root / (DSL_SPECS_DIR if to_dsl else RUNTIME_SPECS_DIR) / SPECS_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(ViewportSpecsContainer(specs=specs).model_dump_json(indent=2))
+    return path
+
+
+class TestLoadCustomSpecs:
+    """Tests for loading the project's custom specs file."""
 
     def test_save_and_load_dsl(self, tmp_path: Path) -> None:
         specs = [_make_spec_entry()]

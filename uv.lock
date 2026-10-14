@@ -844,10 +844,6 @@ llm = [
 mcp = [
     { name = "mcp" },
 ]
-mobile = [
-    { name = "cryptography" },
-    { name = "pyjwt" },
-]
 mobile-full = [
     { name = "cryptography" },
     { name = "google-auth" },
@@ -921,7 +917,6 @@ requires-dist = [
     { name = "bleach", specifier = ">=6.0" },
     { name = "boto3", marker = "extra == 'aws'", specifier = ">=1.35" },
     { name = "boto3", marker = "extra == 'aws-test'", specifier = ">=1.35" },
-    { name = "cryptography", marker = "extra == 'mobile'", specifier = ">=50.0.0" },
     { name = "cryptography", marker = "extra == 'mobile-full'", specifier = ">=50.0.0" },
     { name = "cryptography", marker = "extra == 'signing'", specifier = ">=50.0.0" },
     { name = "cryptography", marker = "extra == 'sso'", specifier = ">=50.0.0" },
@@ -967,7 +962,6 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pyhanko", marker = "extra == 'signing'", specifier = ">=0.25.0" },
     { name = "pyjwt", specifier = ">=2.8.0" },
-    { name = "pyjwt", marker = "extra == 'mobile'", specifier = ">=2.8.0" },
     { name = "pyjwt", marker = "extra == 'mobile-full'", specifier = ">=2.8.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.4" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23" },
@@ -995,7 +989,7 @@ requires-dist = [
     { name = "z3-solver", marker = "extra == 'dev'", specifier = ">=4.13" },
     { name = "z3-solver", marker = "extra == 'proof'", specifier = ">=4.13" },
 ]
-provides-extras = ["llm", "mcp", "graph", "proof", "e2e", "compliance", "sso", "saml", "signing", "dev", "perf", "observability", "serve", "postgres", "temporal", "redis", "events", "viewport", "mobile", "social-auth", "mobile-full", "aws", "i18n", "aws-test", "test-full"]
+provides-extras = ["llm", "mcp", "graph", "proof", "e2e", "compliance", "sso", "saml", "signing", "dev", "perf", "observability", "serve", "postgres", "temporal", "redis", "events", "viewport", "social-auth", "mobile-full", "aws", "i18n", "aws-test", "test-full"]
 
 [[package]]
 name = "defusedxml"

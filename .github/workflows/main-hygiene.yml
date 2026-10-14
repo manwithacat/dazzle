@@ -52,13 +52,13 @@ jobs:
       # monitoring tool that cries wolf gets ignored, which is worse than not
       # having it. The composite runs `uv sync` and puts `.venv/bin` on PATH.
       # Extras must match the `security-tests` job's exactly
-      # (`dev,mobile,postgres,perf`). These two jobs exist to agree about what is
-      # clean; auditing a *narrower* tree here means a CVE in a `mobile`/
+      # (`dev,sso,postgres,perf`). These two jobs exist to agree about what is
+      # clean; auditing a *narrower* tree here means a CVE in an `sso`/
       # `postgres`-only dependency reports clean here while turning every open PR
       # red in `security-tests`. Drift this list and the monitor starts lying.
       - uses: ./.github/actions/setup-dazzle
         with:
-          extras: dev,mobile,postgres,perf
+          extras: dev,sso,postgres,perf
           optional-pip: ""
 
       # Same as the `security-tests` job. A separate step so its failure is

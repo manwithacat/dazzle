@@ -796,19 +796,6 @@ def handle_infer_analytics(args: dict[str, Any], project_path: Path) -> str:
 # Guard Extraction (Issue #81a)
 # ============================================================================
 
-# Patterns in story constraints that imply state machine guards
-_GUARD_PATTERNS: list[tuple[str, str, list[str]]] = [
-    # (pattern_key, guard_type, keywords)
-    ("differ", "requires_different_field", ["differ", "different", "not the same"]),
-    ("only_can", "requires_role", ["only", "assigned", "authorized"]),
-    ("must_have", "requires_field", ["must have", "must be set"]),
-    ("must_be", "requires_field_value", ["must be"]),
-    ("requires_active", "requires_related", ["requires", "active", "valid"]),
-    ("four_eye", "requires_different_field", ["four-eye", "4-eye", "dual"]),
-    ("approval", "requires_role", ["approval", "approve"]),
-    ("cannot_same", "requires_different_field", ["cannot", "same"]),
-]
-
 
 def extract_guards(appspec: ir.AppSpec) -> list[dict[str, Any]]:
     """Extract guard proposals from stories and entity state machines.
@@ -841,52 +828,6 @@ def extract_guards(appspec: ir.AppSpec) -> list[dict[str, Any]]:
             unique.append(p)
 
     return unique
-
-
-def _match_transitions_to_constraint(constraint_lower: str, sm: Any) -> list[tuple[str, str]]:
-    """Try to match a constraint to specific state machine transitions."""
-    matches: list[tuple[str, str]] = []
-    for transition in sm.transitions:
-        from_s = transition.from_state.lower()
-        to_s = transition.to_state.lower()
-        if from_s in constraint_lower or to_s in constraint_lower:
-            matches.append((transition.from_state, transition.to_state))
-    return matches
-
-
-def _build_guard_expression(guard_type: str, constraint: str, entity: Any) -> str:
-    """Build a guard expression string from constraint text."""
-    import re
-
-    if guard_type == "requires_different_field":
-        fields = [f.name for f in entity.fields]
-        mentioned = [f for f in fields if f.lower() in constraint.lower()]
-        if len(mentioned) >= 2:
-            return f"requires_different_field({mentioned[0]}, {mentioned[1]})"
-        return f"requires_different_actors: {constraint}"
-
-    elif guard_type == "requires_role":
-        role_match = re.search(r"(?:only|assigned)\s+(\w+)", constraint.lower())
-        if role_match:
-            return f"requires_role({role_match.group(1)})"
-        return f"requires_role: {constraint}"
-
-    elif guard_type == "requires_field":
-        field_match = re.search(r"must have\s+(\w+)", constraint.lower())
-        if field_match:
-            return f"requires_field({field_match.group(1)})"
-        return f"requires_field: {constraint}"
-
-    elif guard_type == "requires_field_value":
-        field_match = re.search(r"(\w+)\s+must be\s+(.+)", constraint.lower())
-        if field_match:
-            return f"requires({field_match.group(1)}={field_match.group(2).strip()})"
-        return f"requires_value: {constraint}"
-
-    elif guard_type == "requires_related":
-        return f"requires_related: {constraint}"
-
-    return f"guard: {constraint}"
 
 
 def handle_extract_guards(args: dict[str, Any], project_path: Path) -> str:

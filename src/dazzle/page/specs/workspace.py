@@ -154,13 +154,6 @@ class WorkspaceSpec(BaseModel):
         default=None, description="Access control specification"
     )
 
-    def get_route(self, path: str) -> RouteSpec | None:
-        """Get route by path."""
-        for route in self.routes:
-            if route.path == path:
-                return route
-        return None
-
     @property
     def layout_kind(self) -> str:
         """Get layout kind."""

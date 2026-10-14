@@ -551,19 +551,6 @@ def clerk_empty_timeline_title(
     return _clerk_empty_title(name, catalog, vacant=vacant, found=found)
 
 
-def clerk_empty_activity_title(
-    name: str,
-    catalog: dict[str, str] | None = None,
-) -> str:
-    """Clerk-facing activity-feed empty speech (oral #222).
-
-    ``No activity yet`` dumped generic chrome while empty lists already
-    say ``No comments found``. Catalog / PascalCase-split via
-    ``clerk_empty_timeline_title``. Leftover junk invents no collection.
-    """
-    return clerk_empty_timeline_title(name, catalog, vacant="No activity yet")
-
-
 def clerk_empty_kanban_lane(
     name: str,
     catalog: dict[str, str] | None = None,

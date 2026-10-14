@@ -456,18 +456,3 @@ def get_activity_log() -> ActivityLog | None:
 def get_activity_store() -> ActivityStore | None:
     """Get the SQLite-backed activity store instance."""
     return _state.activity_store
-
-
-def init_browser_gate(max_concurrent: int | None = None) -> None:
-    """Configure the global Playwright browser gate at server startup.
-
-    Bounds the number of concurrent Chromium instances to prevent memory
-    exhaustion when LLM agents trigger multiple browser operations in parallel.
-    """
-    from dazzle.testing.browser_gate import configure_browser_gate
-
-    configure_browser_gate(max_concurrent=max_concurrent)
-    logger.info(
-        "Browser gate configured (max_concurrent=%s)",
-        max_concurrent or "default",
-    )

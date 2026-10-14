@@ -82,11 +82,6 @@ def get_fragment_registry() -> dict[str, dict[str, Any]]:
     return FRAGMENT_REGISTRY
 
 
-def get_fragment_info(name: str) -> dict[str, Any] | None:
-    """Return info for a single fragment type, or None if not found."""
-    return FRAGMENT_REGISTRY.get(name)
-
-
 # Post-#1044: the parking-lot tier was retired entirely. The frozenset
 # stays empty so existing imports (cli/coverage.py) keep working.
 PARKING_LOT_FRAGMENTS: frozenset[str] = frozenset()

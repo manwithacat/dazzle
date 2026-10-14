@@ -66,11 +66,6 @@ class TestCatalogueRegistration:
         register_translations("", {"X": "Y"})
         assert get_catalogue().locales() == []
 
-    def test_has_locale(self):
-        register_translations("de", {"Hi": "Hallo"})
-        assert get_catalogue().has_locale("de")
-        assert not get_catalogue().has_locale("ja")
-
     def test_locales_sorted(self):
         register_translations("ja", {"Hi": "こんにちは"})
         register_translations("fr", {"Hi": "Salut"})
@@ -167,54 +162,6 @@ class TestLocaleContextVar:
         ctx = copy_context()
         assert ctx.run(_inner) == "ja"
         assert get_current_locale() == outer_locale
-
-
-class TestGettextFilterReadsContextVar:
-    """`_gettext` reads the locale ContextVar and looks up the catalogue."""
-
-    @pytest.mark.parametrize(
-        ("reg_locale", "reg_mapping", "set_locale", "msgid", "kwargs", "expected"),
-        [
-            (None, {}, "fr", "Welcome", {}, "Welcome"),
-            ("fr", {"Welcome": "Bienvenue"}, "fr", "Welcome", {}, "Bienvenue"),
-            (None, {}, DEFAULT_LOCALE, "Welcome", {}, "Welcome"),
-            (
-                "fr",
-                {"Hello {name}": "Bonjour {name}"},
-                "fr",
-                "Hello {name}",
-                {"name": "Alice"},
-                "Bonjour Alice",
-            ),
-            ("en", {"Sign in": "Sign in (US)"}, "en-GB", "Sign in", {}, "Sign in (US)"),
-        ],
-        ids=[
-            "test_passthrough_when_no_translation_registered",
-            "test_returns_translation_when_locale_matches",
-            "test_default_locale_no_lookup_returns_source",
-            "test_kwargs_format_against_translation",
-            "test_subtag_fallback_through_filter",
-        ],
-    )
-    def test_gettext_filter(
-        self,
-        reg_locale: str | None,
-        reg_mapping: dict,
-        set_locale: str,
-        msgid: str,
-        kwargs: dict,
-        expected: str,
-    ) -> None:
-        from dazzle.render.filters import _gettext
-
-        if reg_locale:
-            register_translations(reg_locale, reg_mapping)
-
-        def _run():
-            locale_ctxvar.set(set_locale)
-            return _gettext(msgid, **kwargs)
-
-        assert copy_context().run(_run) == expected
 
 
 class TestLocaleMiddlewareSetsContextVar:

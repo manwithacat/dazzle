@@ -15,10 +15,10 @@ import pytest
 from dazzle.http.runtime.file_storage import (
     FileMetadata,
     FileMetadataStore,
+    FileService,
     FileValidationError,
     FileValidator,
     LocalStorageBackend,
-    create_local_file_service,
     resolve_under_base,
     sanitize_storage_relpath,
     secure_filename,
@@ -86,9 +86,10 @@ def file_service(temp_storage_path: Any) -> Any:
             conn.execute("DELETE FROM dazzle_files")
     except Exception:  # best-effort test cleanup — table may not exist on a fresh DB
         pass
-    return create_local_file_service(
-        base_path=temp_storage_path,
-        database_url=database_url,
+    return FileService(
+        LocalStorageBackend(temp_storage_path),
+        FileMetadataStore(database_url=database_url),
+        FileValidator(),
     )
 
 
@@ -564,30 +565,3 @@ class TestFileService:
 
         files = file_service.get_entity_files("Task", "task-123")
         assert len(files) == 3
-
-
-# =============================================================================
-# Factory Function Tests
-# =============================================================================
-
-
-@pytest.mark.skipif(
-    not os.environ.get("DATABASE_URL"),
-    reason="DATABASE_URL not set — factory functions require PostgreSQL",
-)
-class TestFactoryFunctions:
-    """Tests for factory functions."""
-
-    def test_create_local_file_service(self, tmp_path: Any) -> None:
-        """Test creating local file service."""
-        service = create_local_file_service(
-            base_path=tmp_path / "uploads",
-            database_url=os.environ["DATABASE_URL"],
-            base_url="/uploads",
-            max_size=5 * 1024 * 1024,
-            allowed_types=["image/*", "application/pdf"],
-        )
-
-        assert service is not None
-        assert service.validator.max_size == 5 * 1024 * 1024
-        assert service.validator.allowed_types == ["image/*", "application/pdf"]

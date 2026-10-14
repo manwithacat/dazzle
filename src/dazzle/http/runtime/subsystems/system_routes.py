@@ -684,7 +684,6 @@ class SystemRoutesSubsystem:
             ctx.app.state.fragment_chrome_theme = chrome.theme
             ctx.app.state.fragment_chrome_font_preconnect = chrome.font_preconnect
             ctx.app.state.fragment_chrome_favicon = chrome.favicon
-            ctx.app.state.fragment_chrome_feedback_widget_enabled = chrome.feedback_widget_enabled
         except ImportError:
             pass  # dazzle_page not installed (CLI-only context)
 

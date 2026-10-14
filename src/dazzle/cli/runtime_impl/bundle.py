@@ -101,9 +101,8 @@ def generate_requirements() -> str:
 dazzle-dsl[serve]
 pydantic>=2.0.0
 
-# Database
-aiosqlite>=0.19.0
-# PostgreSQL: psycopg3 is provided transitively by dazzle-dsl[serve] (#1341).
+# Database: PostgreSQL only (ADR-0008); psycopg3 is provided transitively
+# by dazzle-dsl[serve] (#1341).
 
 # Optional: Redis (for the EventBus process adapter / caching)
 # redis>=5.0.0

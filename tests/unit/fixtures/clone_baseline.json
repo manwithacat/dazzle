@@ -43,14 +43,6 @@
     ]
   },
   {
-    "signature": "889e21d25dedd6c293bcea785dd69890",
-    "count": 2,
-    "names": [
-      "dazzle/cli/e2e/__init__.py::e2e_coverage",
-      "dazzle/cli/e2e/__init__.py::e2e_list_viewport_specs"
-    ]
-  },
-  {
     "signature": "c110390b0e47acf8a942164d3be42943",
     "count": 2,
     "names": [
@@ -784,14 +776,6 @@
     "names": [
       "dazzle/http/runtime/auth/member_admin_routes.py::_resolve_target",
       "dazzle/http/runtime/auth/scim_routes.py::_membership_in_org"
-    ]
-  },
-  {
-    "signature": "122f3d2904aaf65dbe993f95f65a4900",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/auth/middleware.py::is_excluded_path",
-      "dazzle/http/runtime/jwt_middleware.py::_is_excluded_path"
     ]
   },
   {

@@ -14,8 +14,6 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from dazzle.core.ir import AppSpec
-
     from .store import KnowledgeGraph
 
 logger = logging.getLogger(__name__)
@@ -260,28 +258,6 @@ def _seed_semantic_kb(graph: KnowledgeGraph, stats: dict[str, int]) -> None:
         # aborted the entire semantic-KB seed on every CLI invocation.
         if graph.create_alias(alias_term, canonical_id):
             stats["aliases"] += 1
-
-
-def seed_scene_story_relations(graph: KnowledgeGraph, app_spec: AppSpec) -> int:
-    """Populate scene_exercises_story relations from rhythm scene story: refs.
-
-    Returns the number of relations created.
-    """
-    count = 0
-    for rhythm in app_spec.rhythms:
-        for phase in rhythm.phases:
-            for scene in phase.scenes:
-                if scene.story:
-                    source_id = f"scene:{rhythm.name}.{scene.name}"
-                    target_id = f"story:{scene.story}"
-                    graph.create_relation(
-                        source_id=source_id,
-                        target_id=target_id,
-                        relation_type="scene_exercises_story",
-                        metadata={"rhythm": rhythm.name, "phase": phase.name},
-                    )
-                    count += 1
-    return count
 
 
 def _seed_inference_kb(graph: KnowledgeGraph, stats: dict[str, int]) -> None:

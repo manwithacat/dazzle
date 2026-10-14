@@ -6,7 +6,6 @@ from pathlib import Path
 
 from dazzle.core.project import load_project
 from dazzle.render.breadcrumbs import (
-    clerk_empty_activity_title,
     clerk_empty_timeline_title,
     clerk_entity_confirm_noun,
     clerk_entity_noun,
@@ -69,13 +68,11 @@ def test_clerk_empty_timeline_title_splits_pascal_and_catalog() -> None:
     assert clerk_entity_confirm_noun("Task", labels) == "task"
     assert clerk_empty_timeline_title("Task", labels) == "No tasks yet."
     assert clerk_empty_timeline_title("Task") == "No tasks yet."
-    assert clerk_empty_activity_title("Comment") == "No comments yet"
 
 
 def test_clerk_empty_timeline_title_leftover_invents_no_collection() -> None:
     for junk in ("zzz", "ghost", "2abc"):
         assert clerk_empty_timeline_title(junk) == "No events yet."
-        assert clerk_empty_activity_title(junk) == "No activity yet"
 
 
 def test_timeline_empty_is_tasks_not_no_events() -> None:

@@ -89,40 +89,6 @@ def load_custom_viewport_specs(project_root: Path) -> list[ViewportSpecEntry]:
     return []
 
 
-def save_custom_viewport_specs(
-    project_root: Path,
-    specs: list[ViewportSpecEntry],
-    *,
-    to_dsl: bool = True,
-) -> Path:
-    """Save custom viewport specs to disk.
-
-    Parameters
-    ----------
-    project_root:
-        Root directory of the project.
-    specs:
-        The specs to save.
-    to_dsl:
-        If True, save to dsl/tests/ (version-controlled).
-        If False, save to .dazzle/viewport_specs/ (runtime).
-
-    Returns
-    -------
-    Path
-        The path the file was written to.
-    """
-    path = _get_dsl_specs_path(project_root) if to_dsl else _get_runtime_specs_path(project_root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    container = ViewportSpecsContainer(
-        specs=specs,
-        updated_at=utcnow(),
-    )
-    path.write_text(container.model_dump_json(indent=2), encoding="utf-8")
-    return path
-
-
 def convert_to_patterns(
     specs: list[ViewportSpecEntry],
 ) -> dict[str, list[ComponentPattern]]:

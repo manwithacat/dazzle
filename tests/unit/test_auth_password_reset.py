@@ -103,25 +103,6 @@ class TestPasswordResetTokens:
         assert user2.email == "test@example.com"
 
 
-@pytest.mark.e2e
-class TestAuthMiddlewareExclusions:
-    """Test that password reset paths are excluded from auth."""
-
-    def test_forgot_password_excluded(self, auth_store: AuthStore) -> None:
-        """Test that /auth/forgot-password is in the middleware exclude list."""
-        from dazzle.http.runtime.auth import AuthMiddleware
-
-        middleware = AuthMiddleware(auth_store)
-        assert middleware.is_excluded_path("/auth/forgot-password")
-
-    def test_reset_password_excluded(self, auth_store: AuthStore) -> None:
-        """Test that /auth/reset-password is in the middleware exclude list."""
-        from dazzle.http.runtime.auth import AuthMiddleware
-
-        middleware = AuthMiddleware(auth_store)
-        assert middleware.is_excluded_path("/auth/reset-password")
-
-
 # TestSiteRendererSSR + TestOGMetaTags retired in Phase 4 chrome-flag
 # flip (v0.67.43). Both rendered `site/page.html` directly to assert
 # `<!DOCTYPE html>` / `og:title` lived in the rendered output — that

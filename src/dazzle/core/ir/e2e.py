@@ -271,13 +271,6 @@ class E2ETestSpec(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    def get_flow(self, flow_id: str) -> FlowSpec | None:
-        """Get flow by ID."""
-        for flow in self.flows:
-            if flow.id == flow_id:
-                return flow
-        return None
-
     def get_fixture(self, fixture_id: str) -> FixtureSpec | None:
         """Get fixture by ID."""
         for fixture in self.fixtures:
@@ -292,7 +285,3 @@ class E2ETestSpec(BaseModel):
     def get_flows_by_entity(self, entity: str) -> list[FlowSpec]:
         """Get all flows for a given entity."""
         return [f for f in self.flows if f.entity == entity]
-
-    def get_flows_by_tag(self, tag: str) -> list[FlowSpec]:
-        """Get all flows with given tag."""
-        return [f for f in self.flows if tag in f.tags]

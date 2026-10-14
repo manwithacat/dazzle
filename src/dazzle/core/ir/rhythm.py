@@ -46,14 +46,6 @@ ACTION_VOCABULARY: dict[str, dict[str, str]] = {
     "approve": {"archetype": "decide", "meaning": "Authorize a state transition"},
 }
 
-ARCHETYPES = frozenset({"observe", "act", "decide"})
-
-
-def classify_action(action: str) -> str:
-    """Return the archetype for an action verb, or 'custom' if not standard."""
-    entry = ACTION_VOCABULARY.get(action)
-    return entry["archetype"] if entry else "custom"
-
 
 class SceneSpec(BaseModel):
     """A single scene — a persona action on a surface within a rhythm phase."""
@@ -114,7 +106,6 @@ class SceneDimensionScore(BaseModel):
     dimension: Literal["arrival", "orientation", "action", "completion", "confidence"]
     score: Literal["pass", "partial", "fail", "skip"]
     evidence: str = Field(..., description="What the agent observed")
-    root_cause: str | None = Field(default=None, description="Only on partial/fail")
 
     model_config = ConfigDict(frozen=True)
 

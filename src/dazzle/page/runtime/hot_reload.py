@@ -173,7 +173,6 @@ class HotReloadManager:
         # Debounce settings
         self._last_change_time: float = 0
         self._debounce_delay: float = 0.3  # seconds
-        self._pending_reload = threading.Event()
 
         # File watchers (DSL and source)
         self._watcher: FileWatcher | None = None

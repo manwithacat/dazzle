@@ -36,7 +36,7 @@ git -C "$ROOT" worktree add -b "$BRANCH" "$DIR" HEAD >&2
 UV="${HOME}/.local/bin/uv"
 [[ -x "$UV" ]] || UV="$(command -v uv 2>/dev/null || true)"
 if [[ -n "$UV" ]]; then
-  (cd "$DIR" && "$UV" sync --frozen --extra dev --extra llm --extra mcp --extra mobile \
+  (cd "$DIR" && "$UV" sync --frozen --extra dev --extra llm --extra mcp \
       --extra postgres --extra perf --extra saml --extra lsp --quiet) >&2 \
     || echo "warning: uv sync failed in $DIR — run it manually" >&2
 else

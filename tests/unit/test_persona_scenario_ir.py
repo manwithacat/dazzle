@@ -82,7 +82,6 @@ class TestScenarioSpec:
         assert len(scenario.persona_entries) == 2
         assert scenario.get_persona_entry("teacher") is not None
         assert scenario.get_persona_entry("teacher").start_route == "/classes"
-        assert scenario.get_start_route("student") == "/my-assignments"
         assert scenario.get_persona_entry("admin") is None
 
     def test_scenario_with_demo_fixtures(self) -> None:

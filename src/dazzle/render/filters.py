@@ -832,21 +832,6 @@ def _truncate_filter(value: Any, length: int = 50) -> str:
     return text[:length] + "..."
 
 
-def _gettext(message: str, **kwargs: Any) -> str:
-    """gettext helper — translates against the per-request locale."""
-    from dazzle.i18n import get_catalogue, get_current_locale
-
-    locale = get_current_locale()
-    translation = get_catalogue().lookup(locale, message) if locale else None
-    out = translation if translation is not None else message
-    if not kwargs:
-        return out
-    try:
-        return out.format(**kwargs)
-    except (KeyError, IndexError, ValueError):
-        return out
-
-
 def _pagination_pages(current: int, total: int, window: int = 2) -> list[int | None]:
     """Ellipsis-collapsed list of page numbers for pagination controls (#984)."""
     if total <= 0:

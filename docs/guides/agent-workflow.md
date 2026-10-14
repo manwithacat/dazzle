@@ -190,8 +190,8 @@ dazzle test run              # Tier 2 Playwright scripted UI
 
 ```bash
 dazzle test agent            # LLM-agent-driven E2E tests
-dazzle e2e journey           # persona journey run against a deployment
-dazzle e2e coverage          # analyse E2E coverage
+dazzle e2e run-viewport      # viewport assertions against a running app
+dazzle e2e journey           # persona journeys against a deployment
 ```
 
 Tier 3 tests require a running app instance and are slower; they are run

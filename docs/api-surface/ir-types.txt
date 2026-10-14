@@ -1823,8 +1823,7 @@ ir_class: SceneDimensionScore
     - dimension: Literal[arrival, orientation, action, completion, confidence]
     - evidence: str
     - score: Literal[pass, partial, fail, skip]
-  optional:
-    - root_cause: str | None = None
+  optional: (none)
 
 ir_class: SceneEvaluation
   required:

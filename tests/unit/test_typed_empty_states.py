@@ -1,7 +1,7 @@
 """Tests for typed empty-state messages (#807).
 
 Covers:
-- IR: EmptyMessages struct + UXSpec.empty_for() resolver.
+- IR: EmptyMessages struct.
 - Parser: legacy string form still works; block form populates the struct.
 - Unknown sub-keys raise a parse error.
 """
@@ -19,24 +19,6 @@ class TestIR:
         assert em.collection is None
         assert em.filtered is None
         assert em.forbidden is None
-
-    def test_empty_for_picks_typed_case(self) -> None:
-        ux = ir.UXSpec(
-            empty_message=ir.EmptyMessages(collection="No rows yet.", filtered="No matches."),
-        )
-        assert ux.empty_for("collection") == "No rows yet."
-        assert ux.empty_for("filtered") == "No matches."
-        assert ux.empty_for("forbidden") is None  # unset case falls through
-
-    def test_empty_for_falls_back_to_legacy_string(self) -> None:
-        ux = ir.UXSpec(empty_message="No items.")
-        assert ux.empty_for("collection") == "No items."
-        assert ux.empty_for("filtered") == "No items."
-        assert ux.empty_for("forbidden") == "No items."
-
-    def test_empty_for_returns_none_when_unset(self) -> None:
-        ux = ir.UXSpec()
-        assert ux.empty_for("collection") is None
 
 
 # Parser tests — use parse_dsl against a minimal DSL snippet
@@ -81,7 +63,6 @@ class TestParser:
     def test_legacy_string_form(self) -> None:
         ux = self._parse_ux('    empty: "No tasks yet."\n')
         assert ux.empty_message == "No tasks yet."
-        assert ux.empty_for("collection") == "No tasks yet."
 
     def test_block_form_all_three(self) -> None:
         ux = self._parse_ux(

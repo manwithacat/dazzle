@@ -13,7 +13,6 @@ import pytest
 
 from dazzle.http.runtime.auth import (
     AuthContext,
-    AuthMiddleware,
     AuthStore,
     SessionRecord,
     UserRecord,
@@ -514,51 +513,6 @@ class TestAuthContext:
 # =============================================================================
 # AuthMiddleware Tests
 # =============================================================================
-
-
-@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
-class TestAuthMiddleware:
-    """Tests for AuthMiddleware class."""
-
-    @pytest.fixture
-    def auth_store(self) -> Any:
-        """Create an auth store."""
-        return AuthStore(os.environ["DATABASE_URL"])
-
-    @pytest.fixture
-    def middleware(self, auth_store: Any) -> Any:
-        """Create middleware instance."""
-        return AuthMiddleware(auth_store)
-
-    def test_is_excluded_path_health(self, middleware: Any) -> None:
-        """Test health endpoint is excluded."""
-        assert middleware.is_excluded_path("/health") is True
-
-    def test_is_excluded_path_docs(self, middleware: Any) -> None:
-        """Test docs endpoint is excluded."""
-        assert middleware.is_excluded_path("/docs") is True
-        assert middleware.is_excluded_path("/openapi.json") is True
-
-    def test_is_excluded_path_auth(self, middleware: Any) -> None:
-        """Test auth endpoints are excluded."""
-        assert middleware.is_excluded_path("/auth/login") is True
-        assert middleware.is_excluded_path("/auth/register") is True
-
-    def test_is_excluded_path_api(self, middleware: Any) -> None:
-        """Test API endpoints are not excluded."""
-        assert middleware.is_excluded_path("/tasks") is False
-        assert middleware.is_excluded_path("/users") is False
-
-    def test_custom_exclude_paths(self, auth_store: Any) -> None:
-        """Test custom exclude paths."""
-        middleware = AuthMiddleware(
-            auth_store,
-            exclude_paths=["/public", "/webhook"],
-        )
-
-        assert middleware.is_excluded_path("/public") is True
-        assert middleware.is_excluded_path("/webhook") is True
-        assert middleware.is_excluded_path("/private") is False
 
 
 # =============================================================================

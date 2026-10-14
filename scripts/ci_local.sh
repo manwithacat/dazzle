@@ -35,13 +35,13 @@ fi
 
 # ── CI extras (from .github/workflows/ci.yml + setup-dazzle/action.yml) ──────
 # type-check job:
-EXTRAS_TYPE="dev,llm,mcp,mobile,postgres,i18n,viewport,perf"
+EXTRAS_TYPE="dev,llm,mcp,postgres,i18n,viewport,perf"
 # python-tests job:
-EXTRAS_TEST="dev,llm,mcp,mobile,postgres,perf,saml,test-full"
+EXTRAS_TEST="dev,llm,mcp,postgres,perf,saml,test-full"
 # lint job (subset; tier1 uses TYPE for one sync rather than three):
 # EXTRAS_LINT="dev,llm,mcp,postgres,perf"
 # security-tests job:
-# EXTRAS_SECURITY="dev,mobile,postgres,perf"
+# EXTRAS_SECURITY="dev,sso,postgres,perf"
 
 CI_PYTHON="${CI_LOCAL_PYTHON:-3.12}"
 

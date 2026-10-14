@@ -211,18 +211,6 @@ class TestE2ETestSpec:
         assert len(spec.usability_rules) == 1
         assert len(spec.a11y_rules) == 1
 
-    def test_e2e_test_spec_get_flow(self) -> None:
-        """Test getting a flow by ID."""
-        flows = [
-            FlowSpec(id="flow1", steps=[]),
-            FlowSpec(id="flow2", steps=[]),
-        ]
-        spec = E2ETestSpec(app_name="test", version="1.0", flows=flows)
-
-        assert spec.get_flow("flow1") is not None
-        assert spec.get_flow("flow1").id == "flow1"
-        assert spec.get_flow("nonexistent") is None
-
     def test_e2e_test_spec_get_fixture(self) -> None:
         """Test getting a fixture by ID."""
         fixtures = [
@@ -265,21 +253,6 @@ class TestE2ETestSpec:
 
         user_flows = spec.get_flows_by_entity("User")
         assert len(user_flows) == 1
-
-    def test_e2e_test_spec_get_flows_by_tag(self) -> None:
-        """Test getting flows by tag."""
-        flows = [
-            FlowSpec(id="crud1", tags=["crud", "create"], steps=[]),
-            FlowSpec(id="crud2", tags=["crud", "update"], steps=[]),
-            FlowSpec(id="nav1", tags=["navigation"], steps=[]),
-        ]
-        spec = E2ETestSpec(app_name="test", version="1.0", flows=flows)
-
-        crud_flows = spec.get_flows_by_tag("crud")
-        assert len(crud_flows) == 2
-
-        nav_flows = spec.get_flows_by_tag("navigation")
-        assert len(nav_flows) == 1
 
 
 class TestAppSpecE2EExtensions:

@@ -749,13 +749,7 @@
       "_check_playwright": 2,
       "_journey_preflight": 4,
       "_run_journey": 23,
-      "e2e_check_infra": 1,
-      "e2e_coverage": 1,
-      "e2e_list_flows": 1,
-      "e2e_list_viewport_specs": 1,
       "e2e_run_viewport": 5,
-      "e2e_save_viewport_specs": 4,
-      "e2e_tier_guidance": 1,
       "journey_command": 1
     },
     "mi_rank": "A"
@@ -1365,7 +1359,6 @@
       "ConsentState": 5,
       "ConsentState.is_granted": 6,
       "ConsentState.serialize": 1,
-      "ConsentState.to_consent_mode_v2": 4,
       "build_decided_state": 3,
       "parse_consent_cookie": 8
     },
@@ -3478,10 +3471,8 @@
       "A11yRule": 1,
       "E2ETestSpec": 4,
       "E2ETestSpec.get_fixture": 3,
-      "E2ETestSpec.get_flow": 3,
       "E2ETestSpec.get_flows_by_entity": 3,
       "E2ETestSpec.get_flows_by_priority": 3,
-      "E2ETestSpec.get_flows_by_tag": 3,
       "FixtureSpec": 1,
       "FlowAssertion": 1,
       "FlowAssertionKind": 1,
@@ -3888,8 +3879,7 @@
       "RhythmSpec": 1,
       "SceneDimensionScore": 1,
       "SceneEvaluation": 1,
-      "SceneSpec": 1,
-      "classify_action": 2
+      "SceneSpec": 1
     },
     "mi_rank": "A"
   },
@@ -3905,8 +3895,7 @@
       "PersonaScenarioEntry": 1,
       "ScenarioSpec": 3,
       "ScenarioSpec.__str__": 1,
-      "ScenarioSpec.get_persona_entry": 3,
-      "ScenarioSpec.get_start_route": 2
+      "ScenarioSpec.get_persona_entry": 3
     },
     "mi_rank": "A"
   },
@@ -4119,8 +4108,6 @@
       "SurfaceCompositionRule": 1,
       "ThemeMetaSpec": 1,
       "ThemeSpecYAML": 4,
-      "ThemeSpecYAML.get_field_value": 4,
-      "ThemeSpecYAML.is_agent_editable": 1,
       "TypographyRatioPreset": 1,
       "TypographySpec": 1,
       "VisualTreatment": 1
@@ -4166,7 +4153,6 @@
       "SortSpec": 2,
       "SortSpec.__str__": 1,
       "UXSpec": 4,
-      "UXSpec.empty_for": 4,
       "UXSpec.has_attention_signals": 1
     },
     "mi_rank": "A"
@@ -6842,8 +6828,7 @@
     "functions": {
       "AuthMiddleware": 3,
       "AuthMiddleware.__init__": 2,
-      "AuthMiddleware.get_auth_context": 2,
-      "AuthMiddleware.is_excluded_path": 3
+      "AuthMiddleware.get_auth_context": 2
     },
     "mi_rank": "A"
   },
@@ -7682,7 +7667,6 @@
       "StorageBackend.retrieve": 1,
       "StorageBackend.store": 1,
       "StorageBackend.stream": 1,
-      "create_local_file_service": 1,
       "ensure_file_storage_tables": 1,
       "resolve_under_base": 3,
       "sanitize_storage_relpath": 13,
@@ -8639,8 +8623,7 @@
       "SectionOverrideRegistry.get": 1,
       "SectionOverrideRegistry.list_overrides": 1,
       "SectionOverrideRegistry.register": 1,
-      "discover_section_overrides": 12,
-      "write_section_overrides_readme": 2
+      "discover_section_overrides": 12
     },
     "mi_rank": "A"
   },
@@ -9950,7 +9933,6 @@
     "functions": {
       "MessageCatalogue": 3,
       "MessageCatalogue.__init__": 1,
-      "MessageCatalogue.has_locale": 2,
       "MessageCatalogue.locales": 1,
       "MessageCatalogue.lookup": 7,
       "MessageCatalogue.register": 3,
@@ -10112,9 +10094,7 @@
   "dazzle/mcp/event_first_tools.py": {
     "functions": {
       "SemanticExtraction": 1,
-      "_build_guard_expression": 13,
       "_match_compliance_pattern": 11,
-      "_match_transitions_to_constraint": 4,
       "extract_guards": 7,
       "extract_semantics": 32,
       "handle_extract_guards": 2,
@@ -10326,8 +10306,7 @@
       "_seed_semantic_kb": 15,
       "compute_seed_version": 2,
       "ensure_seeded": 2,
-      "seed_framework_knowledge": 2,
-      "seed_scene_story_relations": 5
+      "seed_framework_knowledge": 2
     },
     "mi_rank": "A"
   },
@@ -10473,11 +10452,7 @@
       "ActivityStore.read_since": 1,
       "ActivityStore.session_id": 1,
       "_format_plain": 11,
-      "_progress_bar": 3,
-      "make_error_entry": 2,
-      "make_progress_entry": 5,
-      "make_tool_end_entry": 5,
-      "make_tool_start_entry": 2
+      "_progress_bar": 3
     },
     "mi_rank": "A"
   },
@@ -10895,15 +10870,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/mcp/server/handlers/testing.py": {
-    "functions": {
-      "check_test_infrastructure_impl": 11,
-      "get_e2e_test_coverage_impl": 9,
-      "get_test_tier_guidance_impl": 10,
-      "list_e2e_flows_impl": 9
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/server/handlers/text_utils.py": {
     "functions": {
       "extract_issue_key": 5,
@@ -10913,9 +10879,7 @@
   },
   "dazzle/mcp/server/handlers/viewport_testing.py": {
     "functions": {
-      "list_viewport_specs_impl": 2,
-      "run_viewport_tests_impl": 3,
-      "save_viewport_specs_impl": 2
+      "run_viewport_tests_impl": 3
     },
     "mi_rank": "A"
   },
@@ -11012,7 +10976,6 @@
       "get_state": 1,
       "init_activity_log": 1,
       "init_activity_store": 4,
-      "init_browser_gate": 2,
       "init_dev_mode": 3,
       "init_knowledge_graph": 6,
       "is_dev_mode": 1,
@@ -11350,7 +11313,6 @@
   },
   "dazzle/page/runtime/fragment_registry.py": {
     "functions": {
-      "get_fragment_info": 1,
       "get_fragment_registry": 1
     },
     "mi_rank": "A"
@@ -11599,7 +11561,6 @@
       "WorkspaceAccessLevel": 1,
       "WorkspaceAccessSpec": 1,
       "WorkspaceSpec": 3,
-      "WorkspaceSpec.get_route": 3,
       "WorkspaceSpec.layout_kind": 1
     },
     "mi_rank": "A"
@@ -12232,8 +12193,7 @@
   "dazzle/rbac/ir.py": {
     "functions": {
       "has_data_dependent_node": 2,
-      "iter_nodes": 4,
-      "predicate_kinds": 3
+      "iter_nodes": 4
     },
     "mi_rank": "A"
   },
@@ -12468,7 +12428,6 @@
       "_bool_icon_filter": 2,
       "_currency_filter": 4,
       "_date_filter": 6,
-      "_gettext": 5,
       "_humanize_filter": 2,
       "_metric_number_filter": 7,
       "_pagination_pages": 6,
@@ -14128,7 +14087,6 @@
       "TenantProvisioner.__init__": 1,
       "TenantProvisioner._connect": 1,
       "TenantProvisioner.provision": 2,
-      "TenantProvisioner.schema_exists": 2,
       "_exec_composed": 1
     },
     "mi_rank": "A"
@@ -15117,8 +15075,7 @@
       "_get_runtime_specs_path": 1,
       "convert_to_patterns": 4,
       "load_custom_viewport_specs": 4,
-      "merge_patterns": 6,
-      "save_custom_viewport_specs": 2
+      "merge_patterns": 6
     },
     "mi_rank": "A"
   },

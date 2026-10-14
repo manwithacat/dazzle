@@ -272,11 +272,6 @@ events = [
 viewport = [
     "Pillow>=12.3.0",
 ]
-# Mobile authentication (JWT, OAuth2, Push)
-mobile = [
-    "PyJWT>=2.8.0",
-    "cryptography>=50.0.0",
-]
 # Social authentication providers
 social_auth = [
     "google-auth>=2.25.0",

@@ -55,7 +55,6 @@ def test_workspace_spec_creation() -> None:
     assert workspace.name == "dashboard"
     assert workspace.layout_kind == "singleColumn"
     assert len(workspace.routes) == 2
-    assert workspace.get_route("/") is not None
 
 
 def test_theme_spec_creation() -> None:

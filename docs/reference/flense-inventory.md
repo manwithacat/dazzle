@@ -17,9 +17,9 @@ never zero. The non-DSL scanners are text matches: they over-count rather than m
 
 | Measure | Value |
 |---|---:|
-| Framework source lines (`src/dazzle`) | 341,359 |
-| Test lines (`tests/`) | 350,554 |
-| Documentation lines (`docs/**/*.md`) | 47,270 |
+| Framework source lines (`src/dazzle`) | 340,340 |
+| Test lines (`tests/`) | 350,576 |
+| Documentation lines (`docs/**/*.md`) | 47,282 |
 | Top-level DSL constructs | 31 |
 | Constructs with zero consumer use | 1 |
 
@@ -77,36 +77,36 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 
 | Subpackage | Source lines | Test lines (name-matched) |
 |---|---:|---:|
-| `http` | 101,201 | 649 |
-| `core` | 74,861 | 2,050 |
-| `render` | 29,168 | 5,984 |
-| `mcp` | 25,938 | 5,090 |
-| `cli` | 24,381 | 8,509 |
-| `testing` | 22,907 | 68 |
-| `page` | 12,910 | 2,501 |
+| `http` | 100,904 | 649 |
+| `core` | 74,806 | 2,050 |
+| `render` | 29,140 | 5,984 |
+| `mcp` | 25,287 | 5,090 |
+| `cli` | 24,309 | 8,509 |
+| `testing` | 22,873 | 68 |
+| `page` | 12,897 | 2,501 |
 | `agent` | 7,585 | 7,766 |
 | `qa` | 7,368 | 3,129 |
 | `sentinel` | 6,154 | 563 |
-| `db` | 4,384 | 3,727 |
-| `rbac` | 3,826 | 6,860 |
-| `compliance` | 3,012 | 1,417 |
+| `db` | 4,564 | 4,014 |
+| `rbac` | 3,821 | 6,865 |
+| `compliance` | 2,987 | 1,417 |
 | `signing` | 2,143 | 1,969 |
 | `demo_data` | 2,127 | 365 |
 | `services` | 1,632 | 98 |
 | `agent_loop` | 1,533 | 154 |
 | `llm` | 1,307 | 2,537 |
 | `perf` | 1,197 | 2,203 |
-| `i18n` | 1,086 | 851 |
-| `e2e` | 1,066 | 1,990 |
+| `i18n` | 1,080 | 798 |
+| `e2e` | 1,066 | 1,963 |
 | `representation` | 1,023 | 279 |
 | `api_surface` | 958 | 148 |
 | `api_kb` | 677 | 552 |
 | `conformance` | 660 | 3,034 |
 | `examples` | 573 | 848 |
-| `tenant` | 537 | 6,965 |
+| `tenant` | 524 | 6,937 |
 | `fitness` | 490 | 186 |
 | `deploy` | 181 | 342 |
-| `seed` | 126 | 1,357 |
+| `seed` | 126 | 1,264 |
 | `docs_update` | 0 | 0 |
 | `documents` | 0 | 0 |
 | `domain_brief` | 0 | 0 |
@@ -118,7 +118,7 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `quality` | 0 | 80 |
 | `risk` | 0 | 171 |
 | `spec_narrative` | 0 | 0 |
-| `specs` | 0 | 144 |
+| `specs` | 0 | 156 |
 | `stubs` | 0 | 0 |
 | `templates` | 0 | 598 |
 
@@ -345,7 +345,7 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 
 | Directory | Markdown lines |
 |---|---:|
-| `docs/reference/` | 17,304 |
+| `docs/reference/` | 17,316 |
 | `docs/adr/` | 5,978 |
 | `docs/proposals/` | 4,679 |
 | `docs/plans/` | 4,047 |
