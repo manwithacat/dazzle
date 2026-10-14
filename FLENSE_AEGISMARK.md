@@ -35,13 +35,13 @@ v0.116.0 tree, so the pack can be assembled before any DSL changes.
 | `dazzle analytics audit -f json` | 31 PII name hints, 12 subprocessor rows |
 | DSL annotations | 11 `pii`, 10 `retention`, 18 `signed`, 4 `subprocessor`, 1 `tenancy`, 1 `policies` |
 
-## 2. Step 1 — move the pin to v0.116.0 and absorb the release
+## 2. Step 1 — move the pin to v0.117.0 and absorb the releases
 
-v0.116.0 bundles the flense ships (CHANGELOG `## [0.116.0]`, section *Removed*, plus
+v0.116.0 bundles the flense ships and v0.117.0 the surgical loop (CHANGELOG `## [0.116.0]`, `## [0.117.0]`, section *Removed*, plus
 *Agent Guidance*). Nothing AegisMark's DSL or Python uses was removed — every removal was
 gated on the consumer inventory — but prove it here rather than trust it:
 
-1. In `pyproject.toml` change the git ref to the tag: `…dazzle.git@v0.116.0` (keep the
+1. In `pyproject.toml` change the git ref to the tag: `…dazzle.git@v0.117.0` (keep the
    extras; `serve`, `redis`, `mcp` and `signing` all still exist). `uv lock && uv sync`.
 2. `uv run dazzle validate && uv run dazzle lint` — expect 0 errors and the same
    warnings as before.
@@ -157,7 +157,7 @@ place the design already lives.
 
 ## 7. Done when
 
-- [ ] pin at `v0.116.0`, tests green, `db upgrade head` at the framework head
+- [ ] pin at `v0.117.0`, tests green, `db upgrade head` at the framework head
 - [ ] `make assure` exists, `assurance/` committed, CI fails on drift and on a rising gap count
 - [ ] `rbac routes` scans every override (no import errors)
 - [ ] `rbac prove`: no VACUOUS property that AegisMark's domain needs; residual notes accepted in writing
@@ -166,9 +166,10 @@ place the design already lives.
 
 ## 8. Framework changes on `main` after v0.116.0 that need action here
 
-The surgical loop that followed the release (ships H–AC on 2026-10-13/14, all under
-`## [Unreleased]` in the Dazzle CHANGELOG) changed behaviour your app relies on. Pin to the
-next release tag rather than v0.116.0 when it exists; until then these apply to `main`.
+The surgical loop that followed the release (ships H–AC on 2026-10-13/14) was released
+as **v0.117.0** on 2026-10-14 (CHANGELOG `## [0.117.0]`, read its *Agent Guidance* first). It
+changed behaviour your app relies on. Pin to v0.117.0 — it carries everything in v0.116.0 —
+and treat the items below as part of Step 1.
 
 - **Grants are enforced as declared (ship Q).** `POST /_dazzle/grants` rejects a grant
   without `expires_at` when the relation declares `expiry: required`, rejects an

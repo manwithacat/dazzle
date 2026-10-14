@@ -37,14 +37,14 @@ against this checkout with the v0.116.0 tree.
 | `dazzle analytics audit -f json` | 3 PII name hints, 8 subprocessor rows |
 | DSL | `guide` ×2, `llm_intent` ×6, `persona` ×5; no `pii`, `signed`, `retention`, `tenancy`, `subprocessor` |
 
-## 2. Step 1 — move the pin to v0.116.0 and absorb the release
+## 2. Step 1 — move the pin to v0.117.0 and absorb the releases
 
-v0.116.0 bundles the flense ships (CHANGELOG `## [0.116.0]`, *Removed* and *Agent
+v0.116.0 bundles the flense ships and v0.117.0 the surgical loop (CHANGELOG `## [0.116.0]`, `## [0.117.0]`, *Removed* and *Agent
 Guidance*). One removal names pennydreadful as a non-event: the framework GraphQL BFF is
 gone, and pennydreadful's `/graphql` is its own Strawberry schema (`graphql_schema.py`),
 untouched. Prove the rest:
 
-1. `pyproject.toml` `[tool.uv.sources]`: replace `rev = "…"` with `tag = "v0.116.0"`.
+1. `pyproject.toml` `[tool.uv.sources]`: replace `rev = "…"` with `tag = "v0.117.0"`.
    `uv lock && uv sync`. If the app relied on the removed `graphql` extra for strawberry,
    add strawberry as a direct dependency.
 2. `uv run dazzle validate && uv run dazzle lint` — 0 errors, same warnings.
@@ -124,7 +124,7 @@ when real; a `dazzle assure` composite command; anything in §2 step 3 that fail
 
 ## 7. Done when
 
-- [ ] pin at `v0.116.0`, tests green, migrations at the framework head
+- [ ] pin at `v0.117.0`, tests green, migrations at the framework head
 - [ ] `assure.yml` exists and is green; `assurance/` committed
 - [ ] `rbac matrix` 0 warnings (persona `agent` resolved)
 - [ ] authorship and offer acceptance `signed`, or a written decision why not
@@ -133,9 +133,10 @@ when real; a `dazzle assure` composite command; anything in §2 step 3 that fail
 
 ## 8. Framework changes on `main` after v0.116.0 that need action here
 
-The surgical loop that followed the release (ships H–AC on 2026-10-13/14, all under
-`## [Unreleased]` in the Dazzle CHANGELOG) changed behaviour your app relies on. Pin to the
-next release tag rather than v0.116.0 when it exists; until then these apply to `main`.
+The surgical loop that followed the release (ships H–AC on 2026-10-13/14) was released
+as **v0.117.0** on 2026-10-14 (CHANGELOG `## [0.117.0]`, read its *Agent Guidance* first). It
+changed behaviour your app relies on. Pin to v0.117.0 — it carries everything in v0.116.0 —
+and treat the items below as part of Step 1.
 
 - **Grants are enforced as declared (ship Q).** `POST /_dazzle/grants` rejects a grant
   without `expires_at` when the relation declares `expiry: required`, rejects an

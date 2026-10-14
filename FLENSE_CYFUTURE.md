@@ -41,15 +41,15 @@ The pattern is clear: cyfuture has the richest scope model of the three apps and
 weakest *evidence* model. Six of the sixteen ISO gaps exist because the DSL never says what
 the data is.
 
-## 2. Step 1 — move the pin to v0.116.0 and absorb the release
+## 2. Step 1 — move the pin to v0.117.0 and absorb the releases
 
-v0.116.0 bundles the flense ships (CHANGELOG `## [0.116.0]`, *Removed* and *Agent
+v0.116.0 bundles the flense ships and v0.117.0 the surgical loop (CHANGELOG `## [0.116.0]`, `## [0.117.0]`, *Removed* and *Agent
 Guidance*). Two removals name cyfuture, both as non-events: the `composition` tool
 (cyfuture keeps its own `compositionspec.yaml` script) and the messaging DSL (the SLA
 `on_breach: notify` still writes a log line, DD-007 names cyfuture as the forcing
 consumer when a real channel is needed). Prove the rest:
 
-1. `pyproject.toml`: `…dazzle.git@v0.116.0` (keep `[signing,sso]`). `uv lock && uv sync`.
+1. `pyproject.toml`: `…dazzle.git@v0.117.0` (keep `[signing,sso]`). `uv lock && uv sync`.
 2. `uv run dazzle validate && uv run dazzle lint` — 0 errors, same warnings.
 3. Import every `dazzle.*` module the app uses:
    `grep -rhoE '^(from|import) dazzle[.a-zA-Z_]*' --include='*.py' . | sort -u`, then import
@@ -153,7 +153,7 @@ construct locally.
 
 ## 7. Done when
 
-- [ ] pin at `v0.116.0`, all workflows green, migrations at the framework head
+- [ ] pin at `v0.117.0`, all workflows green, migrations at the framework head
 - [ ] `rbac matrix` 0 warnings, `rbac routes` 0 escapes
 - [ ] `make assure` exists, `assurance/` committed, CI fails on drift and on a rising gap count
 - [ ] `classify`, `pii`, `retention`, `subprocessor` declared; ISO gaps below 10 and falling
@@ -163,9 +163,10 @@ construct locally.
 
 ## 8. Framework changes on `main` after v0.116.0 that need action here
 
-The surgical loop that followed the release (ships H–AC on 2026-10-13/14, all under
-`## [Unreleased]` in the Dazzle CHANGELOG) changed behaviour your app relies on. Pin to the
-next release tag rather than v0.116.0 when it exists; until then these apply to `main`.
+The surgical loop that followed the release (ships H–AC on 2026-10-13/14) was released
+as **v0.117.0** on 2026-10-14 (CHANGELOG `## [0.117.0]`, read its *Agent Guidance* first). It
+changed behaviour your app relies on. Pin to v0.117.0 — it carries everything in v0.116.0 —
+and treat the items below as part of Step 1.
 
 - **Grants are enforced as declared (ship Q).** `POST /_dazzle/grants` rejects a grant
   without `expires_at` when the relation declares `expiry: required`, rejects an
