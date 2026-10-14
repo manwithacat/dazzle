@@ -171,6 +171,96 @@ _UNKNOWN_KEY_CASES = {
         "policy",
         lambda f: [s.name for s in f.processes[0].steps[0].parallel_steps] == ["a"],
     ),
+    # Flense ship Z: the process sub-blocks and llm_config limit maps.
+    "process steps": (
+        "process p:\n  steps:\n    stage a:\n      service: svc\n"
+        "    - step b:\n        service: svc\n",
+        "stage",
+        lambda f: [s.name for s in f.processes[0].steps] == ["b"],
+    ),
+    "compensations": (
+        "process p:\n  compensations:\n    undo_a:\n      service: svc\n"
+        "    - undo_b:\n        service: svc2\n",
+        "undo_a",
+        lambda f: (
+            [(c.name, c.service) for c in f.processes[0].compensations] == [("undo_b", "svc2")]
+        ),
+    ),
+    "compensation": (
+        "process p:\n  compensations:\n    - undo:\n        retries:\n"
+        "          max: 3\n        service: svc\n        timeout: 1m\n",
+        "retries",
+        lambda f: (
+            f.processes[0].compensations[0].service == "svc"
+            and f.processes[0].compensations[0].timeout_seconds == 60
+        ),
+    ),
+    "human_task outcomes": (
+        "process p:\n  steps:\n    - step s:\n        human_task:\n"
+        '          outcomes:\n            reject "No":\n              goto: complete\n'
+        '            - ok "OK":\n                goto: complete\n',
+        "reject",
+        lambda f: [o.name for o in f.processes[0].steps[0].human_task.outcomes] == ["ok"],
+    ),
+    "human_task outcome": (
+        "process p:\n  steps:\n    - step s:\n        human_task:\n"
+        '          outcomes:\n            - ok "OK":\n                colour: red\n'
+        "                style: danger\n",
+        "colour",
+        lambda f: f.processes[0].steps[0].human_task.outcomes[0].style == "danger",
+    ),
+    "process step retry": (
+        "process p:\n  steps:\n    - step s:\n        service: svc\n"
+        "        retry:\n          max_interval: 60s\n          max_attempts: 5\n",
+        "max_interval",
+        lambda f: f.processes[0].steps[0].retry.max_attempts == 5,
+    ),
+    "inputs": (
+        "process p:\n  steps:\n    - step s:\n        service: svc\n"
+        "        inputs:\n          order -> id\n          - task.id -> task_id\n",
+        "order",
+        lambda f: [m.target for m in f.processes[0].steps[0].inputs] == ["task_id"],
+    ),
+    "effects": (
+        "process p:\n  steps:\n    - step s:\n        effects:\n"
+        "          create Task:\n            set:\n              - Task.title -> x\n"
+        "          - update Task:\n              set:\n                - Task.done -> true\n",
+        "create",
+        lambda f: (
+            [e.entity_name for e in f.processes[0].steps[0].effects] == ["Task"]
+            and f.processes[0].steps[0].effects[0].action.value == "update"
+        ),
+    ),
+    "effect": (
+        "process p:\n  steps:\n    - step s:\n        effects:\n"
+        "          - update Task:\n              limit: 1\n              set:\n"
+        "                - Task.done -> true\n",
+        "limit",
+        lambda f: len(f.processes[0].steps[0].effects[0].assignments) == 1,
+    ),
+    "effect set": (
+        "process p:\n  steps:\n    - step s:\n        effects:\n"
+        "          - update Task:\n              set:\n                done -> true\n"
+        "                - Task.title -> x\n",
+        "done",
+        lambda f: (
+            [a.field_path for a in f.processes[0].steps[0].effects[0].assignments] == ["Task.title"]
+        ),
+    ),
+    "llm_config rate_limits": (
+        "llm_config:\n  rate_limits:\n    m1 60\n    m2: 30\n  default_model: m1\n",
+        "m1",
+        lambda f: (
+            f.llm_config is not None
+            and f.llm_config.rate_limits == {"m2": 30}
+            and f.llm_config.default_model == "m1"
+        ),
+    ),
+    "llm_config concurrency": (
+        "llm_config:\n  concurrency:\n    m1 = 2\n    m2: 4\n",
+        "m1",
+        lambda f: f.llm_config is not None and f.llm_config.concurrency == {"m2": 4},
+    ),
     "module": (
         "entitty Task:\n  id: uuid pk\n  meta:\n    x: 1\n\nentity B:\n  id: uuid pk\n",
         "entitty",
@@ -219,6 +309,17 @@ _CLEAN_BLOCKS = [
     "    - parallel both:\n        - step a:\n            service: svc\n"
     "        - step b:\n            service: svc\n",
     "entity B:\n  id: uuid pk\n",
+    "process p:\n  steps:\n    - step s:\n        service: svc\n"
+    "        retry:\n          max_attempts: 5\n          backoff: linear\n"
+    "          interval: 2s\n        inputs:\n          - task.id -> task_id\n"
+    '        effects:\n          - update Task:\n              where: "id == 1"\n'
+    "              set:\n                - Task.done -> true\n"
+    "  compensations:\n    - undo:\n        service: svc\n        timeout: 1m\n"
+    "        inputs:\n          - task.id -> task_id\n",
+    "process p:\n  steps:\n    - step s:\n        human_task:\n          outcomes:\n"
+    '            - ok "OK":\n                label: "Fine"\n                goto: complete\n'
+    '                confirm: "Sure?"\n                style: primary\n',
+    "llm_config:\n  concurrency:\n    m1: 2\n",
 ]
 
 
@@ -237,6 +338,27 @@ def test_unknown_list_item_in_parallel_block_warns_and_skips_the_item() -> None:
         "W_UNKNOWN_BLOCK_KEY: unknown key `stepp` in `parallel` block ignored (test.dsl:7)"
     ]
     assert [s.name for s in fragment.processes[0].steps[0].parallel_steps] == ["b"]
+
+
+def test_unknown_list_item_in_process_steps_warns_and_skips_the_item() -> None:
+    body = (
+        "process p:\n  steps:\n    - stepp a:\n        service: svc\n"
+        "        timeout: 1m\n    - step b:\n        service: svc\n"
+    )
+    fragment = _parse(body)
+    assert fragment.parse_warnings == [
+        "W_UNKNOWN_BLOCK_KEY: unknown key `stepp` in `process steps` block ignored (test.dsl:6)"
+    ]
+    assert [s.name for s in fragment.processes[0].steps] == ["b"]
+
+
+@pytest.mark.parametrize("clause", ["rate_limits", "concurrency"])
+def test_keyword_named_model_keeps_its_limit_entry(clause: str) -> None:
+    # `service` and `entity` lex as keywords; before ship Z they dropped the entry.
+    fragment = _parse(f"llm_config:\n  {clause}:\n    service: 10\n    entity: 4\n    m1: 5\n")
+    assert fragment.parse_warnings == []
+    assert fragment.llm_config is not None
+    assert getattr(fragment.llm_config, clause) == {"service": 10, "entity": 4, "m1": 5}
 
 
 def test_parse_warnings_reach_validate_through_the_linker() -> None:

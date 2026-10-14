@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 990
-- **Tests inside those clusters**: 3,902
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,912 tests** (≈ 20.4% of the suite)
+- **Clusters of ≥3**: 989
+- **Tests inside those clusters**: 3,899
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,910 tests** (≈ 20.4% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -17,7 +17,7 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | 20+ | 3 |
 | 10-19 | 13 |
 | 5-9 | 175 |
-| 3-4 | 799 |
+| 3-4 | 798 |
 
 ## Top 30 largest clusters
 
@@ -73,7 +73,7 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 
 Clusters whose subject is an input-boundary surface (parser/validator/crypto/…). Each is a candidate to collapse into ONE property test (input space → invariant) — which then becomes a fuzz target — rather than a fixed `@pytest.mark.parametrize` list. Path-based hint; confirm by reading the cluster. (#1342)
 
-- **Property/fuzz-candidate clusters**: 127
+- **Property/fuzz-candidate clusters**: 124
 
 | File | Class | Size | Form | Why |
 |---|---|---:|---|---|

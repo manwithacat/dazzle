@@ -306,7 +306,7 @@
   },
   "dazzle/agent/transcript.py": {
     "functions": {
-      "AgentTranscript": 6,
+      "AgentTranscript": 4,
       "AgentTranscript.add_observation": 2,
       "AgentTranscript.summary": 4,
       "AgentTranscript.to_json": 3,
@@ -472,7 +472,7 @@
   },
   "dazzle/api_surface/runtime_urls.py": {
     "functions": {
-      "_collect_routes": 5,
+      "_collect_routes": 4,
       "_decorator_method": 4,
       "_module_label": 2,
       "_path_from_decorator": 4,
@@ -659,7 +659,7 @@
       "_is_shared_schema": 2,
       "_redact_url": 1,
       "_resolve_tenant_schema": 1,
-      "_resolve_url": 2,
+      "_resolve_url": 1,
       "_revision_traces_to_framework_root": 4,
       "_run_with_connection": 2,
       "_safe_current_revision": 3,
@@ -667,22 +667,22 @@
       "_validate_revision_widths": 5,
       "_verify_snapshot_consistency": 7,
       "apply_rls_command": 6,
-      "baseline_command": 11,
+      "baseline_command": 10,
       "cleanup_command": 12,
       "current_command": 2,
       "db_restore_command": 6,
       "db_snapshot_command": 5,
       "db_snapshot_gc_command": 4,
-      "downgrade_command": 2,
+      "downgrade_command": 1,
       "explain_aggregate_command": 23,
       "explain_scope_command": 18,
       "history_command": 2,
-      "migrate_command": 14,
+      "migrate_command": 13,
       "reconcile_baseline_command": 4,
       "reframework_baseline_command": 8,
       "reset_command": 11,
       "revision_command": 3,
-      "rollback_command_wrapper": 3,
+      "rollback_command_wrapper": 1,
       "snapshot_baseline_command": 5,
       "stamp_command": 2,
       "status_command": 5,
@@ -698,7 +698,7 @@
       "generate_command": 4,
       "load_command": 10,
       "propose_command": 4,
-      "reset_and_load_command": 13,
+      "reset_and_load_command": 12,
       "reset_command": 14,
       "save_command": 4,
       "validate_command": 6,
@@ -908,7 +908,7 @@
       "lint_command": 13,
       "validate_command": 12
     },
-    "mi_rank": "B"
+    "mi_rank": "A"
   },
   "dazzle/cli/prove.py": {
     "functions": {
@@ -972,7 +972,7 @@
       "report_cmd": 7,
       "routes_cmd": 5,
       "run_scope_verification": 10,
-      "verify_cmd": 15,
+      "verify_cmd": 6,
       "verify_scope_command": 4
     },
     "mi_rank": "A"
@@ -1005,7 +1005,7 @@
   "dazzle/cli/runtime_impl/build.py": {
     "functions": {
       "_generate_sql_target": 9,
-      "_run_codegen_targets": 6,
+      "_run_codegen_targets": 4,
       "build_api_command": 7,
       "build_command": 12,
       "build_ui_command": 7,
@@ -1062,12 +1062,12 @@
       "_arm_qa_mode_env": 2,
       "_configure_dev_mode": 3,
       "_configure_production_mode": 9,
-      "_echo_runtime_summary": 25,
+      "_echo_runtime_summary": 15,
       "_load_appspec_and_subsystems": 10,
       "_load_manifest_and_dotenv": 6,
       "_print_infra_banner": 1,
       "_redis_extra_available": 1,
-      "_serve_backend_only": 7,
+      "_serve_backend_only": 5,
       "_serve_combined": 31,
       "_serve_ui_only": 3,
       "_start_vendor_mocks": 4,
@@ -1265,7 +1265,7 @@
       "_resolve_fixture_deps": 3,
       "_resolve_step_value": 9,
       "_run_auto_server_tests": 13,
-      "_run_legacy_tests": 24,
+      "_run_legacy_tests": 23,
       "dsl_run": 19,
       "test_agent": 19,
       "test_create_sessions": 10,
@@ -1280,7 +1280,7 @@
   },
   "dazzle/cli/utils.py": {
     "functions": {
-      "print_version_info": 13,
+      "print_version_info": 10,
       "project_root_from_manifest": 3,
       "version_callback": 2
     },
@@ -1950,34 +1950,23 @@
       "Parser._build_parse_dispatch": 1,
       "Parser._dispatch_analytics": 3,
       "Parser._dispatch_archetype": 2,
-      "Parser._dispatch_asset": 2,
-      "Parser._dispatch_atomic": 2,
       "Parser._dispatch_audit": 2,
-      "Parser._dispatch_channel": 2,
-      "Parser._dispatch_document": 2,
       "Parser._dispatch_entity": 2,
-      "Parser._dispatch_event_model": 2,
       "Parser._dispatch_experience": 2,
       "Parser._dispatch_feedback_widget": 2,
       "Parser._dispatch_foreign_model": 2,
       "Parser._dispatch_grant_schema": 2,
       "Parser._dispatch_guide": 2,
-      "Parser._dispatch_hless": 2,
       "Parser._dispatch_integration": 2,
       "Parser._dispatch_island": 2,
-      "Parser._dispatch_job": 2,
-      "Parser._dispatch_ledger": 2,
       "Parser._dispatch_llm_config": 2,
       "Parser._dispatch_llm_intent": 2,
       "Parser._dispatch_llm_model": 2,
-      "Parser._dispatch_message": 2,
       "Parser._dispatch_nav": 2,
-      "Parser._dispatch_notification": 2,
       "Parser._dispatch_param": 2,
       "Parser._dispatch_persona": 2,
       "Parser._dispatch_policies": 2,
       "Parser._dispatch_process": 2,
-      "Parser._dispatch_projection": 2,
       "Parser._dispatch_rhythm": 2,
       "Parser._dispatch_scenario": 2,
       "Parser._dispatch_schedule": 2,
@@ -1985,13 +1974,9 @@
       "Parser._dispatch_service": 4,
       "Parser._dispatch_sla": 2,
       "Parser._dispatch_story": 2,
-      "Parser._dispatch_stream": 2,
       "Parser._dispatch_subprocessor": 2,
-      "Parser._dispatch_subscribe": 2,
       "Parser._dispatch_surface": 2,
-      "Parser._dispatch_template": 2,
       "Parser._dispatch_tenancy": 2,
-      "Parser._dispatch_transaction": 2,
       "Parser._dispatch_workspace": 2,
       "Parser.parse": 7,
       "parse_dsl": 1
@@ -2042,11 +2027,11 @@
   },
   "dazzle/core/dsl_parser_impl/analytics.py": {
     "functions": {
-      "AnalyticsParserMixin": 9,
+      "AnalyticsParserMixin": 8,
       "AnalyticsParserMixin._parse_consent_block": 8,
       "AnalyticsParserMixin._parse_provider_params": 7,
       "AnalyticsParserMixin._parse_providers_block": 6,
-      "AnalyticsParserMixin.parse_analytics": 8
+      "AnalyticsParserMixin.parse_analytics": 7
     },
     "mi_rank": "A"
   },
@@ -2190,7 +2175,7 @@
       "EntityParserMixin._parse_state_transition": 6,
       "EntityParserMixin._parse_tenant_host_block": 20,
       "EntityParserMixin._parse_transition_block": 17,
-      "EntityParserMixin._parse_transition_effect": 13,
+      "EntityParserMixin._parse_transition_effect": 11,
       "EntityParserMixin._parse_transition_inline_guard": 15,
       "EntityParserMixin._parse_via_binding": 1,
       "EntityParserMixin._parse_via_bindings": 3,
@@ -2240,7 +2225,7 @@
       "_kw_transitions": 1,
       "_kw_visible": 1,
       "_kw_was": 1,
-      "_merge_transition_effects": 5
+      "_merge_transition_effects": 4
     },
     "mi_rank": "C"
   },
@@ -2261,10 +2246,10 @@
   },
   "dazzle/core/dsl_parser_impl/governance.py": {
     "functions": {
-      "GovernanceParserMixin": 9,
+      "GovernanceParserMixin": 6,
       "GovernanceParserMixin._parse_classification": 7,
-      "GovernanceParserMixin._parse_erasure": 4,
-      "GovernanceParserMixin.parse_policies": 11,
+      "GovernanceParserMixin._parse_erasure": 3,
+      "GovernanceParserMixin.parse_policies": 8,
       "GovernanceParserMixin.parse_tenancy": 1,
       "_TenancyState": 1,
       "_build_tenancy": 1,
@@ -2303,13 +2288,13 @@
   },
   "dazzle/core/dsl_parser_impl/integration.py": {
     "functions": {
-      "IntegrationParserMixin": 8,
+      "IntegrationParserMixin": 7,
       "IntegrationParserMixin._collect_url_template": 8,
-      "IntegrationParserMixin._parse_action_body": 15,
+      "IntegrationParserMixin._parse_action_body": 14,
       "IntegrationParserMixin._parse_auth_spec": 4,
       "IntegrationParserMixin._parse_env_ref": 3,
       "IntegrationParserMixin._parse_error_strategy": 9,
-      "IntegrationParserMixin._parse_expression": 11,
+      "IntegrationParserMixin._parse_expression": 8,
       "IntegrationParserMixin._parse_http_request": 4,
       "IntegrationParserMixin._parse_larrow_mapping_rules": 3,
       "IntegrationParserMixin._parse_mapping_block": 2,
@@ -2317,8 +2302,8 @@
       "IntegrationParserMixin._parse_mapping_trigger": 8,
       "IntegrationParserMixin._parse_match_rules": 3,
       "IntegrationParserMixin._parse_operation_path": 7,
-      "IntegrationParserMixin._parse_sync_body": 17,
-      "IntegrationParserMixin.parse_integration": 15,
+      "IntegrationParserMixin._parse_sync_body": 10,
+      "IntegrationParserMixin.parse_integration": 12,
       "_MappingState": 1,
       "_build_mapping": 1,
       "_m_kw_cache": 1,
@@ -2334,7 +2319,7 @@
   "dazzle/core/dsl_parser_impl/island.py": {
     "functions": {
       "IslandParserMixin": 8,
-      "IslandParserMixin.parse_island": 9
+      "IslandParserMixin.parse_island": 7
     },
     "mi_rank": "A"
   },
@@ -2351,12 +2336,10 @@
     "functions": {
       "LLMParserMixin": 5,
       "LLMParserMixin._parse_boolean": 3,
-      "LLMParserMixin._parse_concurrency_limits": 4,
       "LLMParserMixin._parse_llm_trigger": 11,
       "LLMParserMixin._parse_logging_policy": 6,
       "LLMParserMixin._parse_model_id_value": 4,
       "LLMParserMixin._parse_pii_policy": 7,
-      "LLMParserMixin._parse_rate_limits": 4,
       "LLMParserMixin._parse_retry_policy": 8,
       "LLMParserMixin._parse_string_list_llm": 4,
       "LLMParserMixin._parse_string_map": 6,
@@ -2459,20 +2442,20 @@
       "ProcessParserMixin._parse_human_task_field": 7,
       "ProcessParserMixin._parse_input_mappings": 5,
       "ProcessParserMixin._parse_overlap_policy": 1,
-      "ProcessParserMixin._parse_parallel_block": 6,
+      "ProcessParserMixin._parse_parallel_block": 5,
       "ProcessParserMixin._parse_process_compound_id": 2,
-      "ProcessParserMixin._parse_process_field": 11,
+      "ProcessParserMixin._parse_process_field": 9,
       "ProcessParserMixin._parse_process_identifier_list": 5,
       "ProcessParserMixin._parse_process_inputs": 8,
       "ProcessParserMixin._parse_process_outputs": 5,
       "ProcessParserMixin._parse_process_steps": 7,
       "ProcessParserMixin._parse_process_trigger": 6,
       "ProcessParserMixin._parse_retry_config": 7,
-      "ProcessParserMixin._parse_schedule_field": 11,
+      "ProcessParserMixin._parse_schedule_field": 9,
       "ProcessParserMixin._parse_schedule_timeout_field": 2,
       "ProcessParserMixin._parse_single_compensation": 7,
       "ProcessParserMixin._parse_single_effect": 10,
-      "ProcessParserMixin._parse_single_outcome": 13,
+      "ProcessParserMixin._parse_single_outcome": 11,
       "ProcessParserMixin._parse_single_step": 4,
       "ProcessParserMixin._parse_step_channel_field": 1,
       "ProcessParserMixin._parse_step_compensate_field": 1,
@@ -2494,13 +2477,9 @@
       "ProcessParserMixin._parse_step_service_field": 1,
       "ProcessParserMixin._parse_step_subprocess_field": 1,
       "ProcessParserMixin._parse_step_timeout_field": 1,
-      "ProcessParserMixin._parse_step_wait_field": 2,
+      "ProcessParserMixin._parse_step_wait_field": 1,
       "ProcessParserMixin._parse_task_outcomes": 5,
       "ProcessParserMixin._parse_trigger_expression": 5,
-      "ProcessParserMixin._skip_to_next_process_field": 2,
-      "ProcessParserMixin._skip_to_next_step": 2,
-      "ProcessParserMixin._skip_to_next_step_field": 2,
-      "ProcessParserMixin._skip_unknown_step_field": 2,
       "ProcessParserMixin.parse_process": 4,
       "ProcessParserMixin.parse_schedule": 4,
       "_ProcessParseContext": 1,
@@ -2806,7 +2785,7 @@
       "ViewParserMixin._parse_view_computed_expr": 4,
       "ViewParserMixin._parse_view_fields": 5,
       "ViewParserMixin._parse_view_identifier_list": 6,
-      "ViewParserMixin.parse_view": 14
+      "ViewParserMixin.parse_view": 12
     },
     "mi_rank": "A"
   },
@@ -2868,7 +2847,7 @@
       "WorkspaceParserMixin.parse_workspace_region": 1,
       "_WorkspaceRegionState": 1,
       "_WorkspaceState": 1,
-      "_build_workspace_region": 13,
+      "_build_workspace_region": 12,
       "_kw_action": 1,
       "_kw_aggregate": 4,
       "_kw_cohort_strip_config": 1,
@@ -2905,7 +2884,7 @@
       "_kw_secondary_action": 2,
       "_kw_sort": 1,
       "_kw_source": 5,
-      "_kw_stages": 5,
+      "_kw_stages": 1,
       "_kw_state_field": 1,
       "_kw_task_inbox_config": 1,
       "_kw_title": 1,
@@ -3047,7 +3026,7 @@
       "_check_detail_structure": 3,
       "_check_form_structure": 25,
       "_check_interaction_fidelity": 17,
-      "_check_semantic_fidelity": 14,
+      "_check_semantic_fidelity": 7,
       "_check_story_embodiment": 40,
       "_check_table_structure": 11,
       "_compute_integration_fidelity": 13,
@@ -3133,10 +3112,10 @@
   },
   "dazzle/core/guide_concordance.py": {
     "functions": {
-      "_check_step_completion": 22,
+      "_check_step_completion": 19,
       "_check_step_cta": 19,
       "_check_step_target": 20,
-      "check_guide_concordance": 24
+      "check_guide_concordance": 17
     },
     "mi_rank": "A"
   },
@@ -3160,10 +3139,10 @@
   },
   "dazzle/core/infra_analyzer.py": {
     "functions": {
-      "InfraRequirements": 8,
-      "InfraRequirements.__post_init__": 6,
-      "analyze_infra_requirements": 25,
-      "get_required_env_vars": 7
+      "InfraRequirements": 5,
+      "InfraRequirements.__post_init__": 4,
+      "analyze_infra_requirements": 19,
+      "get_required_env_vars": 6
     },
     "mi_rank": "A"
   },
@@ -3248,9 +3227,6 @@
       "AppSpec._triples_by_persona": 2,
       "AppSpec.get_api": 1,
       "AppSpec.get_archetype": 1,
-      "AppSpec.get_asset": 1,
-      "AppSpec.get_channel": 1,
-      "AppSpec.get_document": 1,
       "AppSpec.get_domain_service": 1,
       "AppSpec.get_entity": 1,
       "AppSpec.get_experience": 1,
@@ -3261,11 +3237,8 @@
       "AppSpec.get_grant_schemas_by_scope": 1,
       "AppSpec.get_integration": 1,
       "AppSpec.get_island": 1,
-      "AppSpec.get_ledger": 1,
-      "AppSpec.get_ledgers_by_currency": 1,
       "AppSpec.get_llm_intent": 1,
       "AppSpec.get_llm_model": 1,
-      "AppSpec.get_message": 1,
       "AppSpec.get_persona": 1,
       "AppSpec.get_process": 1,
       "AppSpec.get_processes_by_story": 1,
@@ -3276,11 +3249,7 @@
       "AppSpec.get_stories_by_entity": 1,
       "AppSpec.get_stories_by_persona": 1,
       "AppSpec.get_story": 1,
-      "AppSpec.get_stream": 1,
       "AppSpec.get_surface": 1,
-      "AppSpec.get_template": 1,
-      "AppSpec.get_transaction": 1,
-      "AppSpec.get_transactions_by_ledger": 1,
       "AppSpec.get_triple": 1,
       "AppSpec.get_triples_for_entity": 1,
       "AppSpec.get_triples_for_persona": 1,
@@ -3295,9 +3264,6 @@
     "functions": {
       "get_api": 3,
       "get_archetype": 3,
-      "get_asset": 3,
-      "get_channel": 3,
-      "get_document": 3,
       "get_domain_service": 3,
       "get_entity": 1,
       "get_experience": 3,
@@ -3308,11 +3274,8 @@
       "get_grant_schemas_by_scope": 3,
       "get_integration": 3,
       "get_island": 3,
-      "get_ledger": 3,
-      "get_ledgers_by_currency": 3,
       "get_llm_intent": 3,
       "get_llm_model": 3,
-      "get_message": 3,
       "get_persona": 3,
       "get_process": 3,
       "get_processes_by_story": 3,
@@ -3323,11 +3286,7 @@
       "get_stories_by_entity": 3,
       "get_stories_by_persona": 3,
       "get_story": 3,
-      "get_stream": 3,
       "get_surface": 3,
-      "get_template": 3,
-      "get_transaction": 3,
-      "get_transactions_by_ledger": 3,
       "get_triple": 1,
       "get_triples_for_entity": 1,
       "get_triples_for_persona": 1,
@@ -3627,7 +3586,7 @@
       "AuthType": 1,
       "ErrorAction": 1,
       "ErrorStrategy": 1,
-      "Expression": 2,
+      "Expression": 1,
       "HttpMethod": 1,
       "HttpRequestSpec": 1,
       "IntegrationAction": 1,
@@ -3678,20 +3637,7 @@
   "dazzle/core/ir/layout.py": {
     "functions": {
       "AttentionSignalKind": 1,
-      "LayoutPlan": 1,
-      "LayoutSignal": 3,
-      "LayoutSignal.validate_density_preference": 2,
-      "LayoutSignal.validate_interaction_frequency": 2,
-      "LayoutSignal.validate_mode": 2,
-      "LayoutSignal.validate_urgency": 2,
-      "LayoutSurface": 1,
-      "PersonaLayout": 3,
-      "PersonaLayout.validate_proficiency_level": 2,
-      "PersonaLayout.validate_session_style": 2,
-      "Stage": 1,
-      "UXLayouts": 1,
-      "WorkspaceLayout": 3,
-      "WorkspaceLayout.validate_time_horizon": 2
+      "Stage": 1
     },
     "mi_rank": "A"
   },
@@ -3999,9 +3945,6 @@
     "functions": {
       "AutoTransitionSpec": 4,
       "AutoTransitionSpec.delay_seconds": 3,
-      "InvokeBinding": 1,
-      "InvokeFlowSpec": 1,
-      "InvokeSourceKind": 1,
       "StateMachineSpec": 4,
       "StateMachineSpec.get_allowed_targets": 2,
       "StateMachineSpec.get_transition": 5,
@@ -4116,7 +4059,7 @@
   },
   "dazzle/core/ir/tones.py": {
     "functions": {
-      "field_enum_semantic_map": 13,
+      "field_enum_semantic_map": 6,
       "normalize_tone": 2
     },
     "mi_rank": "A"
@@ -4148,7 +4091,7 @@
       "BulkActionSpec": 2,
       "BulkActionSpec.__str__": 1,
       "EmptyMessages": 1,
-      "PersonaVariant": 2,
+      "PersonaVariant": 1,
       "SignalLevel": 1,
       "SortSpec": 2,
       "SortSpec.__str__": 1,
@@ -4256,7 +4199,7 @@
       "_unknown_renderer_message": 1,
       "_validate_render_references": 8,
       "_validate_subtype_panels": 13,
-      "build_appspec": 41
+      "build_appspec": 40
     },
     "mi_rank": "A"
   },
@@ -4265,7 +4208,6 @@
       "DomainSymbols": 2,
       "DomainSymbols.add_entity": 1,
       "DomainSymbols.add_foreign_model": 1,
-      "DomainSymbols.add_ledger": 1,
       "DomainSymbols.add_view": 1,
       "ProcessSymbols": 2,
       "ProcessSymbols.add_persona": 1,
@@ -4284,11 +4226,8 @@
       "SymbolTable.add_grant_schema": 1,
       "SymbolTable.add_integration": 1,
       "SymbolTable.add_island": 1,
-      "SymbolTable.add_job": 1,
-      "SymbolTable.add_ledger": 1,
       "SymbolTable.add_llm_intent": 1,
       "SymbolTable.add_llm_model": 1,
-      "SymbolTable.add_notification": 1,
       "SymbolTable.add_persona": 1,
       "SymbolTable.add_process": 1,
       "SymbolTable.add_rhythm": 1,
@@ -4298,13 +4237,11 @@
       "SymbolTable.add_sla": 1,
       "SymbolTable.add_story": 1,
       "SymbolTable.add_surface": 1,
-      "SymbolTable.add_transaction": 1,
       "SymbolTable.add_view": 1,
       "SymbolTable.add_workspace": 1,
       "SymbolTable.entities": 1,
       "SymbolTable.experiences": 1,
       "SymbolTable.foreign_models": 1,
-      "SymbolTable.ledgers": 1,
       "SymbolTable.personas": 1,
       "SymbolTable.processes": 1,
       "SymbolTable.rhythms": 1,
@@ -4319,7 +4256,7 @@
       "UISymbols.add_surface": 1,
       "UISymbols.add_workspace": 1,
       "_add_symbol": 2,
-      "build_symbol_table": 41,
+      "build_symbol_table": 33,
       "check_unused_imports": 62,
       "detect_entity_cycles": 12,
       "merge_fragments": 7,
@@ -4396,7 +4333,7 @@
       "_fragment_chrome_warned": 1,
       "_parse_storage_configs": 12,
       "check_framework_version": 5,
-      "load_manifest": 48,
+      "load_manifest": 45,
       "resolve_api_url": 4,
       "resolve_database_url": 15,
       "resolve_site_url": 4
@@ -4640,7 +4577,6 @@
       "PostgresProcessAdapter.register_process": 1,
       "PostgresProcessAdapter.register_schedule": 1,
       "PostgresProcessAdapter.resume_process": 3,
-      "PostgresProcessAdapter.set_send_handler": 1,
       "PostgresProcessAdapter.set_side_effect_executor": 1,
       "PostgresProcessAdapter.shutdown": 5,
       "PostgresProcessAdapter.signal_process": 4,
@@ -4857,13 +4793,13 @@
   "dazzle/core/sitespec_loader.py": {
     "functions": {
       "SiteSpecError": 1,
-      "SiteSpecValidationResult": 2,
+      "SiteSpecValidationResult": 1,
       "_copy_section_to_spec": 23,
       "_copy_sections_to_sitespec": 7,
       "_derive_dsl_routes": 9,
       "_parse_footer_columns": 3,
       "_parse_nav_items": 2,
-      "_parse_page": 10,
+      "_parse_page": 6,
       "_parse_section": 17,
       "_parse_section_items": 24,
       "_parse_sitespec_data": 17,
@@ -4953,7 +4889,7 @@
   "dazzle/core/themespec_loader.py": {
     "functions": {
       "ThemeSpecError": 1,
-      "ThemeSpecValidationResult": 2,
+      "ThemeSpecValidationResult": 1,
       "_check_palette_contrast": 8,
       "_parse_themespec_data": 24,
       "create_default_themespec": 1,
@@ -4998,7 +4934,7 @@
       "_validate_reserved_names": 4,
       "is_secret_field_name": 5,
       "validate_auth_identity_binding": 32,
-      "validate_entities": 49,
+      "validate_entities": 43,
       "validate_expose_surface_consistency": 8
     },
     "mi_rank": "A"
@@ -5028,19 +4964,14 @@
   },
   "dazzle/core/validation/financial.py": {
     "functions": {
-      "_validate_account_codes": 11,
-      "_validate_transaction_transfers": 12,
-      "validate_ledgers": 5,
-      "validate_money_fields": 18
+      "validate_money_fields": 8
     },
     "mi_rank": "A"
   },
   "dazzle/core/validation/flows.py": {
     "functions": {
-      "validate_atomic_flows": 45,
       "validate_process_step_service_refs": 7,
-      "validate_slas": 7,
-      "validate_transition_invocations": 26
+      "validate_slas": 7
     },
     "mi_rank": "A"
   },
@@ -5069,7 +5000,6 @@
     "functions": {
       "validate_foreign_models": 8,
       "validate_integrations": 6,
-      "validate_notifications": 12,
       "validate_services": 10
     },
     "mi_rank": "A"
@@ -5124,7 +5054,7 @@
       "_validate_comparison_region": 3,
       "validate_comparison_regions": 8,
       "validate_emits_targets": 5,
-      "validate_enum_semantics": 11,
+      "validate_enum_semantics": 7,
       "validate_insight_summaries": 8,
       "validate_nav_curation": 33,
       "validate_outlier_decorators": 15,
@@ -5208,7 +5138,7 @@
       "fetchrow": 1,
       "fetchval": 2,
       "get_connection": 1,
-      "resolve_db_url": 6
+      "resolve_db_url": 1
     },
     "mi_rank": "A"
   },
@@ -5438,7 +5368,7 @@
       "_enforce_created_before_updated": 7,
       "_looks_like_ref_field": 3,
       "_looks_like_uuid": 6,
-      "_resolve_persona_role": 13,
+      "_resolve_persona_role": 12,
       "_role_enum_values": 9,
       "_strategy_value_obviously_wrong": 10
     },
@@ -5479,7 +5409,7 @@
       "_dir_has_seed_files": 3,
       "_entity_order": 2,
       "_fail": 1,
-      "_finalize_verify": 4,
+      "_finalize_verify": 3,
       "_http_reset_and_seed": 4,
       "_http_seed_only": 3,
       "_is_aggregate_display": 3,
@@ -5526,7 +5456,7 @@
       "InfraPlan": 3,
       "InfraPlan.is_stateless": 1,
       "InfraPlan.to_dict": 2,
-      "build_infra_plan": 18
+      "build_infra_plan": 15
     },
     "mi_rank": "A"
   },
@@ -5773,7 +5703,7 @@
   },
   "dazzle/http/channels/adapters/email.py": {
     "functions": {
-      "FileEmailAdapter": 4,
+      "FileEmailAdapter": 3,
       "FileEmailAdapter.__init__": 3,
       "FileEmailAdapter._update_index": 3,
       "FileEmailAdapter.health_check": 1,
@@ -5877,7 +5807,7 @@
   },
   "dazzle/http/channels/ses_webhooks.py": {
     "functions": {
-      "_confirm_subscription": 4,
+      "_confirm_subscription": 2,
       "_handle_bounce": 2,
       "_handle_complaint": 2,
       "_handle_delivery": 1,
@@ -6278,8 +6208,8 @@
       "_create_memory_bus": 1,
       "_create_postgres_bus": 4,
       "_create_redis_bus": 4,
-      "create_bus": 8,
-      "detect_tier": 6,
+      "create_bus": 7,
+      "detect_tier": 5,
       "get_tier_info": 1
     },
     "mi_rank": "A"
@@ -6548,7 +6478,7 @@
       "_history_block": 4,
       "_readiness_block": 8,
       "_scim_bearer_banner": 2,
-      "build_connections_view": 5
+      "build_connections_view": 4
     },
     "mi_rank": "A"
   },
@@ -6558,7 +6488,7 @@
       "CreatePlan": 1,
       "_require": 3,
       "assemble_saml_config": 11,
-      "parse_group_map": 5,
+      "parse_group_map": 2,
       "plan_domain": 1,
       "plan_oidc": 2,
       "plan_saml": 1,
@@ -6979,7 +6909,7 @@
       "_get_preferences": 1,
       "_json_active_membership_id": 4,
       "_login": 10,
-      "_logout": 8,
+      "_logout": 7,
       "_register": 8,
       "_require_auth": 4,
       "_reset_password": 4,
@@ -7071,7 +7001,7 @@
     "functions": {
       "_SamlLogoutProvider": 2,
       "_SamlLogoutProvider.process_logout": 1,
-      "_clear_session_cookies": 2,
+      "_clear_session_cookies": 1,
       "_logged_out_response": 1,
       "_resolve_saml_connection": 8,
       "create_saml_routes": 1
@@ -7130,10 +7060,10 @@
   },
   "dazzle/http/runtime/auth/scim_routes.py": {
     "functions": {
-      "_active_from_patch": 9,
+      "_active_from_patch": 7,
       "_email_for": 3,
       "_error": 2,
-      "_groups_from_body": 6,
+      "_groups_from_body": 2,
       "_json_body": 3,
       "_membership_in_org": 3,
       "_render_user": 4,
@@ -7356,7 +7286,7 @@
     "functions": {
       "BulkQueryError": 1,
       "BulkSelection": 1,
-      "_echo_to_query": 15,
+      "_echo_to_query": 13,
       "parse_bulk_selection": 13,
       "resolve_all_matching_ids": 10
     },
@@ -7391,7 +7321,7 @@
       "_mount_qa_mode_if_armed": 7,
       "_set_factory_env": 4,
       "_supports_hyperlinks": 4,
-      "run_backend_only": 17,
+      "run_backend_only": 15,
       "run_unified_server": 42
     },
     "mi_rank": "A"
@@ -7495,10 +7425,10 @@
       "_field_ref_route": 5,
       "_is_empty_detail_value": 2,
       "_maybe_append_subtype_panels": 6,
-      "_one_detail_field_dict": 15,
+      "_one_detail_field_dict": 11,
       "_ref_route_for_entity": 2,
       "_related_groups_from_detail": 24,
-      "_resolve_detail_money_value": 8
+      "_resolve_detail_money_value": 7
     },
     "mi_rank": "C"
   },
@@ -7522,11 +7452,11 @@
   },
   "dazzle/http/runtime/event_bus.py": {
     "functions": {
-      "EntityEvent": 2,
+      "EntityEvent": 1,
       "EntityEventBus": 2,
       "EntityEventBus.add_handler": 1,
       "EntityEventBus.add_sync_handler": 1,
-      "EntityEventBus.emit": 6,
+      "EntityEventBus.emit": 5,
       "EntityEventBus.emit_created": 1,
       "EntityEventBus.emit_deleted": 1,
       "EntityEventBus.emit_file_uploaded": 1,
@@ -7590,7 +7520,7 @@
     "functions": {
       "_ExperienceDeps": 1,
       "_experience_entry": 8,
-      "_experience_step_get": 36,
+      "_experience_step_get": 35,
       "_experience_step_post": 45,
       "_get_user_email": 1,
       "_inject_auth": 9,
@@ -7600,7 +7530,7 @@
       "_make_experience_step_post_handler": 1,
       "_persist_progress": 2,
       "_render_experience_surface_step": 11,
-      "create_experience_routes": 17
+      "create_experience_routes": 6
     },
     "mi_rank": "A"
   },
@@ -7695,10 +7625,7 @@
   },
   "dazzle/http/runtime/fts_routes.py": {
     "functions": {
-      "_compile_scope": 11,
-      "_find_cedar_spec": 4,
-      "_render_results_html": 34,
-      "_resolve_user_id": 4,
+      "_render_results_html": 33,
       "create_fts_routes": 4
     },
     "mi_rank": "A"
@@ -7839,7 +7766,7 @@
       "HtmxDetails.wants_fragment": 3,
       "HtmxDetails.wants_partial": 2,
       "_encode_trigger": 4,
-      "_errors_to_messages": 6,
+      "_errors_to_messages": 4,
       "_escape": 1,
       "htmx_error_response": 3,
       "htmx_response": 6,
@@ -7946,7 +7873,7 @@
       "evaluate_invariant_expr": 8,
       "render_invariant_expr": 14,
       "validate_invariant": 1,
-      "validate_invariants": 5
+      "validate_invariants": 4
     },
     "mi_rank": "A"
   },
@@ -8101,7 +8028,7 @@
   },
   "dazzle/http/runtime/mapping_executor.py": {
     "functions": {
-      "MappingExecutor": 9,
+      "MappingExecutor": 8,
       "MappingExecutor.__init__": 2,
       "MappingExecutor._apply_request_mapping": 2,
       "MappingExecutor._apply_response_mapping": 2,
@@ -8115,7 +8042,7 @@
       "MappingExecutor._resolve_auth_headers": 13,
       "MappingExecutor._resolve_base_url": 3,
       "MappingExecutor._resolve_expr_value": 6,
-      "MappingExecutor._set_nested_value": 2,
+      "MappingExecutor._set_nested_value": 1,
       "MappingExecutor._summarize_payload": 3,
       "MappingExecutor.execute_manual": 11,
       "MappingExecutor.handle_event": 12,
@@ -8157,7 +8084,7 @@
   },
   "dazzle/http/runtime/metrics_routes.py": {
     "functions": {
-      "_render_metrics": 4,
+      "_render_metrics": 1,
       "create_metrics_routes": 1
     },
     "mi_rank": "A"
@@ -8270,8 +8197,8 @@
       "_handle_create_form": 7,
       "_handle_detail": 37,
       "_handle_edit_form": 9,
-      "_handle_table": 43,
-      "_inject_auth_context": 26,
+      "_handle_table": 31,
+      "_inject_auth_context": 13,
       "_inject_integration_actions": 10,
       "_inject_onboarding_step": 18,
       "_is_child_entity_cta": 7,
@@ -8299,9 +8226,9 @@
       "_should_suppress_mutations": 11,
       "_suppress_inaccessible_cta": 11,
       "_user_can_mutate": 4,
-      "_workspace_handler": 46,
+      "_workspace_handler": 40,
       "build_app_page_context": 12,
-      "create_page_routes": 101,
+      "create_page_routes": 77,
       "gate_authored_primary_actions_for_principal": 5,
       "gate_detail_transitions": 2
     },
@@ -8559,8 +8486,8 @@
       "FragmentSurfaceAdapter._build_detail_actions": 37,
       "FragmentSurfaceAdapter._build_form": 29,
       "FragmentSurfaceAdapter._build_list": 57,
-      "FragmentSurfaceAdapter._build_related_group": 31,
-      "FragmentSurfaceAdapter._build_view": 37,
+      "FragmentSurfaceAdapter._build_related_group": 7,
+      "FragmentSurfaceAdapter._build_view": 34,
       "FragmentSurfaceAdapter.build": 4,
       "_cell_value": 3,
       "_cta_noun": 5,
@@ -8573,7 +8500,7 @@
       "human_create_cta_label": 11,
       "render_generic_detail": 1
     },
-    "mi_rank": "C"
+    "mi_rank": "B"
   },
   "dazzle/http/runtime/renderers/init.py": {
     "functions": {
@@ -8641,10 +8568,10 @@
       "Repository.aggregate": 11,
       "Repository.create": 17,
       "Repository.delete": 5,
-      "Repository.exists": 2,
+      "Repository.exists": 1,
       "Repository.fts_search": 16,
       "Repository.list": 37,
-      "Repository.read": 22,
+      "Repository.read": 21,
       "Repository.update": 21,
       "RepositoryFactory": 3,
       "RepositoryFactory.__init__": 1,
@@ -8774,7 +8701,7 @@
       "_mounted_get_paths": 6,
       "_normalize_path_template": 4,
       "validate_app_links": 10,
-      "validate_routes": 16
+      "validate_routes": 11
     },
     "mi_rank": "A"
   },
@@ -8836,7 +8763,7 @@
       "_deny_update_destination": 1,
       "_enforce_create_scope": 24,
       "_enforce_update_scope": 23,
-      "_extract_condition_filters": 96,
+      "_extract_condition_filters": 87,
       "_resolve_predicate_filters": 10,
       "_resolve_scope_filters": 20,
       "_resolve_user_attribute": 15,
@@ -8845,7 +8772,7 @@
       "_should_bypass_tenant_filter": 7,
       "build_create_scope_probe": 4
     },
-    "mi_rank": "C"
+    "mi_rank": "B"
   },
   "dazzle/http/runtime/search_routes.py": {
     "functions": {
@@ -8930,15 +8857,15 @@
       "DazzleBackendApp._verify_scope_predicates": 6,
       "DazzleBackendApp._warn_unregistered_renderers": 10,
       "DazzleBackendApp._wire_byte_audit": 6,
-      "DazzleBackendApp._wire_service_hooks": 23,
-      "DazzleBackendApp._wire_sse_live_push": 6,
+      "DazzleBackendApp._wire_service_hooks": 17,
+      "DazzleBackendApp._wire_sse_live_push": 5,
       "DazzleBackendApp._wire_storage_routes": 12,
       "DazzleBackendApp.app": 1,
       "DazzleBackendApp.audit_logger": 1,
       "DazzleBackendApp.auth_enabled": 1,
       "DazzleBackendApp.auth_middleware": 1,
       "DazzleBackendApp.auth_store": 1,
-      "DazzleBackendApp.build": 6,
+      "DazzleBackendApp.build": 4,
       "DazzleBackendApp.create_invokers": 1,
       "DazzleBackendApp.dev_mode_enabled": 1,
       "DazzleBackendApp.entity_auto_includes": 1,
@@ -8989,7 +8916,7 @@
       "CRUDService.on_updated": 1,
       "CRUDService.read": 2,
       "CRUDService.set_repository": 1,
-      "CRUDService.update": 33,
+      "CRUDService.update": 29,
       "CustomService": 2,
       "CustomService.__init__": 1,
       "CustomService.execute": 2,
@@ -9308,10 +9235,10 @@
   },
   "dazzle/http/runtime/subsystems/events.py": {
     "functions": {
-      "EventsSubsystem": 4,
+      "EventsSubsystem": 3,
       "EventsSubsystem.__init__": 1,
       "EventsSubsystem.shutdown": 1,
-      "EventsSubsystem.startup": 6
+      "EventsSubsystem.startup": 4
     },
     "mi_rank": "A"
   },
@@ -9361,7 +9288,7 @@
       "SystemRoutesSubsystem._init_transition_effects": 11,
       "SystemRoutesSubsystem._init_workspace_routes": 2,
       "SystemRoutesSubsystem._register_manual_trigger_routes": 5,
-      "SystemRoutesSubsystem._setup_optional_features": 12,
+      "SystemRoutesSubsystem._setup_optional_features": 6,
       "SystemRoutesSubsystem._setup_system_routes": 17,
       "SystemRoutesSubsystem._wire_entity_events_to_bus": 4,
       "SystemRoutesSubsystem.shutdown": 1,
@@ -9507,7 +9434,7 @@
       "_RegistryCache": 4,
       "_RegistryCache.__init__": 1,
       "_RegistryCache.get": 4,
-      "build_resolver": 4
+      "build_resolver": 3
     },
     "mi_rank": "A"
   },
@@ -9546,7 +9473,7 @@
       "_persona_email_candidates": 6,
       "_prepare_fixture_row": 7,
       "_primary_demo_org_id": 4,
-      "_reset_test_data": 16,
+      "_reset_test_data": 14,
       "_resolve_test_auth_role": 9,
       "_role_enum_values": 6,
       "_rollback_created": 4,
@@ -9633,13 +9560,13 @@
   },
   "dazzle/http/runtime/workspace_aggregation.py": {
     "functions": {
-      "_aggregate_via_groupby": 15,
+      "_aggregate_via_groupby": 13,
       "_apply_derived_to_bucket_rows": 8,
       "_bucket_key_label": 9,
-      "_build_aggregate_filters": 20,
+      "_build_aggregate_filters": 10,
       "_compute_aggregate_metrics": 40,
       "_compute_bucketed_aggregates": 42,
-      "_compute_pivot_buckets": 33,
+      "_compute_pivot_buckets": 31,
       "_condition_references_current_bucket": 9,
       "_enumerate_distinct_buckets": 10,
       "_evaluate_derived_expr": 17,
@@ -9679,7 +9606,7 @@
   },
   "dazzle/http/runtime/workspace_card_fetchers.py": {
     "functions": {
-      "_build_entity_card_sections": 40,
+      "_build_entity_card_sections": 37,
       "_empty_list_coro": 1,
       "_fetch_entity_card_section_rows": 20,
       "_fetch_task_inbox_items_per_source": 19,
@@ -9694,7 +9621,7 @@
       "_ref_detail_route": 2,
       "_resolved_field_kind_token": 4,
       "build_entity_columns": 1,
-      "build_entity_columns_full": 23,
+      "build_entity_columns_full": 20,
       "build_surface_columns": 41,
       "field_kind_to_col_type": 7
     },
@@ -9708,13 +9635,13 @@
   },
   "dazzle/http/runtime/workspace_csv.py": {
     "functions": {
-      "_render_csv_response": 5
+      "_render_csv_response": 4
     },
     "mi_rank": "A"
   },
   "dazzle/http/runtime/workspace_handlers.py": {
     "functions": {
-      "_fetch_region_json": 34,
+      "_fetch_region_json": 26,
       "_workspace_batch_handler": 38,
       "_workspace_stats_handler": 23
     },
@@ -9756,7 +9683,7 @@
   "dazzle/http/runtime/workspace_region_fetch.py": {
     "functions": {
       "RegionItemsResult": 1,
-      "fetch_region_items": 53
+      "fetch_region_items": 37
     },
     "mi_rank": "A"
   },
@@ -9772,7 +9699,7 @@
   "dazzle/http/runtime/workspace_region_orchestration.py": {
     "functions": {
       "_read_stored_insight": 2,
-      "compute_region_render_inputs": 119,
+      "compute_region_render_inputs": 94,
       "gate_confirm_action_urls_for_principal": 5,
       "gate_kanban_rearrange_for_principal": 3,
       "gate_queue_transitions_for_principal": 3
@@ -9782,7 +9709,7 @@
   "dazzle/http/runtime/workspace_region_prelude.py": {
     "functions": {
       "RequestUserContext": 1,
-      "resolve_request_user_context": 36
+      "resolve_request_user_context": 35
     },
     "mi_rank": "A"
   },
@@ -9793,11 +9720,11 @@
       "_active_list_search": 3,
       "_apply_conversation_list_ctx": 4,
       "_apply_list_search_chrome": 2,
-      "_build_card_adapter_ctx": 13,
-      "_build_chart_adapter_ctx": 27,
-      "_build_dashboard_adapter_ctx": 15,
-      "_build_list_adapter_ctx": 14,
-      "_build_specialty_adapter_ctx": 15,
+      "_build_card_adapter_ctx": 11,
+      "_build_chart_adapter_ctx": 15,
+      "_build_dashboard_adapter_ctx": 10,
+      "_build_list_adapter_ctx": 13,
+      "_build_specialty_adapter_ctx": 13,
       "_entity_display_field": 2,
       "_gated_entity_detail_urls": 6,
       "_overlays_to_series": 5,
@@ -10008,7 +9935,7 @@
       "LLMAPIClient._build_user_prompt": 1,
       "LLMAPIClient._call_anthropic": 6,
       "LLMAPIClient._call_openai": 8,
-      "LLMAPIClient._call_vertex": 12,
+      "LLMAPIClient._call_vertex": 11,
       "LLMAPIClient._default_model": 7,
       "LLMAPIClient._fallback_to_subscription_cli": 4,
       "LLMAPIClient._init_client": 8,
@@ -10096,17 +10023,17 @@
       "SemanticExtraction": 1,
       "_match_compliance_pattern": 11,
       "extract_guards": 7,
-      "extract_semantics": 32,
+      "extract_semantics": 26,
       "handle_extract_guards": 2,
       "handle_extract_semantics": 3,
       "handle_infer_analytics": 2,
       "handle_infer_compliance": 2,
       "handle_infer_tenancy": 2,
-      "infer_analytics_intent": 20,
+      "infer_analytics_intent": 16,
       "infer_compliance_requirements": 24,
       "infer_multi_tenancy": 24
     },
-    "mi_rank": "B"
+    "mi_rank": "A"
   },
   "dazzle/mcp/examples.py": {
     "functions": {
@@ -10413,7 +10340,7 @@
       "_handle_list_resources": 1,
       "_handle_list_tools": 1,
       "_handle_read_resource": 1,
-      "_mime_for_uri": 11,
+      "_mime_for_uri": 10,
       "_prompt_text": 9,
       "_resource": 1,
       "call_tool": 2,
@@ -10421,7 +10348,7 @@
       "list_prompts": 1,
       "list_resources_handler": 6,
       "list_tools_handler": 1,
-      "read_resource": 27,
+      "read_resource": 25,
       "run_server": 7
     },
     "mi_rank": "A"
@@ -10489,7 +10416,7 @@
       "_is_template_readme": 3,
       "_representation_decision_for_spec": 3,
       "_representation_instruction_bits": 4,
-      "_run_cognition_pass": 12,
+      "_run_cognition_pass": 8,
       "handle_bootstrap": 4
     },
     "mi_rank": "A"
@@ -10541,7 +10468,7 @@
       "demo_propose_impl": 61,
       "demo_save_impl": 23
     },
-    "mi_rank": "B"
+    "mi_rank": "A"
   },
   "dazzle/mcp/server/handlers/discovery/__init__.py": {
     "functions": {},
@@ -10567,8 +10494,8 @@
   },
   "dazzle/mcp/server/handlers/dsl/inspect.py": {
     "functions": {
-      "inspect_entity": 16,
-      "inspect_surface": 14
+      "inspect_entity": 15,
+      "inspect_surface": 13
     },
     "mi_rank": "A"
   },
@@ -10584,14 +10511,14 @@
   "dazzle/mcp/server/handlers/dsl_test.py": {
     "functions": {
       "dsl_test_coverage_impl": 12,
-      "dsl_test_generate_impl": 12,
-      "dsl_test_run_all_impl": 27,
+      "dsl_test_generate_impl": 11,
+      "dsl_test_run_all_impl": 19,
       "dsl_test_verify_story_impl": 31,
       "generate_dsl_tests_handler": 6,
       "get_dsl_test_coverage_handler": 2,
       "run_all_dsl_tests_handler": 4
     },
-    "mi_rank": "C"
+    "mi_rank": "A"
   },
   "dazzle/mcp/server/handlers/feedback.py": {
     "functions": {
@@ -10646,12 +10573,12 @@
       "_extract_test_generate_metrics": 6,
       "_extract_validate_metrics": 1,
       "aggregate_results": 16,
-      "collect_top_issues": 41,
+      "collect_top_issues": 28,
       "extract_step_metrics": 4,
-      "filter_issues_result": 15,
+      "filter_issues_result": 12,
       "run_step": 12,
       "run_steps_sequential": 5,
-      "step_has_issues": 22
+      "step_has_issues": 16
     },
     "mi_rank": "A"
   },
@@ -10841,8 +10768,8 @@
       "_db_row_to_entry": 5,
       "_mask_database_url": 5,
       "_safe_db_url": 2,
-      "get_activity_handler": 5,
-      "get_demo_world_handler": 11,
+      "get_activity_handler": 4,
+      "get_demo_world_handler": 9,
       "get_dnr_logs_handler": 19,
       "get_mcp_status_handler": 37,
       "get_telemetry_handler": 4
@@ -11015,7 +10942,7 @@
   },
   "dazzle/mcp/setup.py": {
     "functions": {
-      "_get_available_tools": 3,
+      "_get_available_tools": 2,
       "check_mcp_server": 7,
       "get_claude_config_path": 3,
       "register_mcp_server": 7
@@ -11133,14 +11060,14 @@
       "_field_type_to_form_type": 3,
       "_file_accept_attr": 5,
       "_get_field_spec": 10,
-      "_infer_filter_type": 20,
+      "_infer_filter_type": 14,
       "_list_detail_url_candidates": 5,
       "_list_detail_url_template": 5,
       "_ref_column_meta": 5,
       "_resolve_content_measure": 5,
       "_resolve_field_source": 10,
       "_widget_kind_to_form_type": 1,
-      "compile_appspec_to_templates": 102,
+      "compile_appspec_to_templates": 61,
       "compile_surface_to_context": 6
     },
     "mi_rank": "C"
@@ -11245,7 +11172,7 @@
   },
   "dazzle/page/runtime/comparison_resolver.py": {
     "functions": {
-      "resolve_comparison": 9
+      "resolve_comparison": 1
     },
     "mi_rank": "A"
   },
@@ -11407,8 +11334,8 @@
   },
   "dazzle/page/runtime/theme.py": {
     "functions": {
-      "ThemeVariantMiddleware": 4,
-      "ThemeVariantMiddleware.dispatch": 3,
+      "ThemeVariantMiddleware": 3,
+      "ThemeVariantMiddleware.dispatch": 2,
       "get_sidebar_state": 1,
       "install_theme_middleware": 1
     },
@@ -11436,7 +11363,7 @@
       "RegionContext": 1,
       "SourceTabContext": 1,
       "WorkspaceContext": 1,
-      "_build_diagram_data": 15,
+      "_build_diagram_data": 3,
       "_default_col_span": 3,
       "_entity_to_app_url": 1,
       "_flatten_group_by": 3,
@@ -11445,7 +11372,7 @@
       "_serialize_filter_to_params": 3,
       "apply_layout_preferences": 9,
       "build_catalog": 3,
-      "build_workspace_context": 84,
+      "build_workspace_context": 69,
       "migrate_v1_to_v2": 9,
       "render_workspace_content_typed": 24
     },
@@ -12064,10 +11991,10 @@
     "functions": {
       "Criterion": 1,
       "ProbeResult": 1,
-      "_display_kinds": 3,
+      "_display_kinds": 1,
       "_probe_1a": 7,
       "_probe_1b": 6,
-      "_probe_1c": 4,
+      "_probe_1c": 3,
       "_probe_1d": 6,
       "_probe_2a": 5,
       "_probe_2b": 3,
@@ -12199,13 +12126,12 @@
   },
   "dazzle/rbac/matrix.py": {
     "functions": {
-      "AccessMatrix": 5,
-      "AccessMatrix.__init__": 2,
+      "AccessMatrix": 4,
+      "AccessMatrix.__init__": 1,
       "AccessMatrix.get": 1,
       "AccessMatrix.to_csv": 4,
-      "AccessMatrix.to_json": 5,
-      "AccessMatrix.to_table": 11,
-      "AtomicFlowProjection": 1,
+      "AccessMatrix.to_json": 3,
+      "AccessMatrix.to_table": 7,
       "PolicyDecision": 1,
       "PolicyWarning": 1,
       "_condition_has_field_filter": 7,
@@ -12215,11 +12141,10 @@
       "_extract_roles_from_condition": 4,
       "_find_scope_for_role": 10,
       "_no_scope_rule_message": 4,
-      "_render_invariant": 3,
       "_resolve_decision": 10,
       "_resolve_permit_decision": 5,
       "_rule_matches_role": 6,
-      "generate_access_matrix": 54
+      "generate_access_matrix": 49
     },
     "mi_rank": "A"
   },
@@ -12276,12 +12201,9 @@
       "_build_asgi_app": 2,
       "_create_capable_role": 3,
       "_csrf_headers": 1,
-      "_is_role_gate_403": 1,
       "_minimal_body_for_entity": 28,
-      "_minimal_flow_inputs": 16,
       "_open_role_client": 2,
       "_probe_all_cells": 16,
-      "_probe_atomic_flows": 11,
       "_probe_cell": 10,
       "_probe_transport": 1,
       "_scope_create_overlay": 14,
@@ -12294,18 +12216,14 @@
   "dazzle/rbac/verification_types.py": {
     "functions": {
       "CellResult": 1,
-      "VerificationReport": 5,
-      "VerificationReport.load": 6,
+      "VerificationReport": 4,
+      "VerificationReport.load": 5,
       "VerificationReport.save": 1,
-      "VerificationReport.to_json": 4,
+      "VerificationReport.to_json": 3,
       "VerifiedCell": 3,
       "VerifiedCell.from_dict": 2,
       "VerifiedCell.to_dict": 2,
-      "VerifiedFlow": 2,
-      "VerifiedFlow.from_dict": 1,
-      "VerifiedFlow.to_dict": 1,
-      "compare_cell": 23,
-      "compare_flow": 7
+      "compare_cell": 23
     },
     "mi_rank": "A"
   },
@@ -12403,7 +12321,7 @@
       "_account_identity_label": 11,
       "_assert_custom_render_output": 4,
       "_build_account_trailing": 8,
-      "_build_sidebar_from_ctx": 22,
+      "_build_sidebar_from_ctx": 3,
       "_safe_url": 3,
       "_shell_content_measure": 7,
       "_sidebar_from_nav_model": 20,
@@ -12432,7 +12350,7 @@
       "_metric_number_filter": 7,
       "_pagination_pages": 6,
       "_ref_display_name": 29,
-      "_timeago_filter": 20,
+      "_timeago_filter": 9,
       "_truncate_filter": 4,
       "badge_icon_html": 2,
       "infer_terminal_tone_map": 5,
@@ -12521,7 +12439,7 @@
       "_json_bag_summary": 11,
       "_profile": 2,
       "_ref_or_dict_display": 2,
-      "_relative": 7,
+      "_relative": 2,
       "_title_case": 1,
       "format_cell": 4
     },
@@ -12629,7 +12547,7 @@
       "time_series_root_attrs": 1,
       "timeline_item_root_attrs": 1
     },
-    "mi_rank": "C"
+    "mi_rank": "B"
   },
   "dazzle/render/fragment/ingest/models.py": {
     "functions": {
@@ -12906,7 +12824,7 @@
       "WorkspaceShell": 1,
       "WorkspaceToolbar": 1
     },
-    "mi_rank": "C"
+    "mi_rank": "B"
   },
   "dazzle/render/fragment/primitives/forms.py": {
     "functions": {
@@ -13015,15 +12933,15 @@
   "dazzle/render/fragment/region/_builders_cards.py": {
     "functions": {
       "_BuildersCardsMixin": 36,
-      "_BuildersCardsMixin._build_cohort_strip": 36,
+      "_BuildersCardsMixin._build_cohort_strip": 34,
       "_BuildersCardsMixin._build_entity_card": 15,
-      "_BuildersCardsMixin._build_kanban": 87
+      "_BuildersCardsMixin._build_kanban": 77
     },
     "mi_rank": "A"
   },
   "dazzle/render/fragment/region/_builders_charts.py": {
     "functions": {
-      "_BuildersChartsMixin": 19,
+      "_BuildersChartsMixin": 15,
       "_BuildersChartsMixin._build_bar_chart": 17,
       "_BuildersChartsMixin._build_comparison": 7,
       "_BuildersChartsMixin._build_diagram": 21,
@@ -13036,13 +12954,13 @@
       "_parse_reference_lines": 9,
       "_stored_insight_card": 7
     },
-    "mi_rank": "C"
+    "mi_rank": "A"
   },
   "dazzle/render/fragment/region/_builders_metrics.py": {
     "functions": {
-      "_BuildersMetricsMixin": 15,
-      "_BuildersMetricsMixin._build_metrics": 26,
-      "_BuildersMetricsMixin._build_pipeline_steps": 15,
+      "_BuildersMetricsMixin": 14,
+      "_BuildersMetricsMixin._build_metrics": 14,
+      "_BuildersMetricsMixin._build_pipeline_steps": 13,
       "_BuildersMetricsMixin._build_status_list": 13
     },
     "mi_rank": "A"
@@ -13061,7 +12979,7 @@
     "functions": {
       "_BuildersTablesMixin": 55,
       "_BuildersTablesMixin._build_list": 90,
-      "_BuildersTablesMixin._build_pivot_table": 35,
+      "_BuildersTablesMixin._build_pivot_table": 32,
       "_BuildersTablesMixin._build_queue": 57,
       "_BuildersTablesMixin._build_tabbed_list": 34,
       "_format_queue_meta_value": 13,
@@ -13081,15 +12999,15 @@
       "_BuildersTimelineMixin._build_conversation": 35,
       "_BuildersTimelineMixin._build_day_timeline": 16,
       "_BuildersTimelineMixin._build_task_inbox": 26,
-      "_BuildersTimelineMixin._build_timeline": 33,
+      "_BuildersTimelineMixin._build_timeline": 27,
       "_activity_actor_label": 12,
       "_activity_description": 4,
       "_activity_drill_by_id": 4,
-      "_activity_empty_message": 3,
+      "_activity_empty_message": 1,
       "_activity_feed_rows": 6,
       "_conversation_message": 5,
       "_conversation_orientation": 12,
-      "_conversation_time": 10,
+      "_conversation_time": 5,
       "_media_initials": 5
     },
     "mi_rank": "A"
@@ -13102,8 +13020,8 @@
   },
   "dazzle/render/fragment/region/_dispatcher.py": {
     "functions": {
-      "WorkspaceRegionAdapter": 7,
-      "WorkspaceRegionAdapter.build": 6
+      "WorkspaceRegionAdapter": 6,
+      "WorkspaceRegionAdapter.build": 5
     },
     "mi_rank": "A"
   },
@@ -13114,7 +13032,7 @@
       "_resolve_row_links": 14,
       "_resolve_row_open_chain": 15,
       "_try_format_url": 3,
-      "field_label_from_via": 6,
+      "field_label_from_via": 1,
       "via_field_from_template": 5
     },
     "mi_rank": "A"
@@ -13186,8 +13104,8 @@
   },
   "dazzle/render/fragment/renderer/_emit.py": {
     "functions": {
-      "FragmentRenderer": 37,
-      "FragmentRenderer._emit": 129,
+      "FragmentRenderer": 33,
+      "FragmentRenderer._emit": 113,
       "FragmentRenderer._emit_script": 10,
       "FragmentRenderer._emit_stylesheet": 5,
       "FragmentRenderer.render": 2
@@ -13372,7 +13290,7 @@
       "_RenderTablesMixin._emit_related_files": 1,
       "_RenderTablesMixin._emit_related_group": 4,
       "_RenderTablesMixin._emit_related_queue": 4,
-      "_RenderTablesMixin._emit_related_queue_body": 12,
+      "_RenderTablesMixin._emit_related_queue_body": 10,
       "_RenderTablesMixin._emit_related_table": 9,
       "_RenderTablesMixin._emit_slide_over": 1,
       "_RenderTablesMixin._emit_status_list": 4,
@@ -13385,7 +13303,7 @@
       "_RenderTablesMixin._related_overflow_html": 2,
       "_RenderTablesMixin._related_tab_count": 3
     },
-    "mi_rank": "C"
+    "mi_rank": "B"
   },
   "dazzle/render/fragment/state_affordance.py": {
     "functions": {
@@ -13505,7 +13423,7 @@
       "entity_label_from_detail_url": 13,
       "hub_open_discovery_attrs": 3,
       "link_open_discovery_attr_suffix": 14,
-      "open_hop_label": 12,
+      "open_hop_label": 9,
       "search_open_attr_suffix": 1
     },
     "mi_rank": "A"
@@ -14099,7 +14017,7 @@
       "TenantRegistry._connect": 1,
       "TenantRegistry.create": 1,
       "TenantRegistry.ensure_table": 1,
-      "TenantRegistry.get": 2,
+      "TenantRegistry.get": 1,
       "TenantRegistry.list": 2,
       "TenantRegistry.update_config": 3,
       "TenantRegistry.update_status": 2,
@@ -14225,10 +14143,10 @@
       "DSLTestGenerator._generate_state_machine_tests": 1,
       "DSLTestGenerator._generate_workspace_tests": 6,
       "DSLTestGenerator._get_required_refs": 1,
-      "DSLTestGenerator._init_coverage_totals": 10,
+      "DSLTestGenerator._init_coverage_totals": 9,
       "DSLTestGenerator._next_id": 1,
       "DSLTestGenerator._slugify": 1,
-      "DSLTestGenerator.generate_all": 7,
+      "DSLTestGenerator.generate_all": 5,
       "GeneratedTestSuite": 2,
       "GeneratedTestSuite.to_dict": 1,
       "PersonaTestBuilder": 5,
@@ -14251,7 +14169,7 @@
       "_get_required_refs": 9,
       "_invariant_required_fields": 11,
       "_slugify": 1,
-      "compute_dsl_hash": 10,
+      "compute_dsl_hash": 8,
       "generate_tests_from_dsl": 1,
       "save_generated_tests": 1
     },
@@ -14403,7 +14321,7 @@
       "PersonaSession": 1,
       "SessionManager": 5,
       "SessionManager.__init__": 2,
-      "SessionManager._authenticate_via_login": 18,
+      "SessionManager._authenticate_via_login": 17,
       "SessionManager._authenticate_via_test_endpoint": 3,
       "SessionManager._resolve_test_secret": 4,
       "SessionManager._save_manifest": 1,
@@ -14431,11 +14349,11 @@
       "StepExecutor.__init__": 1,
       "StepExecutor._build_surface_url_map": 11,
       "StepExecutor._execute_assert_authenticated_step": 6,
-      "StepExecutor._execute_assert_cookie_cleared_step": 13,
-      "StepExecutor._execute_assert_cookie_set_step": 6,
+      "StepExecutor._execute_assert_cookie_cleared_step": 4,
+      "StepExecutor._execute_assert_cookie_set_step": 4,
       "StepExecutor._execute_assert_count_step": 8,
       "StepExecutor._execute_assert_error_step": 10,
-      "StepExecutor._execute_assert_no_cookie_step": 7,
+      "StepExecutor._execute_assert_no_cookie_step": 3,
       "StepExecutor._execute_assert_redirect_url_step": 6,
       "StepExecutor._execute_assert_state_step": 1,
       "StepExecutor._execute_assert_status_step": 3,
@@ -14607,10 +14525,10 @@
   },
   "dazzle/testing/unified_runner.py": {
     "functions": {
-      "UnifiedTestResult": 6,
-      "UnifiedTestResult._category_breakdown": 6,
-      "UnifiedTestResult._failure_details": 7,
-      "UnifiedTestResult.get_summary": 5,
+      "UnifiedTestResult": 5,
+      "UnifiedTestResult._category_breakdown": 4,
+      "UnifiedTestResult._failure_details": 6,
+      "UnifiedTestResult.get_summary": 4,
       "UnifiedTestResult.to_dict": 2,
       "UnifiedTestRunner": 7,
       "UnifiedTestRunner.__init__": 2,
@@ -14621,11 +14539,11 @@
       "UnifiedTestRunner._parse_base_url": 3,
       "UnifiedTestRunner._save_cache": 1,
       "UnifiedTestRunner.generate_tests": 3,
-      "UnifiedTestRunner.run_all": 16,
+      "UnifiedTestRunner.run_all": 13,
       "UnifiedTestRunner.run_crud_tests": 18,
       "UnifiedTestRunner.start_server": 16,
       "UnifiedTestRunner.stop_server": 3,
-      "format_unified_report": 8,
+      "format_unified_report": 7,
       "main": 11,
       "run_all_examples": 8
     },
@@ -15059,7 +14977,7 @@
       "_file_hash": 1,
       "_safe_filename": 2,
       "capture_screenshot": 1,
-      "compare_screenshots": 8,
+      "compare_screenshots": 5,
       "get_baseline_path": 1,
       "run_visual_regression": 4,
       "save_as_baseline": 1

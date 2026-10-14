@@ -6742,20 +6742,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/security/test_asvs_v5_validation.py",
-    "class": "TestHTMLSanitization",
-    "assertion_shape": "('notin',)",
-    "size": 3,
-    "members": [
-      "test_script_tags_stripped",
-      "test_dangerous_tags_removed",
-      "test_event_handlers_stripped"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "property",
-    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
-  },
-  {
     "file": "tests/unit/core/test_render_clause_linking.py",
     "class": "(module)",
     "assertion_shape": "('eq',)",
@@ -9192,6 +9178,20 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
+    "file": "tests/unit/test_declaration_lints.py",
+    "class": "(module)",
+    "assertion_shape": "('eq',)",
+    "size": 3,
+    "members": [
+      "test_known_keys_produce_no_parse_warnings",
+      "test_construct_without_unread_clause_is_silent",
+      "test_presentation_only_warning_points_at_ship_q"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
     "file": "tests/unit/test_demo_blueprint.py",
     "class": "TestBlueprintDataGenerator",
     "assertion_shape": "('eq',)",
@@ -10478,34 +10478,6 @@
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_input_sanitization.py",
-    "class": "TestStripDangerousTags",
-    "assertion_shape": "('notin',)",
-    "size": 3,
-    "members": [
-      "test_iframe_stripped",
-      "test_onerror_stripped",
-      "test_javascript_protocol_stripped"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "property",
-    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
-  },
-  {
-    "file": "tests/unit/test_input_sanitization.py",
-    "class": "TestStripDangerousTags",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_safe_html_preserved",
-      "test_empty_string",
-      "test_plain_text_preserved"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "property",
-    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
   },
   {
     "file": "tests/unit/test_insight_summary_validation.py",
@@ -12704,6 +12676,20 @@
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "fuzz",
     "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
+  },
+  {
+    "file": "tests/unit/test_richtext_write_path.py",
+    "class": "(module)",
+    "assertion_shape": "('eq',)",
+    "size": 3,
+    "members": [
+      "test_rich_text_fields_derived_from_surface_widget",
+      "test_handler_without_rich_text_fields_writes_html_unchanged",
+      "test_str_field_still_has_tags_stripped"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
     "file": "tests/unit/test_rls_runtime_context.py",

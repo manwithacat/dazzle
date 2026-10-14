@@ -880,85 +880,140 @@ unless_block  ::= "unless" ":" NEWLINE
 
 
 def _build_process_section() -> str:
+    # Keep each production's keywords in step with the dispatch in
+    # dsl_parser_impl/process.py (pinned by tests/unit/test_grammar_gen.py).
     return """\
 process_decl  ::= "process" IDENT STRING? ":" NEWLINE
                   INDENT
-                    ("implements" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
-                    process_trigger?
-                    process_io*
-                    process_step+
-                    compensations_block?
+                    (STRING NEWLINE)?
+                    ("implements" ":" id_list NEWLINE)?
+                    ("trigger" ":" (trigger_expr NEWLINE | NEWLINE process_trigger))?
+                    ("input" ":" NEWLINE INDENT process_input+ DEDENT)?
+                    ("output" ":" NEWLINE INDENT process_output+ DEDENT)?
+                    ("steps" ":" NEWLINE INDENT step_item+ DEDENT)?
+                    ("compensations" ":" NEWLINE INDENT compensation+ DEDENT)?
+                    ("timeout" ":" PROCESS_DURATION NEWLINE)?
+                    ("overlap" ":" overlap_policy NEWLINE)?
                   DEDENT ;
+
+id_list       ::= "[" COMPOUND_ID ("," COMPOUND_ID)* "]" | COMPOUND_ID ;
+
+COMPOUND_ID   ::= /[A-Za-z0-9_-]+/ ;  (* e.g. ST-001 *)
 
 process_trigger
-              ::= "trigger" ":" NEWLINE
-                  INDENT
-                    ("when" ":" trigger_expr NEWLINE)?
-                    ("schedule" ":" cron_expr NEWLINE)?
+              ::= INDENT
+                    "when" ":" trigger_expr NEWLINE
                   DEDENT ;
 
-trigger_expr  ::= "entity" IDENT ("status" "->" IDENT)?
-                | "event" IDENT
-                | "manual" ;
+trigger_expr  ::= "entity" IDENT ("created" | "updated" | "deleted")
+                | "entity" IDENT "status" (IDENT)? "->" IDENT
+                | "manual"
+                | "signal" IDENT
+                | "process" IDENT "completed" ;
 
-cron_expr     ::= STRING
-                | "every" NUMBER ("minutes" | "hours" | "days")
-                | "cron" STRING ;
+process_input ::= IDENT ":" IDENT ("required" | "=" STRING | STRING)* NEWLINE ;
 
-process_io    ::= ("input" | "output") ":" NEWLINE
-                  INDENT
-                    (IDENT ":" type_spec field_modifier* NEWLINE)+
-                  DEDENT ;
+process_output
+              ::= IDENT ":" IDENT STRING? NEWLINE ;
 
-process_step  ::= "step" IDENT STRING? ":" NEWLINE
+overlap_policy
+              ::= "skip" | "queue" | "cancel_previous" | "allow" ;
+
+PROCESS_DURATION ::= /[0-9]+(s|m|h|d)/ ;
+
+step_item     ::= "-" process_step
+                | "-" parallel_step ;
+
+process_step  ::= "step" IDENT ":" NEWLINE
                   INDENT
                     step_body
                   DEDENT ;
 
+parallel_step ::= "parallel" IDENT ":" NEWLINE
+                  INDENT
+                    ("-" process_step)+
+                  DEDENT ;
+
 step_body     ::= ("service" ":" IDENT NEWLINE)?
-                  ("operation" ":" IDENT NEWLINE)?
+                  ("llm_intent" ":" IDENT NEWLINE)?
+                  ("input_map" ":" NEWLINE INDENT (IDENT ":" field_path NEWLINE)+ DEDENT)?
                   ("channel" ":" IDENT NEWLINE)?
-                  ("mapping" ":" NEWLINE INDENT mapping_line+ DEDENT)?
+                  ("message" ":" IDENT NEWLINE)?
+                  ("wait" ":" PROCESS_DURATION NEWLINE)?
+                  ("human_task" ":" NEWLINE INDENT human_task_body DEDENT)?
+                  ("subprocess" ":" IDENT NEWLINE)?
+                  ("condition" ":" (STRING | condition_text) NEWLINE)?
+                  ("on_true" ":" IDENT NEWLINE)?
+                  ("on_false" ":" IDENT NEWLINE)?
+                  ("goto" ":" IDENT NEWLINE)?  (* same as on_success *)
                   ("on_success" ":" IDENT NEWLINE)?
                   ("on_failure" ":" IDENT NEWLINE)?
-                  ("retry" ":" NEWLINE INDENT retry_config DEDENT)?
-                  ("timeout" ":" NUMBER NEWLINE)?
-                  ("parallel" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
-                  ("subprocess" ":" IDENT NEWLINE)?
-                  ("human_task" ":" NEWLINE INDENT human_task_body DEDENT)?
-                  ("condition" ":" condition_expr NEWLINE)?
-                  ("on_true" ":" IDENT NEWLINE)?
-                  ("on_false" ":" IDENT NEWLINE)? ;
+                  ("compensate" ":" IDENT NEWLINE)?
+                  ("timeout" ":" PROCESS_DURATION NEWLINE)?
+                  ("retry" ":" NEWLINE INDENT step_retry_config DEDENT)?
+                  ("inputs" ":" NEWLINE INDENT input_mapping+ DEDENT)?
+                  ("effects" ":" NEWLINE INDENT step_effect+ DEDENT)? ;
 
-mapping_line  ::= IDENT ":" (literal | field_path) NEWLINE ;
+condition_text
+              ::= /[^\\n]+/ ;  (* the rest of the line, verbatim *)
+
+step_retry_config
+              ::= ("max_attempts" ":" NUMBER NEWLINE)?
+                  ("backoff" ":" ("fixed" | "exponential" | "linear") NEWLINE)?
+                  ("interval" ":" PROCESS_DURATION NEWLINE)? ;
 
 retry_config  ::= ("max_attempts" ":" NUMBER NEWLINE)?
                   ("backoff" ":" IDENT NEWLINE)?
                   ("initial_delay_ms" ":" NUMBER NEWLINE)?
                   ("max_delay_ms" ":" NUMBER NEWLINE)? ;
 
-human_task_body
-              ::= ("assignee" ":" field_path NEWLINE)?
-                  ("assignee_role" ":" IDENT NEWLINE)?
-                  ("surface" ":" IDENT NEWLINE)?
-                  ("confirm" ":" STRING NEWLINE)?
-                  ("inputs" ":" NEWLINE INDENT (IDENT ":" type_spec NEWLINE)+ DEDENT)? ;
+input_mapping ::= "-" field_path "->" IDENT NEWLINE ;
 
-compensations_block
-              ::= "compensations" ":" NEWLINE
+step_effect   ::= "-" ("create" | "update") IDENT ":" NEWLINE
                   INDENT
-                    ("compensate" IDENT ":" IDENT NEWLINE)+
+                    ("where" ":" (STRING | condition_text) NEWLINE)?
+                    ("set" ":" NEWLINE INDENT field_assignment+ DEDENT)?
                   DEDENT ;
+
+field_assignment
+              ::= "-" field_path "->" (literal | field_path | IDENT "(" ")") NEWLINE ;
+
+human_task_body
+              ::= ("surface" ":" IDENT NEWLINE)?
+                  ("entity" ":" IDENT NEWLINE)?
+                  ("assignee_role" ":" IDENT NEWLINE)?
+                  ("assignee" ":" (STRING | condition_text) NEWLINE)?
+                  ("timeout" ":" PROCESS_DURATION NEWLINE)?
+                  ("outcomes" ":" NEWLINE INDENT task_outcome+ DEDENT)? ;
+
+task_outcome  ::= "-" IDENT STRING? ":" NEWLINE
+                  (INDENT
+                    ("label" ":" STRING NEWLINE)?
+                    ("goto" ":" IDENT NEWLINE)?
+                    ("confirm" ":" STRING NEWLINE)?
+                    ("style" ":" IDENT NEWLINE)?
+                  DEDENT)? ;
+
+compensation  ::= "-" IDENT ":" NEWLINE
+                  (INDENT
+                    ("service" ":" IDENT NEWLINE)?
+                    ("timeout" ":" PROCESS_DURATION NEWLINE)?
+                    ("inputs" ":" NEWLINE INDENT input_mapping+ DEDENT)?
+                  DEDENT)? ;
 
 schedule_decl ::= "schedule" IDENT STRING? ":" NEWLINE
                   INDENT
-                    ("process" ":" IDENT NEWLINE)?
-                    ("cron" ":" STRING NEWLINE | "interval" ":" STRING NEWLINE | "every" ":" STRING NEWLINE)?
-                    ("timezone" ":" STRING NEWLINE)?
-                    ("input" ":" NEWLINE INDENT (IDENT ":" literal NEWLINE)+ DEDENT)?
-                    ("overlap" ":" IDENT NEWLINE)?  (* accepted, not read: W_DECLARED_NOT_READ *)
+                    (STRING NEWLINE)?
+                    ("implements" ":" id_list NEWLINE)?
+                    ("cron" ":" (STRING | param_ref) NEWLINE | "interval" ":" PROCESS_DURATION NEWLINE)?
+                    ("timezone" ":" (STRING | param_ref) NEWLINE)?
+                    ("timeout" ":" (PROCESS_DURATION | param_ref) NEWLINE)?
+                    ("steps" ":" NEWLINE INDENT step_item+ DEDENT)?
+                    ("overlap" ":" overlap_policy NEWLINE)?  (* accepted, not read: W_DECLARED_NOT_READ *)
                     ("catch_up" ":" BOOLEAN NEWLINE)?  (* accepted, not read: W_DECLARED_NOT_READ *)
                   DEDENT ;
+
+param_ref     ::= "param" "(" STRING ")" ;
 """
 
 
@@ -1003,6 +1058,7 @@ llm_config_decl
                     ("artifact_store" ":" IDENT NEWLINE)?  (* accepted, not read: W_DECLARED_NOT_READ *)
                     ("logging" ":" NEWLINE INDENT llm_logging_body DEDENT)?
                     ("rate_limits" ":" NEWLINE INDENT (IDENT ":" NUMBER NEWLINE)+ DEDENT)?
+                    ("concurrency" ":" NEWLINE INDENT (IDENT ":" NUMBER NEWLINE)+ DEDENT)?
                   DEDENT ;
 
 llm_logging_body
@@ -1156,18 +1212,15 @@ workspace dashboard "Dashboard":
 """,
     "Workflow": """\
 ```dsl
-story ST-001 "User completes task":
-  actor: StaffUser
+story ST-001 "Staff user completes task":
+  persona: staff
   trigger: status_changed
-  scope: [Task]
-
+  entities: [Task]
   given:
-    - Task.status is 'in_progress'
-    - Task.assigned_to is set
-
+    - "Task is in progress and assigned"
   then:
-    - Task.status becomes 'done'
-    - Task.completed_at is recorded
+    - "Task status becomes done"
+    - "Completion time is recorded"
 
 process order_fulfillment "Order Fulfillment":
   implements: [ST-001]
@@ -1178,23 +1231,40 @@ process order_fulfillment "Order Fulfillment":
   input:
     order_id: uuid required
 
-  step validate "Validate Order":
-    service: OrderService
-    operation: validate
-    on_success: pick
-    on_failure: cancel
+  steps:
+    - step validate:
+        service: validate_order
+        on_success: pick
+        on_failure: cancel
+        retry:
+          max_attempts: 3
+          backoff: exponential
 
-  step pick "Pick Items":
-    human_task:
-      assignee_role: warehouse
-      surface: pick_list
-      confirm: "All items picked?"
-    on_success: ship
+    - step pick:
+        human_task:
+          surface: pick_list
+          entity: Order
+          assignee_role: warehouse
+          timeout: 4h
+          outcomes:
+            - picked "All items picked":
+                goto: complete
+            - short "Items missing":
+                goto: cancel
+                style: danger
+
+    - step cancel:
+        effects:
+          - update Order:
+              set:
+                - Order.status -> cancelled
 
 schedule daily_report "Daily Report":
-  process: generate_report
   cron: "0 9 * * *"
   timezone: "Europe/London"
+  steps:
+    - step generate:
+        service: generate_report
 ```
 """,
     "Integration": """\

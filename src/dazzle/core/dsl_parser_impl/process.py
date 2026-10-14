@@ -659,12 +659,10 @@ class ProcessParserMixin:
                     step = self._parse_parallel_block()
                     steps.append(step)
                 else:
-                    # Skip unknown
-                    self.advance()
-                    self._skip_to_next_step()
+                    # `- <word>` that is not a step: the list item is the entry.
+                    self._skip_unknown_block_key("process steps", list_item=True)
             else:
-                # Skip unknown token
-                self.advance()
+                self._skip_unknown_block_key("process steps")
 
         self.expect(TokenType.DEDENT)
         return steps
@@ -919,8 +917,7 @@ class ProcessParserMixin:
                 comp = self._parse_single_compensation()
                 compensations.append(comp)
             else:
-                # Skip unknown
-                self.advance()
+                self._skip_unknown_block_key("compensations")
 
         self.expect(TokenType.DEDENT)
         return compensations
@@ -963,8 +960,7 @@ class ProcessParserMixin:
                     inputs = self._parse_input_mappings()
 
                 else:
-                    # Skip unknown
-                    self.advance()
+                    self._skip_unknown_block_key("compensation")
 
             self.expect(TokenType.DEDENT)
 
@@ -1083,8 +1079,7 @@ class ProcessParserMixin:
                 outcome = self._parse_single_outcome()
                 outcomes.append(outcome)
             else:
-                # Skip unknown
-                self.advance()
+                self._skip_unknown_block_key("human_task outcomes")
 
         self.expect(TokenType.DEDENT)
         return outcomes
@@ -1139,8 +1134,7 @@ class ProcessParserMixin:
                     self.skip_newlines()
 
                 else:
-                    # Skip unknown
-                    self.advance()
+                    self._skip_unknown_block_key("human_task outcome")
 
             self.expect(TokenType.DEDENT)
 
@@ -1180,8 +1174,7 @@ class ProcessParserMixin:
                 )
                 self.skip_newlines()
             else:
-                # Skip unknown
-                self.advance()
+                self._skip_unknown_block_key("effect set")
 
         self.expect(TokenType.DEDENT)
         return assignments
@@ -1204,7 +1197,7 @@ class ProcessParserMixin:
                 self.advance()
                 effects.append(self._parse_single_effect())
             else:
-                self.advance()
+                self._skip_unknown_block_key("effects")
 
         self.expect(TokenType.DEDENT)
         return effects
@@ -1257,7 +1250,7 @@ class ProcessParserMixin:
                     self.skip_newlines()
                     assignments = self._parse_field_assignments()
                 else:
-                    self.advance()
+                    self._skip_unknown_block_key("effect")
 
             self.expect(TokenType.DEDENT)
 
@@ -1296,8 +1289,7 @@ class ProcessParserMixin:
                 )
                 self.skip_newlines()
             else:
-                # Skip unknown
-                self.advance()
+                self._skip_unknown_block_key("inputs")
 
         self.expect(TokenType.DEDENT)
         return mappings
@@ -1374,8 +1366,7 @@ class ProcessParserMixin:
                     self.skip_newlines()
 
                 else:
-                    # Skip unknown
-                    self.advance()
+                    self._skip_unknown_block_key("process step retry")
 
             self.expect(TokenType.DEDENT)
 
@@ -1482,16 +1473,6 @@ class ProcessParserMixin:
             value += "()"
 
         return value
-
-    def _skip_to_next_step(self) -> None:
-        """Skip tokens until we reach the next step or end of block."""
-        while not self.match(
-            TokenType.MINUS,
-            TokenType.DEDENT,
-            TokenType.EOF,
-        ):
-            self.advance()
-            self.skip_newlines()
 
 
 # ---------------------------------------------------------------------------

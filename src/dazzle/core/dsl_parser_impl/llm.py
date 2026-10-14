@@ -26,6 +26,7 @@ class LLMParserMixin:
         advance: Any
         match: Any
         current_token: Any
+        peek_token: Any
         expect_identifier_or_keyword: Any
         skip_newlines: Any
         file: Any
@@ -167,33 +168,39 @@ class LLMParserMixin:
             redact_pii=redact_pii,
         )
 
-    def _parse_rate_limits(self) -> dict[str, int]:
-        """Parse rate limits block."""
+    def _parse_model_limit_map(self, block: str) -> dict[str, int]:
+        """Parse a ``<model>: <limit>`` block (``rate_limits:`` / ``concurrency:``).
+
+        The model name is an ``llm_model`` name, which may lex as a keyword, so
+        any word followed by ``:`` is an entry (flense ship Z; before, a
+        keyword-named model dropped its entry without a word). Any other line
+        warns ``W_UNKNOWN_BLOCK_KEY`` and is skipped.
+        """
         self.expect(TokenType.INDENT)
 
-        rate_limits: dict[str, int] = {}
+        limits: dict[str, int] = {}
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
 
-            # model_name: rate
-            if self.match(TokenType.IDENTIFIER):
-                model_name = self.current_token().value
+            tok = self.current_token()
+            if (
+                isinstance(tok.value, str)
+                and tok.value.isidentifier()
+                and self.peek_token().type == TokenType.COLON
+            ):
                 self.advance()
                 self.expect(TokenType.COLON)
-                rate = int(self.expect(TokenType.NUMBER).value)
-                rate_limits[model_name] = rate
-                self.skip_newlines()
-
+                limits[tok.value] = int(self.expect(TokenType.NUMBER).value)
             else:
-                self.advance()
-                self.skip_newlines()
+                self._skip_unknown_block_key(block)
+            self.skip_newlines()
 
         self.expect(TokenType.DEDENT)
 
-        return rate_limits
+        return limits
 
     def parse_llm_intent(self) -> ir.LLMIntentSpec:
         """Parse a ``llm_intent <name> "Title":`` declaration.
@@ -525,33 +532,6 @@ class LLMParserMixin:
 
         self.expect(TokenType.DEDENT)
         return result
-
-    def _parse_concurrency_limits(self) -> dict[str, int]:
-        """Parse concurrency limits block (same format as rate_limits)."""
-        self.expect(TokenType.INDENT)
-
-        limits: dict[str, int] = {}
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            if self.match(TokenType.IDENTIFIER):
-                model_name = self.current_token().value
-                self.advance()
-                self.expect(TokenType.COLON)
-                limit = int(self.expect(TokenType.NUMBER).value)
-                limits[model_name] = limit
-                self.skip_newlines()
-
-            else:
-                self.advance()
-                self.skip_newlines()
-
-        self.expect(TokenType.DEDENT)
-
-        return limits
 
 
 # ============================================================ #
@@ -970,7 +950,7 @@ def _lc_kw_rate_limits(parser: Any, state: _LLMConfigState) -> None:
     if _lc_scalar_map_value_ignored(parser, key_tok):
         return
     parser.skip_newlines()
-    state.rate_limits = parser._parse_rate_limits()
+    state.rate_limits = parser._parse_model_limit_map("llm_config rate_limits")
 
 
 # ---------- IDENT-text-matched keyword parsers ---------- #
@@ -983,7 +963,7 @@ def _lc_kw_concurrency(parser: Any, state: _LLMConfigState) -> None:
     if _lc_scalar_map_value_ignored(parser, key_tok):
         return
     parser.skip_newlines()
-    state.concurrency = parser._parse_concurrency_limits()
+    state.concurrency = parser._parse_model_limit_map("llm_config concurrency")
 
 
 # ---------- Dispatch tables + on_unknown + builder ---------- #

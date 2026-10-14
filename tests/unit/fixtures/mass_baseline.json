@@ -1,7 +1,7 @@
 {
-  "src_lines": 340340,
-  "test_lines": 350576,
-  "docs_lines": 47649,
+  "src_lines": 340371,
+  "test_lines": 350749,
+  "docs_lines": 47718,
   "construct_count": 31,
   "written": "2026-10-14",
   "exceptions": [
@@ -114,6 +114,15 @@
         "test_lines"
       ],
       "reason": "ship X: KB/example cleanup and remaining lenient sub-blocks (+tests)"
+    },
+    {
+      "date": "2026-10-14",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "ship Z: parser hygiene, process grammar matches the parser, baseline regeneration (+tests)"
     }
   ]
 }

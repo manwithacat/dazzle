@@ -1,8 +1,14 @@
 """Tests for grammar_gen.py — grammar documentation generator."""
 
+import re
+from pathlib import Path
+
 import pytest
 
+from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.dsl_parser_impl.process import _STEP_FIELD_IDENT_KEYWORDS, _STEP_FIELD_KEYWORDS
 from dazzle.core.grammar_gen import (
+    _CATEGORY_EXAMPLES,
     _MIXIN_SECTIONS,
     build_type_spec_rule,
     generate_grammar,
@@ -127,3 +133,48 @@ class TestVersion:
         pep440_part = re.compile(r"^\d+([a-z]+\d+)?$")
         for p in parts:
             assert pep440_part.match(p), f"Version part {p!r} is not numeric or PEP-440"
+
+
+def _production_keywords(name: str) -> set[str]:
+    """Quoted keywords of one EBNF production in the generated grammar."""
+    match = re.search(rf"^{name}\s*::=(.*?);[^\n]*$", generate_grammar(), re.M | re.S)
+    assert match, f"production {name!r} not found"
+    return set(re.findall(r'"([a-z_]+)"', match.group(1)))
+
+
+class TestProcessGrammarMatchesParser:
+    """Flense ship Z: the process productions list what the parser reads."""
+
+    def test_step_body_keywords_match_the_step_dispatch_table(self) -> None:
+        parsed = {tt.value for tt in _STEP_FIELD_KEYWORDS} | set(_STEP_FIELD_IDENT_KEYWORDS)
+        assert _production_keywords("step_body") == parsed
+
+    @pytest.mark.parametrize(
+        ("production", "keywords"),
+        [
+            (
+                "human_task_body",
+                {"surface", "entity", "assignee_role", "assignee", "timeout", "outcomes"},
+            ),
+            ("task_outcome", {"label", "goto", "confirm", "style"}),
+            ("compensation", {"service", "timeout", "inputs"}),
+            (
+                "step_retry_config",
+                {"max_attempts", "backoff", "interval", "fixed", "exponential", "linear"},
+            ),
+        ],
+    )
+    def test_process_sub_block_keywords(self, production: str, keywords: set[str]) -> None:
+        assert _production_keywords(production) == keywords
+
+    def test_workflow_example_parses_without_warnings(self) -> None:
+        body = _CATEGORY_EXAMPLES["Workflow"].split("```dsl\n", 1)[1].split("```", 1)[0]
+        *_, fragment = parse_dsl('module t\napp t "T"\n\n' + body, Path("x.dsl"))
+        assert fragment.parse_warnings == []
+        process = fragment.processes[0]
+        assert [s.name for s in process.steps] == ["validate", "pick", "cancel"]
+        task = process.steps[1].human_task
+        assert task is not None and task.entity_path == "Order"
+        assert [o.name for o in task.outcomes] == ["picked", "short"]
+        assert process.steps[0].retry is not None
+        assert [s.name for s in fragment.schedules[0].steps] == ["generate"]

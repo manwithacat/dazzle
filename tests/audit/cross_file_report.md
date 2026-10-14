@@ -64,14 +64,13 @@ Files dominated by tests that pin internal call shapes (high mocks, short body, 
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 11751
+- **Twin pairs**: 11764
 
 ### Top 30 twin pairs
 
 | File A | File B | A | B | Shared | Overlap |
 |---|---|---:|---:|---:|---:|
 | `test_pdf_viewer_component.py` | `test_region_adapter.py` | 52 | 121 | 38 | 0.73 |
-| `test_mapping_executor.py` | `test_parser.py` | 49 | 130 | 36 | 0.73 |
 | `test_parser.py` | `test_rbac_verifier.py` | 130 | 43 | 36 | 0.84 |
 | `test_data_primitives.py` | `test_parser.py` | 37 | 130 | 34 | 0.92 |
 | `test_fidelity_scorer.py` | `test_parser.py` | 39 | 130 | 34 | 0.87 |
@@ -83,7 +82,7 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_parser.py` | `test_structured_content.py` | 130 | 32 | 27 | 0.84 |
 | `test_data_primitives.py` | `test_expression_lang.py` | 37 | 82 | 26 | 0.7 |
 | `test_agent_performance_resource.py` | `test_persona_journey.py` | 33 | 55 | 26 | 0.79 |
-| `test_datatable_handler.py` | `test_mapping_executor.py` | 30 | 49 | 26 | 0.87 |
+| `test_datatable_handler.py` | `test_mapping_executor.py` | 30 | 53 | 26 | 0.87 |
 | `test_events.py` | `test_parser.py` | 36 | 130 | 26 | 0.72 |
 | `test_expression_lang.py` | `test_org_activation.py` | 82 | 36 | 26 | 0.72 |
 | `test_expression_lang.py` | `test_rbac_ui_fixes.py` | 82 | 30 | 26 | 0.87 |
@@ -100,3 +99,4 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_data_primitives.py` | `test_workspace_layout_prefs.py` | 37 | 31 | 24 | 0.77 |
 | `test_agent_auth.py` | `test_ux_contract_checker.py` | 26 | 36 | 24 | 0.92 |
 | `test_agent_data_integrity.py` | `test_parser.py` | 26 | 130 | 24 | 0.92 |
+| `test_agent_data_integrity.py` | `test_persona_journey.py` | 26 | 55 | 24 | 0.92 |

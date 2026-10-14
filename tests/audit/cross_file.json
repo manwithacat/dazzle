@@ -562,14 +562,6 @@
       "overlap_ratio": 0.73
     },
     {
-      "file_a": "tests/unit/test_mapping_executor.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 49,
-      "tests_b": 130,
-      "shared_shape_count": 36,
-      "overlap_ratio": 0.73
-    },
-    {
       "file_a": "tests/unit/test_parser.py",
       "file_b": "tests/unit/test_rbac_verifier.py",
       "tests_a": 130,
@@ -661,7 +653,7 @@
       "file_a": "tests/unit/test_datatable_handler.py",
       "file_b": "tests/unit/test_mapping_executor.py",
       "tests_a": 30,
-      "tests_b": 49,
+      "tests_b": 53,
       "shared_shape_count": 26,
       "overlap_ratio": 0.87
     },
@@ -805,7 +797,7 @@
       "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
       "file_b": "tests/unit/test_mapping_executor.py",
       "tests_a": 33,
-      "tests_b": 49,
+      "tests_b": 53,
       "shared_shape_count": 24,
       "overlap_ratio": 0.73
     },
@@ -952,6 +944,14 @@
       "tests_b": 33,
       "shared_shape_count": 22,
       "overlap_ratio": 0.88
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
+      "file_b": "tests/unit/test_datatable_handler.py",
+      "tests_a": 33,
+      "tests_b": 30,
+      "shared_shape_count": 22,
+      "overlap_ratio": 0.73
     }
   ]
 }

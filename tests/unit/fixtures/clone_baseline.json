@@ -140,14 +140,6 @@
     ]
   },
   {
-    "signature": "f4a23354446ebfcf45ddf3e150d9c3bc",
-    "count": 2,
-    "names": [
-      "dazzle/core/dsl_parser_impl/llm.py::_parse_concurrency_limits",
-      "dazzle/core/dsl_parser_impl/llm.py::_parse_rate_limits"
-    ]
-  },
-  {
     "signature": "exact:ba9cb8cefefe327e43d928f02b288fac",
     "count": 2,
     "names": [
