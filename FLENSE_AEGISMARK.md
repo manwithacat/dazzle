@@ -1,4 +1,4 @@
-# FLENSE_AEGISMARK.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/AegisMark`
+# FLENSE_AEGISMARK.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/AegisMark` (refreshed 2026-10-14 for Dazzle v0.117.0)
 
 This file is the hand-off from the Dazzle framework to the AegisMark repo. Read it before
 touching anything; it is the only brief you get. Framework context lives in the Dazzle
@@ -17,15 +17,18 @@ demonstration is the **assurance pack**: a set of machine-produced proofs and ev
 committed in this repo, regenerated and diffed in CI, that a non-technical buyer can be
 handed. Today nobody runs it. Phase 4 makes AegisMark the first app that does.
 
-## 1. Ground truth, measured 2026-10-13 against Dazzle v0.116.0
+## 1. Ground truth, measured 2026-10-13 against Dazzle v0.116.0, re-validated 2026-10-14 against v0.117.0
 
-Pin today: `dazzle-dsl[serve,redis,mcp,signing] @ git+…@6a7f34752` (before the flense
-ships). Every proof command below already runs cleanly against this checkout with the
-v0.116.0 tree, so the pack can be assembled before any DSL changes.
+Pin today: `dazzle-dsl[serve,redis,mcp,signing] @ git+…@787946583` (commit `c7a804aa`,
+2026-10-14: v0.116.0 plus ships H–K, so the 0022 table drop is already absorbed, but none of
+the grant, search, rich-text or lint changes of v0.117.0). The numbers below were measured on
+the earlier pin `6a7f34752`; every proof command runs cleanly against this checkout with the
+v0.117.0 tree, so the pack can be assembled before any DSL changes.
 
 | Probe | Result |
 |---|---|
 | `dazzle validate` / `dazzle lint` | identical output on v0.116.0 and on the pinned SHA |
+| `dazzle validate` on **v0.117.0** (2026-10-14) | exit 0; new lint lines: 5 `W_DECLARED_NOT_READ` (three grant `principal_label:`/`revoke_verb:`, `llm_config artifact_store:`, `entity_card_config scope_param:`), 10 `W_UNKNOWN_BLOCK_KEY` (the stray blocks at app.dsl:12938–12989) — all listed in §2 step 7 |
 | `dazzle rbac prove -f json` | `scope_satisfiability` PROVED, `deny_overrides` PROVED, `least_privilege` INFORMATIONAL, `role_hierarchy_acyclic` VACUOUS, `separation_of_duty` VACUOUS; 12 residual notes (FK paths abstracted as free symbols) |
 | `dazzle rbac matrix -f json` | 22.6k lines, 0 warnings |
 | `dazzle rbac routes` | "every domain route is matrix-represented", **but** the scan cannot import `pipeline` (`routes/wonde_webhook_health.py`), so part of the route surface was not inspected |
@@ -58,6 +61,65 @@ gated on the consumer inventory — but prove it here rather than trust it:
    AegisMark hit): pass `--database-url` or `DATABASE_URL` explicitly.
 5. Full test suite green. Commit the pin bump on its own, as the CHANGELOG here records
    framework bumps.
+6. **Absorb the v0.117.0 behaviour changes.** The surgical loop (ships H–AC, 2026-10-13/14)
+   is released as v0.117.0; read CHANGELOG `## [0.117.0]` *Agent Guidance* first. What changes
+   for a running app:
+
+   - **Grants are enforced as declared (ship Q).** `POST /_dazzle/grants` rejects a grant
+     without `expires_at` when the relation declares `expiry: required`, rejects an
+     `expires_at` beyond `max_duration`, requires `"confirmed": true` when the relation declares
+     `confirmation:`, and lets only `approved_by:` roles approve or reject. `GET /_dazzle/grants`
+     now lists only the grants the caller is a party to or may grant/approve (ship AC). Audit
+     existing `_grants` rows with a null or over-cap `expires_at`; they stay active until revoked.
+   - **Search applies scope rules (ship P) and lifecycle filters (ship AA).** `/_dazzle/fts/{entity}`
+     and `/_dazzle/search` ran with no scope; they now apply the list endpoint's permit gate and
+     scope resolution, and FTS omits soft-deleted and ended temporal rows. Anonymous callers never
+     see rows of an entity with access rules on list, search or single reads (ships AA, AC).
+   - **Rich text is sanitised on write (ship T) and the plain-text regex denylist is gone (ship W).**
+     Fields a surface renders with `widget=rich_text` pass through the allowlist sanitiser on
+     create, update, integration write-backs and the test seed route; a value over the field's cap
+     is a 422. Plain `text` values are stored byte-for-byte as sent ("one=two" is no longer
+     deleted). After the pin bump run `dazzle db resanitize-rich-text --dry-run`, review the
+     per-field counts, then `--apply` (per tenant with `--tenant` under schema isolation).
+   - **`dazzle validate` now warns on declarations the runtime does not read (ships R, U, X, Z, AC):**
+     `W_DECLARED_NOT_READ`, `W_UNKNOWN_BLOCK_KEY` (typos and removed clauses no longer vanish
+     silently, including at the top level), `W_CLAUSE_VALUE_IGNORED`, `W_TENANCY_MODE_UNIMPLEMENTED`,
+     `W_GRANT_EXPIRY_CONTRADICTION`, `W_GRANT_APPROVER_UNUSED`. Exit codes are unchanged; treat the
+     new lines as a to-do list (the app-specific ones are below).
+   - **`tenancy: mode:` is applied (ship R).** Both regulated apps declare `shared_schema`, so nothing
+     changes; a non-default mode would switch off partition-key injection and RLS and no runtime
+     implements it (it now warns).
+   - **Islands are not rendered (DD-011)**; only `entity:` has effect. The locale middleware is
+     mounted (ship AB), so `param locale.*` defaults and tenant config reach rendered dates. The
+     feedback widget mounts again when `feedback_widget: enabled` is declared (ship AB).
+   - **Removed, none used by a consumer:** the `dazzle i18n` CLI and string translation (DD-012),
+     `dazzle serve --watch-source`, `dazzle test list|feedback|dsl-generate|dsl-coverage|run-all`,
+     six `dazzle e2e` wrappers, the `mobile`, `push`, `sendgrid` and `i18n` extras, the
+     `analytics: server_side:` clause, and the `extract_guards` semantics operation is now a no-op
+     that always returns `[]` (stories carry no constraints).
+
+7. **AegisMark-specific clean-ups the new lint reveals** (each its own commit, `dazzle validate`
+   clean of `W_DECLARED_NOT_READ` / `W_UNKNOWN_BLOCK_KEY` / `W_CLAUSE_VALUE_IGNORED` at the end):
+
+   - Clients creating `acting_hod` or `cover_access` grants must send `expires_at` (≤ 90 d / ≤ 30 d)
+     and `"confirmed": true`. `department_observer.granted_by`'s `has_grant("acting_hod", department)`
+     term is now evaluated (ship AA).
+   - `dsl/app.dsl` 12938–12989: a stray `list` (12938) and nine `scope:` blocks (12941–12989) after a
+     `rhythm` were never parsed and now warn `W_UNKNOWN_BLOCK_KEY`; delete them. `llm_config`
+     `artifact_store:` (3223) and `entity_card_config` `scope_param:` (10907) warn
+     `W_DECLARED_NOT_READ`; delete them. The three grant relations' `principal_label:`/`revoke_verb:`
+     warn `W_DECLARED_NOT_READ` too (no framework grant UI renders them): delete, or record the
+     acceptance in `assurance/README.md`.
+   - Re-enable the `feedback_widget` commented out at `dsl/app.dsl:99–106` (dazzle#869 is fixed and
+     mounting is now idempotent) as a bare `feedback_widget: enabled`: the `categories:`/`severities:`
+     lines in the comment are not read and would warn `W_DECLARED_NOT_READ`.
+   - 42 fields on 26 entities are rich text (`ConsentTemplate.body_html`, `SafeguardingConcern.*`,
+     `Question.*`, `MarkingResult.*`, …): run `db resanitize-rich-text` with priority on
+     `SafeguardingConcern` and `ConsentTemplate`.
+   - `AGENTS.md:442` advertises `dazzle test coverage`, which does not exist; the kept `dazzle test`
+     commands are `run`, `dsl-run`, `generate`, `walk`, `create-sessions`, `diff-personas`,
+     `verify-story`, `populate`, `agent` and `tier2-generate` (`dazzle test --help`).
+
 
 ## 3. Step 2 — the assurance pack
 
@@ -158,64 +220,10 @@ place the design already lives.
 ## 7. Done when
 
 - [ ] pin at `v0.117.0`, tests green, `db upgrade head` at the framework head
+- [ ] `dazzle validate` emits no `W_DECLARED_NOT_READ` / `W_UNKNOWN_BLOCK_KEY` / `W_CLAUSE_VALUE_IGNORED` line
+- [ ] `dazzle db resanitize-rich-text --apply` run per environment; grant clients send `expires_at` and `confirmed`
 - [ ] `make assure` exists, `assurance/` committed, CI fails on drift and on a rising gap count
 - [ ] `rbac routes` scans every override (no import errors)
 - [ ] `rbac prove`: no VACUOUS property that AegisMark's domain needs; residual notes accepted in writing
 - [ ] `assurance/summary.md` rendered and readable by a DPO
 - [ ] framework asks filed as `consumer-forced` issues with the pack output attached
-
-## 8. Framework changes on `main` after v0.116.0 that need action here
-
-The surgical loop that followed the release (ships H–AC on 2026-10-13/14) was released
-as **v0.117.0** on 2026-10-14 (CHANGELOG `## [0.117.0]`, read its *Agent Guidance* first). It
-changed behaviour your app relies on. Pin to v0.117.0 — it carries everything in v0.116.0 —
-and treat the items below as part of Step 1.
-
-- **Grants are enforced as declared (ship Q).** `POST /_dazzle/grants` rejects a grant
-  without `expires_at` when the relation declares `expiry: required`, rejects an
-  `expires_at` beyond `max_duration`, requires `"confirmed": true` when the relation declares
-  `confirmation:`, and lets only `approved_by:` roles approve or reject. `GET /_dazzle/grants`
-  now lists only the grants the caller is a party to or may grant/approve (ship AC). Audit
-  existing `_grants` rows with a null or over-cap `expires_at`; they stay active until revoked.
-- **Search applies scope rules (ship P) and lifecycle filters (ship AA).** `/_dazzle/fts/{entity}`
-  and `/_dazzle/search` ran with no scope; they now apply the list endpoint's permit gate and
-  scope resolution, and FTS omits soft-deleted and ended temporal rows. Anonymous callers never
-  see rows of an entity with access rules on list, search or single reads (ships AA, AC).
-- **Rich text is sanitised on write (ship T) and the plain-text regex denylist is gone (ship W).**
-  Fields a surface renders with `widget=rich_text` pass through the allowlist sanitiser on
-  create, update, integration write-backs and the test seed route; a value over the field's cap
-  is a 422. Plain `text` values are stored byte-for-byte as sent ("one=two" is no longer
-  deleted). After the pin bump run `dazzle db resanitize-rich-text --dry-run`, review the
-  per-field counts, then `--apply` (per tenant with `--tenant` under schema isolation).
-- **`dazzle validate` now warns on declarations the runtime does not read (ships R, U, X, Z, AC):**
-  `W_DECLARED_NOT_READ`, `W_UNKNOWN_BLOCK_KEY` (typos and removed clauses no longer vanish
-  silently, including at the top level), `W_CLAUSE_VALUE_IGNORED`, `W_TENANCY_MODE_UNIMPLEMENTED`,
-  `W_GRANT_EXPIRY_CONTRADICTION`, `W_GRANT_APPROVER_UNUSED`. Exit codes are unchanged; treat the
-  new lines as a to-do list (the app-specific ones are below).
-- **`tenancy: mode:` is applied (ship R).** Both regulated apps declare `shared_schema`, so nothing
-  changes; a non-default mode would switch off partition-key injection and RLS and no runtime
-  implements it (it now warns).
-- **Islands are not rendered (DD-011)**; only `entity:` has effect. The locale middleware is
-  mounted (ship AB), so `param locale.*` defaults and tenant config reach rendered dates. The
-  feedback widget mounts again when `feedback_widget: enabled` is declared (ship AB).
-- **Removed, none used by a consumer:** the `dazzle i18n` CLI and string translation (DD-012),
-  `dazzle serve --watch-source`, `dazzle test list|feedback|dsl-generate|dsl-coverage|run-all`,
-  six `dazzle e2e` wrappers, the `mobile`, `push`, `sendgrid` and `i18n` extras, the
-  `analytics: server_side:` clause, and the `extract_guards` semantics operation is now a no-op
-  that always returns `[]` (stories carry no constraints).
-
-**AegisMark-specific lines from the loop:**
-- Clients creating `acting_hod` or `cover_access` grants must send `expires_at` (≤ 90 d / ≤ 30 d)
-  and `"confirmed": true`. `department_observer.granted_by`'s `has_grant("acting_hod", department)`
-  term is now evaluated (ship AA).
-- `dsl/app.dsl` ~12935–12993: ten stray `scope:` blocks after a `rhythm` were never parsed and
-  now warn `W_UNKNOWN_BLOCK_KEY`; delete them. `llm_config` `artifact_store:` (3223) and
-  `entity_card_config` `scope_param:` (10907) warn `W_DECLARED_NOT_READ`; grant
-  `principal_label:`/`revoke_verb:` are still presentation-only.
-- Re-enable the `feedback_widget` commented out at `dsl/app.dsl:99–106` (dazzle#869 is fixed and
-  mounting is now idempotent).
-- 42 fields on 26 entities are rich text (`ConsentTemplate.body_html`, `SafeguardingConcern.*`,
-  `Question.*`, `MarkingResult.*`, …): run `db resanitize-rich-text` with priority on
-  `SafeguardingConcern` and `ConsentTemplate`.
-- `AGENTS.md:442` advertises `dazzle test coverage`, which does not exist; the kept commands
-  are `dazzle test run` and `dazzle test dsl-coverage`.

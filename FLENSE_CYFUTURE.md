@@ -1,4 +1,4 @@
-# FLENSE_CYFUTURE.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/cyfuture`
+# FLENSE_CYFUTURE.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/cyfuture` (refreshed 2026-10-14 for Dazzle v0.117.0)
 
 This file is the hand-off from the Dazzle framework to the cyfuture repo. Read it before
 touching anything; it is the only brief you get. Framework context lives in the Dazzle
@@ -19,7 +19,7 @@ this repo, regenerated and diffed in CI. cyfuture already has the most CI of the
 consumers (`dsl-quality.yml`, `db-migrations.yml`, `hmrc-compliance.yml`, …); the pack is
 one more gate beside them.
 
-## 1. Ground truth, measured 2026-10-13 against Dazzle v0.116.0
+## 1. Ground truth, measured 2026-10-13 against Dazzle v0.116.0, re-validated 2026-10-14 against v0.117.0
 
 Pin today: `dazzle-dsl[signing,sso] @ git+…@518c02a6e` (the ADR-0057 commit, before the
 flense ships). Every proof command below already runs against this checkout with the
@@ -28,6 +28,7 @@ v0.116.0 tree.
 | Probe | Result |
 |---|---|
 | `dazzle validate` / `dazzle lint` | identical output on v0.116.0 and on the pinned SHA |
+| `dazzle validate` on **v0.117.0** (2026-10-14) | exit 0; new lint lines: 12 `W_DECLARED_NOT_READ` (feedback_widget presentation keys, 8 schedule `catch_up:`/`overlap:`, 3 service `stub:`), 1 `W_UNKNOWN_BLOCK_KEY` (`human_task title:` at app.dsl:13116) — all listed in §2 step 7 |
 | `dazzle rbac prove -f json` | `scope_satisfiability` PROVED, `deny_overrides` PROVED, `least_privilege` INFORMATIONAL, `role_hierarchy_acyclic` VACUOUS, `separation_of_duty` VACUOUS; 4 residual notes (EXISTS via `PartnershipMember` / `SoleTrader` abstracted as free booleans) |
 | `dazzle rbac matrix -f json` | 11.8k lines; **4 WARNINGs**: role `admin` passes `permit` for `HMRCBusiness.delete`, `HMRCObligation.delete`, `HMRCCalculation.delete`, `HMRCAdjustableSummary.delete` but has no matching `scope` rule — those requests 404 at runtime |
 | `dazzle rbac routes` | **1 VIOLATION**: `POST /companycontacts` (`routes/company_contact_join.py`) shadows a generated entity route with no `# dazzle:implements <Entity>.<op> via <param>` binding — it bypasses the entity's permit/scope model; also `routes/signup_page.py` has no callable `handler` |
@@ -61,6 +62,63 @@ consumer when a real channel is needed). Prove the rest:
    commands no longer read `.dazzle/runtime.json` (#1775): pass `--database-url` or
    `DATABASE_URL` explicitly in `db_ops.yaml`-driven scripts.
 5. Unit, integration and HMRC harness workflows green. Commit the pin bump alone.
+6. **Absorb the v0.117.0 behaviour changes.** The surgical loop (ships H–AC, 2026-10-13/14)
+   is released as v0.117.0; read CHANGELOG `## [0.117.0]` *Agent Guidance* first. What changes
+   for a running app:
+
+   - **Grants are enforced as declared (ship Q).** `POST /_dazzle/grants` rejects a grant
+     without `expires_at` when the relation declares `expiry: required`, rejects an
+     `expires_at` beyond `max_duration`, requires `"confirmed": true` when the relation declares
+     `confirmation:`, and lets only `approved_by:` roles approve or reject. `GET /_dazzle/grants`
+     now lists only the grants the caller is a party to or may grant/approve (ship AC). Audit
+     existing `_grants` rows with a null or over-cap `expires_at`; they stay active until revoked.
+   - **Search applies scope rules (ship P) and lifecycle filters (ship AA).** `/_dazzle/fts/{entity}`
+     and `/_dazzle/search` ran with no scope; they now apply the list endpoint's permit gate and
+     scope resolution, and FTS omits soft-deleted and ended temporal rows. Anonymous callers never
+     see rows of an entity with access rules on list, search or single reads (ships AA, AC).
+   - **Rich text is sanitised on write (ship T) and the plain-text regex denylist is gone (ship W).**
+     Fields a surface renders with `widget=rich_text` pass through the allowlist sanitiser on
+     create, update, integration write-backs and the test seed route; a value over the field's cap
+     is a 422. Plain `text` values are stored byte-for-byte as sent ("one=two" is no longer
+     deleted). After the pin bump run `dazzle db resanitize-rich-text --dry-run`, review the
+     per-field counts, then `--apply` (per tenant with `--tenant` under schema isolation).
+   - **`dazzle validate` now warns on declarations the runtime does not read (ships R, U, X, Z, AC):**
+     `W_DECLARED_NOT_READ`, `W_UNKNOWN_BLOCK_KEY` (typos and removed clauses no longer vanish
+     silently, including at the top level), `W_CLAUSE_VALUE_IGNORED`, `W_TENANCY_MODE_UNIMPLEMENTED`,
+     `W_GRANT_EXPIRY_CONTRADICTION`, `W_GRANT_APPROVER_UNUSED`. Exit codes are unchanged; treat the
+     new lines as a to-do list (the app-specific ones are below).
+   - **`tenancy: mode:` is applied (ship R).** Both regulated apps declare `shared_schema`, so nothing
+     changes; a non-default mode would switch off partition-key injection and RLS and no runtime
+     implements it (it now warns).
+   - **Islands are not rendered (DD-011)**; only `entity:` has effect. The locale middleware is
+     mounted (ship AB), so `param locale.*` defaults and tenant config reach rendered dates. The
+     feedback widget mounts again when `feedback_widget: enabled` is declared (ship AB).
+   - **Removed, none used by a consumer:** the `dazzle i18n` CLI and string translation (DD-012),
+     `dazzle serve --watch-source`, `dazzle test list|feedback|dsl-generate|dsl-coverage|run-all`,
+     six `dazzle e2e` wrappers, the `mobile`, `push`, `sendgrid` and `i18n` extras, the
+     `analytics: server_side:` clause, and the `extract_guards` semantics operation is now a no-op
+     that always returns `[]` (stories carry no constraints).
+
+7. **cyfuture-specific clean-ups the new lint reveals** (each its own commit, `dazzle validate`
+   clean of `W_DECLARED_NOT_READ` / `W_UNKNOWN_BLOCK_KEY` / `W_CLAUSE_VALUE_IGNORED` at the end):
+
+   - `scripts/probe_signing.py` (~line 108) creates an `approve_letter` grant without `expires_at`
+     and now gets 422: send one no more than 30 days out.
+   - Delete `services/dazzle_datetime_display_patch.py` and its `app_factory.py:50-56` call: the
+     locale middleware now applies your tenant `locale.timezone`/`locale.date_format`, the patch
+     re-implements what `format_cell` does, and its wrapper drops the `host=` keyword the timeline
+     builder passes (it breaks timeline cells).
+   - `dsl/app.dsl`: `human_task` `title:` at 13116 warns `W_UNKNOWN_BLOCK_KEY` (remove it); the
+     eight schedules' `catch_up:`/`overlap:` (12026–12131) and three services' `stub:`
+     (13073–13092) warn `W_DECLARED_NOT_READ` (delete them); `feedback_widget`
+     `shortcut:`/`categories:`/`severities:` (17) likewise. `.claude/commands/actions.md:69` calls
+     `semantics(operation="extract_guards")`, which now always returns `[]`; drop that step.
+   - 23 fields on 15 entities are rich text (`Communication.body`, `MLROFlag.narrative`, the
+     `CustomerDueDiligence` EDD fields, …): run `db resanitize-rich-text`.
+   - `AGENTS.md:130` advertises `dazzle test coverage`, which does not exist; the kept `dazzle test`
+     commands are `run`, `dsl-run`, `generate`, `walk`, `create-sessions`, `diff-personas`,
+     `verify-story`, `populate`, `agent` and `tier2-generate` (`dazzle test --help`).
+
 
 ## 3. Step 2 — the assurance pack
 
@@ -154,65 +212,11 @@ construct locally.
 ## 7. Done when
 
 - [ ] pin at `v0.117.0`, all workflows green, migrations at the framework head
+- [ ] `dazzle validate` emits no `W_DECLARED_NOT_READ` / `W_UNKNOWN_BLOCK_KEY` / `W_CLAUSE_VALUE_IGNORED` line
+- [ ] `dazzle db resanitize-rich-text --apply` run per environment; grant clients send `expires_at` and `confirmed`
 - [ ] `rbac matrix` 0 warnings, `rbac routes` 0 escapes
 - [ ] `make assure` exists, `assurance/` committed, CI fails on drift and on a rising gap count
 - [ ] `classify`, `pii`, `retention`, `subprocessor` declared; ISO gaps below 10 and falling
 - [ ] SoD declared for filings; `rbac prove` has no VACUOUS property cyfuture's domain needs
 - [ ] cross-tenant read test in `integration-tests.yml` per `tenancy` entity
 - [ ] `assurance/summary.md` rendered; framework asks filed as `consumer-forced` issues
-
-## 8. Framework changes on `main` after v0.116.0 that need action here
-
-The surgical loop that followed the release (ships H–AC on 2026-10-13/14) was released
-as **v0.117.0** on 2026-10-14 (CHANGELOG `## [0.117.0]`, read its *Agent Guidance* first). It
-changed behaviour your app relies on. Pin to v0.117.0 — it carries everything in v0.116.0 —
-and treat the items below as part of Step 1.
-
-- **Grants are enforced as declared (ship Q).** `POST /_dazzle/grants` rejects a grant
-  without `expires_at` when the relation declares `expiry: required`, rejects an
-  `expires_at` beyond `max_duration`, requires `"confirmed": true` when the relation declares
-  `confirmation:`, and lets only `approved_by:` roles approve or reject. `GET /_dazzle/grants`
-  now lists only the grants the caller is a party to or may grant/approve (ship AC). Audit
-  existing `_grants` rows with a null or over-cap `expires_at`; they stay active until revoked.
-- **Search applies scope rules (ship P) and lifecycle filters (ship AA).** `/_dazzle/fts/{entity}`
-  and `/_dazzle/search` ran with no scope; they now apply the list endpoint's permit gate and
-  scope resolution, and FTS omits soft-deleted and ended temporal rows. Anonymous callers never
-  see rows of an entity with access rules on list, search or single reads (ships AA, AC).
-- **Rich text is sanitised on write (ship T) and the plain-text regex denylist is gone (ship W).**
-  Fields a surface renders with `widget=rich_text` pass through the allowlist sanitiser on
-  create, update, integration write-backs and the test seed route; a value over the field's cap
-  is a 422. Plain `text` values are stored byte-for-byte as sent ("one=two" is no longer
-  deleted). After the pin bump run `dazzle db resanitize-rich-text --dry-run`, review the
-  per-field counts, then `--apply` (per tenant with `--tenant` under schema isolation).
-- **`dazzle validate` now warns on declarations the runtime does not read (ships R, U, X, Z, AC):**
-  `W_DECLARED_NOT_READ`, `W_UNKNOWN_BLOCK_KEY` (typos and removed clauses no longer vanish
-  silently, including at the top level), `W_CLAUSE_VALUE_IGNORED`, `W_TENANCY_MODE_UNIMPLEMENTED`,
-  `W_GRANT_EXPIRY_CONTRADICTION`, `W_GRANT_APPROVER_UNUSED`. Exit codes are unchanged; treat the
-  new lines as a to-do list (the app-specific ones are below).
-- **`tenancy: mode:` is applied (ship R).** Both regulated apps declare `shared_schema`, so nothing
-  changes; a non-default mode would switch off partition-key injection and RLS and no runtime
-  implements it (it now warns).
-- **Islands are not rendered (DD-011)**; only `entity:` has effect. The locale middleware is
-  mounted (ship AB), so `param locale.*` defaults and tenant config reach rendered dates. The
-  feedback widget mounts again when `feedback_widget: enabled` is declared (ship AB).
-- **Removed, none used by a consumer:** the `dazzle i18n` CLI and string translation (DD-012),
-  `dazzle serve --watch-source`, `dazzle test list|feedback|dsl-generate|dsl-coverage|run-all`,
-  six `dazzle e2e` wrappers, the `mobile`, `push`, `sendgrid` and `i18n` extras, the
-  `analytics: server_side:` clause, and the `extract_guards` semantics operation is now a no-op
-  that always returns `[]` (stories carry no constraints).
-
-**cyfuture-specific lines from the loop:**
-- `scripts/probe_signing.py` (~line 108) creates an `approve_letter` grant without `expires_at`
-  and now gets 422: send one no more than 30 days out.
-- Delete `services/dazzle_datetime_display_patch.py` and its `app_factory.py:50-56` call: the
-  locale middleware now applies your tenant `locale.timezone`/`locale.date_format`, the patch
-  re-implements what `format_cell` does, and its wrapper drops the `host=` keyword the timeline
-  builder passes (it breaks timeline cells).
-- `dsl/app.dsl`: `human_task` `title:` at 13116 warns `W_UNKNOWN_BLOCK_KEY` (remove it); the
-  eight schedules' `catch_up:`/`overlap:` (12026–12131) and three services' `stub:`
-  (13073–13092) warn `W_DECLARED_NOT_READ` (delete them); `feedback_widget`
-  `shortcut:`/`categories:`/`severities:` (17) likewise. `.claude/commands/actions.md:69` calls
-  `semantics(operation="extract_guards")`, which now always returns `[]`; drop that step.
-- 23 fields on 15 entities are rich text (`Communication.body`, `MLROFlag.narrative`, the
-  `CustomerDueDiligence` EDD fields, …): run `db resanitize-rich-text`.
-- `AGENTS.md:130` advertises `dazzle test coverage`, which does not exist.
