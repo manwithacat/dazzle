@@ -24,7 +24,6 @@ def _generator() -> RouteGenerator:
         services={},
         models={},
         schemas={},
-        entity_access_specs={},
         auth_dep=None,
         optional_auth_dep=None,
     )

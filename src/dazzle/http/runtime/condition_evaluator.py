@@ -2,7 +2,7 @@
 Condition expression evaluator for access control.
 
 Evaluates ConditionExpr from IR AccessSpec at runtime for:
-- Row-level visibility filtering (converting to SQL WHERE clauses)
+- Workspace region filters (converting to SQL WHERE clauses)
 - Permission checks (evaluating against entity records)
 
 The pure evaluation logic lives in dazzle.page.utils.condition_eval so that
@@ -21,8 +21,6 @@ from dazzle.core.condition_eval import (
 __all__ = [
     "evaluate_condition",
     "condition_to_sql_filter",
-    "build_visibility_filter",
-    "filter_records_by_condition",
 ]
 
 
@@ -110,92 +108,6 @@ def condition_to_sql_filter(
     # In a real implementation, we'd generate SQL OR clauses
 
     return filters
-
-
-def build_visibility_filter(
-    access_spec: dict[str, Any] | None,
-    is_authenticated: bool,
-    user_id: str | None,
-) -> tuple[dict[str, Any], dict[str, Any] | None]:
-    """
-    Build visibility filter from access spec.
-
-    Args:
-        access_spec: Entity access spec from metadata
-        is_authenticated: Whether user is authenticated
-        user_id: Current user ID if authenticated
-
-    Returns:
-        Tuple of (sql_filters, post_filter_condition)
-        - sql_filters: Filters to apply in SQL query
-        - post_filter_condition: Condition for post-fetch filtering (for OR)
-    """
-    if not access_spec:
-        return {}, None
-
-    visibility_rules = access_spec.get("visibility", [])
-    context = {"current_user_id": user_id}
-
-    # Find the appropriate visibility rule
-    target_context = "authenticated" if is_authenticated else "anonymous"
-    condition = None
-
-    for rule in visibility_rules:
-        if rule.get("context") == target_context:
-            condition = rule.get("condition")
-            break
-
-    if not condition:
-        # No visibility rule = allow all
-        return {}, None
-
-    # Check if condition has OR operators (needs post-filtering)
-    has_or = _condition_has_or(condition)
-
-    if has_or:
-        # Complex condition - need post-fetch filtering
-        return {}, condition
-    else:
-        # Simple AND condition - can convert to SQL filters
-        return condition_to_sql_filter(condition, context), None
-
-
-def _condition_has_or(condition: dict[str, Any] | None) -> bool:
-    """Check if condition contains OR operators."""
-    if not condition:
-        return False
-    if "operator" in condition:
-        if condition["operator"] == "or":
-            return True
-        # Check children - use `or {}` to handle explicit None values
-        left = condition.get("left") or {}
-        right = condition.get("right") or {}
-        if _condition_has_or(left):
-            return True
-        if _condition_has_or(right):
-            return True
-    return False
-
-
-def filter_records_by_condition(
-    records: list[dict[str, Any]],
-    condition: dict[str, Any],
-    context: dict[str, Any],
-) -> list[dict[str, Any]]:
-    """
-    Filter records by a condition expression.
-
-    Used for post-fetch filtering when SQL can't handle the full condition.
-
-    Args:
-        records: List of entity records
-        condition: Condition expression
-        context: Runtime context
-
-    Returns:
-        Filtered list of records
-    """
-    return [r for r in records if evaluate_condition(condition, r, context)]
 
 
 def _is_field_condition(condition: Any) -> bool:

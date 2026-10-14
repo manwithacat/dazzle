@@ -19,6 +19,7 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.validation import (
     validate_grant_relation_clauses,
+    validate_permit_grant_checks,
     validate_tenancy_mode_implemented,
 )
 
@@ -547,3 +548,41 @@ def test_presentation_only_warning_points_at_ship_q() -> None:
 )
 def test_consistent_grant_relation_is_silent(rel: dict[str, object]) -> None:
     assert validate_grant_relation_clauses(_grant(**rel)) == ([], [])
+
+
+# ---------------------------------------------------------------------------
+# Flense ship AC — has_grant(...) in permit:/forbid: is never satisfied
+# ---------------------------------------------------------------------------
+
+_PERMIT_GRANT_DSL = """entity Department "Department":
+  id: uuid pk
+  name: str(50)
+
+entity Event "Event":
+  id: uuid pk
+  department: ref Department
+  permit:
+    read: {read}
+"""
+
+
+def _permit_appspec(read: str) -> AppSpec:
+    *_, fragment = parse_dsl(_HEADER + _PERMIT_GRANT_DSL.format(read=read), Path("test.dsl"))
+    module = ir.ModuleIR(name="test.core", file=Path("test.dsl"), app_name="t", fragment=fragment)
+    return build_appspec([module], "test.core")
+
+
+def test_has_grant_in_permit_warns_declared_not_read() -> None:
+    appspec = _permit_appspec('role(hod) or has_grant("acting_hod", department)')
+    expected = (
+        "W_DECLARED_NOT_READ: entity 'Event' permit read: `has_grant(\"acting_hod\", …)` "
+        "declared but not read by the runtime (the permit gate does not resolve the "
+        "caller's grants, so the term is always false); see CHANGELOG, flense ship AC"
+    )
+    assert validate_permit_grant_checks(appspec) == ([], [expected])
+    _, warnings, _ = lint_appspec(appspec, suggest=False)
+    assert expected in warnings
+
+
+def test_permit_without_has_grant_is_silent() -> None:
+    assert validate_permit_grant_checks(_permit_appspec("role(hod)")) == ([], [])

@@ -86,7 +86,7 @@ from .governance import (
     validate_llm_subject_surface,
     validate_sensitive_fields,
 )
-from .grants import validate_grant_relation_clauses
+from .grants import validate_grant_relation_clauses, validate_permit_grant_checks
 from .graphs import (
     _NUMERIC_FIELD_TYPES,
     _validate_graph_edge,
@@ -212,6 +212,7 @@ __all__ = [
     "validate_insight_summaries",
     "validate_island_render_fields",
     "validate_grant_relation_clauses",
+    "validate_permit_grant_checks",
     "validate_tenancy_mode_implemented",
     "validate_outlier_decorators",
     "validate_rag_decorators",

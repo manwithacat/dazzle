@@ -118,7 +118,6 @@ def test_list_403_detail_reports_effective_roles_not_global() -> None:
         asyncio.run(
             _list_handler_body(
                 service=MagicMock(),
-                access_spec=None,
                 is_authenticated=True,
                 user_id="u-1",
                 request=MagicMock(),

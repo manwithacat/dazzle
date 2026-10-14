@@ -201,7 +201,6 @@ async def resolve_all_matching_ids(
     echo: dict[str, str],
     search_fields: list[str] | None,
     filter_fields: list[str] | None,
-    access_spec: dict[str, Any] | None = None,
     ref_targets: dict[str, str] | None = None,
     cap: int = 10_000,
     page_size: int = 500,
@@ -209,7 +208,7 @@ async def resolve_all_matching_ids(
     """Resolve the ids an all-matching bulk action applies to (pre-exclusions).
 
     Re-runs the echoed query through :func:`gated_list` — the SAME permit +
-    scope + visibility pipeline the list view used — page by page. ``page`` /
+    scope pipeline the list view used — page by page. ``page`` /
     ``page_size`` from the echo are deliberately absent here: they window the
     display, not the matched set.
 
@@ -234,7 +233,6 @@ async def resolve_all_matching_ids(
             search=search,
             user_filters=user_filters,
             search_fields=search_fields,
-            access_spec=access_spec,
             ref_targets=ref_targets,
             temporal_as_of_raw=as_of_raw,
             temporal_include_closed=include_closed,

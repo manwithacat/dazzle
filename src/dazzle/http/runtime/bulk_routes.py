@@ -89,7 +89,6 @@ def create_bulk_routes(
     admin_personas: list[str] | None = None,
     entity_search_fields: dict[str, list[str]] | None = None,
     entity_filter_fields: dict[str, list[str]] | None = None,
-    entity_access_specs: dict[str, Any] | None = None,
     entity_ref_targets: dict[str, dict[str, str]] | None = None,
     all_matching_cap: int = 10_000,
 ) -> APIRouter | None:
@@ -143,7 +142,6 @@ def create_bulk_routes(
             admin_personas=admin_personas,
             search_fields=(entity_search_fields or {}).get(entity_name),
             filter_fields=(entity_filter_fields or {}).get(entity_name),
-            access_spec=(entity_access_specs or {}).get(entity_name),
             ref_targets=(entity_ref_targets or {}).get(entity_name),
             all_matching_cap=all_matching_cap,
         )
@@ -164,7 +162,6 @@ def _register_bulk_route(
     admin_personas: list[str] | None,
     search_fields: list[str] | None = None,
     filter_fields: list[str] | None = None,
-    access_spec: Any = None,
     ref_targets: dict[str, str] | None = None,
     all_matching_cap: int = 10_000,
 ) -> None:
@@ -229,7 +226,6 @@ def _register_bulk_route(
                     echo=sel.echo,
                     search_fields=search_fields,
                     filter_fields=filter_fields,
-                    access_spec=access_spec,
                     ref_targets=ref_targets,
                     cap=all_matching_cap,
                 )

@@ -1469,10 +1469,6 @@ class _PageRouterConfig:
     entity_auto_includes: dict[str, Any] = field(default_factory=dict)
     entity_fk_graph: Any = None
     entity_admin_personas: list[str] = field(default_factory=list)
-    # Legacy pre-Cedar visibility specs (`entity.metadata["access"]`) the REST list
-    # route applies via build_visibility_filter — threaded so the in-process page
-    # list (gated_list) applies the same. Empty for Cedar-only apps. (#1422)
-    entity_access_specs: dict[str, Any] = field(default_factory=dict)
     surface_entity: dict[str, str] = field(default_factory=dict)
     surface_mode: dict[str, str] = field(default_factory=dict)
     surface_workspace: dict[str, str] = field(default_factory=dict)
@@ -2096,7 +2092,6 @@ async def _list_entity_in_process(
         "search": search,
         "user_filters": filters or None,
         "auto_include": prc.deps.entity_auto_includes.get(entity_name),
-        "access_spec": prc.deps.entity_access_specs.get(entity_name),
         "temporal_include_closed": include_closed,
     }
     try:
@@ -3586,14 +3581,6 @@ def create_page_routes(
     _entity_admin_personas = (
         list(_tenancy.admin_personas) if _tenancy is not None and _tenancy.admin_personas else []
     )
-    # Legacy visibility specs — same shape the REST RouteGenerator derives
-    # (`{entity.name: entity.metadata["access"]}` for entities that declare one).
-    _entity_access_specs: dict[str, Any] = {}
-    for _e in appspec.domain.entities:
-        _md = getattr(_e, "metadata", None)
-        if _md and "access" in _md:
-            _entity_access_specs[_e.name] = _md["access"]
-
     deps = _PageRouterConfig(
         appspec=appspec,
         theme_css=theme_css,
@@ -3607,7 +3594,6 @@ def create_page_routes(
         entity_auto_includes=entity_auto_includes or {},
         entity_fk_graph=_entity_fk_graph,
         entity_admin_personas=_entity_admin_personas,
-        entity_access_specs=_entity_access_specs,
         surface_entity=surface_entity,
         surface_mode=surface_mode,
         surface_workspace=surface_workspace,

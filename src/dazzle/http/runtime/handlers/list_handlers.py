@@ -312,7 +312,6 @@ def list_state_transitions(
 def create_list_handler(
     spec: "RouteSpec",
     *,
-    access_spec: dict[str, Any] | None = None,
     select_fields: list[str] | None = None,
     json_projection: list[str] | None = None,
     htmx_columns: list[dict[str, Any]] | None = None,
@@ -348,7 +347,6 @@ def create_list_handler(
 
     Args:
         spec: Per-route bundle (handler config + service + cross-verb fields)
-        access_spec: Access control specification for this entity
         select_fields: Optional field projection for SQL queries
         json_projection: Optional field names to include in JSON API responses (#360)
         htmx_columns: Column definitions for HTMX table row rendering
@@ -432,8 +430,8 @@ def create_list_handler(
             is_authenticated = auth_context.is_authenticated
             user_id = str(auth_context.user.id) if auth_context.user else None
 
-            # Deny-default: require authentication when enabled and no explicit access rules
-            if require_auth_by_default and not access_spec and not is_authenticated:
+            # Deny-default: require authentication when enabled
+            if require_auth_by_default and not is_authenticated:
                 raise HTTPException(
                     status_code=401,
                     detail="Authentication required",
@@ -445,7 +443,6 @@ def create_list_handler(
             _inject_htmx_meta(request)
             return await _list_handler_body(
                 service,
-                access_spec,
                 is_authenticated,
                 user_id,
                 request,
@@ -500,7 +497,6 @@ def create_list_handler(
         _inject_htmx_meta(request)
         return await _list_handler_body(
             service,
-            access_spec,
             False,
             None,
             request,
@@ -550,7 +546,6 @@ from dazzle.http.runtime.condition_evaluator import (  # noqa: E402
 
 async def _list_handler_body(
     service: Any,
-    access_spec: dict[str, Any] | None,
     is_authenticated: bool,
     user_id: str | None,
     request: Any,
@@ -578,8 +573,8 @@ async def _list_handler_body(
 ) -> Any:
     """Shared list handler logic for both auth and no-auth paths."""
     # Parse user-supplied filters from the request (HTTP concern). The enforcement
-    # — Cedar LIST permit gate, legacy visibility filter, Cedar scope merge, and
-    # the OR-condition post-filter — plus the data call were relocated VERBATIM to
+    # — Cedar LIST permit gate and Cedar scope merge — plus the data call were
+    # relocated VERBATIM to
     # access.gated.gated_list (#1422); this route now parses params, delegates,
     # and shapes the result. Permit-deny raises AccessForbidden → mapped to 403
     # here (with the same _forbidden_detail); scope-default-deny returns an empty
@@ -683,7 +678,6 @@ async def _list_handler_body(
             select_fields=select_fields,
             auto_include=auto_include,
             search_fields=search_fields,
-            access_spec=access_spec,
             ref_targets=ref_targets,
             temporal_as_of_raw=_as_of_raw,
             temporal_include_closed=_include_closed,

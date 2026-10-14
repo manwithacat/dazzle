@@ -635,7 +635,6 @@ class TestListPermissionGate:
         with pytest.raises(HTTPException) as exc_info:
             await _list_handler_body(
                 service=mock_service,
-                access_spec=None,
                 is_authenticated=True,
                 user_id="user-1",
                 request=mock_request,
@@ -687,7 +686,6 @@ class TestListPermissionGate:
 
         result = await _list_handler_body(
             service=mock_service,
-            access_spec=None,
             is_authenticated=True,
             user_id="user-1",
             request=mock_request,
@@ -749,7 +747,6 @@ class TestListPermissionGate:
         # Should NOT raise 403 — field conditions pass the gate
         result = await _list_handler_body(
             service=mock_service,
-            access_spec=None,
             is_authenticated=True,
             user_id="user-1",
             request=mock_request,
@@ -826,7 +823,6 @@ class TestListGateRoleCheckCondition:
         with pytest.raises(HTTPException) as exc_info:
             await _list_handler_body(
                 service=mock_service,
-                access_spec=None,
                 is_authenticated=True,
                 user_id="user-1",
                 request=mock_request,
@@ -886,7 +882,6 @@ class TestListGateRoleCheckCondition:
         # Should not raise
         result = await _list_handler_body(
             service=mock_service,
-            access_spec=None,
             is_authenticated=True,
             user_id="user-2",
             request=mock_request,
@@ -959,7 +954,6 @@ class TestListGateRoleCheckCondition:
         # Gate skips because field condition is present — no 403
         result = await _list_handler_body(
             service=mock_service,
-            access_spec=None,
             is_authenticated=True,
             user_id="user-3",
             request=mock_request,
@@ -1277,7 +1271,6 @@ class TestScopeEnforcement:
 
         result = await _list_handler_body(
             service=mock_service,
-            access_spec=None,
             is_authenticated=True,
             user_id="user-1",
             request=mock_request,
@@ -1353,7 +1346,6 @@ class TestScopeEnforcement:
 
         result = await _list_handler_body(
             service=mock_service,
-            access_spec=None,
             is_authenticated=True,
             user_id="user-2",
             request=mock_request,

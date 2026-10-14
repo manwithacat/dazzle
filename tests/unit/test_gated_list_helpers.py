@@ -112,9 +112,8 @@ class TestAnonymousCallerOnAccessRules:
     rules on the list path, the rule `list_scope_filters` applies to search.
 
     Before, `gated_list` skipped the permit gate and the scope merge for an
-    anonymous caller and listed every row (the legacy `access_spec` visibility
-    filter, here anonymous-allow-all, being the only filter left). `auth_context
-    is None` (no auth configured) keeps the unscoped read.
+    anonymous caller and listed every row. `auth_context is None` (no auth
+    configured) keeps the unscoped read.
     """
 
     class _Service:
@@ -147,14 +146,6 @@ class TestAnonymousCallerOnAccessRules:
             fk_graph=None,
             admin_personas=None,
         )
-        result = asyncio.run(
-            gated_list(
-                service,
-                access,
-                page=1,
-                page_size=20,
-                access_spec={"visibility": [{"context": "anonymous", "condition": None}]},
-            )
-        )
+        result = asyncio.run(gated_list(service, access, page=1, page_size=20))
         assert len(result["items"]) == rows
         assert service.calls == rows

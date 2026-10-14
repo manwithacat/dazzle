@@ -200,7 +200,6 @@ class RouteGenerator:
         services: dict[str, Any],
         models: dict[str, type[BaseModel]],
         schemas: dict[str, dict[str, type[BaseModel]]] | None = None,
-        entity_access_specs: dict[str, dict[str, Any]] | None = None,
         auth_dep: Callable[..., Any] | None = None,
         optional_auth_dep: Callable[..., Any] | None = None,
         require_auth_by_default: bool = False,
@@ -234,10 +233,9 @@ class RouteGenerator:
             services: Dictionary mapping service names to service instances
             models: Dictionary mapping entity names to Pydantic models
             schemas: Optional dictionary with create/update schemas per entity
-            entity_access_specs: Optional dictionary mapping entity names to access specs
             auth_dep: FastAPI dependency that requires authentication (raises 401)
             optional_auth_dep: FastAPI dependency for optional auth (returns empty AuthContext)
-            require_auth_by_default: If True, require auth for all routes when no access spec
+            require_auth_by_default: If True, require auth for every route
             auth_store: AuthStore instance for creating per-route role-based dependencies
             audit_logger: Optional AuditLogger for recording access decisions
             cedar_access_specs: Optional dict of entity_name -> EntityAccessSpec for Cedar evaluation
@@ -262,7 +260,6 @@ class RouteGenerator:
         self.services = services
         self.models = models
         self.schemas = schemas or {}
-        self.entity_access_specs = entity_access_specs or {}
         self.auth_dep = auth_dep
         self.optional_auth_dep = optional_auth_dep
         self.require_auth_by_default = require_auth_by_default
@@ -499,8 +496,6 @@ class RouteGenerator:
         elif (
             endpoint.method == HttpMethod.GET and "{id}" not in endpoint.path
         ) or operation_kind == OperationKind.LIST:
-            # Get access spec for this entity
-            access_spec = self.entity_access_specs.get(entity_name or "")
             # Get field projection for this entity (from view-backed list surfaces)
             projection = self.entity_list_projections.get(entity_name or "")
             # Get search fields for this entity (from surface config)
@@ -520,7 +515,6 @@ class RouteGenerator:
                     response_schema=model,
                     auto_include=includes,
                 ),
-                access_spec=access_spec,
                 select_fields=projection,
                 json_projection=projection,
                 htmx_columns=_htmx.get("columns"),

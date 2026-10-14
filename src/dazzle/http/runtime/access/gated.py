@@ -302,22 +302,6 @@ def _parse_temporal_filters(
     return _temporal
 
 
-def _apply_list_post_filter(result: dict[str, Any], post_filter: Any, user_id: str | None) -> None:
-    """Apply the OR-condition visibility post-filter to the result page in place
-    (re-counting ``total``). No-op when there's no post-filter or no items."""
-    if not (post_filter and result and "items" in result):
-        return
-    from dazzle.http.runtime.condition_evaluator import filter_records_by_condition
-
-    context = {"current_user_id": user_id}
-    items = result["items"]
-    if items and hasattr(items[0], "model_dump"):
-        items = [item.model_dump() for item in items]
-    filtered_items = filter_records_by_condition(items, post_filter, context)
-    result["items"] = filtered_items
-    result["total"] = len(filtered_items)
-
-
 async def gated_list(
     service: Any,
     access: AccessContext,
@@ -330,7 +314,6 @@ async def gated_list(
     select_fields: list[str] | None = None,
     auto_include: list[str] | None = None,
     search_fields: list[str] | None = None,
-    access_spec: dict[str, Any] | None = None,
     ref_targets: dict[str, str] | None = None,
     temporal_as_of_raw: str | None = None,
     temporal_include_closed: bool = False,
@@ -340,10 +323,9 @@ async def gated_list(
 
     Relocated verbatim from ``list_handlers.py::_list_handler_body`` — the
     enforcement+data half: the Cedar LIST permit gate (→ ``AccessForbidden``
-    instead of the route's ``HTTPException(403)``), the legacy visibility filter,
-    the Cedar scope merge (scope-default-deny → an EMPTY page, NOT an error — the
-    list's documented shape), the ``service.execute("list", …)`` call, and the
-    OR-condition ``post_filter`` that runs on the result. HTTP concerns stay in
+    instead of the route's ``HTTPException(403)``), the Cedar scope merge
+    (scope-default-deny → an EMPTY page, NOT an error — the list's documented
+    shape) and the ``service.execute("list", …)`` call. HTTP concerns stay in
     the adapter: request-param parsing (the caller passes already-parsed
     ``user_filters``, incl. any temporal ``__as_of``/``__isnull`` keys, plus
     ``sort_list``), the success audit, and all output shaping.
@@ -351,8 +333,6 @@ async def gated_list(
     ``is_authenticated``/``user_id`` derive from ``access.auth_context`` exactly
     as the route handler computes them.
     """
-    from dazzle.http.runtime.condition_evaluator import build_visibility_filter
-
     auth_context = access.auth_context
     is_authenticated = bool(auth_context and auth_context.is_authenticated)
     user_id = (
@@ -366,28 +346,29 @@ async def gated_list(
 
     # 1b. An anonymous caller never reads an entity with access rules (flense ship
     #     AA). The permit gate and the scope merge skip it, so it read unscoped
-    #     whenever the route's 401 did not stop it: `require_auth_by_default` off
-    #     (test mode) or a legacy visibility spec present. `auth_context is None`
-    #     means the app has no auth configured, where no Cedar rule is enforced
-    #     anywhere (the bulk route's convention), so that case is left as it was.
+    #     whenever the route's 401 did not stop it (`require_auth_by_default` off,
+    #     test mode). `auth_context is None` means the app has no auth configured,
+    #     where no Cedar rule is enforced anywhere (the bulk route's convention),
+    #     so that case is left as it was.
     if auth_context is not None and _anonymous_on_access_rules(
         access, is_authenticated=is_authenticated, user_id=user_id
     ):
         return {"items": [], "total": 0, "page": page, "page_size": page_size}
 
-    # 2. Legacy visibility filter + 3. Cedar scope merge (default-deny → empty page).
-    sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)
+    # 2. Cedar scope merge (default-deny → empty page). The legacy
+    #    `metadata["access"]` visibility filter went in flense ship AC: nothing
+    #    populated it.
     sql_filters = _resolve_list_scope(
         access,
         is_authenticated=is_authenticated,
         user_id=user_id,
         ref_targets=ref_targets,
-        sql_filters=sql_filters,
+        sql_filters={},
     )
     if sql_filters is _SCOPE_DEFAULT_DENY:
         return {"items": [], "total": 0, "page": page, "page_size": page_size}
 
-    # 4. Temporal params — parsed post-gate so a denied caller is rejected before
+    # 3. Temporal params — parsed post-gate so a denied caller is rejected before
     #    any input validation runs (#1406 order).
     _temporal = _parse_temporal_filters(
         service,
@@ -410,7 +391,4 @@ async def gated_list(
         include=auto_include,
         search_fields=search_fields,
     )
-
-    # 5. OR-condition visibility post-filter (runs on the result page).
-    _apply_list_post_filter(result, post_filter, user_id)
     return result

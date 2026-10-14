@@ -555,7 +555,6 @@ class TestListAuditLogging:
 
         await _list_handler_body(
             service=mock_service,
-            access_spec=None,
             is_authenticated=True,
             user_id="user-1",
             request=mock_request,
@@ -592,7 +591,6 @@ class TestListAuditLogging:
         # Should not raise
         result = await _list_handler_body(
             service=mock_service,
-            access_spec=None,
             is_authenticated=False,
             user_id=None,
             request=mock_request,

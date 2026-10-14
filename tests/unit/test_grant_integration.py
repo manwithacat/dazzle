@@ -106,6 +106,29 @@ entity AssessmentEvent "Assessment Event":
         result = evaluate_condition(condition_dict, record, context)
         assert result is False
 
+    def test_store_row_with_expiry_evaluates(self, pg_integration_conn):
+        """Flense ship AC: a stored grant's `expires_at` is a datetime; the check
+        compared it with an ISO string and raised TypeError."""
+        from datetime import UTC, datetime, timedelta
+
+        store = GrantStore(pg_integration_conn)
+        user_id, dept_id = uuid4(), uuid4()
+        store.create_grant(
+            schema_name="dept_delegation",
+            relation="acting_hod",
+            principal_id=user_id,
+            scope_entity="Department",
+            scope_id=dept_id,
+            granted_by_id=uuid4(),
+            approval_mode="none",
+            expires_at=datetime.now(UTC) + timedelta(days=1),
+        )
+        active_grants = store.list_grants(principal_id=user_id, status="active")
+        assert isinstance(active_grants[0]["expires_at"], datetime)
+        condition = {"grant_check": {"relation": "acting_hod", "scope_field": "department"}}
+        context = {"active_grants": active_grants}
+        assert evaluate_condition(condition, {"department": str(dept_id)}, context) is True
+
 
 class TestDeclaredGrantClausesOverRoutes:
     """ADR-0057 ship Q: expiry / max_duration / approved_by enforced through the real routes."""
@@ -183,3 +206,78 @@ grant_schema department_delegation "Department Delegation":
         assert resp.status_code == 200, resp.text
         assert resp.json()["grant"]["status"] == "active"
         assert str(resp.json()["grant"]["approved_by_id"]) == leader["x-user"]
+
+
+class TestGrantListingOverRoutes:
+    """Flense ship AC: `GET /_dazzle/grants` is authorised against the real store."""
+
+    def test_listing_is_scoped_to_the_caller(self, pg_integration_conn):
+        from contextlib import contextmanager
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+
+        from fastapi import FastAPI, Request
+        from fastapi.testclient import TestClient
+
+        from dazzle.http.runtime.grant_routes import create_grant_routes
+
+        dsl = """module test_mod
+
+grant_schema department_delegation "Department Delegation":
+  scope: Department
+  relation observer "Assign Observer":
+    granted_by: role(school_admin)
+    approval: none
+    expiry: optional
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        schema = fragment.grant_schemas[0]
+        appspec = MagicMock()
+        appspec.get_grant_schema = lambda n: schema if n == schema.name else None
+
+        @contextmanager
+        def _conn():
+            yield pg_integration_conn
+
+        db = MagicMock()
+        db.connection = _conn
+
+        def auth_dep(request: Request):
+            return SimpleNamespace(
+                is_authenticated=True,
+                user_id=request.headers["x-user"],
+                user=SimpleNamespace(
+                    roles=[request.headers["x-role"]],
+                    is_superuser=request.headers.get("x-superuser") == "1",
+                ),
+            )
+
+        app = FastAPI()
+        app.include_router(create_grant_routes(db_manager=db, appspec=appspec, auth_dep=auth_dep))
+        client = TestClient(app)
+        admin = {"x-user": str(uuid4()), "x-role": "school_admin"}
+        holder, bystander = str(uuid4()), str(uuid4())
+        created = set()
+        for principal in (holder, str(uuid4())):
+            body = {
+                "schema_name": "department_delegation",
+                "relation": "observer",
+                "principal_id": principal,
+                "scope_entity": "Department",
+                "scope_id": str(uuid4()),
+            }
+            resp = client.post("/_dazzle/grants", json=body, headers=admin)
+            assert resp.status_code == 201, resp.text
+            created.add(str(resp.json()["grant"]["id"]))
+
+        def listed(headers: dict[str, str]) -> set[str]:
+            resp = client.get("/_dazzle/grants", headers=headers)
+            assert resp.status_code == 200, resp.text
+            return {str(g["id"]) for g in resp.json()["grants"]}
+
+        assert listed({"x-user": bystander, "x-role": "teacher"}) == set()
+        holder_view = listed({"x-user": holder, "x-role": "teacher"})
+        assert len(holder_view) == 1 and holder_view < created
+        assert listed({"x-user": str(uuid4()), "x-role": "school_admin"}) == created
+        su = {"x-user": bystander, "x-role": "teacher", "x-superuser": "1"}
+        assert listed(su) == created

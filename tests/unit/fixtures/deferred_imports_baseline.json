@@ -76,7 +76,7 @@
   "src/dazzle/http/converters/__init__.py": 1,
   "src/dazzle/http/events/framework.py": 1,
   "src/dazzle/http/events/tier.py": 4,
-  "src/dazzle/http/runtime/access/gated.py": 12,
+  "src/dazzle/http/runtime/access/gated.py": 10,
   "src/dazzle/http/runtime/aggregate.py": 1,
   "src/dazzle/http/runtime/aggregate_expression.py": 1,
   "src/dazzle/http/runtime/app_factory.py": 29,

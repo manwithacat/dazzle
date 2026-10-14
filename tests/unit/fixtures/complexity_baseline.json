@@ -6233,7 +6233,6 @@
       "InvalidTemporalParam": 1,
       "RecordNotFound": 1,
       "_apply_list_permit_gate": 10,
-      "_apply_list_post_filter": 7,
       "_parse_temporal_filters": 6,
       "_resolve_list_scope": 9,
       "access_context_from": 1,
@@ -7340,11 +7339,8 @@
   },
   "dazzle/http/runtime/condition_evaluator.py": {
     "functions": {
-      "_condition_has_or": 8,
       "_is_field_condition": 6,
-      "build_visibility_filter": 7,
-      "condition_to_sql_filter": 21,
-      "filter_records_by_condition": 3
+      "condition_to_sql_filter": 21
     },
     "mi_rank": "A"
   },

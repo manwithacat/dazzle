@@ -1592,12 +1592,6 @@ class DazzleBackendApp:
         """Generate entity CRUD routes, audit routes, file routes, and dev routes."""
         assert self._app is not None
 
-        # Extract access specs
-        entity_access_specs: dict[str, dict[str, Any]] = {}
-        for entity in self._entities:
-            if entity.metadata and "access" in entity.metadata:
-                entity_access_specs[entity.name] = entity.metadata["access"]
-
         cedar_access_specs: dict[str, Any] = {}
         for entity in self._entities:
             if entity.access:
@@ -1973,7 +1967,6 @@ class DazzleBackendApp:
             services=self._services,
             models=self._models,
             schemas=self._schemas,
-            entity_access_specs=entity_access_specs,
             auth_dep=auth_dep,
             optional_auth_dep=optional_auth_dep,
             require_auth_by_default=self._enable_auth and not self._enable_test_mode,
@@ -2440,14 +2433,8 @@ class DazzleBackendApp:
             # (#1181) — otherwise every bulk route is silently skipped under
             # auth ("no service for scope enforcement").
             # C0b: the all-matching resolver re-runs the echoed query through
-            # gated_list with the SAME search/filter/visibility config the
-            # list view used — parity is the §15 guarantee. (Same derivation
-            # of the legacy visibility specs as the CRUD route generation.)
-            _visibility_specs: dict[str, Any] = {
-                entity.name: entity.metadata["access"]
-                for entity in self._entities
-                if entity.metadata and "access" in entity.metadata
-            }
+            # gated_list with the SAME search/filter config the list view
+            # used — parity is the §15 guarantee.
             bulk_router = create_bulk_routes(
                 list(self._appspec.surfaces),
                 repositories=self._repositories,
@@ -2458,7 +2445,6 @@ class DazzleBackendApp:
                 admin_personas=_admin_personas,
                 entity_search_fields=self._entity_search_fields,
                 entity_filter_fields=self._entity_filter_fields,
-                entity_access_specs=_visibility_specs,
                 entity_ref_targets=self._entity_ref_targets,
             )
             if bulk_router is not None:

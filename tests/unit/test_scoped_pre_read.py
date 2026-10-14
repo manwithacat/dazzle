@@ -184,36 +184,6 @@ async def test_no_matching_scope_rule_returns_none_for_default_deny() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 5. Unauthenticated fallback — defensive
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_unauthenticated_falls_through_to_unscoped_read() -> None:
-    """The permit gate rejects unauth users before this helper runs
-    when cedar_access_spec is set. This branch is defensive — if
-    somehow an unauth context reaches here, fall through rather than
-    default-deny so the test path isn't surprised."""
-    record = {"id": "row-1"}
-    service = _make_service(read_result=record)
-    spec = _spec_with_scope_rule(op="update", persona="admin", all_rows=True)
-    unauth = SimpleNamespace(is_authenticated=False, user=None)
-
-    result = await _scoped_pre_read(
-        service=service,
-        operation="update",
-        id="row-1",
-        cedar_access_spec=spec,
-        auth_context=unauth,
-        entity_name="Task",
-        fk_graph=MagicMock(),
-        admin_personas=None,
-    )
-
-    assert result == record
-
-
-# ---------------------------------------------------------------------------
 # Adversarial / negative scope-enforcement tests (#1173)
 #
 # These exercise the *attack* paths, not the happy path: a scope predicate
@@ -344,3 +314,43 @@ class TestAdversarialScopeEnforcement:
             )
 
         assert result == record
+
+
+class TestAnonymousCallerOnAccessRules:
+    """Flense ship AC: an anonymous caller on an entity with access rules gets
+    ``None`` (404) — the rule ``gated_list`` applies to lists (ship AA). Before,
+    the helper read the row unscoped and relied on the permit gate denying
+    anonymous callers, so a permit admitting them would have bypassed
+    ``scope: <op>:``. ``auth_context is None`` (no auth configured) still reads."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("auth_context", "spec", "reads"),
+        [
+            (SimpleNamespace(is_authenticated=False, user=None), "scoped", False),
+            (SimpleNamespace(is_authenticated=False, user=None), "unscoped", False),
+            (SimpleNamespace(is_authenticated=True, user=None), "scoped", False),
+            (None, "scoped", True),  # no auth configured
+        ],
+        ids=["anonymous-scoped", "anonymous-permit-only", "no-user", "no-auth"],
+    )
+    async def test_anonymous_read(self, auth_context: object, spec: str, reads: bool) -> None:
+        record = {"id": "row-1"}
+        service = _make_service(read_result=record, list_items=[record])
+        cedar = (
+            _spec_with_scope_rule(op="read", persona="admin", all_rows=False)
+            if spec == "scoped"
+            else SimpleNamespace(scopes=None)
+        )
+        result = await _scoped_pre_read(
+            service=service,
+            operation="read",
+            id="row-1",
+            cedar_access_spec=cedar,
+            auth_context=auth_context,  # type: ignore[arg-type]
+            entity_name="Task",
+            fk_graph=MagicMock(),
+            admin_personas=None,
+        )
+        assert (result == record) is reads
+        assert service.execute.await_count == (1 if reads else 0)

@@ -1,6 +1,6 @@
 from . import ir
 from .discovery import RelevanceGroup, suggest_capabilities
-from .validation.grants import validate_grant_relation_clauses
+from .validation.grants import validate_grant_relation_clauses, validate_permit_grant_checks
 from .validation.tenancy import validate_tenancy_mode_implemented
 from .validator import (
     extended_lint,
@@ -184,7 +184,12 @@ def lint_appspec(
     all_warnings.extend(warnings)
 
     # Flense ship U: declarations the runtime does not honour
-    for ship_u_check in (validate_tenancy_mode_implemented, validate_grant_relation_clauses):
+    # (+ flense ship AC: has_grant in permit:/forbid: is never satisfied)
+    for ship_u_check in (
+        validate_tenancy_mode_implemented,
+        validate_grant_relation_clauses,
+        validate_permit_grant_checks,
+    ):
         errors, warnings = ship_u_check(appspec)
         all_errors.extend(errors)
         all_warnings.extend(warnings)

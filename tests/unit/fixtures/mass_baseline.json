@@ -1,6 +1,6 @@
 {
-  "src_lines": 339071,
-  "test_lines": 350728,
+  "src_lines": 339095,
+  "test_lines": 350984,
   "docs_lines": 47806,
   "construct_count": 31,
   "written": "2026-10-14",
@@ -138,6 +138,14 @@
         "docs_lines"
       ],
       "reason": "ship AB: locale middleware and feedback widget wired, hot reload retired, DD-012 (+docs)"
+    },
+    {
+      "date": "2026-10-14",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "ship AC: grant listing authorisation, has_grant permit lint, legacy visibility path removed (+src/+tests)"
     }
   ]
 }

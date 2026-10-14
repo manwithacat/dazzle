@@ -107,6 +107,26 @@ def _evaluate_role_check(
     return role_name in user_roles
 
 
+def grant_unexpired(expires_at: Any, now: datetime) -> bool:
+    """True when a grant's ``expires_at`` is unset or later than ``now`` (aware UTC).
+
+    Accepts the store's ``datetime`` (a naive value is read as UTC) or an
+    ISO-8601 string (a serialised row). An unparseable value fails closed.
+    """
+    if expires_at is None or expires_at == "":
+        return True
+    if isinstance(expires_at, str):
+        try:
+            expires_at = datetime.fromisoformat(expires_at)
+        except ValueError:
+            return False
+    if not isinstance(expires_at, datetime):
+        return False
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=UTC)
+    return bool(expires_at > now)
+
+
 def _evaluate_grant_check(
     grant_check: dict[str, Any],
     record: dict[str, Any],
@@ -133,12 +153,14 @@ def _evaluate_grant_check(
         return False
 
     active_grants = context.get("active_grants", [])
-    now = datetime.now(UTC).isoformat()
+    now = datetime.now(UTC)
 
+    # The store returns ``expires_at`` as a datetime; comparing it with an ISO
+    # string raised TypeError (flense ship AC). ``grant_unexpired`` takes either.
     return any(
         g.get("relation") == relation
         and str(g.get("scope_id", "")) == str(scope_value)
-        and (g.get("expires_at") is None or g.get("expires_at", "") > now)
+        and grant_unexpired(g.get("expires_at"), now)
         for g in active_grants
     )
 

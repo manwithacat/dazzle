@@ -100,3 +100,25 @@ class TestGrantCheckEvaluation:
             "active_grants": [_make_grant("acting_hod", "dept-1")],
         }
         assert evaluate_condition(condition, record, context) is True
+
+
+class TestGrantCheckExpiryTypes:
+    """Flense ship AC: the grant store returns ``expires_at`` as a datetime, which the
+    check compared against an ISO string (TypeError). Either form now evaluates."""
+
+    @pytest.mark.parametrize(
+        ("expires_at", "expected"),
+        [
+            (datetime.now(UTC) + timedelta(days=1), True),
+            (datetime.now(UTC) - timedelta(days=1), False),
+            ((datetime.now(UTC) + timedelta(days=1)).replace(tzinfo=None), True),  # naive = UTC
+            ((datetime.now(UTC) + timedelta(days=1)).isoformat(), True),
+            ("not a timestamp", False),  # unparseable fails closed
+        ],
+        ids=["datetime-future", "datetime-past", "naive-future", "iso-future", "garbage"],
+    )
+    def test_store_row_expiry(self, expires_at: object, expected: bool) -> None:
+        context = {"active_grants": [_make_grant("acting_hod", "dept-1", expires_at=expires_at)]}
+        assert (
+            evaluate_condition(_GRANT_CONDITION, {"department_id": "dept-1"}, context) is expected
+        )

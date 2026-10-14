@@ -65,7 +65,6 @@ def test_generate_all_routes_skips_claimed_routes() -> None:
         services={},
         models={},
         schemas={},
-        entity_access_specs={},
         auth_dep=None,
         optional_auth_dep=None,
     )
@@ -103,7 +102,6 @@ def test_app_with_override_emits_zero_conflicts() -> None:
         services={},
         models={},
         schemas={},
-        entity_access_specs={},
         auth_dep=None,
         optional_auth_dep=None,
     )

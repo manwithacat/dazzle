@@ -240,6 +240,25 @@ class _FakeGrantStore:
             for g in self.grants.values()
         )
 
+    def list_grants(
+        self,
+        scope_entity: Any = None,
+        scope_id: Any = None,
+        principal_id: Any = None,
+        status: Any = None,
+    ) -> list[dict[str, Any]]:
+        wanted = {
+            "scope_entity": scope_entity,
+            "scope_id": scope_id,
+            "principal_id": principal_id,
+            "status": status,
+        }
+        return [
+            g
+            for g in self.grants.values()
+            if all(v is None or str(g.get(k)) == str(v) for k, v in wanted.items())
+        ]
+
 
 @pytest.fixture
 def clause_client(monkeypatch: pytest.MonkeyPatch) -> Any:
@@ -271,7 +290,10 @@ def clause_client(monkeypatch: pytest.MonkeyPatch) -> Any:
         return SimpleNamespace(
             is_authenticated=True,
             user_id=request.headers.get("x-user") or str(uuid4()),
-            user=SimpleNamespace(roles=request.headers.get("x-roles", "").split(",")),
+            user=SimpleNamespace(
+                roles=request.headers.get("x-roles", "").split(","),
+                is_superuser=request.headers.get("x-superuser") == "1",
+            ),
             active_membership=(
                 SimpleNamespace(roles=membership_roles.split(","))
                 if membership_roles is not None
@@ -289,10 +311,16 @@ def clause_client(monkeypatch: pytest.MonkeyPatch) -> Any:
         roles: str = "school_admin",
         user: str | None = None,
         membership_roles: str | None = None,
+        method: str = "post",
+        superuser: bool = False,
     ) -> Any:
         headers = {"x-roles": roles, **({"x-user": user} if user else {})}
         if membership_roles is not None:
             headers["x-membership-roles"] = membership_roles
+        if superuser:
+            headers["x-superuser"] = "1"
+        if method == "get":
+            return client.get(f"/_dazzle/grants{path}", headers=headers)
         return client.post(f"/_dazzle/grants{path}", json=json or {}, headers=headers)
 
     yield post, rels
@@ -482,3 +510,86 @@ class TestGrantAuthorityIsEvaluated:
         body = {**_create_body("dept_observer"), "scope_id": department}
         resp = post("", body, roles="teacher", user=caller)
         assert resp.status_code == expected, resp.text
+
+
+class TestGrantListingIsAuthorised:
+    """Flense ship AC: `GET /_dazzle/grants` listed every grant to any signed-in
+    user. A caller now sees the grants they are a party to (principal, granter,
+    approver) and those of relations/scopes whose `granted_by:`/`approved_by:` they
+    satisfy; a superuser sees all; query filters only narrow."""
+
+    def _setup(self, post: Any) -> dict[str, str]:
+        ids = {k: str(uuid4()) for k in ("admin", "holder", "hod", "acting", "dept", "leader")}
+        # observer: granted_by role(school_admin)
+        observer = {**_create_body("observer"), "principal_id": ids["holder"]}
+        resp = post("", observer, roles="school_admin", user=ids["admin"])
+        ids["observer_grant"] = resp.json()["grant"]["id"]
+        # acting_hod on dept, held by `acting` (granted by a teacher, approved by a leader)
+        acting = {
+            **_create_body("acting_hod", confirmed=True, expires_at=_in_days(5)),
+            "principal_id": ids["acting"],
+            "scope_id": ids["dept"],
+        }
+        gid = post("", acting, roles="teacher").json()["grant"]["id"]
+        assert post(f"/{gid}/approve", roles="senior_leader", user=ids["leader"]).status_code == 200
+        ids["acting_grant"] = gid
+        # dept_observer on dept: granted_by role(head_of_department) or has_grant(acting_hod)
+        dept_obs = {**_create_body("dept_observer"), "scope_id": ids["dept"]}
+        resp = post("", dept_obs, roles="head_of_department", user=ids["hod"])
+        ids["dept_observer_grant"] = resp.json()["grant"]["id"]
+        return ids
+
+    def _listed(self, post: Any, query: str = "", **caller: Any) -> set[str]:
+        resp = post(query, method="get", **caller)
+        assert resp.status_code == 200, resp.text
+        return {str(g["id"]) for g in resp.json()["grants"]}
+
+    def test_plain_user_sees_only_their_own(self, clause_client: Any) -> None:
+        post, _ = clause_client
+        ids = self._setup(post)
+        assert self._listed(post, roles="teacher", user=str(uuid4())) == {
+            ids["acting_grant"]  # teacher satisfies acting_hod's granted_by
+        }
+        assert self._listed(post, roles="nobody", user=str(uuid4())) == set()
+        assert self._listed(post, roles="nobody", user=ids["holder"]) == {ids["observer_grant"]}
+
+    def test_granter_and_approver_see_what_they_could_decide(self, clause_client: Any) -> None:
+        post, _ = clause_client
+        ids = self._setup(post)
+        # another school_admin satisfies observer, acting_hod... granted_by
+        assert ids["observer_grant"] in self._listed(post, roles="school_admin", user=str(uuid4()))
+        assert self._listed(post, roles="head_of_department", user=str(uuid4())) == {
+            ids["dept_observer_grant"]
+        }
+        # approved_by role(senior_leader) on acting_hod
+        assert self._listed(post, roles="senior_leader", user=str(uuid4())) == {ids["acting_grant"]}
+        # the recorded approver sees it too, whatever their roles now
+        assert self._listed(post, roles="nobody", user=ids["leader"]) == {ids["acting_grant"]}
+
+    def test_has_grant_term_admits_listing_in_that_scope(self, clause_client: Any) -> None:
+        post, _ = clause_client
+        ids = self._setup(post)
+        # `acting` holds acting_hod on dept, so satisfies dept_observer's granted_by there
+        assert self._listed(post, roles="nobody", user=ids["acting"]) == {
+            ids["acting_grant"],
+            ids["dept_observer_grant"],
+        }
+
+    def test_superuser_sees_all_and_filters_narrow(self, clause_client: Any) -> None:
+        post, _ = clause_client
+        ids = self._setup(post)
+        everything = {ids["observer_grant"], ids["acting_grant"], ids["dept_observer_grant"]}
+        assert self._listed(post, roles="nobody", superuser=True) == everything
+        assert self._listed(
+            post, f"?principal_id={ids['holder']}", roles="nobody", superuser=True
+        ) == {ids["observer_grant"]}
+        # a filter never widens: a plain user filtering on another principal gets nothing
+        assert (
+            self._listed(post, f"?principal_id={ids['holder']}", roles="nobody", user=str(uuid4()))
+            == set()
+        )
+
+    @pytest.mark.parametrize("verb", ["approve", "reject", "cancel"])
+    def test_decision_routes_422_on_a_malformed_id(self, clause_client: Any, verb: str) -> None:
+        post, _ = clause_client
+        assert post(f"/not-a-uuid/{verb}").status_code == 422

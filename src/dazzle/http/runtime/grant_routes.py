@@ -15,6 +15,13 @@ active, unexpired ``rel`` grant on the scope the grant being decided is for.
 ``and``/``or``/``not`` combine as written; any other term (a field comparison)
 does not authorize.
 
+Listing (flense ship AC): ``GET /_dazzle/grants`` returns only the grants the
+caller is a party to (principal, granter or approver) plus the grants of any
+relation and scope whose ``granted_by:`` or ``approved_by:`` the caller
+satisfies — the grants they could create, decide, cancel or revoke. A
+superuser (the framework admin, as on ``/_dazzle/audit``) sees every grant.
+The query-string filters narrow that set; they never widen it.
+
 Declared relation clauses enforced on create (ADR-0057, flense ship Q):
 
 - ``expiry: required`` — ``expires_at`` must be supplied; ``expiry: none`` —
@@ -39,6 +46,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from dazzle.core import ir
+from dazzle.core.condition_eval import grant_unexpired
 from dazzle.core.dsl_parser_impl._lexical import short_duration_seconds
 from dazzle.core.ir.conditions import LogicalOperator
 from dazzle.core.ir.grants import GrantExpiryMode
@@ -213,6 +221,75 @@ def grant_expr_allows(expr: Any, roles: set[str], has_grant: Callable[[str], boo
     return False
 
 
+def _is_grant_admin(auth_context: Any) -> bool:
+    """A superuser sees and manages every grant (the ``/_dazzle/audit`` admin rule)."""
+    user = getattr(auth_context, "user", None)
+    return bool(user is not None and getattr(user, "is_superuser", False))
+
+
+def _caller_active_grant_keys(store: Any, user_id: str) -> set[tuple[str, str]]:
+    """``(relation, scope_id)`` of every active, unexpired grant the caller holds.
+
+    One query per listing, so evaluating ``has_grant(...)`` terms across many
+    scopes does not issue a lookup per scope.
+    """
+    try:
+        principal = UUID(str(user_id))
+    except (TypeError, ValueError):
+        return set()
+    now = datetime.now(UTC)
+    return {
+        (str(g.get("relation")), str(g.get("scope_id")))
+        for g in store.list_grants(principal_id=principal, status="active")
+        if grant_unexpired(g.get("expires_at"), now)
+    }
+
+
+def visible_grants(
+    grants: list[dict[str, Any]],
+    *,
+    user_id: str,
+    roles: set[str],
+    held: set[tuple[str, str]],
+    relation_spec: Callable[[str, str], Any],
+) -> list[dict[str, Any]]:
+    """The subset of ``grants`` a non-admin caller may see.
+
+    A grant is visible when the caller is its principal, granter or approver,
+    or satisfies its relation's ``granted_by:`` or ``approved_by:`` for its
+    scope. ``held`` is the caller's ``(relation, scope_id)`` active grants (for
+    ``has_grant`` terms); ``relation_spec(schema, relation)`` returns the
+    declared relation or ``None`` (a grant whose relation is no longer declared
+    is visible to its parties only).
+    """
+    decided: dict[tuple[str, str, str], bool] = {}
+    out: list[dict[str, Any]] = []
+    for grant in grants:
+        parties = {
+            str(grant.get(k))
+            for k in ("principal_id", "granted_by_id", "approved_by_id")
+            if grant.get(k) is not None
+        }
+        if user_id in parties:
+            out.append(grant)
+            continue
+        scope_id = str(grant.get("scope_id"))
+        key = (str(grant.get("schema_name")), str(grant.get("relation")), scope_id)
+        if key not in decided:
+            rel = relation_spec(key[0], key[1])
+
+            def _holds(relation: str, _scope: str = scope_id) -> bool:
+                return (relation, _scope) in held
+
+            decided[key] = rel is not None and (
+                grant_expr_allows(getattr(rel, "granted_by", None), roles, _holds)
+                or grant_expr_allows(getattr(rel, "approved_by", None), roles, _holds)
+            )
+        if decided[key]:
+            out.append(grant)
+    return out
+
+
 def create_grant_routes(
     *,
     db_manager: Any,
@@ -277,6 +354,20 @@ def create_grant_routes(
         )
         return rel
 
+    def _declared_relation(schema_name: str, relation_name: str) -> Any:
+        """The declared relation, or ``None`` when the schema or relation is gone."""
+        schema = appspec.get_grant_schema(schema_name) if appspec else None
+        if schema is None:
+            return None
+        return next((r for r in schema.relations if r.name == relation_name), None)
+
+    def _load_grant(store: Any, grant_id: str) -> dict[str, Any]:
+        parsed = _parse_uuid(grant_id, "grant_id")
+        try:
+            return dict(store._get_grant(parsed))
+        except ValueError:
+            raise HTTPException(status_code=404, detail="Grant not found")
+
     def _caller_allowed(
         expr: Any, auth_context: AuthContext, user_id: str, store: Any, scope_id: Any
     ) -> bool:
@@ -335,7 +426,7 @@ def create_grant_routes(
             principal_id: str | None = Query(None),
             status: str | None = Query(None),
         ) -> dict[str, Any]:
-            _get_user_id(auth_context)
+            user_id = _get_user_id(auth_context)
             with _store() as store:
                 grants = store.list_grants(
                     scope_entity=scope_entity,
@@ -345,6 +436,14 @@ def create_grant_routes(
                     ),
                     status=status,
                 )
+                if not _is_grant_admin(auth_context):
+                    grants = visible_grants(
+                        grants,
+                        user_id=user_id,
+                        roles=caller_grant_roles(auth_context),
+                        held=_caller_active_grant_keys(store, user_id),
+                        relation_spec=_declared_relation,
+                    )
             return {"grants": grants}
 
         @router.post("", summary="Create a grant", status_code=201)
@@ -404,10 +503,7 @@ def create_grant_routes(
         ) -> dict[str, Any]:
             user_id = _get_user_id(auth_context)
             with _store() as store:
-                try:
-                    grant = store._get_grant(grant_id)
-                except ValueError:
-                    raise HTTPException(status_code=404, detail="Grant not found")
+                grant = _load_grant(store, grant_id)
 
                 _check_approved_by(grant, auth_context, user_id, store)
 
@@ -424,10 +520,7 @@ def create_grant_routes(
         ) -> dict[str, Any]:
             user_id = _get_user_id(auth_context)
             with _store() as store:
-                try:
-                    grant = store._get_grant(grant_id)
-                except ValueError:
-                    raise HTTPException(status_code=404, detail="Grant not found")
+                grant = _load_grant(store, grant_id)
 
                 _check_approved_by(grant, auth_context, user_id, store)
 
@@ -445,10 +538,7 @@ def create_grant_routes(
             user_id = _get_user_id(auth_context)
             parsed_id = _parse_uuid(grant_id, "grant_id")
             with _store() as store:
-                try:
-                    grant = store._get_grant(parsed_id)
-                except ValueError:
-                    raise HTTPException(status_code=404, detail="Grant not found")
+                grant = _load_grant(store, grant_id)
 
                 _check_granted_by(grant, auth_context, user_id, store)
 
@@ -465,10 +555,7 @@ def create_grant_routes(
         ) -> dict[str, Any]:
             user_id = _get_user_id(auth_context)
             with _store() as store:
-                try:
-                    grant = store._get_grant(grant_id)
-                except ValueError:
-                    raise HTTPException(status_code=404, detail="Grant not found")
+                grant = _load_grant(store, grant_id)
 
                 _check_granted_by(grant, auth_context, user_id, store)
 

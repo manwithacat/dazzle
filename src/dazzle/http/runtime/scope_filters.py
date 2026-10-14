@@ -822,6 +822,16 @@ def _scoped_list_filters(
     return filters
 
 
+def _authenticated_user_id(auth_context: "AuthContext | None") -> str | None:
+    """The signed-in caller's user id, or ``None`` for an anonymous caller."""
+    if auth_context is None or not getattr(auth_context, "is_authenticated", False):
+        return None
+    user = getattr(auth_context, "user", None)
+    if user is None or getattr(user, "id", None) is None:
+        return None
+    return str(user.id)
+
+
 async def _scoped_pre_read(
     *,
     service: "BaseService[Any]",
@@ -858,7 +868,18 @@ async def _scoped_pre_read(
     fall through to the unscoped read (the predicate compiler path
     requires fk_graph; without it we cannot compile a scope predicate
     so we treat it as "no enforcement available here").
+
+    An anonymous caller on an entity with access rules gets ``None``
+    (404) before any of the above (flense ship AC) — the rule
+    ``gated_list`` applies to lists (ship AA). Scope enforcement needs a
+    user id, so without this a permit that admitted anonymous callers
+    would read past ``scope: <operation>:``. ``auth_context is None``
+    means the app has no auth configured and is left as it was.
     """
+    user_id = _authenticated_user_id(auth_context)
+    if auth_context is not None and cedar_access_spec is not None and user_id is None:
+        return None
+
     if not getattr(cedar_access_spec, "scopes", None):
         return await _execute_read_as_of(service, id, as_of)
 
@@ -868,23 +889,16 @@ async def _scoped_pre_read(
         # silently default-deny on test fixtures lacking the FK graph.
         return await _execute_read_as_of(service, id, as_of)
 
-    user_roles: set[str] = set()
-    user_id: str | None = None
-    if auth_context is not None and getattr(auth_context, "is_authenticated", False):
-        user = getattr(auth_context, "user", None)
-        if user is not None:
-            user_id = str(user.id) if getattr(user, "id", None) is not None else None
-        # auth Plan 1b: roles from the active membership (effective_roles), not
-        # the global user.roles. user_id still comes from the user.
-        for r in effective_roles_of(auth_context):
-            r_name = r if isinstance(r, str) else getattr(r, "name", str(r))
-            user_roles.add(_normalize_role(r_name))
-
     if user_id is None:
-        # Unauthenticated path — fall back to unscoped (the permit gate
-        # has already rejected unauth users with cedar_access_spec set;
-        # this branch is defensive).
+        # No auth configured (`auth_context is None`): nothing is enforced.
         return await _execute_read_as_of(service, id, as_of)
+
+    # auth Plan 1b: roles from the active membership (effective_roles), not
+    # the global user.roles. user_id still comes from the user.
+    user_roles: set[str] = set()
+    for r in effective_roles_of(auth_context):
+        r_name = r if isinstance(r, str) else getattr(r, "name", str(r))
+        user_roles.add(_normalize_role(r_name))
 
     scope_result = _resolve_scope_filters(
         cedar_access_spec,
