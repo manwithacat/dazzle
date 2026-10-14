@@ -19,12 +19,9 @@ process critical_ticket_escalation "Escalate ticket start to manager":
 
   steps:
     - step manager_review:
+        # Review in-progress ticket
         human_task:
-          title: "Review in-progress ticket"
           assignee_role: manager
-          form:
-            acknowledged: bool required
-            notes: text
           timeout: 4h
 
   timeout: 24h

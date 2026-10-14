@@ -1476,6 +1476,3 @@ island ticket_composer "Ticket Composer":
 
 feedback_widget: enabled
   position: bottom-right
-  shortcut: backtick
-  categories: [bug, ux, visual, enhancement, other]
-  severities: [blocker, annoying, minor]

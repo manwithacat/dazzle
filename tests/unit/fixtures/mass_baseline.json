@@ -1,7 +1,7 @@
 {
-  "src_lines": 341452,
-  "test_lines": 351032,
-  "docs_lines": 47663,
+  "src_lines": 341464,
+  "test_lines": 351132,
+  "docs_lines": 47649,
   "construct_count": 31,
   "written": "2026-10-14",
   "exceptions": [
@@ -106,6 +106,14 @@
         "docs_lines"
       ],
       "reason": "ship W: sanitiser follow-ups and db resanitize-rich-text (+src/+tests)"
+    },
+    {
+      "date": "2026-10-14",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "ship X: KB/example cleanup and remaining lenient sub-blocks (+tests)"
     }
   ]
 }

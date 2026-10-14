@@ -29,6 +29,7 @@ class LLMParserMixin:
         expect_identifier_or_keyword: Any
         skip_newlines: Any
         file: Any
+        _skip_unknown_block_key: Any
 
     def parse_llm_model(self) -> ir.LLMModelSpec:
         """Parse a ``llm_model <name> "Title"?:`` declaration.
@@ -96,7 +97,6 @@ class LLMParserMixin:
 
             llm_config:
               default_model: claude_sonnet
-              artifact_store: local
               logging:
                 log_prompts: true
                 log_completions: true
@@ -156,7 +156,7 @@ class LLMParserMixin:
                 self.skip_newlines()
 
             else:
-                self.advance()
+                self._skip_unknown_block_key("llm_config logging")
                 self.skip_newlines()
 
         self.expect(TokenType.DEDENT)
@@ -282,7 +282,7 @@ class LLMParserMixin:
                 self.skip_newlines()
 
             else:
-                self.advance()
+                self._skip_unknown_block_key("llm_intent retry")
                 self.skip_newlines()
 
         self.expect(TokenType.DEDENT)
@@ -336,7 +336,7 @@ class LLMParserMixin:
                 self.skip_newlines()
 
             else:
-                self.advance()
+                self._skip_unknown_block_key("llm_intent pii")
                 self.skip_newlines()
 
         self.expect(TokenType.DEDENT)
@@ -452,7 +452,7 @@ class LLMParserMixin:
                 self.skip_newlines()
 
             else:
-                self.advance()
+                self._skip_unknown_block_key("llm_intent trigger")
                 self.skip_newlines()
 
         self.expect(TokenType.DEDENT)

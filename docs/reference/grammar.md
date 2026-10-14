@@ -726,8 +726,8 @@ schedule_decl ::= "schedule" IDENT STRING? ":" NEWLINE
                     ("cron" ":" STRING NEWLINE | "interval" ":" STRING NEWLINE | "every" ":" STRING NEWLINE)?
                     ("timezone" ":" STRING NEWLINE)?
                     ("input" ":" NEWLINE INDENT (IDENT ":" literal NEWLINE)+ DEDENT)?
-                    ("overlap" ":" IDENT NEWLINE)?
-                    ("catch_up" ":" BOOLEAN NEWLINE)?
+                    ("overlap" ":" IDENT NEWLINE)?  (* accepted, not read: W_DECLARED_NOT_READ *)
+                    ("catch_up" ":" BOOLEAN NEWLINE)?  (* accepted, not read: W_DECLARED_NOT_READ *)
                   DEDENT ;
 
 (* =============================================================================
@@ -756,7 +756,7 @@ domain_service_decl
                     service_io_block?
                     service_io_block?
                     guarantees_block?
-                    ("stub" ":" ("python" | "typescript") NEWLINE)?
+                    ("stub" ":" ("python" | "typescript") NEWLINE)?  (* accepted, not read: W_DECLARED_NOT_READ *)
                   DEDENT ;
 
 service_io_block
@@ -894,7 +894,7 @@ llm_config_decl
               ::= "llm_config" ":" NEWLINE
                   INDENT
                     ("default_model" ":" IDENT NEWLINE)?
-                    ("artifact_store" ":" STRING NEWLINE)?
+                    ("artifact_store" ":" IDENT NEWLINE)?  (* accepted, not read: W_DECLARED_NOT_READ *)
                     ("logging" ":" NEWLINE INDENT llm_logging_body DEDENT)?
                     ("rate_limits" ":" NEWLINE INDENT (IDENT ":" NUMBER NEWLINE)+ DEDENT)?
                   DEDENT ;
@@ -1188,7 +1188,6 @@ service PricingEngine "Pricing Engine":
     total: decimal(10,2)
   guarantees:
     - "Total = unit_price * quantity"
-  stub: python
 
 foreign_model CompanyProfile from companies_house:
   key: company_number
@@ -1242,7 +1241,6 @@ llm_model gpt4 "GPT-4":
 
 llm_config:
   default_model: gpt4
-  artifact_store: ".dazzle/llm_artifacts"
   logging:
     log_prompts: true
     log_completions: true

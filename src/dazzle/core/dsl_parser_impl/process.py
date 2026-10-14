@@ -447,8 +447,7 @@ class ProcessParserMixin:
                 trigger = self._parse_trigger_expression()
                 self.skip_newlines()
             else:
-                # Skip unknown
-                self.advance()
+                self._skip_unknown_block_key("process trigger")
 
         self.expect(TokenType.DEDENT)
 
@@ -888,11 +887,10 @@ class ProcessParserMixin:
                     step = self._parse_single_step()
                     parallel_steps.append(step)
                 else:
-                    # Skip unknown
-                    self.advance()
+                    # `- <word>` that is not a step: the list item is the entry.
+                    self._skip_unknown_block_key("parallel", list_item=True)
             else:
-                # Skip unknown token
-                self.advance()
+                self._skip_unknown_block_key("parallel")
 
         self.expect(TokenType.DEDENT)
 
@@ -1063,7 +1061,7 @@ class ProcessParserMixin:
             self.skip_newlines()
             outcomes = self._parse_task_outcomes()
         else:
-            self.advance()
+            self._skip_unknown_block_key("human_task")
         return surface, entity_path, assignee_role, assignee_expression, timeout_seconds, outcomes
 
     def _parse_task_outcomes(self) -> list[ir.HumanTaskOutcome]:

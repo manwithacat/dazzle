@@ -52,14 +52,13 @@ llm_model gpt4o_mini "GPT-4o Mini":
 
 ## Llm Config
 
-Global LLM configuration for the application. Sets default model, artifact storage (local/s3/gcs), logging policy, per-model rate limits (requests per minute) and per-model concurrency limits (max concurrent requests).
+Global LLM configuration for the application. Sets default model, logging policy, per-model rate limits (requests per minute) and per-model concurrency limits (max concurrent requests). `artifact_store:` is accepted for forward compatibility but not read by the runtime; `dazzle validate` warns W_DECLARED_NOT_READ when it is declared, so leave it out.
 
 ### Syntax
 
 ```dsl
 llm_config:
   [default_model: <llm_model_name>]
-  [artifact_store: <local|s3|gcs>]
   [logging:]
     [log_prompts: true|false]
     [log_completions: true|false]
@@ -75,7 +74,6 @@ llm_config:
 ```dsl
 llm_config:
   default_model: claude_sonnet
-  artifact_store: local
   logging:
     log_prompts: true
     log_completions: true
@@ -240,7 +238,6 @@ llm_config:
 ```dsl
 llm_config:
   default_model: claude_sonnet
-  artifact_store: local
   logging:
     log_prompts: true
     log_completions: true

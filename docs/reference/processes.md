@@ -192,7 +192,7 @@ process expense_approval "Expense Approval":
 
 ## Schedule
 
-A scheduled job definition for recurring tasks. Schedules are a simplified form of process triggered by cron expressions or fixed intervals. Supports catch-up for missed runs, overlap policies, and the same step kinds as processes.
+A scheduled job definition for recurring tasks. Schedules are a simplified form of process triggered by cron expressions or fixed intervals. Supports the same step kinds as processes. `catch_up:` and `overlap:` are accepted for forward compatibility but not read by the runtime (`dazzle validate` warns W_DECLARED_NOT_READ), so missed runs are not replayed and overlapping runs are not prevented by the schedule declaration.
 
 ### Syntax
 
@@ -201,8 +201,6 @@ schedule <name> "<Title>":
   [cron: "<cron_expression>"]
   [interval_seconds: <int>]
   [timezone: "<IANA_timezone>"]
-  [catch_up: true|false]
-  [overlap: <skip|queue|cancel_previous|allow>]
   [timeout: <duration>]
 
   steps:
@@ -217,8 +215,6 @@ schedule <name> "<Title>":
 schedule daily_report "Daily Report":
   cron: "0 8 * * *"
   timezone: "Europe/London"
-  catch_up: false
-  overlap: skip
   timeout: 1h
 
   steps:
@@ -228,7 +224,6 @@ schedule daily_report "Daily Report":
 
 schedule hourly_sync "Hourly Data Sync":
   interval_seconds: 3600
-  overlap: skip
 
   steps:
     - step synchronize:
@@ -239,8 +234,7 @@ schedule hourly_sync "Hourly Data Sync":
 ### Best Practices
 
 - Use cron for specific times, interval_seconds for fixed periods
-- Set overlap: skip to prevent concurrent runs of the same schedule
-- Use catch_up: false unless missed runs must execute on startup
+- Do not declare catch_up: or overlap: — they are accepted for forward compatibility but not read by the runtime
 - Always set a timeout to prevent runaway jobs
 
 **Related:** [Process](processes.md#process), [Process Steps](processes.md#process-steps)

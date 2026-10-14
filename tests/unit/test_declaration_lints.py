@@ -103,6 +103,79 @@ _UNKNOWN_KEY_CASES = {
         "from",
         lambda f: f.integrations[0].syncs[0].into_entity == "Contact",
     ),
+    # Flense ship X: the remaining lenient sub-blocks and the top-level loop.
+    "llm_config logging": (
+        "llm_config:\n  logging:\n    log_prompt: false\n    redact_pii: false\n"
+        "  default_model: m1\n",
+        "log_prompt",
+        lambda f: (
+            f.llm_config is not None
+            and f.llm_config.logging.redact_pii is False
+            and f.llm_config.logging.log_prompts is True
+            and f.llm_config.default_model == "m1"
+        ),
+    ),
+    "llm_intent retry": (
+        'llm_intent s "S":\n  model: m1\n  retry:\n    max_attempt: 5\n'
+        '    backoff: linear\n  prompt: "x"\n',
+        "max_attempt",
+        lambda f: (
+            f.llm_intents[0].retry is not None
+            and f.llm_intents[0].retry.max_attempts == 3
+            and f.llm_intents[0].retry.backoff == ir.RetryBackoff.LINEAR
+            and f.llm_intents[0].prompt_template == "x"
+        ),
+    ),
+    "llm_intent pii": (
+        'llm_intent s "S":\n  model: m1\n  pii:\n    scanning: true\n'
+        '    action: reject\n  prompt: "x"\n',
+        "scanning",
+        lambda f: (
+            f.llm_intents[0].pii is not None
+            and f.llm_intents[0].pii.scan is False
+            and f.llm_intents[0].pii.action == ir.PIIAction.REJECT
+        ),
+    ),
+    "llm_intent trigger": (
+        'llm_intent s "S":\n  model: m1\n  trigger:\n    on_entity: Task\n'
+        "    debounce:\n      seconds: 5\n    on_event: created\n"
+        '    when: "entity.category == null"\n  prompt: "x"\n',
+        "debounce",
+        lambda f: (
+            f.llm_intents[0].triggers[0].when == "entity.category == null"
+            and f.llm_intents[0].prompt_template == "x"
+        ),
+    ),
+    "process trigger": (
+        "process p:\n  trigger:\n    debounce: 5\n    when: entity Task created\n"
+        "  steps:\n    - step s:\n        service: svc\n",
+        "debounce",
+        lambda f: (
+            f.processes[0].trigger is not None
+            and f.processes[0].trigger.entity_name == "Task"
+            and len(f.processes[0].steps) == 1
+        ),
+    ),
+    "human_task": (
+        "process p:\n  steps:\n    - step s:\n        human_task:\n"
+        "          form:\n            ok: bool required\n          timeout: 4h\n",
+        "form",
+        lambda f: (
+            f.processes[0].steps[0].human_task is not None
+            and f.processes[0].steps[0].human_task.timeout_seconds == 4 * 3600
+        ),
+    ),
+    "parallel": (
+        "process p:\n  steps:\n    - parallel both:\n        policy:\n"
+        "          fail_fast: true\n        - step a:\n            service: svc\n",
+        "policy",
+        lambda f: [s.name for s in f.processes[0].steps[0].parallel_steps] == ["a"],
+    ),
+    "module": (
+        "entitty Task:\n  id: uuid pk\n  meta:\n    x: 1\n\nentity B:\n  id: uuid pk\n",
+        "entitty",
+        lambda f: [e.name for e in f.entities] == ["B"],
+    ),
 }
 
 
@@ -131,12 +204,39 @@ _CLEAN_BLOCKS = [
     "process p:\n  timeout: 1h\n  steps:\n    - step s:\n        service: svc\n",
     'schedule nightly:\n  cron: "0 1 * * *"\n  steps:\n    - step s:\n        service: svc\n',
     "integration crm:\n  sync pull:\n    into entity Contact\n",
+    "llm_config:\n  logging:\n    log_prompts: false\n    log_completions: true\n"
+    "    redact_pii: false\n",
+    'llm_intent s "S":\n  model: m1\n  prompt: "x"\n  retry:\n    max_attempts: 2\n'
+    "    backoff: linear\n    initial_delay_ms: 100\n    max_delay_ms: 1000\n"
+    '  pii:\n    scan: true\n    action: redact\n    patterns: "a", "b"\n'
+    "  trigger:\n    on_entity: Task\n    on_event: created\n    input_map:\n"
+    '      title: entity.title\n    write_back:\n      Task.tag: output\n    when: "x"\n',
+    "process p:\n  trigger:\n    when: entity Task created\n  steps:\n"
+    "    - step s:\n        human_task:\n          surface: review\n"
+    "          entity: Task\n          assignee_role: manager\n"
+    '          assignee: "owner"\n          timeout: 4h\n          outcomes:\n'
+    '            - ok "OK":\n                goto: complete\n'
+    "    - parallel both:\n        - step a:\n            service: svc\n"
+    "        - step b:\n            service: svc\n",
+    "entity B:\n  id: uuid pk\n",
 ]
 
 
 @pytest.mark.parametrize("body", _CLEAN_BLOCKS, ids=lambda b: b.split()[0])
 def test_known_keys_produce_no_parse_warnings(body: str) -> None:
     assert _parse_warnings(body) == []
+
+
+def test_unknown_list_item_in_parallel_block_warns_and_skips_the_item() -> None:
+    body = (
+        "process p:\n  steps:\n    - parallel both:\n        - stepp a:\n"
+        "            service: svc\n        - step b:\n            service: svc\n"
+    )
+    fragment = _parse(body)
+    assert fragment.parse_warnings == [
+        "W_UNKNOWN_BLOCK_KEY: unknown key `stepp` in `parallel` block ignored (test.dsl:7)"
+    ]
+    assert [s.name for s in fragment.processes[0].steps[0].parallel_steps] == ["b"]
 
 
 def test_parse_warnings_reach_validate_through_the_linker() -> None:

@@ -14,8 +14,6 @@ module simple_task.llm
 
 llm_config:
   default_model: claude_haiku
-  fallback_mode: mock
-  artifact_store: local
   logging:
     log_prompts: true
     log_completions: true
@@ -33,14 +31,12 @@ llm_model claude_haiku "Claude Haiku (Fast)":
   model_id: claude-3-haiku-20240307
   tier: fast
   max_tokens: 1024
-  description: "Fast model for simple classifications"
 
 llm_model claude_sonnet "Claude Sonnet (Balanced)":
   provider: anthropic
   model_id: claude-3-5-sonnet-20241022
   tier: balanced
   max_tokens: 4096
-  description: "Balanced model for complex analysis"
 
 # =============================================================================
 # LLM Intents

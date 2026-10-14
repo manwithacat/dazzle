@@ -29,8 +29,6 @@ service calculate_user_workload "Calculate User Workload":
     - "Workload score is between 0.0 and 1.0"
     - "Read-only operation, no side effects"
 
-  stub: python
-
 # =============================================================================
 # Assignment Services
 # =============================================================================
@@ -52,8 +50,6 @@ service auto_assign_task "Auto-assign Task to Best Candidate":
     - "Only assigns to active users"
     - "Considers current workload balance"
 
-  stub: python
-
 service find_overdue_tasks "Find All Overdue Tasks":
   kind: domain_logic
 
@@ -63,8 +59,6 @@ service find_overdue_tasks "Find All Overdue Tasks":
 
   output:
     count: int
-
-  stub: python
 
 # =============================================================================
 # Notification Services
@@ -82,8 +76,6 @@ service send_assignment_notification "Send Task Assignment Notification":
     notification_sent: bool
     channel: str
 
-  stub: python
-
 service send_overdue_reminder "Send Overdue Task Reminder":
   kind: integration
 
@@ -93,8 +85,6 @@ service send_overdue_reminder "Send Overdue Task Reminder":
 
   output:
     notifications_sent: int
-
-  stub: python
 
 # =============================================================================
 # Escalation Services
@@ -116,8 +106,6 @@ service escalate_overdue_task "Escalate Overdue Task":
     - "Task priority is increased if escalation_level >= 2"
     - "Manager is notified at all escalation levels"
 
-  stub: python
-
 # =============================================================================
 # Analytics Services
 # =============================================================================
@@ -134,5 +122,3 @@ service generate_team_report "Generate Team Performance Report":
     total_tasks_completed: int
     average_completion_time_hours: decimal
     on_time_completion_rate: decimal
-
-  stub: python

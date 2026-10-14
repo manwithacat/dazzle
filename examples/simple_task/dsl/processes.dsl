@@ -76,12 +76,9 @@ process urgent_task_approval "Urgent Task Approval":
 
   steps:
     - step request_approval:
+        # Approve Urgent Task
         human_task:
-          title: "Approve Urgent Task"
           assignee_role: manager
-          form:
-            approved: bool required
-            notes: text
           timeout: 4h
 
   timeout: 24h

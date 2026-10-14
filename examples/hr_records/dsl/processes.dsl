@@ -20,12 +20,9 @@ process employment_manager_assignment "Manager acknowledges new employment":
 
   steps:
     - step manager_ack:
+        # Acknowledge new team employment
         human_task:
-          title: "Acknowledge new team employment"
           assignee_role: manager
-          form:
-            acknowledged: bool required
-            notes: text
           timeout: 4h
 
   timeout: 48h

@@ -30,7 +30,7 @@ v0_5_changes = "NEW in v0.5"
 category = "Extensibility (v0.5)"
 doc_page = "services"
 doc_order = 1
-definition = "Custom business logic declaration in DSL with implementation in Python/TypeScript stubs. Part of the Anti-Turing extensibility model."
+definition = "Custom business logic declaration in DSL with implementation in Python/TypeScript stubs. Part of the Anti-Turing extensibility model. The `stub:` clause is accepted for forward compatibility but not read by the runtime (`dazzle validate` warns W_DECLARED_NOT_READ), so leave it out."
 syntax = '''
 service <name> "<Title>":
   kind: <domain_logic|validation|integration|workflow>
@@ -42,7 +42,6 @@ service <name> "<Title>":
     ...
   guarantees:
     - "<contract guarantee>"
-  stub: <python|typescript>
 '''
 example = '''
 service calculate_vat "Calculate VAT":
@@ -56,7 +55,6 @@ service calculate_vat "Calculate VAT":
   guarantees:
     - "Must not mutate the invoice record"
     - "Must raise domain error if config incomplete"
-  stub: python
 '''
 related = ["stub", "three_layer_architecture"]
 v0_5_changes = "NEW in v0.5"

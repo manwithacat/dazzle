@@ -469,8 +469,10 @@ class Parser(
             else:
                 if token_type == TokenType.EOF:
                     break
-                # Skip unknown tokens
-                self.advance()
+                # An unknown word at the start of a line is a construct the
+                # parser does not know (a typo such as `entitty`, or a parked
+                # construct): warn and skip its whole block (flense ship X).
+                self._skip_unknown_block_key("module")
 
         if self.parse_warnings:
             fragment = fragment.model_copy(update={"parse_warnings": list(self.parse_warnings)})

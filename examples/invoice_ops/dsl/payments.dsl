@@ -21,8 +21,6 @@ service payment_provider "Payment Provider":
     - "Idempotent for the same invoice_id"
     - "Returns a failure_reason on every non-success outcome"
 
-  stub: python
-
 # Settlement saga: triggered when an invoice reaches `approved`.
 process settle_invoice "Settle Approved Invoice":
   trigger:

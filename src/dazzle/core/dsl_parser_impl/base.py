@@ -46,7 +46,7 @@ class ParserProtocol(Protocol):
     def skip_newlines(self) -> None: ...
     def _is_keyword_as_identifier(self) -> bool: ...
     def _parse_warning(self, token: Token, message: str) -> None: ...
-    def _skip_unknown_block_key(self, block: str) -> None: ...
+    def _skip_unknown_block_key(self, block: str, *, list_item: bool = False) -> None: ...
     def _parse_construct_header(
         self,
         token_type: TokenType,
@@ -300,7 +300,17 @@ class BaseParser:
             TokenType.DEDENT,
         )
 
-    def _skip_unknown_block_key(self, block: str) -> None:
+    def _after_line_leading_dash(self) -> bool:
+        """True when the previous token is a ``-`` that starts its line."""
+        if self.pos < 2 or self.tokens[self.pos - 1].type != TokenType.MINUS:
+            return False
+        return self.tokens[self.pos - 2].type in (
+            TokenType.NEWLINE,
+            TokenType.INDENT,
+            TokenType.DEDENT,
+        )
+
+    def _skip_unknown_block_key(self, block: str, *, list_item: bool = False) -> None:
         """Skip a token a lenient block does not recognise (flense ship U).
 
         A word at the start of a line is an entry the block does not know — a
@@ -308,6 +318,10 @@ class BaseParser:
         ``W_UNKNOWN_BLOCK_KEY`` and skips the whole entry: the rest of its line
         and any indented block under it. Any other token (a value a key handler
         left behind) is skipped alone, as the blocks always did.
+
+        ``list_item`` marks a word that directly follows a line-leading ``-``
+        the caller already consumed (a list block's item); it counts as the
+        start of the entry (flense ship X).
         """
         tok = self.current_token()
         value = tok.value
@@ -315,7 +329,7 @@ class BaseParser:
             tok.type not in (TokenType.NEWLINE, TokenType.INDENT, TokenType.DEDENT, TokenType.EOF)
             and isinstance(value, str)
             and value.isidentifier()
-            and self._at_line_start()
+            and (self._at_line_start() or (list_item and self._after_line_leading_dash()))
         )
         if not is_entry:
             self.advance()

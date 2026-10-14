@@ -467,11 +467,10 @@ related = ["llm_intent", "llm_config"]
 category = "LLM Jobs (v0.24)"
 doc_page = "llm"
 doc_order = 2
-definition = "Global LLM configuration for the application. Sets default model, artifact storage (local/s3/gcs), logging policy, per-model rate limits (requests per minute) and per-model concurrency limits (max concurrent requests)."
+definition = "Global LLM configuration for the application. Sets default model, logging policy, per-model rate limits (requests per minute) and per-model concurrency limits (max concurrent requests). `artifact_store:` is accepted for forward compatibility but not read by the runtime; `dazzle validate` warns W_DECLARED_NOT_READ when it is declared, so leave it out."
 syntax = '''
 llm_config:
   [default_model: <llm_model_name>]
-  [artifact_store: <local|s3|gcs>]
   [logging:]
     [log_prompts: true|false]
     [log_completions: true|false]
@@ -484,7 +483,6 @@ llm_config:
 example = '''
 llm_config:
   default_model: claude_sonnet
-  artifact_store: local
   logging:
     log_prompts: true
     log_completions: true
@@ -609,14 +607,12 @@ related = ["index", "entity"]
 category = "Workflow (v0.23)"
 doc_page = "processes"
 doc_order = 3
-definition = "A scheduled job definition for recurring tasks. Schedules are a simplified form of process triggered by cron expressions or fixed intervals. Supports catch-up for missed runs, overlap policies, and the same step kinds as processes."
+definition = "A scheduled job definition for recurring tasks. Schedules are a simplified form of process triggered by cron expressions or fixed intervals. Supports the same step kinds as processes. `catch_up:` and `overlap:` are accepted for forward compatibility but not read by the runtime (`dazzle validate` warns W_DECLARED_NOT_READ), so missed runs are not replayed and overlapping runs are not prevented by the schedule declaration."
 syntax = '''
 schedule <name> "<Title>":
   [cron: "<cron_expression>"]
   [interval_seconds: <int>]
   [timezone: "<IANA_timezone>"]
-  [catch_up: true|false]
-  [overlap: <skip|queue|cancel_previous|allow>]
   [timeout: <duration>]
 
   steps:
@@ -628,8 +624,6 @@ example = '''
 schedule daily_report "Daily Report":
   cron: "0 8 * * *"
   timezone: "Europe/London"
-  catch_up: false
-  overlap: skip
   timeout: 1h
 
   steps:
@@ -639,7 +633,6 @@ schedule daily_report "Daily Report":
 
 schedule hourly_sync "Hourly Data Sync":
   interval_seconds: 3600
-  overlap: skip
 
   steps:
     - step synchronize:
@@ -647,7 +640,7 @@ schedule hourly_sync "Hourly Data Sync":
         timeout: 10m
 '''
 related = ["process", "process_steps"]
-best_practices = ["Use cron for specific times, interval_seconds for fixed periods", "Set overlap: skip to prevent concurrent runs of the same schedule", "Use catch_up: false unless missed runs must execute on startup", "Always set a timeout to prevent runaway jobs"]
+best_practices = ["Use cron for specific times, interval_seconds for fixed periods", "Do not declare catch_up: or overlap: — they are accepted for forward compatibility but not read by the runtime", "Always set a timeout to prevent runaway jobs"]
 
 [concepts.nav_group]
 category = "Workspace Feature (v0.38)"
@@ -881,7 +874,6 @@ llm_config:
 example = '''
 llm_config:
   default_model: claude_sonnet
-  artifact_store: local
   logging:
     log_prompts: true
     log_completions: true

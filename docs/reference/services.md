@@ -9,7 +9,7 @@ Services declare custom business logic in DSL with implementation in Python or T
 
 ## Domain Service
 
-Custom business logic declaration in DSL with implementation in Python/TypeScript stubs. Part of the Anti-Turing extensibility model.
+Custom business logic declaration in DSL with implementation in Python/TypeScript stubs. Part of the Anti-Turing extensibility model. The `stub:` clause is accepted for forward compatibility but not read by the runtime (`dazzle validate` warns W_DECLARED_NOT_READ), so leave it out.
 
 ### Syntax
 
@@ -24,7 +24,6 @@ service <name> "<Title>":
     ...
   guarantees:
     - "<contract guarantee>"
-  stub: <python|typescript>
 ```
 
 ### Example
@@ -41,7 +40,6 @@ service calculate_vat "Calculate VAT":
   guarantees:
     - "Must not mutate the invoice record"
     - "Must raise domain error if config incomplete"
-  stub: python
 ```
 
 **Related:** [Stub](services.md#stub), [Three Layer Architecture](services.md#three-layer-architecture)
