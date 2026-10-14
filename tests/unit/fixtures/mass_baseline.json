@@ -1,7 +1,7 @@
 {
   "src_lines": 339095,
   "test_lines": 350984,
-  "docs_lines": 47806,
+  "docs_lines": 47845,
   "construct_count": 31,
   "written": "2026-10-14",
   "exceptions": [
@@ -146,6 +146,13 @@
         "test_lines"
       ],
       "reason": "ship AC: grant listing authorisation, has_grant permit lint, legacy visibility path removed (+src/+tests)"
+    },
+    {
+      "date": "2026-10-14",
+      "rose": [
+        "docs_lines"
+      ],
+      "reason": "closing: plan \u00a78.1 and FLENSE \u00a78 consumer actions (+docs)"
     }
   ]
 }

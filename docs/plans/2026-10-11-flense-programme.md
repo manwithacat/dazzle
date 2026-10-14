@@ -230,6 +230,45 @@ Phase 4 starting point, measured on 2026-10-13 with the v0.116.0 tree against ea
 | cyfuture | 2 proved, 1 informational, 2 vacuous, 4 residual notes | 16 (incl. A.5.12/13 classification, A.5.34 PII, A.8.11 masking) | 32 / 8 | 1 (`POST /companycontacts`); 4 `admin` delete permits with no scope rule | 0 classify, 296 permit, 881 scope, 8 sla |
 | pennydreadful | 2 proved, 1 informational, 2 vacuous, 16 residual notes | 10 (all tier 3) | 3 / 8 | 0 | 0 classify, 144 permit, 271 scope; persona `agent` unreferenced |
 
+### 8.1 The surgical loop (2026-10-13/14, after v0.116.0)
+
+Twenty commits on `main` after the release, ships H–AC, run the same way (Opus worktree
+agents, the session harvesting by cherry-pick, every ship gated with `make ci-fast` and
+pushed under the push gate; CI green on every push). Removals were evidenced by
+zero-importer and reachability walks from the console entry point, the MCP dispatch table,
+the HTTP server, Alembic and every consumer, script, hook and skill import, then a word
+search across the framework and the three checkouts; anything with a reader stayed and is
+listed in the CHANGELOG.
+
+| Measure | v0.116.0 | After ship AC | Target (§7) |
+|---|---:|---:|---:|
+| Framework src lines | 394,547 | 339,095 | ≤ 250,000 |
+| Test lines | 363,407 | 350,984 | ≤ 200,000 |
+| Docs lines in tree | 48,483 | 47,806 | ≤ 60,000 |
+| Top-level constructs | 31 | 31 | ≤ 30 |
+
+What the loop found that mattered more than the lines: the search routes applied no scope
+(ship P), the rich-text sanitiser was never called and the plain-text denylist was
+bypassable and mangled ordinary text (T, W), the list endpoint showed anonymous callers
+every row in test mode (AA), `GET /_dazzle/grants` listed every grant to any user (AC),
+the grant clauses both regulated consumers declare were parsed and never enforced (Q),
+`tenancy: mode:` was never applied (R), no CRUD service ever inherited the event mixin
+DD-006 described (O), islands were never rendered (DD-011), the locale middleware was never
+mounted and the feedback widget never served (AB), and a long tail of DSL clauses
+consumers write that nothing reads — now `dazzle validate` warnings (U, X, Z, AC).
+
+The src and test targets are not met. The remaining mass is live: `http/runtime` ≈ 85k,
+`core` ≈ 70k, `render` 29k, `mcp` ≈ 30k, `cli` ≈ 25k, with the reachability walks now
+finding no unreached module in those packages. Further reduction means retiring features
+consumers use or re-architecting kept ones, which is a product decision, not a flense.
+
+Open for the operator: drop revisions for the `devices` table (ship O) need sign-off;
+`/_dazzle/metrics` serves a constant document (drop the URL or wire a collector); the
+`SortHeader` dual lock retires HM-first; `mobile_full` has no consumer; pennydreadful serves
+`/app` page lists unscoped to anonymous callers (AA finding, consumer decision); cyfuture's
+`/actions` command calls the now-empty `extract_guards`. Each consumer's actions are in its
+`FLENSE_*.md` §8.
+
 Known nuisances: the HaTchi-MaXchi prose-drift tests fail when run from the framework root
 (pre-existing; they pass in the package's own gate), and `test_api_surface_drift[ir_types]`
 is order-dependent after the presentation MCP tests in one process.
