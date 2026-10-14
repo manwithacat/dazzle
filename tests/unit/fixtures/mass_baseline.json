@@ -1,7 +1,7 @@
 {
-  "src_lines": 340371,
-  "test_lines": 350749,
-  "docs_lines": 47718,
+  "src_lines": 340453,
+  "test_lines": 351246,
+  "docs_lines": 47717,
   "construct_count": 31,
   "written": "2026-10-14",
   "exceptions": [
@@ -123,6 +123,14 @@
         "docs_lines"
       ],
       "reason": "ship Z: parser hygiene, process grammar matches the parser, baseline regeneration (+tests)"
+    },
+    {
+      "date": "2026-10-14",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "ship AA: scope/FTS/grant runtime correctness (+src/+tests), consumer-forced"
     }
   ]
 }

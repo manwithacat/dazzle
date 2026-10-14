@@ -759,6 +759,86 @@ class TestResolveScopeFiltersPredicatePath:
         # Legacy path uses condition extraction, not __scope_predicate
         assert "__scope_predicate" not in result
 
+    @staticmethod
+    def _user_without(attr: str) -> Any:
+        """An auth context whose user record and preferences lack ``attr``."""
+        from types import SimpleNamespace
+
+        return SimpleNamespace(
+            user=SimpleNamespace(id="user-1", email="t@example.com"),
+            preferences={},
+            active_membership=None,
+        )
+
+    def test_unresolved_user_attribute_denies_without_raising(self, caplog):
+        """Flense ship AA: a rule whose `current_user.<attr>` does not resolve used
+        to append `None` to the union and raise TypeError (a 500 on list, search
+        and read). It is now an always-false rule: no rows, the same `None` as
+        "no scope rule matched", and a WARNING naming entity, verb and attribute."""
+        pytest.importorskip("fastapi")
+        from dazzle.core.ir.fk_graph import FKGraph
+        from dazzle.core.ir.predicates import CompOp, UserAttrCheck
+        from dazzle.http.runtime.route_generator import _resolve_scope_filters
+
+        pred = UserAttrCheck(field="department_id", user_attr="department", op=CompOp.EQ)
+        spec = self._make_scope_spec_with_predicate(pred, personas=["teacher"])
+
+        with caplog.at_level("WARNING"):
+            result = _resolve_scope_filters(
+                spec,
+                "list",
+                {"teacher"},
+                "user-1",
+                auth_context=self._user_without("department"),
+                entity_name="Assessment",
+                fk_graph=FKGraph(),
+            )
+
+        assert result is None
+        assert "Assessment list" in caplog.text
+        assert "current_user.department" in caplog.text
+
+    def test_unresolved_rule_leaves_the_other_roles_scope_in_force(self):
+        """Union semantics: the unresolvable rule contributes no rows, the
+        resolvable rule of the caller's other role still applies."""
+        pytest.importorskip("fastapi")
+        from types import SimpleNamespace
+
+        from dazzle.core.ir.fk_graph import FKGraph
+        from dazzle.core.ir.predicates import ColumnCheck, CompOp, UserAttrCheck, ValueRef
+        from dazzle.http.runtime.route_generator import _resolve_scope_filters
+
+        dept_rule = SimpleNamespace(
+            operation=SimpleNamespace(value="list"),
+            condition=None,
+            personas=["teacher"],
+            predicate=UserAttrCheck(field="department_id", user_attr="department", op=CompOp.EQ),
+        )
+        own_rule = SimpleNamespace(
+            operation=SimpleNamespace(value="list"),
+            condition=None,
+            personas=["author"],
+            predicate=ColumnCheck(
+                field="owner_id", op=CompOp.EQ, value=ValueRef(current_user=True)
+            ),
+        )
+        spec = SimpleNamespace(scopes=[dept_rule, own_rule])
+
+        result = _resolve_scope_filters(
+            spec,
+            "list",
+            {"teacher", "author"},
+            "user-1",
+            auth_context=self._user_without("department"),
+            entity_name="Assessment",
+            fk_graph=FKGraph(),
+        )
+
+        assert result is not None
+        sql, params = result["__scope_predicate"]
+        assert '"owner_id"' in sql and "department_id" not in sql
+        assert params == ["user-1"]
+
 
 class TestQueryBuilderScopePredicate:
     """Tests for QueryBuilder handling of __scope_predicate."""

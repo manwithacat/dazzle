@@ -4,9 +4,16 @@ Grant management API routes.
 Exposes CRUD endpoints for runtime RBAC grants so that ``has_grant()``
 transition guards become reachable.  Mounted at ``/_dazzle/grants/*``.
 
-Authorization: only roles listed in the relation's ``granted_by`` may create,
-cancel or revoke grants. When the relation declares ``approved_by``, only those
-roles may approve or reject a pending grant (otherwise ``granted_by`` decides).
+Authorization: only a caller satisfying the relation's ``granted_by`` may create,
+cancel or revoke grants. When the relation declares ``approved_by``, only a caller
+satisfying it may approve or reject a pending grant (otherwise ``granted_by``
+decides). The expression is evaluated, not mined for role names (flense ship AA):
+``role(x)`` is checked against the caller's effective roles (the active
+membership's roles when there is one, as everywhere else in the runtime), and
+``has_grant("rel", <field>)`` against the grant store — the caller must hold an
+active, unexpired ``rel`` grant on the scope the grant being decided is for.
+``and``/``or``/``not`` combine as written; any other term (a field comparison)
+does not authorize.
 
 Declared relation clauses enforced on create (ADR-0057, flense ship Q):
 
@@ -23,7 +30,7 @@ Declared relation clauses enforced on create (ADR-0057, flense ship Q):
 here (no grant UI renders them yet).
 """
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -33,9 +40,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from dazzle.core import ir
 from dazzle.core.dsl_parser_impl._lexical import short_duration_seconds
+from dazzle.core.ir.conditions import LogicalOperator
 from dazzle.core.ir.grants import GrantExpiryMode
 from dazzle.core.ir.params import ParamRef
-from dazzle.http.runtime.auth import AuthContext
+from dazzle.core.strings import normalize_role
+from dazzle.http.runtime.auth import AuthContext, effective_roles_of
 from dazzle.http.runtime.param_store import resolve_value
 
 
@@ -161,6 +170,49 @@ def require_grant_confirmation(rel: Any, body: dict[str, Any]) -> None:
         )
 
 
+def caller_grant_roles(auth_context: Any) -> set[str]:
+    """The caller's effective roles, normalised, for ``granted_by``/``approved_by``.
+
+    Membership-first, like every other authorization site in the runtime
+    (``effective_roles_of``): a member acting in a tenant is judged by that
+    membership's roles, not the global ``user.roles``.
+    """
+    return {
+        normalize_role(r if isinstance(r, str) else getattr(r, "name", str(r)))
+        for r in effective_roles_of(auth_context)
+    }
+
+
+def grant_expr_allows(expr: Any, roles: set[str], has_grant: Callable[[str], bool]) -> bool:
+    """Evaluate a ``granted_by``/``approved_by`` ConditionExpr for a caller.
+
+    ``roles`` are the caller's normalised effective roles; ``has_grant(relation)``
+    answers whether the caller holds an active grant of ``relation`` on the scope
+    in question (only called when a ``has_grant`` term is reached). A missing
+    expression or any other term (a field comparison) does not authorize.
+    """
+    if expr is None:
+        return False
+    op = getattr(expr, "operator", None)
+    if op == LogicalOperator.NOT:
+        return not grant_expr_allows(expr.left, roles, has_grant)
+    if op == LogicalOperator.AND:
+        return grant_expr_allows(expr.left, roles, has_grant) and grant_expr_allows(
+            expr.right, roles, has_grant
+        )
+    if op == LogicalOperator.OR:
+        return grant_expr_allows(expr.left, roles, has_grant) or grant_expr_allows(
+            expr.right, roles, has_grant
+        )
+    role_check = getattr(expr, "role_check", None)
+    if role_check is not None:
+        return normalize_role(role_check.role_name) in roles
+    grant_check = getattr(expr, "grant_check", None)
+    if grant_check is not None:
+        return has_grant(grant_check.relation)
+    return False
+
+
 def create_grant_routes(
     *,
     db_manager: Any,
@@ -211,28 +263,6 @@ def create_grant_routes(
         except (ValueError, AttributeError):
             raise HTTPException(status_code=422, detail=f"Invalid UUID for {field_name}")
 
-    def _get_user_roles(auth_context: AuthContext) -> set[str]:
-        user = getattr(auth_context, "user", None)
-        if not user:
-            return set()
-        roles: set[str] = set()
-        for r in getattr(user, "roles", []):
-            roles.add(r if isinstance(r, str) else getattr(r, "name", str(r)))
-        return roles
-
-    def _extract_roles(expr: Any) -> set[str]:
-        """Extract role names from a ConditionExpr tree."""
-        roles: set[str] = set()
-        if expr is None:
-            return roles
-        if getattr(expr, "role_check", None):
-            roles.add(expr.role_check.role_name)
-        if getattr(expr, "left", None):
-            roles |= _extract_roles(expr.left)
-        if getattr(expr, "right", None):
-            roles |= _extract_roles(expr.right)
-        return roles
-
     def _get_relation_spec(schema_name: str, relation_name: str) -> Any:
         """Look up a GrantRelationSpec by schema and relation name."""
         from dazzle.http.runtime.http_errors import require_found
@@ -247,17 +277,34 @@ def create_grant_routes(
         )
         return rel
 
-    def _check_approved_by(schema_name: str, relation_name: str, user_roles: set[str]) -> None:
+    def _caller_allowed(
+        expr: Any, auth_context: AuthContext, user_id: str, store: Any, scope_id: Any
+    ) -> bool:
+        """Evaluate a ``granted_by``/``approved_by`` expression for the caller."""
+
+        def _holds(relation: str) -> bool:
+            try:
+                principal, scope = UUID(str(user_id)), UUID(str(scope_id))
+            except (TypeError, ValueError):
+                return False
+            return bool(store.has_active_grant(principal, relation, scope))
+
+        return grant_expr_allows(expr, caller_grant_roles(auth_context), _holds)
+
+    def _check_approved_by(
+        grant: dict[str, Any], auth_context: AuthContext, user_id: str, store: Any
+    ) -> None:
         """Verify the caller may decide (approve/reject) a pending grant.
 
-        A relation's ``approved_by`` names the deciding roles; without it the
-        ``granted_by`` roles decide (the pre-ship-Q behaviour).
+        A relation's ``approved_by`` names who decides; without it ``granted_by``
+        decides (the pre-ship-Q behaviour).
         """
+        schema_name, relation_name = grant["schema_name"], grant["relation"]
         rel = _get_relation_spec(schema_name, relation_name)
         if getattr(rel, "approved_by", None) is None:
-            _check_granted_by(schema_name, relation_name, user_roles)
+            _check_granted_by(grant, auth_context, user_id, store)
             return
-        if not _extract_roles(rel.approved_by).intersection(user_roles):
+        if not _caller_allowed(rel.approved_by, auth_context, user_id, store, grant["scope_id"]):
             raise HTTPException(
                 status_code=403,
                 detail=(
@@ -266,11 +313,13 @@ def create_grant_routes(
                 ),
             )
 
-    def _check_granted_by(schema_name: str, relation_name: str, user_roles: set[str]) -> None:
-        """Verify the caller has a role listed in granted_by for the relation."""
-        rel = _get_relation_spec(schema_name, relation_name)
-        allowed = _extract_roles(rel.granted_by)
-        if not allowed.intersection(user_roles):
+    def _check_granted_by(
+        grant: dict[str, Any], auth_context: AuthContext, user_id: str, store: Any
+    ) -> None:
+        """Verify the caller satisfies ``granted_by`` for the grant's relation and scope."""
+        schema_name = grant["schema_name"]
+        rel = _get_relation_spec(schema_name, grant["relation"])
+        if not _caller_allowed(rel.granted_by, auth_context, user_id, store, grant["scope_id"]):
             raise HTTPException(
                 status_code=403,
                 detail=f"Your role is not authorized to manage grants for '{schema_name}'",
@@ -305,7 +354,6 @@ def create_grant_routes(
             auth_context: AuthContext = Depends(auth_dep),
         ) -> dict[str, Any]:
             user_id = _get_user_id(auth_context)
-            user_roles = _get_user_roles(auth_context)
 
             schema_name = body.get("schema_name", "")
             relation = body.get("relation", "")
@@ -319,19 +367,24 @@ def create_grant_routes(
                     detail="Required fields: schema_name, relation, principal_id, scope_entity, scope_id",
                 )
 
-            _check_granted_by(schema_name, relation, user_roles)
-
-            # Look up approval mode from relation spec
-            rel_spec = _get_relation_spec(schema_name, relation)
-            approval_mode = str(rel_spec.approval) if rel_spec.approval else "auto"
-            require_grant_confirmation(rel_spec, body)
-            expires_at = resolve_grant_expiry(
-                rel_spec,
-                body.get("expires_at"),
-                param_resolver=getattr(request.app.state, "param_resolver", None),
-            )
-
             with _store() as store:
+                _check_granted_by(
+                    {"schema_name": schema_name, "relation": relation, "scope_id": scope_id},
+                    auth_context,
+                    user_id,
+                    store,
+                )
+
+                # Look up approval mode from relation spec
+                rel_spec = _get_relation_spec(schema_name, relation)
+                approval_mode = str(rel_spec.approval) if rel_spec.approval else "auto"
+                require_grant_confirmation(rel_spec, body)
+                expires_at = resolve_grant_expiry(
+                    rel_spec,
+                    body.get("expires_at"),
+                    param_resolver=getattr(request.app.state, "param_resolver", None),
+                )
+
                 grant = store.create_grant(
                     schema_name=schema_name,
                     relation=relation,
@@ -356,8 +409,7 @@ def create_grant_routes(
                 except ValueError:
                     raise HTTPException(status_code=404, detail="Grant not found")
 
-                user_roles = _get_user_roles(auth_context)
-                _check_approved_by(grant["schema_name"], grant["relation"], user_roles)
+                _check_approved_by(grant, auth_context, user_id, store)
 
                 try:
                     result = store.approve_grant(grant_id, user_id)
@@ -377,8 +429,7 @@ def create_grant_routes(
                 except ValueError:
                     raise HTTPException(status_code=404, detail="Grant not found")
 
-                user_roles = _get_user_roles(auth_context)
-                _check_approved_by(grant["schema_name"], grant["relation"], user_roles)
+                _check_approved_by(grant, auth_context, user_id, store)
 
                 try:
                     result = store.reject_grant(grant_id, user_id)
@@ -399,8 +450,7 @@ def create_grant_routes(
                 except ValueError:
                     raise HTTPException(status_code=404, detail="Grant not found")
 
-                user_roles = _get_user_roles(auth_context)
-                _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
+                _check_granted_by(grant, auth_context, user_id, store)
 
                 try:
                     result = store.cancel_grant(parsed_id, UUID(user_id))
@@ -420,8 +470,7 @@ def create_grant_routes(
                 except ValueError:
                     raise HTTPException(status_code=404, detail="Grant not found")
 
-                user_roles = _get_user_roles(auth_context)
-                _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
+                _check_granted_by(grant, auth_context, user_id, store)
 
                 try:
                     result = store.revoke_grant(grant_id, user_id)

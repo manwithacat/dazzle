@@ -121,6 +121,9 @@ def _seed(app: _ScopeRuntimeApp, auth_store: Any, db_url: str) -> None:
         "teacher_math": ("teacher.math@scope.test", "teacher"),
         "teacher_science": ("teacher.science@scope.test", "teacher"),
         "admin": ("admin@scope.test", "admin"),
+        # Flense ship AA: a teacher with no domain User row, so
+        # `current_user.department` does not resolve for them.
+        "teacher_no_department": ("teacher.nodept@scope.test", "teacher"),
     }
     for key, (email, role) in users.items():
         if auth_store.get_user_by_email(email) is None:
@@ -365,6 +368,37 @@ async def test_rest_list_respects_list_scope_via_gated_list(app: _ScopeRuntimeAp
     assert app.science_enrolment_id not in ids, (
         "foreign-department enrolment must be scope-filtered out of the list"
     )
+
+
+async def test_unresolvable_scope_attribute_denies_cleanly(app: _ScopeRuntimeApp) -> None:
+    """Flense ship AA: a teacher whose user record has no `department` used to get
+    a 500 (TypeError in the scope union) on the list. The rule now matches no
+    rows: the list is an empty page and a single read is 404, the same shapes as
+    "no scope rule matched"."""
+    client = await app.client_as("teacher_no_department")
+
+    listed = await client.get("/enrolments")
+    assert listed.status_code == 200, listed.text[:300]
+    assert listed.json()["items"] == []
+
+    read = await client.get(f"/enrolments/{app.math_enrolment_id}")
+    assert read.status_code == 404, read.text[:300]
+
+
+async def test_anonymous_list_reads_no_rows_of_a_scoped_entity(app: _ScopeRuntimeApp) -> None:
+    """Flense ship AA: with `require_auth_by_default` off (this harness boots in
+    test mode) the list route let an anonymous caller through, and `gated_list`
+    skipped both the permit gate and the scope merge for it, so it read every
+    enrolment. It now gets an empty page, as the search routes give it (ship P)."""
+    import httpx
+
+    async with httpx.AsyncClient(
+        transport=app._transport, base_url=_BASE_URL, follow_redirects=True
+    ) as anon:
+        resp = await anon.get("/enrolments")
+    assert resp.status_code in (200, 401), resp.text[:300]
+    if resp.status_code == 200:
+        assert resp.json()["items"] == []
 
 
 async def test_inprocess_create_invoker_enforces_create_scope(app: _ScopeRuntimeApp) -> None:

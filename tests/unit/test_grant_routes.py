@@ -185,6 +185,11 @@ grant_schema department_delegation "Department Delegation":
     granted_by: role(school_admin)
     approval: none
     expiry: none
+
+  relation dept_observer "Assign Department Observer":
+    granted_by: role(head_of_department) or has_grant("acting_hod", department)
+    approval: none
+    expiry: optional
 """
 
 
@@ -226,6 +231,15 @@ class _FakeGrantStore:
         g.update(status="rejected")
         return g
 
+    def has_active_grant(self, principal_id: Any, relation: str, scope_id: Any) -> bool:
+        return any(
+            g["status"] == "active"
+            and str(g["principal_id"]) == str(principal_id)
+            and g["relation"] == relation
+            and str(g["scope_id"]) == str(scope_id)
+            for g in self.grants.values()
+        )
+
 
 @pytest.fixture
 def clause_client(monkeypatch: pytest.MonkeyPatch) -> Any:
@@ -253,10 +267,16 @@ def clause_client(monkeypatch: pytest.MonkeyPatch) -> Any:
     db.connection = _conn
 
     def auth_dep(request: Request) -> Any:
+        membership_roles = request.headers.get("x-membership-roles")
         return SimpleNamespace(
             is_authenticated=True,
             user_id=request.headers.get("x-user") or str(uuid4()),
             user=SimpleNamespace(roles=request.headers.get("x-roles", "").split(",")),
+            active_membership=(
+                SimpleNamespace(roles=membership_roles.split(","))
+                if membership_roles is not None
+                else None
+            ),
         )
 
     app = FastAPI()
@@ -268,8 +288,11 @@ def clause_client(monkeypatch: pytest.MonkeyPatch) -> Any:
         json: dict[str, Any] | None = None,
         roles: str = "school_admin",
         user: str | None = None,
+        membership_roles: str | None = None,
     ) -> Any:
         headers = {"x-roles": roles, **({"x-user": user} if user else {})}
+        if membership_roles is not None:
+            headers["x-membership-roles"] = membership_roles
         return client.post(f"/_dazzle/grants{path}", json=json or {}, headers=headers)
 
     yield post, rels
@@ -405,3 +428,57 @@ class TestDeclaredApprovedByEnforced:
         post, _ = clause_client
         gid = self._pending(post)
         assert post(f"/{gid}/reject", roles="senior_leader").status_code == 200
+
+
+class TestGrantAuthorityIsEvaluated:
+    """Flense ship AA: `granted_by`/`approved_by` are evaluated for the caller, not
+    mined for role names — effective (membership) roles, and `has_grant(...)` terms
+    against the grant store."""
+
+    @pytest.mark.parametrize(
+        ("user_roles", "membership_roles", "expected"),
+        [
+            ("teacher", "school_admin", 201),  # the membership role satisfies granted_by
+            ("school_admin", "teacher", 403),  # an active membership wins over user.roles
+            ("role_school_admin", None, 201),  # no membership: user.roles, normalised
+        ],
+    )
+    def test_granted_by_reads_effective_roles(
+        self,
+        clause_client: Any,
+        user_roles: str,
+        membership_roles: str | None,
+        expected: int,
+    ) -> None:
+        post, _ = clause_client
+        resp = post(
+            "", _create_body("observer"), roles=user_roles, membership_roles=membership_roles
+        )
+        assert resp.status_code == expected, resp.text
+
+    def _acting_hod(self, post: Any, holder: str, scope_id: str) -> None:
+        body = {
+            **_create_body("acting_hod", confirmed=True, expires_at=_in_days(5)),
+            "principal_id": holder,
+            "scope_id": scope_id,
+        }
+        gid = post("", body, roles="teacher").json()["grant"]["id"]
+        assert post(f"/{gid}/approve", roles="senior_leader").status_code == 200
+
+    @pytest.mark.parametrize(
+        ("holds_grant_on", "expected"),
+        [("same", 201), ("other", 403), (None, 403)],
+    )
+    def test_has_grant_term_in_granted_by(
+        self, clause_client: Any, holds_grant_on: str | None, expected: int
+    ) -> None:
+        """`dept_observer` is granted by `role(head_of_department) or
+        has_grant("acting_hod", department)`: an acting HoD of this department may
+        assign an observer to it, without the head_of_department role."""
+        post, _ = clause_client
+        caller, department = str(uuid4()), str(uuid4())
+        if holds_grant_on is not None:
+            self._acting_hod(post, caller, department if holds_grant_on == "same" else str(uuid4()))
+        body = {**_create_body("dept_observer"), "scope_id": department}
+        resp = post("", body, roles="teacher", user=caller)
+        assert resp.status_code == expected, resp.text

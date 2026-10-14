@@ -66,13 +66,25 @@ class _StubDb:
 
 
 def _build_repo(
-    table_name: str = "Manuscript", count: int = 3, rows: list[dict[str, Any]] | None = None
+    table_name: str = "Manuscript",
+    count: int = 3,
+    rows: list[dict[str, Any]] | None = None,
+    *,
+    soft_delete: bool = False,
+    temporal: Any = None,
 ) -> Repository:
     """Minimal repo wired to the stub DB. The Generic param doesn't matter
     for these tests — fts_search doesn't go through model_class."""
     if rows is None:
         rows = [{"id": "uid-1", "rank": 0.9, "title": "Hello world"}]
-    entity = SimpleNamespace(name=table_name, fields=[], computed_fields=[], subtype_of=None)
+    entity = SimpleNamespace(
+        name=table_name,
+        fields=[],
+        computed_fields=[],
+        subtype_of=None,
+        soft_delete=soft_delete,
+        temporal=temporal,
+    )
 
     class _M:
         pass
@@ -239,6 +251,32 @@ class TestScopePredicate:
 # ---------------------------------------------------------------------------
 # Pagination
 # ---------------------------------------------------------------------------
+
+
+class TestRowLifecycleFilters:
+    """Flense ship AA: search applies the soft-delete and temporal-active filters
+    `list` applies (shared `_row_lifecycle_filters`), on the count and the items."""
+
+    @pytest.mark.parametrize(
+        ("entity_attrs", "clause"),
+        [
+            ({"soft_delete": True}, '"deleted_at" IS NULL'),
+            (
+                {
+                    "temporal": SimpleNamespace(
+                        default_filter="active", start_field="started_at", end_field="ended_at"
+                    )
+                },
+                '"ended_at" IS NULL',
+            ),
+        ],
+    )
+    def test_hidden_rows_are_filtered(self, entity_attrs: dict[str, Any], clause: str) -> None:
+        repo = _build_repo(**entity_attrs)
+        asyncio.run(repo.fts_search(_spec(), "hello"))
+        count_sql, items_sql = (q[0] for q in repo.db.cursor_obj.queries)
+        assert clause in count_sql
+        assert clause in items_sql
 
 
 class TestPagination:

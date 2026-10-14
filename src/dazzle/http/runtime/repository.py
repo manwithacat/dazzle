@@ -1140,6 +1140,47 @@ class Repository[T: BaseModel]:
 
         return bool(rowcount and rowcount > 0)
 
+    def _row_lifecycle_filters(self, filters: dict[str, Any] | None) -> tuple[dict[str, Any], Any]:
+        """Add the row-lifecycle filters every multi-row read applies.
+
+        ``list``, ``aggregate`` and ``fts_search`` share this, so a row one of
+        them hides is hidden by all three. Returns ``(effective_filters, as_of)``;
+        the ``__as_of`` key is consumed.
+
+        * #1218 Option A: tombstone filter for ``soft_delete`` entities
+          (``deleted_at IS NULL``), AND-merged with any user/scope filters.
+          ``include_deleted`` query-param + RBAC gate is a follow-up.
+        * #1223 Phase 3a.ii / 3a.iv: for a temporal entity with
+          ``default_filter: active``, ``<end_field> IS NULL`` (currently-active
+          rows); with ``__as_of`` the historical-snapshot predicate
+          ``start_field <= as_of AND (end_field IS NULL OR end_field > as_of)``
+          instead, AND-composed with any ``__scope_predicate``. Route handlers
+          inject ``__as_of`` from the ``?as_of=YYYY-MM-DD`` URL parameter.
+        """
+        effective_filters: dict[str, Any] = dict(filters) if filters else {}
+        if self.entity_spec.soft_delete:
+            effective_filters.setdefault("deleted_at__isnull", True)
+
+        temporal = self.entity_spec.temporal
+        as_of = effective_filters.pop("__as_of", None)
+        if temporal is not None and temporal.default_filter == "active":
+            if as_of is not None:
+                t_pred = _build_temporal_as_of_predicate(
+                    temporal.start_field, temporal.end_field, as_of
+                )
+                existing = effective_filters.get("__scope_predicate")
+                if existing is not None:
+                    s_sql, s_params = existing
+                    effective_filters["__scope_predicate"] = (
+                        f"({s_sql}) AND ({t_pred[0]})",
+                        list(s_params) + list(t_pred[1]),
+                    )
+                else:
+                    effective_filters["__scope_predicate"] = t_pred
+            else:
+                effective_filters.setdefault(f"{temporal.end_field}__isnull", True)
+        return effective_filters, as_of
+
     async def list(
         self,
         page: int = 1,
@@ -1197,42 +1238,7 @@ class Repository[T: BaseModel]:
             builder.select_fields = list(select_fields)
         builder.set_pagination(page, page_size)
 
-        # #1218 Option A: tombstone filter for soft-delete entities.
-        # Composes via QueryBuilder so the predicate AND-merges with
-        # any user/scope filters already in `filters`. Authors opt
-        # into the filter via the `soft_delete` directive on the entity.
-        # `include_deleted` query-param + RBAC gate is a follow-up.
-        effective_filters: dict[str, Any] = dict(filters) if filters else {}
-        if self.entity_spec.soft_delete:
-            effective_filters.setdefault("deleted_at__isnull", True)
-
-        # #1223 Phase 3a.ii / 3a.iv: tombstone filter + as_of reprojection.
-        # Default behaviour (no as_of): inject `<end_field> IS NULL` so list
-        # paths return only currently-active rows. With as_of (3a.iv): replace
-        # the active-only filter with the historical-snapshot predicate
-        # `start_field <= as_of AND (end_field IS NULL OR end_field > as_of)`.
-        # The as_of value is passed via the special `__as_of` filter dict key,
-        # mirroring the `__scope_predicate` pattern. Route handlers inject it
-        # from the workspace/surface `?as_of=YYYY-MM-DD` URL parameter.
-        _temporal = self.entity_spec.temporal
-        _as_of = effective_filters.pop("__as_of", None)
-        if _temporal is not None and _temporal.default_filter == "active":
-            if _as_of is not None:
-                _temporal_predicate = _build_temporal_as_of_predicate(
-                    _temporal.start_field, _temporal.end_field, _as_of
-                )
-                # AND-compose with any existing scope predicate.
-                existing = effective_filters.get("__scope_predicate")
-                if existing is not None:
-                    s_sql, s_params = existing
-                    effective_filters["__scope_predicate"] = (
-                        f"({s_sql}) AND ({_temporal_predicate[0]})",
-                        list(s_params) + list(_temporal_predicate[1]),
-                    )
-                else:
-                    effective_filters["__scope_predicate"] = _temporal_predicate
-            else:
-                effective_filters.setdefault(f"{_temporal.end_field}__isnull", True)
+        effective_filters, _as_of = self._row_lifecycle_filters(filters)
 
         if effective_filters:
             builder.add_filters(effective_filters)
@@ -1439,35 +1445,8 @@ class Repository[T: BaseModel]:
             dimension_count=len(dimensions),
             measure_count=len(measures),
         ):
-            # #1218 Option A: tombstone filter on the aggregate path.
-            # Same composition contract as `list` — merges with the
-            # incoming `filters` dict so QueryBuilder ANDs the
-            # tombstone predicate with any scope/user filters.
-            effective_filters: dict[str, Any] = dict(filters) if filters else {}
-            if self.entity_spec.soft_delete:
-                effective_filters.setdefault("deleted_at__isnull", True)
-
-            # #1223 Phase 3a.ii / 3a.iv: tombstone or as-of for temporal.
-            # Same shape as the list path. The __as_of key flows through
-            # the same filters dict used by list/scope composition.
-            _temporal_agg = self.entity_spec.temporal
-            _as_of_agg = effective_filters.pop("__as_of", None)
-            if _temporal_agg is not None and _temporal_agg.default_filter == "active":
-                if _as_of_agg is not None:
-                    _t_pred = _build_temporal_as_of_predicate(
-                        _temporal_agg.start_field, _temporal_agg.end_field, _as_of_agg
-                    )
-                    existing_agg = effective_filters.get("__scope_predicate")
-                    if existing_agg is not None:
-                        s_sql, s_params = existing_agg
-                        effective_filters["__scope_predicate"] = (
-                            f"({s_sql}) AND ({_t_pred[0]})",
-                            list(s_params) + list(_t_pred[1]),
-                        )
-                    else:
-                        effective_filters["__scope_predicate"] = _t_pred
-                else:
-                    effective_filters.setdefault(f"{_temporal_agg.end_field}__isnull", True)
+            # Same soft-delete + temporal composition as `list`.
+            effective_filters, _ = self._row_lifecycle_filters(filters)
 
             sql, params = build_aggregate_sql(
                 table_name=self.table_name,
@@ -1565,7 +1544,9 @@ class Repository[T: BaseModel]:
                 the ``__scope_predicate`` key. Compiled by the same
                 :class:`QueryBuilder` ``list`` uses and ANDed into the WHERE
                 clause, so search and list see the same rows. ``None`` or
-                ``{}`` means no row filter.
+                ``{}`` means no access filter; the soft-delete and
+                temporal-active filters (``_row_lifecycle_filters``) apply
+                regardless, as on ``list``.
 
         Returns:
             ``{"items": [{"id", "rank", **row}, ...], "total": N,
@@ -1592,9 +1573,12 @@ class Repository[T: BaseModel]:
             f"search_vector @@ websearch_to_tsquery('{config}', {ph})",
         ]
         params: list[Any] = [q]
-        if filters:
+        # The soft-delete and temporal-active filters `list` applies, so search
+        # never returns a row the list hides.
+        effective_filters, _ = self._row_lifecycle_filters(filters)
+        if effective_filters:
             builder = QueryBuilder(table_name=self.table_name, placeholder_style=ph)
-            builder.add_filters(filters)
+            builder.add_filters(effective_filters)
             filter_where, filter_params = builder.build_where_clause()
             if filter_where:
                 where_parts.append(f"({filter_where.removeprefix('WHERE ')})")

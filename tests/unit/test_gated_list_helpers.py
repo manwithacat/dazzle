@@ -105,3 +105,56 @@ class TestResolveListScope:
             )
             is sql
         )
+
+
+class TestAnonymousCallerOnAccessRules:
+    """Flense ship AA: an anonymous caller never reads rows of an entity with access
+    rules on the list path, the rule `list_scope_filters` applies to search.
+
+    Before, `gated_list` skipped the permit gate and the scope merge for an
+    anonymous caller and listed every row (the legacy `access_spec` visibility
+    filter, here anonymous-allow-all, being the only filter left). `auth_context
+    is None` (no auth configured) keeps the unscoped read.
+    """
+
+    class _Service:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.entity_spec = SimpleNamespace(temporal=None)
+
+        async def execute(self, **_: object) -> dict[str, object]:
+            self.calls += 1
+            return {"items": [{"id": "row-1"}], "total": 1, "page": 1, "page_size": 20}
+
+    @pytest.mark.parametrize(
+        ("auth_context", "cedar", "rows"),
+        [
+            (SimpleNamespace(is_authenticated=False, user=None), SimpleNamespace(), 0),
+            (None, SimpleNamespace(), 1),  # no auth configured
+            (SimpleNamespace(is_authenticated=False, user=None), None, 1),  # no access rules
+        ],
+    )
+    def test_anonymous_list(self, auth_context: object, cedar: object, rows: int) -> None:
+        import asyncio
+
+        from dazzle.http.runtime.access.gated import gated_list
+
+        service = self._Service()
+        access = access_context_from(
+            auth_context=auth_context,
+            entity_name="Widget",
+            cedar_access_spec=cedar,
+            fk_graph=None,
+            admin_personas=None,
+        )
+        result = asyncio.run(
+            gated_list(
+                service,
+                access,
+                page=1,
+                page_size=20,
+                access_spec={"visibility": [{"context": "anonymous", "condition": None}]},
+            )
+        )
+        assert len(result["items"]) == rows
+        assert service.calls == rows

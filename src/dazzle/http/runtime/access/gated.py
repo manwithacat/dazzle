@@ -229,6 +229,19 @@ def _resolve_list_scope(
     return sql_filters
 
 
+def _anonymous_on_access_rules(
+    access: AccessContext, *, is_authenticated: bool, user_id: str | None
+) -> bool:
+    """True when the entity declares access rules and the caller is not signed in.
+
+    The LIST permit gate and the scope merge both skip an anonymous caller (they
+    need roles and a user id), so without this check an anonymous caller would
+    read such an entity unscoped. ``list_scope_filters`` and ``gated_list`` both
+    deny on it (flense ships P and AA).
+    """
+    return access.cedar_access_spec is not None and not (is_authenticated and user_id)
+
+
 def list_scope_filters(access: AccessContext) -> dict[str, Any] | None:
     """The LIST enforcement ``gated_list`` applies, for a caller that issues its own
     query (the full-text search routes): the Cedar LIST permit gate, then the scope
@@ -236,16 +249,15 @@ def list_scope_filters(access: AccessContext) -> dict[str, Any] | None:
     scope rule matched the caller (default-deny, the caller returns nothing), else
     the filters dict to AND into the query (``{}`` when no row filter applies).
 
-    Unlike the list route, these callers have no ``require_auth_by_default`` 401 in
-    front of them, so an anonymous caller on an entity that declares access rules is
-    denied here rather than read unscoped.
+    An anonymous caller on an entity that declares access rules is denied here
+    rather than read unscoped, the same rule ``gated_list`` applies.
     """
     auth_context = access.auth_context
     is_authenticated = bool(auth_context and auth_context.is_authenticated)
     user_id = (
         str(auth_context.user.id) if auth_context and getattr(auth_context, "user", None) else None
     )
-    if access.cedar_access_spec is not None and not (is_authenticated and user_id):
+    if _anonymous_on_access_rules(access, is_authenticated=is_authenticated, user_id=user_id):
         return None
     _apply_list_permit_gate(
         access.cedar_access_spec, auth_context, is_authenticated, access.entity_name
@@ -351,6 +363,17 @@ async def gated_list(
     _apply_list_permit_gate(
         access.cedar_access_spec, auth_context, is_authenticated, access.entity_name
     )
+
+    # 1b. An anonymous caller never reads an entity with access rules (flense ship
+    #     AA). The permit gate and the scope merge skip it, so it read unscoped
+    #     whenever the route's 401 did not stop it: `require_auth_by_default` off
+    #     (test mode) or a legacy visibility spec present. `auth_context is None`
+    #     means the app has no auth configured, where no Cedar rule is enforced
+    #     anywhere (the bulk route's convention), so that case is left as it was.
+    if auth_context is not None and _anonymous_on_access_rules(
+        access, is_authenticated=is_authenticated, user_id=user_id
+    ):
+        return {"items": [], "total": 0, "page": page, "page_size": page_size}
 
     # 2. Legacy visibility filter + 3. Cedar scope merge (default-deny → empty page).
     sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)

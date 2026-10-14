@@ -733,6 +733,7 @@ def _resolve_scope_filters(
                     user_id,
                     auth_context,
                     admin_personas=admin_personas,
+                    operation=op_val,
                 )
             except Exception:
                 # Predicate compilation/resolution failed (e.g. null FK in
@@ -743,6 +744,13 @@ def _resolve_scope_filters(
                     exc_info=True,
                 )
                 return None
+            if rule_filters is None:
+                # A `current_user.<attr>` / `current_tenant` the rule needs did
+                # not resolve (logged by the resolver). The rule is an
+                # always-false predicate: it contributes no rows, and any other
+                # matched role's rule still applies. If no rule resolves, the
+                # fall-through below denies — the "no scope rule matched" shape.
+                continue
             resolved_rules.append(rule_filters)
             continue
 
@@ -1377,6 +1385,16 @@ def _should_bypass_tenant_filter(
     return not normalised.isdisjoint(admin_personas)
 
 
+def _log_unresolved_scope_ref(entity_name: str, operation: str, ref: str) -> None:
+    """WARNING for a scope rule denied because ``ref`` did not resolve for the caller."""
+    logging.getLogger(__name__).warning(
+        "Scope rule for %s %s denies: %s does not resolve for this user — the rule matches no rows",
+        entity_name,
+        operation or "?",
+        ref,
+    )
+
+
 def _resolve_predicate_filters(
     predicate: Any,
     entity_name: str,
@@ -1384,11 +1402,17 @@ def _resolve_predicate_filters(
     user_id: str,
     auth_context: "AuthContext | None",
     admin_personas: list[str] | None = None,
-) -> dict[str, Any]:
+    *,
+    operation: str = "",
+) -> dict[str, Any] | None:
     """Compile a ScopePredicate to SQL and resolve runtime markers.
 
     Returns a filters dict with the special ``__scope_predicate`` key
-    containing a ``(sql, params)`` tuple ready for the QueryBuilder.
+    containing a ``(sql, params)`` tuple ready for the QueryBuilder, or
+    ``None`` when a runtime marker the predicate needs cannot be bound
+    (``current_user.<attr>`` missing on the user, or ``current_tenant`` with no
+    host tenant). ``None`` means the rule matches no rows; it is logged at
+    WARNING naming the entity, the ``operation`` and the unresolved reference.
 
     `admin_personas` (#957 cycle 5) — when the active user matches one
     of these tenant-admin personas, the scope filter is skipped and an
@@ -1428,13 +1452,15 @@ def _resolve_predicate_filters(
             # query, mirroring the unresolvable-user-attr deny above.
             host_tid = get_current_host_tenant_id()
             if not host_tid:
-                return None  # type: ignore[return-value]
+                _log_unresolved_scope_ref(entity_name, operation, "current_tenant")
+                return None
             resolved_params.append(host_tid)
         elif isinstance(p, UserAttrRef):
             resolved = _resolve_user_attribute(p.attr_name, auth_context)
             if resolved == "__RBAC_DENY__":
                 # Null FK — deny cleanly instead of passing sentinel to SQL (#580)
-                return None  # type: ignore[return-value]
+                _log_unresolved_scope_ref(entity_name, operation, f"current_user.{p.attr_name}")
+                return None
             resolved_params.append(resolved)
         else:
             resolved_params.append(p)
