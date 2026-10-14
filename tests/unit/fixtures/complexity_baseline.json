@@ -403,7 +403,6 @@
       "InfrastructureSpec": 1,
       "OperationSpec": 1,
       "SandboxSpec": 1,
-      "WebhookEventSpec": 1,
       "_collect_packs_from_dir": 8,
       "_discover_packs": 2,
       "_get_packs_dir": 1,
@@ -412,28 +411,12 @@
       "_parse_foreign_models": 3,
       "_parse_infrastructure": 3,
       "_parse_operations": 8,
-      "_parse_webhooks": 4,
       "_resolve_project_root": 2,
       "generate_env_example": 6,
-      "get_all_env_vars": 4,
       "list_packs": 1,
       "load_pack": 1,
       "search_packs": 12,
       "set_pack_project_root": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/api_kb/openapi_importer.py": {
-    "functions": {
-      "_clean_identifier": 1,
-      "_escape_toml": 1,
-      "_extract_auth": 8,
-      "_extract_models": 11,
-      "_extract_operations": 8,
-      "_openapi_type_to_dsl": 12,
-      "_to_snake": 1,
-      "import_from_openapi": 7,
-      "scaffold_blank": 1
     },
     "mi_rank": "A"
   },
@@ -1387,25 +1370,6 @@
     "functions": {},
     "mi_rank": "A"
   },
-  "dazzle/compliance/analytics/bridge.py": {
-    "functions": {
-      "AnalyticsBridge": 5,
-      "AnalyticsBridge.__init__": 2,
-      "AnalyticsBridge._resolve_tenant": 4,
-      "AnalyticsBridge._to_analytics_event": 11,
-      "AnalyticsBridge.accepts": 1,
-      "AnalyticsBridge.close": 2,
-      "AnalyticsBridge.handle_envelope": 7,
-      "_entity_from_event_type": 3,
-      "_event_name_from_event_type": 5,
-      "_matches_any": 2,
-      "_safe_param_dict": 3,
-      "build_bridge_from_spec": 5,
-      "match_topic_glob": 6,
-      "start_bridge_consumer": 4
-    },
-    "mi_rank": "A"
-  },
   "dazzle/compliance/analytics/consent.py": {
     "functions": {
       "ConsentDefaults": 4,
@@ -1422,24 +1386,7 @@
   },
   "dazzle/compliance/analytics/consent_banner.py": {
     "functions": {
-      "render_consent_banner": 7,
-      "render_consent_banner_from_state": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/compliance/analytics/event_vocabulary.py": {
-    "functions": {
-      "EventParam": 1,
-      "EventSchema": 1,
-      "get_event_schema": 1,
-      "list_event_names": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/compliance/analytics/pii_filter.py": {
-    "functions": {
-      "PIIFilterResult": 1,
-      "strip_pii": 8
+      "render_consent_banner": 7
     },
     "mi_rank": "A"
   },
@@ -1512,42 +1459,6 @@
       "_render_entry": 1,
       "analytics_globally_disabled": 6,
       "resolve_active_providers": 11
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/compliance/analytics/sinks/__init__.py": {
-    "functions": {},
-    "mi_rank": "A"
-  },
-  "dazzle/compliance/analytics/sinks/base.py": {
-    "functions": {
-      "AnalyticsEvent": 1,
-      "AnalyticsSink": 2,
-      "AnalyticsSink.close": 1,
-      "AnalyticsSink.emit": 1,
-      "SinkMetrics": 1,
-      "SinkResult": 1,
-      "TenantContext": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/compliance/analytics/sinks/ga4.py": {
-    "functions": {
-      "GA4MeasurementProtocolSink": 5,
-      "GA4MeasurementProtocolSink.__init__": 1,
-      "GA4MeasurementProtocolSink._api_secret": 2,
-      "GA4MeasurementProtocolSink._build_payload": 6,
-      "GA4MeasurementProtocolSink._ensure_client": 3,
-      "GA4MeasurementProtocolSink.close": 2,
-      "GA4MeasurementProtocolSink.emit": 12
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/compliance/analytics/sinks/registry.py": {
-    "functions": {
-      "_ga4_factory": 1,
-      "get_sink_factory": 1,
-      "list_sink_names": 1
     },
     "mi_rank": "A"
   },
@@ -1846,16 +1757,6 @@
       "_strip_bold": 1,
       "get_changelog_path": 1,
       "parse_changelog_since": 13
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/core/changes.py": {
-    "functions": {
-      "ChangeSet": 13,
-      "ChangeSet.is_empty": 16,
-      "ChangeSet.requires_full_rebuild": 3,
-      "ChangeSet.summary": 18,
-      "detect_changes": 13
     },
     "mi_rank": "A"
   },
@@ -2165,8 +2066,6 @@
       "AnalyticsParserMixin._parse_consent_block": 8,
       "AnalyticsParserMixin._parse_provider_params": 7,
       "AnalyticsParserMixin._parse_providers_block": 6,
-      "AnalyticsParserMixin._parse_server_side_block": 10,
-      "AnalyticsParserMixin._parse_topic_glob_list": 7,
       "AnalyticsParserMixin.parse_analytics": 8
     },
     "mi_rank": "A"
@@ -3153,18 +3052,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/core/expression_lang/type_checker.py": {
-    "functions": {
-      "_infer": 9,
-      "_infer_binary": 30,
-      "_infer_func": 7,
-      "_infer_if": 1,
-      "_infer_literal": 6,
-      "_infer_unary": 2,
-      "infer_type": 2
-    },
-    "mi_rank": "A"
-  },
   "dazzle/core/fidelity_scorer.py": {
     "functions": {
       "HTMLElement": 3,
@@ -3369,7 +3256,6 @@
     "functions": {
       "AnalyticsConsentSpec": 1,
       "AnalyticsProviderInstance": 1,
-      "AnalyticsServerSideSpec": 1,
       "AnalyticsSpec": 1
     },
     "mi_rank": "A"
@@ -3641,7 +3527,6 @@
       "BinaryOp": 1,
       "DurationLiteral": 2,
       "DurationLiteral.__str__": 1,
-      "ExprType": 1,
       "FieldRef": 2,
       "FieldRef.__str__": 1,
       "FieldRef.field_name": 1,
@@ -4573,8 +4458,7 @@
       "project_last_seen_version": 1,
       "project_log_dir": 1,
       "project_manifest": 1,
-      "project_processes_dir": 1,
-      "project_test_results_dir": 1
+      "project_processes_dir": 1
     },
     "mi_rank": "A"
   },
@@ -5051,22 +4935,6 @@
       "_load_from_file": 2,
       "get_spec_summary": 4,
       "load_spec": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/core/state.py": {
-    "functions": {
-      "BuildState": 2,
-      "BuildState.from_dict": 1,
-      "BuildState.to_dict": 1,
-      "StateError": 1,
-      "clear_state": 2,
-      "compute_dsl_hashes": 3,
-      "compute_file_hash": 3,
-      "get_state_file_path": 1,
-      "load_state": 3,
-      "save_state": 3,
-      "simplify_appspec": 9
     },
     "mi_rank": "A"
   },
@@ -8600,12 +8468,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/http/runtime/process_schema.py": {
-    "functions": {
-      "ensure_process_tables": 1
-    },
-    "mi_rank": "A"
-  },
   "dazzle/http/runtime/qa_routes.py": {
     "functions": {
       "MagicLinkRequest": 1,
@@ -10222,29 +10084,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/llm/models.py": {
-    "functions": {
-      "BusinessRule": 1,
-      "BusinessRuleType": 1,
-      "CRUDAnalysis": 5,
-      "CRUDAnalysis._coerce_string_operations": 4,
-      "CRUDOperation": 1,
-      "ImpliedTransition": 1,
-      "MissingSpecification": 1,
-      "Question": 1,
-      "QuestionCategory": 1,
-      "QuestionPriority": 1,
-      "SpecAnalysis": 4,
-      "SpecAnalysis.get_all_questions": 2,
-      "SpecAnalysis.get_crud_coverage": 3,
-      "SpecAnalysis.get_high_priority_questions": 3,
-      "SpecAnalysis.get_question_count": 2,
-      "SpecAnalysis.get_state_machine_coverage": 5,
-      "StateMachine": 1,
-      "StateTransition": 1
-    },
-    "mi_rank": "A"
-  },
   "dazzle/log_setup.py": {
     "functions": {
       "SecretRedactionFilter": 6,
@@ -10314,10 +10153,8 @@
   "dazzle/mcp/inference.py": {
     "functions": {
       "_inference_entity_to_suggestion": 7,
-      "get_inference_kb_version": 3,
       "list_all_patterns": 11,
-      "lookup_inference": 7,
-      "reload_inference_kb": 2
+      "lookup_inference": 7
     },
     "mi_rank": "A"
   },
@@ -10561,46 +10398,6 @@
   "dazzle/mcp/resources.py": {
     "functions": {
       "create_resources": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/runtime_tools/__init__.py": {
-    "functions": {},
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/runtime_tools/components.py": {
-    "functions": {
-      "get_all_component_names": 2,
-      "get_component_by_name": 2,
-      "get_valid_layout_kinds": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/runtime_tools/definitions.py": {
-    "functions": {
-      "get_runtime_tools": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/runtime_tools/handlers.py": {
-    "functions": {
-      "_build_dispatch_table": 1,
-      "_compose_workspace": 11,
-      "_create_uispec_component": 11,
-      "_get_backend_service_spec": 7,
-      "_get_channel_status": 9,
-      "_get_dispatch": 1,
-      "_get_dnr_component_spec": 9,
-      "_get_dnr_entity": 7,
-      "_get_outbox_status": 4,
-      "_list_backend_services": 6,
-      "_list_channels": 4,
-      "_list_dnr_components": 7,
-      "_list_dnr_entities": 3,
-      "_list_messages": 8,
-      "_list_workspace_layouts": 1,
-      "_patch_uispec_component": 15,
-      "handle_runtime_tool": 3
     },
     "mi_rank": "A"
   },
@@ -11018,14 +10815,12 @@
   },
   "dazzle/mcp/server/handlers/serializers.py": {
     "functions": {
-      "list_response": 1,
       "serialize_entity_detail": 6,
       "serialize_entity_summary": 2,
       "serialize_story": 1,
       "serialize_story_summary": 1,
       "serialize_surface_detail": 9,
       "serialize_surface_summary": 4,
-      "serialize_test_design": 1,
       "serialize_ux_summary": 9
     },
     "mi_rank": "A"
@@ -11108,40 +10903,10 @@
     "functions": {},
     "mi_rank": "A"
   },
-  "dazzle/mcp/server/handlers/test_design/coverage.py": {
-    "functions": {
-      "_generate_crud_steps": 7,
-      "_generate_state_machine_test_template": 2,
-      "_generate_view_steps": 6,
-      "get_coverage_actions_handler": 1,
-      "get_runtime_coverage_gaps_handler": 1,
-      "save_runtime_coverage_handler": 2,
-      "test_design_coverage_actions_impl": 35,
-      "test_design_runtime_gaps_impl": 18,
-      "test_design_save_runtime_impl": 1
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/server/handlers/test_design/gaps.py": {
     "functions": {
       "_state_transition_flow_covered": 3,
       "get_test_gaps_handler": 47
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/server/handlers/test_design/persistence.py": {
-    "functions": {
-      "save_test_designs_handler": 2,
-      "test_design_save_impl": 6
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/mcp/server/handlers/test_design/proposals.py": {
-    "functions": {
-      "_parse_test_design_action": 3,
-      "_parse_test_design_trigger": 3,
-      "propose_persona_tests_handler": 1,
-      "test_design_propose_persona_impl": 27
     },
     "mi_rank": "A"
   },
@@ -11248,7 +11013,6 @@
     "functions": {
       "ServerState": 2,
       "ServerState.__init__": 1,
-      "ServerState.get_or_create_ui_spec": 2,
       "ServerState.reset": 1,
       "_auto_populate_graph": 4,
       "_detect_dev_environment": 6,
@@ -11259,10 +11023,8 @@
       "get_activity_store": 1,
       "get_available_projects": 1,
       "get_knowledge_graph": 1,
-      "get_or_create_ui_spec": 1,
       "get_project_root": 1,
       "get_state": 1,
-      "get_ui_spec": 1,
       "init_activity_log": 1,
       "init_activity_store": 4,
       "init_browser_gate": 2,
@@ -11273,9 +11035,7 @@
       "reset_state": 1,
       "resolve_project_path": 12,
       "set_active_project": 1,
-      "set_appspec_data": 1,
-      "set_project_root": 2,
-      "set_ui_spec": 1
+      "set_project_root": 2
     },
     "mi_rank": "A"
   },
@@ -11546,27 +11306,6 @@
       "_hm_build": 2,
       "_load_css_file": 5,
       "get_bundled_css": 6
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/page/runtime/dev_server.py": {
-    "functions": {
-      "DazzleDevHandler": 3,
-      "DazzleDevHandler._send_response": 1,
-      "DazzleDevHandler._serve_app": 2,
-      "DazzleDevHandler._serve_hot_reload": 3,
-      "DazzleDevHandler._serve_html": 2,
-      "DazzleDevHandler._serve_runtime": 2,
-      "DazzleDevHandler._serve_spec": 2,
-      "DazzleDevHandler.do_GET": 6,
-      "DazzleDevHandler.log_message": 1,
-      "DazzleDevServer": 2,
-      "DazzleDevServer.__init__": 1,
-      "DazzleDevServer.start": 2,
-      "DazzleDevServer.stop": 2,
-      "run_dev_server": 1,
-      "run_dev_server_from_dict": 1,
-      "run_dev_server_from_json": 1
     },
     "mi_rank": "A"
   },
@@ -12469,7 +12208,6 @@
   },
   "dazzle/rbac/byte_route_proof.py": {
     "functions": {
-      "_enclosing_func": 4,
       "_is_stream_construct": 5,
       "find_byte_route_violations": 8
     },
@@ -12508,8 +12246,6 @@
   },
   "dazzle/rbac/ir.py": {
     "functions": {
-      "collect_columns": 6,
-      "collect_user_attrs": 5,
       "has_data_dependent_node": 2,
       "iter_nodes": 4,
       "predicate_kinds": 3
@@ -12528,7 +12264,6 @@
       "PolicyDecision": 1,
       "PolicyWarning": 1,
       "_condition_has_field_filter": 7,
-      "_condition_is_pure_role": 3,
       "_condition_is_pure_role_only": 7,
       "_condition_matches_role": 5,
       "_extract_roles_from_access": 2,

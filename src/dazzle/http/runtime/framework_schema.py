@@ -237,7 +237,7 @@ def ensure_framework_schema(conn: Any) -> None:  # conn: psycopg.Connection
     statement a no-op when the object is already present.
 
     The connection is committed inside this function (same pattern as
-    ``AuthStore._init_db`` and ``ensure_process_tables``).
+    ``AuthStore._init_db``).
 
     Args:
         conn: A psycopg synchronous connection (autocommit=False).  The caller

@@ -26,7 +26,6 @@ _ROOTS = [pathlib.Path("src/dazzle/http"), pathlib.Path("src/dazzle/page")]
 # silent error swallowing. Keep this list tight — a new entry needs a reason.
 _ALLOW = {
     "combined_server.py",  # `dazzle serve` console banner + dependency hints
-    "dev_server.py",  # dev server console output
     "hot_reload.py",  # the --reload file-watcher's terminal UX
 }
 

@@ -16,7 +16,6 @@ DAZZLE_DIR = ".dazzle"
 
 # -- Subdirectory names under .dazzle ----------------------------------------
 LOGS_DIR = "logs"
-TEST_RESULTS_DIR = "test_results"
 STORIES_DIR = "stories"
 DEMO_DATA_DIR = "demo_data"
 PROCESSES_DIR = "processes"
@@ -48,11 +47,6 @@ def project_manifest(project_root: Path) -> Path:
 def project_log_dir(project_root: Path) -> Path:
     """Return the logs directory for a project."""
     return project_dazzle_dir(project_root) / LOGS_DIR
-
-
-def project_test_results_dir(project_root: Path) -> Path:
-    """Return the test results directory for a project."""
-    return project_dazzle_dir(project_root) / TEST_RESULTS_DIR
 
 
 def project_demo_data_dir(project_root: Path) -> Path:

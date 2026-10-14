@@ -1,9 +1,9 @@
 """Access-decision observability seam for the RBAC *verification* layer.
 
 This module is the Layer-3 hook the RBAC verification framework uses to
-*observe* `evaluate_permission()` decisions — for the `ConformanceMonitor`
-and the dynamic RBAC verifier (`InMemoryAuditSink`), or for offline
-analysis (`JsonFileAuditSink`). `set_audit_sink()` swaps the active sink.
+*observe* `evaluate_permission()` decisions — for the dynamic RBAC verifier
+and the `conformance` MCP tool's monitor status (`InMemoryAuditSink`), or for
+offline analysis (`JsonFileAuditSink`). `set_audit_sink()` swaps the active sink.
 
 It is **not** the production audit trail. In production the sink is
 `NullAuditSink` *by design* (zero overhead) — the durable access-decision

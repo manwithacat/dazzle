@@ -17,12 +17,9 @@ from collections.abc import Iterator
 
 from dazzle.core.ir.predicates import (
     BoolComposite,
-    ColumnCheck,
-    ColumnRefCheck,
     ExistsCheck,
     PathCheck,
     PolyPathCheck,
-    UserAttrCheck,
 )
 
 # Every concrete node kind the union can hold. Kept here as the single list the
@@ -56,36 +53,6 @@ def iter_nodes(node: object) -> Iterator[object]:
 def predicate_kinds(node: object) -> set[str]:
     """The set of node `kind` discriminators present in a predicate tree."""
     return {k for n in iter_nodes(node) if (k := getattr(n, "kind", None)) is not None}
-
-
-def collect_columns(node: object) -> set[str]:
-    """Entity columns a predicate constrains (best-effort; paths joined by '.')."""
-    cols: set[str] = set()
-    for n in iter_nodes(node):
-        if isinstance(n, (ColumnCheck, UserAttrCheck)):
-            cols.add(n.field)
-        elif isinstance(n, ColumnRefCheck):
-            cols.add(n.field)
-            cols.add(n.other_field)
-        elif isinstance(n, PathCheck):
-            cols.add(".".join(n.path))
-        elif isinstance(n, PolyPathCheck):
-            cols.add(n.type_field)
-            cols.add(n.id_field)
-    return cols
-
-
-def collect_user_attrs(node: object) -> set[str]:
-    """Current-user attributes a predicate reads (e.g. 'id', 'org_id')."""
-    attrs: set[str] = set()
-    for n in iter_nodes(node):
-        if isinstance(n, UserAttrCheck):
-            attrs.add(n.user_attr)
-        elif isinstance(n, (ColumnCheck, PathCheck)):
-            ua = getattr(n.value, "user_attr", None)
-            if ua is not None:
-                attrs.add(ua)
-    return attrs
 
 
 def has_data_dependent_node(node: object) -> bool:

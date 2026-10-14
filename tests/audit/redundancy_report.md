@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 1,002
-- **Tests inside those clusters**: 3,945
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,943 tests** (≈ 20.6% of the suite)
+- **Clusters of ≥3**: 990
+- **Tests inside those clusters**: 3,902
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,912 tests** (≈ 20.4% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -16,8 +16,8 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 |---|---:|
 | 20+ | 3 |
 | 10-19 | 13 |
-| 5-9 | 176 |
-| 3-4 | 810 |
+| 5-9 | 175 |
+| 3-4 | 799 |
 
 ## Top 30 largest clusters
 
@@ -59,9 +59,9 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | File | Tests that could collapse |
 |---|---:|
 | `tests/unit/test_region_adapter.py` | 72 |
-| `tests/unit/http_runtime/test_query_builder.py` | 32 |
 | `tests/unit/test_auth_connection_cli.py` | 27 |
 | `tests/unit/render/fragment/test_data_primitives.py` | 27 |
+| `tests/unit/http_runtime/test_query_builder.py` | 27 |
 | `tests/unit/test_expression_lang.py` | 27 |
 | `tests/unit/test_schema_diff.py` | 25 |
 | `tests/unit/test_two_factor_views.py` | 25 |
@@ -73,7 +73,7 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 
 Clusters whose subject is an input-boundary surface (parser/validator/crypto/…). Each is a candidate to collapse into ONE property test (input space → invariant) — which then becomes a fuzz target — rather than a fixed `@pytest.mark.parametrize` list. Path-based hint; confirm by reading the cluster. (#1342)
 
-- **Property/fuzz-candidate clusters**: 128
+- **Property/fuzz-candidate clusters**: 127
 
 | File | Class | Size | Form | Why |
 |---|---|---:|---|---|

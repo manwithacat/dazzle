@@ -9,7 +9,7 @@ Tests sharing the same `(class_name, assertion_shape, public_target)` across mul
 - **Clusters of size ≥4 across ≥2 files**: 21
 - **Tests inside cross-file clusters**: 205
 - **Theoretical saving**: ~184 if each cluster collapses to one parametric test
-- **Skipped (no attributable public target)**: 1,272 tests — shape matches without a shared target are not actionable
+- **Skipped (no attributable public target)**: 1,274 tests — shape matches without a shared target are not actionable
 
 ### Top 25 cross-file clusters
 
@@ -64,39 +64,39 @@ Files dominated by tests that pin internal call shapes (high mocks, short body, 
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 11957
+- **Twin pairs**: 11751
 
 ### Top 30 twin pairs
 
 | File A | File B | A | B | Shared | Overlap |
 |---|---|---:|---:|---:|---:|
-| `test_query_builder.py` | `test_parser.py` | 55 | 132 | 41 | 0.75 |
 | `test_pdf_viewer_component.py` | `test_region_adapter.py` | 52 | 121 | 38 | 0.73 |
-| `test_mapping_executor.py` | `test_parser.py` | 49 | 132 | 36 | 0.73 |
-| `test_parser.py` | `test_rbac_verifier.py` | 132 | 43 | 36 | 0.84 |
-| `test_data_primitives.py` | `test_parser.py` | 37 | 132 | 34 | 0.92 |
-| `test_fidelity_scorer.py` | `test_parser.py` | 39 | 132 | 34 | 0.87 |
+| `test_mapping_executor.py` | `test_parser.py` | 49 | 130 | 36 | 0.73 |
+| `test_parser.py` | `test_rbac_verifier.py` | 130 | 43 | 36 | 0.84 |
+| `test_data_primitives.py` | `test_parser.py` | 37 | 130 | 34 | 0.92 |
+| `test_fidelity_scorer.py` | `test_parser.py` | 39 | 130 | 34 | 0.87 |
+| `test_query_builder.py` | `test_parser.py` | 44 | 130 | 31 | 0.7 |
 | `test_region_adapter.py` | `test_two_factor_views.py` | 121 | 35 | 31 | 0.89 |
 | `test_fidelity_scorer.py` | `test_rbac_verifier.py` | 39 | 43 | 29 | 0.74 |
-| `test_parser.py` | `test_workspace_layout_prefs.py` | 132 | 31 | 29 | 0.94 |
-| `test_datatable_handler.py` | `test_parser.py` | 30 | 132 | 28 | 0.93 |
-| `test_parser.py` | `test_structured_content.py` | 132 | 32 | 28 | 0.88 |
-| `test_query_builder.py` | `test_data_primitives.py` | 55 | 37 | 27 | 0.73 |
-| `test_data_primitives.py` | `test_expression_lang.py` | 37 | 83 | 26 | 0.7 |
+| `test_parser.py` | `test_workspace_layout_prefs.py` | 130 | 31 | 29 | 0.94 |
+| `test_datatable_handler.py` | `test_parser.py` | 30 | 130 | 28 | 0.93 |
+| `test_parser.py` | `test_structured_content.py` | 130 | 32 | 27 | 0.84 |
+| `test_data_primitives.py` | `test_expression_lang.py` | 37 | 82 | 26 | 0.7 |
 | `test_agent_performance_resource.py` | `test_persona_journey.py` | 33 | 55 | 26 | 0.79 |
-| `test_datatable_handler.py` | `test_expression_lang.py` | 30 | 83 | 26 | 0.87 |
 | `test_datatable_handler.py` | `test_mapping_executor.py` | 30 | 49 | 26 | 0.87 |
-| `test_events.py` | `test_parser.py` | 36 | 132 | 26 | 0.72 |
-| `test_expression_lang.py` | `test_org_activation.py` | 83 | 36 | 26 | 0.72 |
-| `test_expression_lang.py` | `test_rbac_ui_fixes.py` | 83 | 30 | 26 | 0.87 |
+| `test_events.py` | `test_parser.py` | 36 | 130 | 26 | 0.72 |
+| `test_expression_lang.py` | `test_org_activation.py` | 82 | 36 | 26 | 0.72 |
+| `test_expression_lang.py` | `test_rbac_ui_fixes.py` | 82 | 30 | 26 | 0.87 |
 | `test_persona_journey.py` | `test_ux_contract_checker.py` | 55 | 36 | 26 | 0.72 |
-| `test_scim_routes.py` | `test_parser.py` | 33 | 132 | 25 | 0.76 |
+| `test_scim_routes.py` | `test_parser.py` | 33 | 130 | 25 | 0.76 |
 | `test_agent_auth.py` | `test_persona_journey.py` | 26 | 55 | 25 | 0.96 |
 | `test_agent_performance_resource.py` | `test_ux_contract_checker.py` | 33 | 36 | 25 | 0.76 |
+| `test_datatable_handler.py` | `test_expression_lang.py` | 30 | 82 | 25 | 0.83 |
 | `test_datatable_handler.py` | `test_rbac_verifier.py` | 30 | 43 | 25 | 0.83 |
-| `test_parser.py` | `test_rbac_ui_fixes.py` | 132 | 30 | 25 | 0.83 |
+| `test_parser.py` | `test_rbac_ui_fixes.py` | 130 | 30 | 25 | 0.83 |
 | `test_predicate_compiler.py` | `test_region_adapter.py` | 34 | 121 | 25 | 0.74 |
-| `test_auth.py` | `test_rbac_ui_fixes.py` | 80 | 30 | 24 | 0.8 |
-| `test_auth.py` | `test_structured_content.py` | 80 | 32 | 24 | 0.75 |
-| `test_query_builder.py` | `test_workspace_layout_prefs.py` | 55 | 31 | 24 | 0.77 |
+| `test_auth.py` | `test_rbac_ui_fixes.py` | 78 | 30 | 24 | 0.8 |
+| `test_auth.py` | `test_structured_content.py` | 78 | 32 | 24 | 0.75 |
 | `test_data_primitives.py` | `test_workspace_layout_prefs.py` | 37 | 31 | 24 | 0.77 |
+| `test_agent_auth.py` | `test_ux_contract_checker.py` | 26 | 36 | 24 | 0.92 |
+| `test_agent_data_integrity.py` | `test_parser.py` | 26 | 130 | 24 | 0.92 |

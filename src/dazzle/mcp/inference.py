@@ -156,16 +156,6 @@ _GUIDANCE = (
 # ---------------------------------------------------------------------------
 
 
-def get_inference_kb_version() -> str:
-    """Get the version of the inference knowledge base."""
-    graph = _get_kg()
-    if graph is not None:
-        version: str | None = graph.get_seed_meta("seed_version")
-        if version:
-            return version
-    return "unknown"
-
-
 def lookup_inference(
     query: str,
     detail: Literal["minimal", "full"] = "minimal",
@@ -298,17 +288,3 @@ def list_all_patterns() -> dict[str, Any]:
         result["domains"] = domains
 
     return result
-
-
-def reload_inference_kb() -> dict[str, Any]:
-    """Re-seed the inference knowledge from TOML into the KG."""
-    graph = _get_kg()
-    if graph is not None:
-        from dazzle.mcp.knowledge_graph.seed import seed_framework_knowledge
-
-        seed_framework_knowledge(graph)
-
-    return {
-        "status": "reloaded",
-        "version": get_inference_kb_version(),
-    }

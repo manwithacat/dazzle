@@ -7,7 +7,6 @@ TestDesignSpec, EntitySpec, and SurfaceSpec used across all MCP handlers.
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -79,12 +78,6 @@ _TD_FULL_FIELDS = frozenset(
         "notes",
     }
 )
-
-
-def serialize_test_design(td: Any) -> dict[str, Any]:
-    """Full test design serialization with steps, outcomes, and metadata."""
-    result: dict[str, Any] = td.model_dump(mode="json", include=set(_TD_FULL_FIELDS))
-    return result
 
 
 # =============================================================================
@@ -199,10 +192,3 @@ def serialize_surface_detail(surface: SurfaceSpec) -> dict[str, Any]:
 # =============================================================================
 # Generic response helpers
 # =============================================================================
-
-
-def list_response(items: list[Any], **extra: Any) -> str:
-    """Build standard JSON list response with count."""
-    payload: dict[str, Any] = {"count": len(items), "items": items}
-    payload.update(extra)
-    return json.dumps(payload, indent=2)

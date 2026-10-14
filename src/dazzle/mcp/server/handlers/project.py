@@ -79,7 +79,7 @@ def list_projects() -> str:
 
 def load_appspec_for_project(project_path: Path) -> bool:
     """
-    Load AppSpec for a project to enable the Dazzle runtime tools.
+    Check that a project's DSL parses and links into an AppSpec with entities.
 
     Args:
         project_path: Path to the project directory
@@ -113,9 +113,6 @@ def load_appspec_for_project(project_path: Path) -> bool:
         if not appspec.domain.entities:
             logger.warning("No entities found in %s", project_path)
             return False
-
-        # Store AppSpec data for the Dazzle runtime tools
-        get_state().appspec_data = appspec.model_dump()
 
         logger.info(
             "Loaded AppSpec for %s: %s entities, %s surfaces",
@@ -183,7 +180,6 @@ def select_project(args: dict[str, Any]) -> str:
         state.knowledge_graph = None
         state.graph_db_path = None
         state.activity_store = None
-        state.appspec_data = None
         return error_response(f"Could not select project '{project_name}': {e}")
 
     set_active_project(project_name)
@@ -202,8 +198,7 @@ def select_project(args: dict[str, Any]) -> str:
     except Exception as e:
         result["warning"] = f"Could not load manifest: {e}"
 
-    # Auto-load AppSpec for the Dazzle runtime tools
-    get_state().appspec_data = None
+    # Check that the project's DSL builds an AppSpec
     appspec_loaded = load_appspec_for_project(project_path)
     if appspec_loaded:
         result["appspec"] = "loaded"
@@ -249,7 +244,7 @@ def get_active_project_info(resolved_path: Path | None = None) -> str:
                 "version": manifest.version,
             }
 
-            # Auto-load AppSpec for the Dazzle runtime tools
+            # Report whether the project's DSL builds an AppSpec
             appspec_loaded = load_appspec_for_project(project_root)
             result["appspec"] = "loaded" if appspec_loaded else "not loaded"
 

@@ -1,8 +1,8 @@
 """
 Dazzle typed expression language.
 
-Tokenizer, parser, evaluator, and type checker for the unified
-expression system described in #275.
+Tokenizer, parser and evaluator for the unified expression system
+described in #275.
 
 Usage:
     from dazzle.core.expression_lang import parse_expr, evaluate
@@ -14,6 +14,5 @@ Usage:
 
 from dazzle.core.expression_lang.evaluator import evaluate
 from dazzle.core.expression_lang.parser import parse_expr
-from dazzle.core.expression_lang.type_checker import infer_type
 
-__all__ = ["evaluate", "infer_type", "parse_expr"]
+__all__ = ["evaluate", "parse_expr"]

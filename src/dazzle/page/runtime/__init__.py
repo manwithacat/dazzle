@@ -23,12 +23,6 @@ Example usage:
     >>> generate_preview_files(appspec, "preview/")
 """
 
-from dazzle.page.runtime.dev_server import (
-    DazzleDevServer,
-    run_dev_server,
-    run_dev_server_from_dict,
-    run_dev_server_from_json,
-)
 from dazzle.page.runtime.template_renderer import render_page
 from dazzle.render.context import (
     ColumnContext,
@@ -54,11 +48,6 @@ __all__ = [
     "PdfViewerContext",
     "ColumnContext",
     "FieldContext",
-    # Development server
-    "DazzleDevServer",
-    "run_dev_server",
-    "run_dev_server_from_dict",
-    "run_dev_server_from_json",
     # Unified server (single-port FastAPI) moved to dazzle.http.runtime.combined_server
     # (#smells 2026-06-19 — ui must not import back; the composition root lives in back).
 ]

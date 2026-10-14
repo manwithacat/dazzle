@@ -3,7 +3,7 @@
 ``PgProcessStateStore`` exposes **exactly** the same public methods as
 ``ProcessStateStore`` (the Redis store in ``process_state.py``), backed by the
 ``process_runs`` / ``process_tasks`` framework tables created by
-``ensure_process_tables`` (Task 2).
+``ensure_framework_schema`` (and lazily by ``_ensure`` below in development).
 
 Design choices
 --------------
@@ -198,16 +198,13 @@ class PgProcessStateStore:
     def _ensure(self) -> None:
         """Create ``process_runs`` / ``process_tasks`` on first use.
 
-        Inlines the same DDL as ``ensure_process_tables`` (Task 2 /
-        ``dazzle.http.runtime.process_schema``) so that ``dazzle.core`` never
-        imports ``dazzle.http`` — the import-linter layer contract forbids that
-        edge.  Both paths share ``queue_columns_ddl`` (``dazzle.core.coordination``
-        — a core→core import, allowed) as the single source of truth for the
-        queue column set.
-
-        The http-layer boot path (``ensure_process_tables``) and this core-layer
-        path are intentional dual-write: each is idempotent (``IF NOT EXISTS``),
-        so whichever runs first wins and the other is a no-op.
+        Inlines the process-table DDL so that ``dazzle.core`` never imports
+        ``dazzle.http`` — the import-linter layer contract forbids that edge.
+        The column set comes from ``queue_columns_ddl``
+        (``dazzle.core.coordination`` — a core→core import, allowed), the single
+        source of truth for the queue columns. Every statement is idempotent
+        (``IF NOT EXISTS``), so running after ``ensure_framework_schema`` is a
+        no-op.
         """
         if self._tables_ensured:
             return

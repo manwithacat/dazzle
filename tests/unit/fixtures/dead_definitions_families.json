@@ -1,10 +1,3 @@
 {
-  "src/dazzle/api_kb/loader.py::get_all_env_vars": "semantics-and-kb-residue",
-  "src/dazzle/compliance/analytics/consent_banner.py::render_consent_banner_from_state": "error-and-report-helpers",
-  "src/dazzle/compliance/slicer.py::load_document_spec": "error-and-report-helpers",
-  "src/dazzle/mcp/inference.py::reload_inference_kb": "agent-and-loop-legacy",
-  "src/dazzle/rbac/byte_route_proof.py::_enclosing_func": "qa-and-testing-helpers",
-  "src/dazzle/rbac/ir.py::collect_columns": "qa-and-testing-helpers",
-  "src/dazzle/rbac/ir.py::collect_user_attrs": "qa-and-testing-helpers",
-  "src/dazzle/rbac/matrix.py::_condition_is_pure_role": "qa-and-testing-helpers"
+  "src/dazzle/compliance/slicer.py::load_document_spec": "error-and-report-helpers"
 }

@@ -1,7 +1,9 @@
 """
-Auto-generated E2E tests for simple_task.
+E2E tests for simple_task.
 
-Generated from E2ETestSpec by Dazzle playwright_codegen.
+First generated from an E2ETestSpec by Dazzle's ``playwright_codegen``, which
+was removed in flense ship M (ADR-0057). Nothing regenerates this file now:
+edit it by hand.
 
 This module uses the console logging infrastructure from conftest.py:
 - page_diagnostics: Captures all browser console output

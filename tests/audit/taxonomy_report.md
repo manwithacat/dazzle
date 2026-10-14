@@ -1,4 +1,4 @@
-# Test Suite Taxonomy — Pass 1 (17,090 test functions)
+# Test Suite Taxonomy — Pass 1 (16,789 test functions)
 
 Static classification per `docs/proposals/Suite Distillation Strategy.md`. No execution; AST + import-shape heuristics only. Confidence < 0.8 means the classifier could be wrong; see rationale field.
 
@@ -6,21 +6,21 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 
 | Archetype | Count | % | High-confidence count |
 |---|---:|---:|---:|
-| contract | 14,153 | 82.8% | 0 |
-| smoke | 1,881 | 11.0% | 863 |
-| parametric_cluster | 467 | 2.7% | 467 |
-| regression_pin | 450 | 2.6% | 450 |
+| contract | 13,875 | 82.6% | 0 |
+| smoke | 1,861 | 11.1% | 861 |
+| parametric_cluster | 470 | 2.8% | 470 |
+| regression_pin | 445 | 2.7% | 445 |
 | implementation_mirror | 72 | 0.4% | 0 |
 | property_based | 51 | 0.3% | 51 |
-| snapshot | 10 | 0.1% | 10 |
+| snapshot | 9 | 0.1% | 9 |
 | belt_and_braces | 6 | 0.0% | 0 |
 
 ## Action thresholds
 
-- **Definitely keep**: 15,131 (contract + regression_pin + parametric + snapshot + property_based)
+- **Definitely keep**: 14,850 (contract + regression_pin + parametric + snapshot + property_based)
 - **Property-based (fuzzable; the target archetype)**: 51
 - **Review for collapse/rewrite**: 78 (implementation_mirror + belt_and_braces)
-- **Smoke tests** (canary; keep but never as sole coverage): 1,881
+- **Smoke tests** (canary; keep but never as sole coverage): 1,861
 
 ## Top 10 implementation-mirror files
 
@@ -38,10 +38,10 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 ## Top 10 smoke-test files
 
 - `tests/unit/test_csrf_disposition_phase3.py` — 21 smoke tests
-- `tests/unit/http_runtime/test_auth.py` — 18 smoke tests
+- `tests/unit/test_parser.py` — 19 smoke tests
 - `tests/unit/test_expression_lang.py` — 18 smoke tests
 - `tests/unit/test_invariant_evaluator.py` — 18 smoke tests
-- `tests/unit/test_parser.py` — 18 smoke tests
+- `tests/unit/http_runtime/test_auth.py` — 17 smoke tests
 - `tests/unit/test_csrf_origin_gate_phase2.py` — 17 smoke tests
 - `tests/unit/test_aggregate_expression_l3.py` — 15 smoke tests
 - `tests/unit/test_llm_driver.py` — 15 smoke tests

@@ -14,12 +14,10 @@ import pytest
 from dazzle.core.expression_lang.evaluator import ExpressionEvalError, evaluate
 from dazzle.core.expression_lang.parser import ExpressionParseError, parse_expr
 from dazzle.core.expression_lang.tokenizer import ExpressionTokenError, TokenKind, tokenize
-from dazzle.core.expression_lang.type_checker import infer_type
 from dazzle.core.ir.expressions import (
     BinaryExpr,
     BinaryOp,
     DurationLiteral,
-    ExprType,
     FieldRef,
     FuncCall,
     IfExpr,
@@ -741,85 +739,6 @@ class TestEvalNullHandling:
         expr = parse_expr("coalesce(x, 0)")
         assert evaluate(expr, {"x": None}) == 0
         assert evaluate(expr, {"x": 42}) == 42
-
-
-# ============================================================================
-# Type checker tests
-# ============================================================================
-
-
-class TestTypeInference:
-    """Type checker infers expression types correctly."""
-
-    @pytest.mark.parametrize(
-        ("expr_str", "ctx", "expected_type"),
-        [
-            # Literals (no context needed)
-            ("42", {}, ExprType.INT),
-            ("3.14", {}, ExprType.FLOAT),
-            ('"hello"', {}, ExprType.STR),
-            ("true", {}, ExprType.BOOL),
-            ("null", {}, ExprType.NULL),
-            ("7d", {}, ExprType.DURATION),
-            # Field references resolve through context (or default to ANY)
-            ("amount", {"amount": ExprType.MONEY}, ExprType.MONEY),
-            ("amount", {}, ExprType.ANY),
-            # Arithmetic propagates / promotes type
-            ("a + b", {"a": ExprType.INT, "b": ExprType.INT}, ExprType.INT),
-            ("a + b", {"a": ExprType.INT, "b": ExprType.FLOAT}, ExprType.FLOAT),
-            ("price + tax", {"price": ExprType.MONEY, "tax": ExprType.MONEY}, ExprType.MONEY),
-            ("price * qty", {"price": ExprType.MONEY, "qty": ExprType.INT}, ExprType.MONEY),
-            ("a / b", {"a": ExprType.INT, "b": ExprType.INT}, ExprType.FLOAT),
-            ("a + b", {"a": ExprType.STR, "b": ExprType.STR}, ExprType.STR),
-            # Boolean-producing ops
-            ("x > 0", {}, ExprType.BOOL),
-            ("x == y", {}, ExprType.BOOL),
-            ("a and b", {}, ExprType.BOOL),
-            ("not x", {}, ExprType.BOOL),
-            ("x in [1, 2]", {}, ExprType.BOOL),
-            # Date arithmetic
-            ("start + 7d", {"start": ExprType.DATE}, ExprType.DATE),
-            ("a - b", {"a": ExprType.DATE, "b": ExprType.DATE}, ExprType.DURATION),
-            # Built-in functions
-            ("today()", {}, ExprType.DATE),
-            ("days_until(x)", {}, ExprType.INT),
-            ("concat(a, b)", {}, ExprType.STR),
-            # If-expression returns the type of its branches
-            ('if x: "yes" else: "no"', {}, ExprType.STR),
-            # abs() preserves operand type
-            ("abs(x)", {"x": ExprType.MONEY}, ExprType.MONEY),
-        ],
-        ids=[
-            "int_literal",
-            "float_literal",
-            "string_literal",
-            "bool_literal",
-            "null_literal",
-            "duration_literal",
-            "field_with_ctx",
-            "field_without_ctx",
-            "int_plus_int",
-            "int_plus_float_promotes",
-            "money_plus_money",
-            "money_times_int",
-            "int_div_int_returns_float",
-            "str_concat",
-            "comparison_gt",
-            "comparison_eq",
-            "logic_and",
-            "logic_not",
-            "in_list",
-            "date_plus_duration",
-            "date_minus_date",
-            "today_returns_date",
-            "days_until_returns_int",
-            "concat_returns_str",
-            "if_returns_branch_type",
-            "abs_preserves_type",
-        ],
-    )
-    def test_infer_type(self, expr_str, ctx, expected_type) -> None:
-        assert infer_type(parse_expr(expr_str), ctx) == expected_type
 
 
 # ============================================================================

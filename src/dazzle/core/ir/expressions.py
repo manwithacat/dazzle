@@ -23,26 +23,6 @@ from enum import StrEnum
 from pydantic import BaseModel, ConfigDict, Field
 
 # ---------------------------------------------------------------------------
-# Expression type system
-# ---------------------------------------------------------------------------
-
-
-class ExprType(StrEnum):
-    """Types that expressions can evaluate to."""
-
-    INT = "int"
-    FLOAT = "float"
-    STR = "str"
-    BOOL = "bool"
-    DATE = "date"
-    DATETIME = "datetime"
-    MONEY = "money"
-    DURATION = "duration"
-    NULL = "null"
-    ANY = "any"
-
-
-# ---------------------------------------------------------------------------
 # Operators
 # ---------------------------------------------------------------------------
 

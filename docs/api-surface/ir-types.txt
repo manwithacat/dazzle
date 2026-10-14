@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 283 BaseModels, 103 Enums, 17 other (functions / typealiases / constants)
+# Counts: 282 BaseModels, 103 Enums, 17 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -91,19 +91,11 @@ ir_class: AnalyticsProviderInstance
   optional:
     - params: dict[str, str] = {}
 
-ir_class: AnalyticsServerSideSpec
-  required:
-    - sink: str
-  optional:
-    - bus_topics: list[str] = []
-    - measurement_id: str | None = None
-
 ir_class: AnalyticsSpec
   required: (none)
   optional:
     - consent: AnalyticsConsentSpec | None = None
     - providers: list[AnalyticsProviderInstance] = []
-    - server_side: AnalyticsServerSideSpec | None = None
 
 ir_class: AppConfigSpec
   required: (none)

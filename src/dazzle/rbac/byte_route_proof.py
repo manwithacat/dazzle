@@ -105,11 +105,3 @@ def _walk_with_enclosing_func(tree: ast.AST) -> Iterator[tuple[ast.AST, str | No
         children = list(ast.iter_child_nodes(node))
         for child in reversed(children):
             stack.append((child, child_func))
-
-
-def _enclosing_func(tree: ast.AST, target: ast.AST) -> str | None:
-    """Return the name of the innermost function that contains *target*."""
-    for node, func in _walk_with_enclosing_func(tree):
-        if node is target:
-            return func
-    return None

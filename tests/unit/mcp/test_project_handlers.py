@@ -40,11 +40,6 @@ def _import_project():
     install_handlers_common_mock()
     sys.modules["dazzle.mcp.server.state"] = mock_state
 
-    # Mock runtime_tools module
-    mock_runtime = MagicMock()
-    mock_runtime.set_appspec_data = MagicMock()
-    sys.modules["dazzle.mcp.runtime_tools"] = mock_runtime
-
     module_path = (
         Path(__file__).parent.parent.parent.parent
         / "src"

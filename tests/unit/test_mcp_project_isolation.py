@@ -51,7 +51,6 @@ async def test_failed_switch_clears_previous_project_state(tmp_path: Path) -> No
     state.available_projects = {"other": project}
     state.active_project = "previous"
     state.knowledge_graph = MagicMock()
-    state.appspec_data = {"name": "previous"}
 
     with patch("dazzle.mcp.server.state.reinit_knowledge_graph", side_effect=OSError("broken db")):
         result = json.loads(
@@ -60,5 +59,4 @@ async def test_failed_switch_clears_previous_project_state(tmp_path: Path) -> No
     assert "Could not select project" in result["error"]
     assert state.active_project is None
     assert state.knowledge_graph is None
-    assert state.appspec_data is None
     reset_state()

@@ -12,7 +12,6 @@ handler and focus trap in `static/js/dz-consent.js` mount unchanged.
 
 from __future__ import annotations
 
-import json as _json
 from typing import Any
 
 from dazzle.render.html import esc as _esc
@@ -125,19 +124,4 @@ def render_consent_banner(
         '<button type="button" class="dz-consent-btn dz-consent-btn-link" '
         'data-dz-consent-action="back">Back</button>'
         "</div></div></div></div>"
-    )
-
-
-def render_consent_banner_from_state(
-    *,
-    consent: dict[str, Any],
-    privacy_page_url: str | None = None,
-    cookie_policy_url: str | None = None,
-) -> str:
-    """Convenience entry — serialises `consent` to JSON for the data attr."""
-    return render_consent_banner(
-        consent=consent,
-        consent_state_json=_json.dumps(consent),
-        privacy_page_url=privacy_page_url,
-        cookie_policy_url=cookie_policy_url,
     )

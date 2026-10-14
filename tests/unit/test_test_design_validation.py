@@ -1,74 +1,7 @@
-"""Unit tests for test design validation and persistence helpers."""
+"""Unit tests for the test design persistence helpers."""
 
-import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock
-
-import pytest
-
-# Pre-mock the mcp SDK package so dazzle.mcp.server can be imported
-# without the mcp package being installed.
-for _mod in ("mcp", "mcp.server", "mcp.server.fastmcp", "mcp.server.stdio", "mcp.types"):
-    sys.modules.setdefault(_mod, MagicMock(pytest_plugins=[]))
-
-from dazzle.mcp.server.handlers.test_design import (  # noqa: E402
-    _parse_test_design_action,
-    _parse_test_design_trigger,
-)
-
-
-class TestTestDesignActionParsing:
-    """Tests for TestDesignAction parsing with improved error messages."""
-
-    def test_valid_action_parsed(self) -> None:
-        """Test that valid actions are parsed correctly."""
-        from dazzle.core.ir.test_design import TestDesignAction
-
-        result = _parse_test_design_action("login_as")
-        assert result == TestDesignAction.LOGIN_AS
-
-        result = _parse_test_design_action("click")
-        assert result == TestDesignAction.CLICK
-
-    def test_invalid_action_shows_valid_options(self) -> None:
-        """Test that invalid action error includes all valid options."""
-        with pytest.raises(ValueError) as exc_info:
-            _parse_test_design_action("signup")
-
-        error_msg = str(exc_info.value)
-        assert "'signup' is not a valid action" in error_msg
-        assert "Valid actions:" in error_msg
-        # Check some known valid actions are listed
-        assert "login_as" in error_msg
-        assert "click" in error_msg
-        assert "navigate_to" in error_msg
-
-
-class TestTestDesignTriggerParsing:
-    """Tests for TestDesignTrigger parsing with improved error messages."""
-
-    def test_valid_trigger_parsed(self) -> None:
-        """Test that valid triggers are parsed correctly."""
-        from dazzle.core.ir.test_design import TestDesignTrigger
-
-        result = _parse_test_design_trigger("user_click")
-        assert result == TestDesignTrigger.USER_CLICK
-
-        result = _parse_test_design_trigger("page_load")
-        assert result == TestDesignTrigger.PAGE_LOAD
-
-    def test_invalid_trigger_shows_valid_options(self) -> None:
-        """Test that invalid trigger error includes all valid options."""
-        with pytest.raises(ValueError) as exc_info:
-            _parse_test_design_trigger("on_hover")
-
-        error_msg = str(exc_info.value)
-        assert "'on_hover' is not a valid trigger" in error_msg
-        assert "Valid triggers:" in error_msg
-        # Check some known valid triggers are listed
-        assert "user_click" in error_msg
-        assert "page_load" in error_msg
 
 
 class TestTestDesignIdCollisionHandling:

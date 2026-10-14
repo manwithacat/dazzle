@@ -114,15 +114,6 @@ def _condition_has_field_filter(condition: ConditionExpr | None) -> bool:
     return False
 
 
-def _condition_is_pure_role(condition: ConditionExpr | None, role: str) -> bool:
-    """Return True if condition is purely a role check matching *role*."""
-    if condition is None:
-        return False
-    if condition.role_check is not None:
-        return condition.role_check.role_name == role
-    return False
-
-
 def _condition_matches_role(condition: ConditionExpr | None, role: str) -> bool:
     """Return True if condition contains a role check matching *role* anywhere.
 

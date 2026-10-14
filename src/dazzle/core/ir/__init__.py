@@ -24,7 +24,6 @@ from .aggregates import (
 from .analytics import (
     AnalyticsConsentSpec,
     AnalyticsProviderInstance,
-    AnalyticsServerSideSpec,
     AnalyticsSpec,
 )
 from .appspec import (
@@ -151,7 +150,6 @@ from .expressions import (
 )
 from .expressions import (
     Expr,
-    ExprType,
 )
 from .expressions import (
     FieldRef as ExprFieldRef,
@@ -677,7 +675,6 @@ __all__ = [
     # Analytics (v0.61.0 Phase 3 + Phase 5)
     "AnalyticsConsentSpec",
     "AnalyticsProviderInstance",
-    "AnalyticsServerSideSpec",
     "AnalyticsSpec",
     # Conditions
     "ComparisonOperator",

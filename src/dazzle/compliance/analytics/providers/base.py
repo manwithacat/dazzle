@@ -63,8 +63,6 @@ class ProviderDefinition:
         noscript_renderer: Callable returning the HTML snippet rendered
             inside ``<noscript>`` (GTM convention — enables analytics
             when JS is disabled, if the provider supports it).
-        supports_server_side: Whether this provider has a server-side sink
-            implementation (Phase 5). Informational for audits.
         linked_subprocessor_name: Name of the matching subprocessor in
             the framework subprocessor registry. Used to surface GDPR
             compliance data for this provider automatically.
@@ -81,7 +79,6 @@ class ProviderDefinition:
     head_renderer: ProviderRenderer | None = None
     body_renderer: ProviderRenderer | None = None
     noscript_renderer: ProviderRenderer | None = None
-    supports_server_side: bool = False
     linked_subprocessor_name: str | None = None
     required_params: tuple[str, ...] = ()
     optional_params: tuple[str, ...] = ()

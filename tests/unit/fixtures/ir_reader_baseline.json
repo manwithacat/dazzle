@@ -14,6 +14,7 @@
   "integrations.MatchRule.foreign_field",
   "money.Money.amount_minor",
   "money.MoneyWithScale.scale_override",
+  "pii.PIIAnnotation.sensitivity",
   "rhythm.Gap.rhythm",
   "rhythm.Gap.scene",
   "rhythm.Gap.story_ref",

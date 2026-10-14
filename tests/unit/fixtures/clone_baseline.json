@@ -59,21 +59,6 @@
     ]
   },
   {
-    "signature": "exact:c401f08efd6a7dae7009649c0c6f3ccc",
-    "count": 9,
-    "names": [
-      "dazzle/cli/runtime_impl/ux_cycle_impl/subagent_explore.py::to_dict",
-      "dazzle/core/state.py::to_dict",
-      "dazzle/http/runtime/retry_accumulator.py::to_dict",
-      "dazzle/qa/hyperpart_types.py::to_json",
-      "dazzle/qa/smoke_dig.py::to_json",
-      "dazzle/qa/trial_inventory.py::to_json",
-      "dazzle/qa/work_surface_utility.py::to_json",
-      "dazzle/rbac/access_evidence.py::to_dict",
-      "dazzle/rbac/audit.py::to_dict"
-    ]
-  },
-  {
     "signature": "exact:7d595bfd7e80fb2259fe1705e42488bd",
     "count": 2,
     "names": [
@@ -111,23 +96,6 @@
     "names": [
       "dazzle/cli/testing.py::_assert_state_transition_allowed",
       "dazzle/cli/testing.py::_assert_state_transition_blocked"
-    ]
-  },
-  {
-    "signature": "exact:76c47956d364b2dbea58447a6afdf1c3",
-    "count": 3,
-    "names": [
-      "dazzle/compliance/analytics/event_vocabulary.py::get_event_schema",
-      "dazzle/compliance/analytics/providers/registry.py::get_provider_definition",
-      "dazzle/compliance/analytics/registry.py::get_framework_subprocessor"
-    ]
-  },
-  {
-    "signature": "exact:f35daa502beb4b7c129f115e149c6cbd",
-    "count": 2,
-    "names": [
-      "dazzle/compliance/analytics/sinks/ga4.py::close",
-      "dazzle/testing/walk/runner.py::__aexit__"
     ]
   },
   {
@@ -1073,14 +1041,6 @@
     ]
   },
   {
-    "signature": "de23ddc05e3966ca0867b98060de6d41",
-    "count": 2,
-    "names": [
-      "dazzle/mcp/server/handlers/test_design/proposals.py::_parse_test_design_action",
-      "dazzle/mcp/server/handlers/test_design/proposals.py::_parse_test_design_trigger"
-    ]
-  },
-  {
     "signature": "c670fb65f17edfc12d8ddb1a306f3696",
     "count": 2,
     "names": [
@@ -1201,6 +1161,28 @@
     "names": [
       "dazzle/testing/walk/claims.py::__init__",
       "dazzle/testing/walk/loader.py::__init__"
+    ]
+  },
+  {
+    "signature": "exact:c401f08efd6a7dae7009649c0c6f3ccc",
+    "count": 8,
+    "names": [
+      "dazzle/cli/runtime_impl/ux_cycle_impl/subagent_explore.py::to_dict",
+      "dazzle/http/runtime/retry_accumulator.py::to_dict",
+      "dazzle/qa/hyperpart_types.py::to_json",
+      "dazzle/qa/smoke_dig.py::to_json",
+      "dazzle/qa/trial_inventory.py::to_json",
+      "dazzle/qa/work_surface_utility.py::to_json",
+      "dazzle/rbac/access_evidence.py::to_dict",
+      "dazzle/rbac/audit.py::to_dict"
+    ]
+  },
+  {
+    "signature": "exact:76c47956d364b2dbea58447a6afdf1c3",
+    "count": 2,
+    "names": [
+      "dazzle/compliance/analytics/providers/registry.py::get_provider_definition",
+      "dazzle/compliance/analytics/registry.py::get_framework_subprocessor"
     ]
   }
 ]

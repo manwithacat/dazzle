@@ -241,8 +241,8 @@ v1, breaking changes cut a new version.
 | `dz_api_error` | htmx 4xx/5xx response | status_code, surface |
 
 Every event carries `dz_schema_version="1"` and (in multi-tenant apps)
-`dz_tenant`. Full schema in `src/dazzle/compliance/analytics/event_vocabulary.py`;
-drift is pinned by `tests/unit/test_event_vocabulary_v1.py`.
+`dz_tenant`. The emitter is `src/dazzle/page/runtime/static/js/dz-analytics.js`;
+this table is the schema.
 
 ### Disable semantics
 
@@ -261,52 +261,6 @@ The JS bus reads from `data-dz-*` attributes only, never from input
 values. The server-side template layer decides what lands in those
 attributes, honouring `pii()` annotations. Entity IDs, user IDs, email
 addresses never appear in events unless a surface explicitly opts-in.
-
-## Server-side analytics sinks (Phase 5)
-
-Server-side analytics forward business events from the framework's event
-bus to provider ingest endpoints (GA4 Measurement Protocol, Plausible
-Events API, etc.). Runs alongside the client-side dataLayer — captures
-events that don't depend on browser JS or user consent (state transitions,
-audit events, completed orders).
-
-```dsl
-analytics:
-  server_side:
-    sink: ga4_measurement_protocol
-    measurement_id: "G-XXXXXX"
-    bus_topics: [audit.*, transition.**, order.completed]
-```
-
-- **`sink`**: name of a registered `AnalyticsSink`. Ships: `ga4_measurement_protocol`.
-- **`measurement_id`**: provider-specific default; per-tenant overrides in Phase 6.
-- **`bus_topics`**: glob list (`*` = one segment, `**` = any remainder).
-
-### API secret handling
-
-**The GA4 API secret never lives in the DSL or TOML.** It comes from the
-`DAZZLE_GA4_API_SECRET` environment variable at runtime. A sink
-constructed without the secret logs a warning and drops events — it does
-not fail the publisher.
-
-### Reliability
-
-Each sink emission:
-
-- 2xx response → success, increment `metrics.success_total`.
-- 4xx response → log + drop; `metrics.dropped_total`. (Bad event shape
-  won't be fixed by retry.)
-- 5xx / network error → retry with exponential backoff, up to 3 attempts;
-  `metrics.failure_total` if exhausted.
-- All outcomes are non-fatal to the originating publisher. Use metrics
-  to monitor delivery reliability.
-
-### PII stripping
-
-When the bridge knows the entity schema (via `entity_specs_by_name`),
-event payloads pass through `strip_pii()` before the sink sees them.
-`pii()`-annotated fields are dropped; opt-in happens per-surface as in
-Phase 1.
 
 ## Per-tenant analytics resolution (Phase 6)
 

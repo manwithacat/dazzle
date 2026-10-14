@@ -57,9 +57,6 @@ class TenantAnalyticsConfig:
         consent_override: Hard override for default — ``"granted"`` or ``"denied"``.
         privacy_page_url: Override for banner's Privacy-notice link.
         cookie_policy_url: Override for banner's Cookie-policy link.
-        ga4_api_secret_env: Optional env-var name to read the GA4 API
-            secret from for this tenant. None → use the framework default
-            (``DAZZLE_GA4_API_SECRET``).
         extra: Escape hatch for custom resolver → app code integration.
     """
 
@@ -69,7 +66,6 @@ class TenantAnalyticsConfig:
     consent_override: str | None = None
     privacy_page_url: str = "/privacy"
     cookie_policy_url: str | None = None
-    ga4_api_secret_env: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
 

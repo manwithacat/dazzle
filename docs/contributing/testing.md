@@ -177,19 +177,6 @@ npm test
 npm run test:watch
 ```
 
-### 6. LLM Tests
-
-**Location:** `tests/llm/`
-**Execution:** Manual (requires API keys)
-
-Tests for AI-assisted features:
-
-| File | Description |
-|------|-------------|
-| `test_models.py` | LLM model integration |
-| `test_dsl_generator.py` | DSL generation from natural language |
-| `test_fixtures.py` | LLM fixture generation |
-
 ---
 
 ## Example-Specific Tests
@@ -485,7 +472,6 @@ carry an `xdist_group` pin naming that directory's cohort.
 | JavaScript | `*.test.js` | ✅ | ✅ | ✅ |
 | Example E2E (P0) | `examples/*/tests/e2e/` | ✅ | ❌ | ✅ |
 | Example E2E (P1/P2) | `examples/*/tests/e2e/` | ✅ | ❌ | ⚠️ (main only) |
-| LLM | `tests/llm/` | ✅ | ❌ | ❌ (manual) |
 
 ---
 

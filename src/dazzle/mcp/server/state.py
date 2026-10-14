@@ -46,16 +46,8 @@ class ServerState:
         self.graph_db_path: Path | None = None
         self.activity_log: ActivityLog | None = None
         self.activity_store: ActivityStore | None = None
-        self.appspec_data: dict[str, Any] | None = None
-        self.ui_spec: dict[str, Any] | None = None
         self.pack_cache: dict[str, Any] = {}
         self.packs_loaded: bool = False
-
-    def get_or_create_ui_spec(self) -> dict[str, Any]:
-        """Get the UI spec, creating a default if none exists."""
-        if self.ui_spec is None:
-            self.ui_spec = {"name": "unnamed", "components": [], "workspaces": [], "themes": []}
-        return self.ui_spec
 
     def reset(self) -> None:
         """Reset all state to defaults."""
@@ -67,8 +59,6 @@ class ServerState:
         self.graph_db_path = None
         self.activity_log = None
         self.activity_store = None
-        self.appspec_data = None
-        self.ui_spec = None
         self.pack_cache.clear()
         self.packs_loaded = False
 
@@ -466,26 +456,6 @@ def get_activity_log() -> ActivityLog | None:
 def get_activity_store() -> ActivityStore | None:
     """Get the SQLite-backed activity store instance."""
     return _state.activity_store
-
-
-def set_appspec_data(spec: dict[str, Any] | None) -> None:
-    """Store the active AppSpec data on the server state."""
-    _state.appspec_data = spec
-
-
-def set_ui_spec(spec: dict[str, Any] | None) -> None:
-    """Store the active UI spec on the server state."""
-    _state.ui_spec = spec
-
-
-def get_ui_spec() -> dict[str, Any] | None:
-    """Return the current UI spec, or None if none is loaded."""
-    return _state.ui_spec
-
-
-def get_or_create_ui_spec() -> dict[str, Any]:
-    """Return the current UI spec, creating an empty default if absent."""
-    return _state.get_or_create_ui_spec()
 
 
 def init_browser_gate(max_concurrent: int | None = None) -> None:

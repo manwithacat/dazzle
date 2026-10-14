@@ -133,19 +133,6 @@ class InfrastructureSpec:
 
 
 @dataclass
-class WebhookEventSpec:
-    """Specification for a webhook event in an API pack."""
-
-    name: str
-    description: str = ""
-    signing: str = "hmac-sha256"  # hmac-sha256, stripe-v1, none
-    signing_header: str = "X-Webhook-Signature"
-    signing_env_var: str = ""  # env var for signing secret
-    webhook_path: str = ""  # e.g. /webhooks/stripe
-    payload: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
 class ApiPack:
     """A complete API pack configuration."""
 
@@ -161,7 +148,6 @@ class ApiPack:
     operations: list[OperationSpec] = field(default_factory=list)
     foreign_models: list[ForeignModelSpec] = field(default_factory=list)
     infrastructure: InfrastructureSpec | None = None
-    webhooks: list[WebhookEventSpec] = field(default_factory=list)
 
     def generate_env_example(self) -> str:
         """Generate .env.example content for this pack."""
@@ -463,26 +449,6 @@ def _parse_infrastructure(infra_data: dict[str, Any]) -> InfrastructureSpec | No
     )
 
 
-def _parse_webhooks(raw: dict[str, Any]) -> list[WebhookEventSpec]:
-    webhooks: list[WebhookEventSpec] = []
-    for wh_name, wh_spec in raw.items():
-        if isinstance(wh_spec, dict):
-            webhooks.append(
-                WebhookEventSpec(
-                    name=wh_name,
-                    description=wh_spec.get("description", ""),
-                    signing=wh_spec.get("signing", "hmac-sha256"),
-                    signing_header=wh_spec.get("signing_header", "X-Webhook-Signature"),
-                    signing_env_var=wh_spec.get("signing_env_var", ""),
-                    webhook_path=wh_spec.get("webhook_path", ""),
-                    payload=wh_spec.get("payload", {}),
-                )
-            )
-        elif isinstance(wh_spec, str):
-            webhooks.append(WebhookEventSpec(name=wh_name, description=wh_spec))
-    return webhooks
-
-
 def _load_pack_from_toml(toml_path: Path) -> ApiPack:
     """Load a single pack from a TOML file."""
     with open(toml_path, "rb") as f:
@@ -515,7 +481,6 @@ def _load_pack_from_toml(toml_path: Path) -> ApiPack:
         operations=_parse_operations(data.get("operations", {})),
         foreign_models=_parse_foreign_models(data.get("foreign_models", {})),
         infrastructure=_parse_infrastructure(data.get("infrastructure", {})),
-        webhooks=_parse_webhooks(data.get("webhooks", {})),
     )
 
 
@@ -621,26 +586,6 @@ def search_packs(
         ]
 
     return results
-
-
-def get_all_env_vars() -> list[EnvVarSpec]:
-    """
-    Get all environment variables from all packs.
-
-    Returns:
-        Deduplicated list of all env vars across packs
-    """
-    _discover_packs()
-    seen: set[str] = set()
-    result: list[EnvVarSpec] = []
-
-    for pack in _pack_cache.values():
-        for env_var in pack.env_vars:
-            if env_var.name not in seen:
-                seen.add(env_var.name)
-                result.append(env_var)
-
-    return result
 
 
 def generate_env_example(pack_names: list[str] | None = None) -> str:

@@ -103,9 +103,9 @@ def conformance_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
 def conformance_monitor_status_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Return the current conformance monitor state.
 
-    If a ConformanceMonitor has been installed (e.g. during a test scenario),
-    returns the current observations and comparison report. Otherwise returns
-    an empty status.
+    If an ``InMemoryAuditSink`` is installed (the dynamic RBAC verifier
+    installs one while it runs), returns the access decisions it has recorded.
+    Otherwise returns an empty status.
     """
     from dazzle.rbac.audit import get_audit_sink
 

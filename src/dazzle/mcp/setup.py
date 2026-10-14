@@ -213,24 +213,10 @@ def _get_available_tools() -> list[str]:
     Get list of available MCP tools.
 
     Returns:
-        List of tool names
+        The tool names the MCP server registers; the caller treats an import
+        failure as "tools unknown" and leaves the list empty.
     """
     # Import here to avoid circular dependency
-    try:
-        from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
+    from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
 
-        tools = get_all_consolidated_tools()
-        return [tool.name for tool in tools]
-    except Exception:
-        # Fallback to known tools
-        return [
-            "validate_dsl",
-            "list_modules",
-            "inspect_entity",
-            "inspect_surface",
-            "build",
-            "analyze_patterns",
-            "lint_project",
-            "lookup_concept",
-            "find_examples",
-        ]
+    return [tool.name for tool in get_all_consolidated_tools()]

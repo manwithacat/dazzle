@@ -93,8 +93,8 @@ def _import_test_design():
 
     pkg_dir = handlers_dir / "test_design"
 
-    # Import submodules first so the package __init__ can re-export them
-    for submod_name in ("proposals", "gaps", "persistence", "coverage"):
+    # Import the submodule first so the package __init__ can re-export it
+    for submod_name in ("gaps",):
         submod_path = pkg_dir / f"{submod_name}.py"
         sub_spec = importlib.util.spec_from_file_location(
             f"dazzle.mcp.server.handlers.test_design.{submod_name}",
@@ -122,19 +122,12 @@ def _import_test_design():
 _td = _import_test_design()
 
 # Get references to the functions we need
-propose_persona_tests_handler = _td.propose_persona_tests_handler
 get_test_gaps_handler = _td.get_test_gaps_handler
-save_test_designs_handler = _td.save_test_designs_handler
-get_coverage_actions_handler = _td.get_coverage_actions_handler
 
 # Pure predicate from the gaps submodule (loaded via the isolation dance above).
 _state_transition_flow_covered = sys.modules[
     "dazzle.mcp.server.handlers.test_design.gaps"
 ]._state_transition_flow_covered
-get_runtime_coverage_gaps_handler = _td.get_runtime_coverage_gaps_handler
-save_runtime_coverage_handler = _td.save_runtime_coverage_handler
-_parse_test_design_action = _td._parse_test_design_action
-_parse_test_design_trigger = _td._parse_test_design_trigger
 
 
 # =============================================================================
@@ -197,213 +190,6 @@ entity Task "Task":
     return project_dir
 
 
-@pytest.fixture
-def temp_project_no_personas(tmp_path):
-    """Create a temporary project without personas."""
-    project_dir = tmp_path / "test_project"
-    project_dir.mkdir()
-
-    manifest = project_dir / "dazzle.toml"
-    manifest.write_text(
-        """
-[project]
-name = "test_project"
-version = "0.1.0"
-root = "test_project"
-
-[modules]
-paths = ["./dsl"]
-"""
-    )
-
-    dsl_dir = project_dir / "dsl"
-    dsl_dir.mkdir()
-
-    main_dsl = dsl_dir / "main.dsl"
-    main_dsl.write_text(
-        """
-module test_project
-app test_project "Test Project"
-
-entity Task "Task":
-    id: uuid pk
-    title: str(200) required
-"""
-    )
-
-    dazzle_dir = project_dir / ".dazzle"
-    dazzle_dir.mkdir()
-
-    test_designs_dir = dazzle_dir / "test_designs"
-    test_designs_dir.mkdir()
-
-    return project_dir
-
-
-# =============================================================================
-# Helper Function Tests
-# =============================================================================
-
-
-class TestParseTestDesignAction:
-    """Tests for _parse_test_design_action helper."""
-
-    def test_valid_action(self) -> None:
-        """Test parsing valid action."""
-        from dazzle.core.ir.test_design import TestDesignAction
-
-        action = _parse_test_design_action("login_as")
-        assert action == TestDesignAction.LOGIN_AS
-
-    def test_valid_action_click(self) -> None:
-        """Test parsing click action."""
-        from dazzle.core.ir.test_design import TestDesignAction
-
-        action = _parse_test_design_action("click")
-        assert action == TestDesignAction.CLICK
-
-    def test_invalid_action(self) -> None:
-        """Test parsing invalid action."""
-        with pytest.raises(ValueError) as exc_info:
-            _parse_test_design_action("invalid_action")
-
-        assert "is not a valid action" in str(exc_info.value)
-        assert "Valid actions:" in str(exc_info.value)
-
-
-class TestParseTestDesignTrigger:
-    """Tests for _parse_test_design_trigger helper."""
-
-    def test_valid_trigger(self) -> None:
-        """Test parsing valid trigger."""
-        from dazzle.core.ir.test_design import TestDesignTrigger
-
-        trigger = _parse_test_design_trigger("form_submitted")
-        assert trigger == TestDesignTrigger.FORM_SUBMITTED
-
-    def test_valid_trigger_click(self) -> None:
-        """Test parsing user_click trigger."""
-        from dazzle.core.ir.test_design import TestDesignTrigger
-
-        trigger = _parse_test_design_trigger("user_click")
-        assert trigger == TestDesignTrigger.USER_CLICK
-
-    def test_invalid_trigger(self) -> None:
-        """Test parsing invalid trigger."""
-        with pytest.raises(ValueError) as exc_info:
-            _parse_test_design_trigger("invalid_trigger")
-
-        assert "is not a valid trigger" in str(exc_info.value)
-        assert "Valid triggers:" in str(exc_info.value)
-
-
-# =============================================================================
-# Handler Tests
-# =============================================================================
-
-
-class TestProposePersonaTestsHandler:
-    """Tests for propose_persona_tests_handler."""
-
-    def test_proposes_tests_for_persona(self, temp_project) -> None:
-        """Test proposing tests from persona goals."""
-        result = propose_persona_tests_handler(temp_project, {})
-        data = json.loads(result)
-
-        # Should generate test designs for admin persona (uses 'designs' key)
-        assert "designs" in data or "test_designs" in data or "status" in data
-
-    def test_no_personas_returns_message(self, temp_project_no_personas) -> None:
-        """Test handling of project without personas."""
-        result = propose_persona_tests_handler(temp_project_no_personas, {})
-        data = json.loads(result)
-
-        assert data.get("status") == "no_personas"
-        assert "No personas found" in data.get("message", "")
-
-    def test_respects_max_tests(self, temp_project) -> None:
-        """Test max_tests limit."""
-        result = propose_persona_tests_handler(temp_project, {"max_tests": 1})
-        data = json.loads(result)
-
-        if "test_designs" in data:
-            assert len(data["test_designs"]) <= 1
-
-    def test_filters_by_persona(self, temp_project) -> None:
-        """Test filtering by persona ID."""
-        result = propose_persona_tests_handler(temp_project, {"persona": "admin"})
-        data = json.loads(result)
-
-        # Should only include tests for admin persona
-        if "test_designs" in data:
-            for td in data["test_designs"]:
-                assert td.get("persona") == "Admin" or "admin" in td.get("persona", "").lower()
-
-    def test_handles_missing_project(self, tmp_path) -> None:
-        """Test handling of missing project."""
-        missing_project = tmp_path / "missing"
-        missing_project.mkdir()
-
-        result = propose_persona_tests_handler(missing_project, {})
-        data = json.loads(result)
-
-        assert "error" in data
-
-
-class TestSaveTestDesignsHandler:
-    """Tests for save_test_designs_handler."""
-
-    def test_requires_designs(self, temp_project) -> None:
-        """Test that designs are required."""
-        result = save_test_designs_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert "error" in data
-        # Check for error about missing designs
-        assert "designs" in data["error"].lower() or "no" in data["error"].lower()
-
-    def test_saves_valid_design(self, temp_project) -> None:
-        """Test saving a valid test design."""
-        designs = [
-            {
-                "test_id": "TD-001",
-                "title": "Test Task Creation",
-                "description": "Verify user can create a task",
-                "persona": "admin",
-                "trigger": "form_submitted",
-                "steps": [
-                    {"action": "login_as", "target": "admin"},
-                    {"action": "navigate_to", "target": "tasks"},
-                    {"action": "click", "target": "create_button"},
-                ],
-                "expected_outcomes": ["Task is created"],
-                "entities": ["Task"],
-                "tags": ["smoke"],
-                "status": "proposed",
-            }
-        ]
-
-        result = save_test_designs_handler(temp_project, {"designs": designs})
-        data = json.loads(result)
-
-        assert data.get("status") == "saved"
-        assert data.get("saved_count") == 1
-
-    def test_validates_design_structure(self, temp_project) -> None:
-        """Test that invalid designs are rejected."""
-        designs = [
-            {
-                "test_id": "TD-001",
-                # Missing required fields
-            }
-        ]
-
-        result = save_test_designs_handler(temp_project, {"designs": designs})
-        data = json.loads(result)
-
-        assert "error" in data
-
-
 class TestStateTransitionFlowCovered:
     """Regression for #1335: gap check must accept the `_as_{persona}` suffix
     that generate_state_machine_flows emits for role-guarded transitions."""
@@ -452,82 +238,3 @@ class TestGetTestGapsHandler:
         data = json.loads(result)
 
         assert "error" in data
-
-
-class TestGetCoverageActionsHandler:
-    """Tests for get_coverage_actions_handler."""
-
-    def test_returns_coverage_actions(self, temp_project) -> None:
-        """Test getting coverage improvement actions."""
-        result = get_coverage_actions_handler(temp_project, {})
-        data = json.loads(result)
-
-        # Should return actions or analysis
-        assert "actions" in data or "coverage" in data or "error" not in data
-
-    def test_respects_max_actions(self, temp_project) -> None:
-        """Test max_actions limit."""
-        result = get_coverage_actions_handler(temp_project, {"max_actions": 3})
-        data = json.loads(result)
-
-        if "actions" in data:
-            assert len(data["actions"]) <= 3
-
-    def test_filters_by_focus(self, temp_project) -> None:
-        """Test filtering by focus area."""
-        result = get_coverage_actions_handler(temp_project, {"focus": "entities"})
-        data = json.loads(result)
-
-        # Should only return entity-related actions
-        assert "actions" in data or "error" not in data
-
-
-class TestSaveRuntimeCoverageHandler:
-    """Tests for save_runtime_coverage_handler."""
-
-    def test_requires_coverage_data(self, temp_project) -> None:
-        """Test that coverage_data is required."""
-        result = save_runtime_coverage_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert "error" in data
-
-    def test_saves_coverage_data(self, temp_project) -> None:
-        """Test saving runtime coverage data."""
-        coverage_data = {
-            "timestamp": "2025-01-01T00:00:00Z",
-            "entities_covered": ["Task"],
-            "endpoints_hit": ["/_dazzle/tasks", "/_dazzle/tasks/create"],
-            "personas_tested": ["admin"],
-        }
-
-        result = save_runtime_coverage_handler(temp_project, {"coverage_data": coverage_data})
-        data = json.loads(result)
-
-        assert data.get("status") == "saved" or "error" not in data
-
-
-class TestGetRuntimeCoverageGapsHandler:
-    """Tests for get_runtime_coverage_gaps_handler."""
-
-    def test_analyzes_runtime_gaps(self, temp_project) -> None:
-        """Test analyzing runtime coverage gaps."""
-        result = get_runtime_coverage_gaps_handler(temp_project, {})
-        data = json.loads(result)
-
-        # Without coverage data, should return helpful error with hint
-        # When coverage data exists, returns gaps analysis
-        assert "gaps" in data or "error" in data or "status" in data
-        if "error" in data:
-            # Error should provide helpful guidance
-            assert "hint" in data or "coverage" in data["error"].lower()
-
-    def test_handles_missing_coverage_report(self, temp_project) -> None:
-        """Test handling of missing coverage report."""
-        result = get_runtime_coverage_gaps_handler(
-            temp_project, {"coverage_report_path": "/nonexistent/path"}
-        )
-        data = json.loads(result)
-
-        # Should handle gracefully
-        assert "error" in data or "status" in data
