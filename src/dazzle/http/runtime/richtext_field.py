@@ -26,6 +26,13 @@ that persists a rich-text field calls it before validation.
   (never truncated, never stored). A visually empty value (the editor's
   ``<p><br></p>`` shell) becomes ``None``, the same as an empty textarea.
 
+Flense ship W extended it: integration write-backs
+(``MappingExecutor._write_back``) and ``/__test__/seed`` fixtures run the
+same call, and ``dazzle db resanitize-rich-text``
+(``dazzle.db.resanitize_rich_text``) cleans rows stored before ship T. This
+is the only sanitiser for rich text: the service layer stores ``text``
+values as it receives them.
+
 The function is deliberately small and dependency-light: take a
 string, return a sanitised string, raise `ValueError` if too long.
 """

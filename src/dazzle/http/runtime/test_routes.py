@@ -14,7 +14,7 @@ import logging
 import os
 import re
 import secrets
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +28,7 @@ from dazzle.http.runtime.auth_identity_mirror import mirror_auth_user_to_domain
 from dazzle.http.runtime.http_errors import require_found
 from dazzle.http.runtime.pg_backend import PostgresBackend
 from dazzle.http.runtime.repository import Repository
+from dazzle.http.runtime.richtext_field import RichTextTooLongError, sanitise_rich_text_values
 from dazzle.http.specs.entity import EntitySpec
 
 logger = logging.getLogger(__name__)
@@ -144,6 +145,10 @@ class _TestDeps:
     # Core-IR `User` entity (carries any `auth_identity:` binding) for the ADR-0039
     # domain-User mirror. None = app has no User entity → no mirror.
     user_ir_spec: ir.EntitySpec | None = None
+    # Flense ship W: entity → {rich-text field → cap}. ``/__test__/seed`` takes
+    # fixture rows from the client, so rich-text values are cleaned with the
+    # same allowlist sanitiser as the create/update handlers.
+    rich_text_fields: dict[str, dict[str, int]] = field(default_factory=dict)
 
 
 # =============================================================================
@@ -193,6 +198,16 @@ async def _create_one_fixture(
         raise HTTPException(status_code=400, detail="Unknown entity: " + entity_name)
 
     data = _prepare_fixture_row(fixture, repo, id_mapping)
+    caps = deps.rich_text_fields.get(entity_name)
+    if caps:
+        try:
+            sanitise_rich_text_values(data, caps)
+        except RichTextTooLongError as exc:
+            _rollback_created(deps, created_ids)
+            raise HTTPException(
+                status_code=422,
+                detail=f"Fixture {fixture.id}: {exc.field}: {exc}",
+            ) from exc
     try:
         entity = await repo.create(data)
         row = entity.model_dump() if hasattr(entity, "model_dump") else data
@@ -883,6 +898,7 @@ def create_test_routes(
     personas: list[dict[str, Any]] | None = None,
     project_root: Path | None = None,
     user_ir_spec: ir.EntitySpec | None = None,
+    rich_text_fields: dict[str, dict[str, int]] | None = None,
 ) -> APIRouter:
     """
     Create test routes for E2E testing.
@@ -894,6 +910,8 @@ def create_test_routes(
         auth_store: Optional AuthStore for creating real test sessions
         personas: Optional list of persona configurations for demo user recreation
         project_root: Optional project root for loading test_credentials.json
+        rich_text_fields: Entity → {rich-text field → cap}
+            (``rich_text_fields_by_entity``); seeded values are sanitised.
 
     Returns:
         APIRouter with test endpoints
@@ -910,6 +928,7 @@ def create_test_routes(
         personas=personas or [],
         project_root=project_root,
         user_ir_spec=user_ir_spec,
+        rich_text_fields=rich_text_fields or {},
     )
 
     # --- Authentication dependency ---

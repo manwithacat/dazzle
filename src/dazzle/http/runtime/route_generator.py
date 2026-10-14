@@ -12,7 +12,6 @@ section rather than scanning the file):
   L 315  Result utils       _extract_result_id (shared by audit_wrap +
                              the create handler)
   L 325  RouteGenerator     Primary class — wires all factories into APIRouter
-  L 880  Convenience        generate_crud_routes (thin wrapper)
 
 Scope / row-RBAC filter resolution (Cedar row filters, condition-tree
 extraction, _resolve_scope_filters / _resolve_predicate_filters,
@@ -56,18 +55,14 @@ after `scripts/stall_log_mine.py` flagged this file as friction-148
 
 import logging
 from collections.abc import Callable
-from contextlib import suppress
 from dataclasses import replace
-from enum import Enum
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
 
 from fastapi import APIRouter as _APIRouter
-from fastapi import Depends, HTTPException, Query, Request
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi import Depends
 from pydantic import BaseModel
 
-from dazzle.core.strings import entity_slug, to_api_plural
+from dazzle.core.strings import entity_slug
 
 # Audit context + access logging + auth wrapping live in audit_wrap.py
 # (#1361 slice 3). Same re-import contract as scope_filters / htmx_render
@@ -133,7 +128,6 @@ from dazzle.http.runtime.htmx_render import (  # noqa: F401  (re-exported for ba
     _render_table_sentinel,
     _with_htmx_triggers,
 )
-from dazzle.http.runtime.http_errors import require_found
 
 # Scope / row-RBAC filter resolution lives in scope_filters.py (#1361 slice 1).
 # The names are re-imported at module level so existing
@@ -176,7 +170,6 @@ APIRouter = _APIRouter
 # leaf instead of back UP into this module — breaking the import cycle that forced
 # ~18 in-function imports. Re-exported here so `route_generator.<name>` keeps resolving
 # for back-compat importers and patch points.
-from dazzle.http.runtime.htmx import is_peek_request  # noqa: E402
 from dazzle.http.runtime.route_support import (  # noqa: E402, F401  (re-exported for back-compat importers + patch points; route_support declares __all__)
     HandlerConfig,
     RouteSpec,
@@ -822,162 +815,3 @@ class RouteGenerator:
     def router(self) -> APIRouter:
         """Get the generated router."""
         return self._router
-
-
-# =============================================================================
-# Convenience Functions
-# =============================================================================
-
-
-def generate_crud_routes(
-    entity_name: str,
-    service: Any,
-    model: type[BaseModel],
-    create_schema: type[BaseModel],
-    update_schema: type[BaseModel],
-    prefix: str | None = None,
-    tags: list[str | Enum] | None = None,
-) -> APIRouter:
-    """
-    Generate standard CRUD routes for an entity.
-
-    This is a convenience function for quickly creating RESTful routes.
-
-    Args:
-        entity_name: Name of the entity
-        service: CRUD service instance
-        model: Pydantic model for the entity
-        create_schema: Schema for create operations
-        update_schema: Schema for update operations
-        prefix: Optional URL prefix (defaults to /entity_name)
-        tags: Optional tags for grouping in OpenAPI docs
-
-    Returns:
-        FastAPI router with CRUD routes
-    """
-    router = _APIRouter()
-    prefix = prefix or f"/{to_api_plural(entity_name)}"
-    tags = tags or [entity_name]
-
-    # List
-    @router.get(prefix, tags=tags, summary=f"List {entity_name}s")
-    async def list_items(
-        page: int = Query(1, ge=1),
-        page_size: int = Query(20, ge=1, le=100),
-    ) -> Any:
-        return await service.execute(operation="list", page=page, page_size=page_size)
-
-    # Read
-    @router.get(f"{prefix}/{{id}}", tags=tags, summary=f"Get {entity_name}", response_model=model)
-    async def get_item(id: UUID) -> Any:
-        result = await service.execute(operation="read", id=id)
-        result = require_found(result)
-        return result
-
-    # Create
-    @router.post(prefix, tags=tags, summary=f"Create {entity_name}", response_model=model)
-    async def create_item(request: Request, data: create_schema) -> Any:
-        result = await service.execute(operation="create", data=data)
-        return _with_htmx_triggers(request, result, entity_name, "created")
-
-    # Update
-    @router.put(
-        f"{prefix}/{{id}}", tags=tags, summary=f"Update {entity_name}", response_model=model
-    )
-    async def update_item(id: UUID, request: Request, data: update_schema) -> Any:
-        result = await service.execute(operation="update", id=id, data=data)
-        result = require_found(result)
-        # #1494 (2c, Slice 2 — inline save-and-stay): a peek-panel save
-        # (`?peek=1`) must NOT redirect the whole page — the form re-fetches the
-        # read-only view back into the panel cell itself. Suppress HX-Redirect so
-        # only the HX-Trigger toast/refresh headers ride along; otherwise settle
-        # to the current page as before.
-        peek = is_peek_request(request)
-        redirect_url = None if peek else _htmx_current_url(request)
-        # Simple CRUD helper has no entity_slug; titled toast still ships.
-        return _with_htmx_triggers(
-            request, result, entity_name, "updated", redirect_url=redirect_url
-        )
-
-    # Delete
-    @router.delete(f"{prefix}/{{id}}", tags=tags, summary=f"Delete {entity_name}")
-    async def delete_item(id: UUID, request: Request) -> Any:
-        try:
-            result = await service.execute(operation="delete", id=id)
-        except ValueError as exc:
-            # FK constraint violation — entity is referenced by child records
-            raise HTTPException(status_code=409, detail=str(exc))
-        if not result:
-            raise HTTPException(status_code=404, detail="Not found")
-        return _with_htmx_triggers(
-            request,
-            {"deleted": True},
-            entity_name,
-            "deleted",
-            redirect_url=_htmx_parent_url(request),
-        )
-
-    # Patch field — inline edit support for data tables
-    @router.patch(
-        f"{prefix}/{{entity_id}}/field/{{field_name}}",
-        tags=tags,
-        summary=f"Update a single field on {entity_name}",
-    )
-    async def patch_field(entity_id: UUID, field_name: str, request: Request) -> Any:
-        # Validate: reject protected / computed fields
-        _PROTECTED_FIELDS = {"id", "created_at", "updated_at"}
-        if field_name in _PROTECTED_FIELDS or field_name.endswith("_id"):
-            raise HTTPException(
-                status_code=422,
-                detail=f"Field '{field_name}' is not inline-editable",
-            )
-
-        # Validate: field must exist on the model
-        model_fields = set(model.model_fields.keys()) if hasattr(model, "model_fields") else set()
-        if model_fields and field_name not in model_fields:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Field '{field_name}' does not exist on {entity_name}",
-            )
-
-        # Parse form body
-        form_data = await request.form()
-        value = form_data.get("value")
-
-        result = await service.execute(
-            operation="update",
-            id=entity_id,
-            data={field_name: value},
-        )
-        result = require_found(result)
-
-        # Return the new value as plain text; the template handles rendering
-        updated_value = (
-            result.get(field_name, "")
-            if isinstance(result, dict)
-            else getattr(result, field_name, "")
-        )
-        return PlainTextResponse(content=str(updated_value) if updated_value is not None else "")
-
-    # Bulk delete — batch removal for data table bulk actions
-    @router.post(
-        f"{prefix}/bulk-delete",
-        tags=tags,
-        summary=f"Bulk delete {entity_name} records",
-    )
-    async def bulk_delete(request: Request) -> Any:
-        body = await request.json()
-        ids: list[Any] = body.get("ids", [])
-        if not ids:
-            return JSONResponse({"error": "No IDs provided"}, status_code=422)
-
-        deleted = 0
-        for item_id in ids:
-            # Skip items the user cannot access or that no longer exist (#smells-1.1).
-            with suppress(Exception):
-                await service.execute(operation="delete", id=item_id)
-                deleted += 1
-
-        return JSONResponse({"deleted": deleted, "total": len(ids)})
-
-    return router

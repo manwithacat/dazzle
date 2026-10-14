@@ -218,7 +218,7 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
             check_invariants_for_create,
         )
 
-        # Sanitize string/text input fields (v0.25 - #135)
+        # Strip tags from single-line string input fields (#135; text: ship W)
         self._sanitize_fields(data)
 
         # Generate ID
@@ -344,7 +344,7 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
             validate_status_update,
         )
 
-        # Sanitize string/text input fields (v0.25 - #135)
+        # Strip tags from single-line string input fields (#135; text: ship W)
         self._sanitize_fields(data)
 
         # Get update data, excluding None values
@@ -561,15 +561,22 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
         return filtered
 
     def _sanitize_fields(self, data: BaseModel) -> None:
-        """Sanitize string and text fields to prevent XSS via the API.
+        """Strip HTML tags from single-line string fields.
 
-        Mutates the model in-place: str fields get all tags stripped,
-        text fields get only dangerous tags/attributes stripped.
+        Mutates the model in-place: ``str``/``email``/``url``/``slug`` and enum
+        fields get all tags stripped. ``text`` fields are stored as sent (flense
+        ship W, ADR-0057): a plain ``text`` value is data, escaped wherever it is
+        rendered into HTML (``render.fragment.renderer._data_row._render_cell_display``
+        and the region cell renderers), and a ``widget=rich_text`` field is
+        sanitised by the allowlist sanitiser (``richtext_field.clean_rich_text``)
+        in the write handlers before it reaches the service. The old regex
+        denylist that ran here deleted ordinary text such as ``one=two`` and
+        missed real payloads.
         """
         if not self.entity_spec:
             return
 
-        from dazzle.http.runtime.sanitizer import strip_dangerous_tags, strip_html_tags
+        from dazzle.http.runtime.sanitizer import strip_html_tags
         from dazzle.http.specs.entity import ScalarType
 
         field_type_map = {f.name: f.type for f in self.entity_spec.fields}
@@ -579,10 +586,7 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
             if not isinstance(value, str):
                 continue
 
-            if field_type.kind == "scalar" and field_type.scalar_type == ScalarType.TEXT:
-                # Text fields: strip dangerous tags only
-                sanitized = strip_dangerous_tags(value)
-            elif field_type.kind == "scalar" and field_type.scalar_type in (
+            if field_type.kind == "scalar" and field_type.scalar_type in (
                 ScalarType.STR,
                 ScalarType.EMAIL,
                 ScalarType.URL,

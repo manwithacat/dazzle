@@ -745,3 +745,57 @@ class TestTestModeDisabled:
         """Test that snapshot endpoint is not available when test mode disabled."""
         response = test_client.get("/__test__/snapshot")
         assert response.status_code == 404
+
+
+class TestSeedSanitisesRichText:
+    """``/__test__/seed`` takes fixture rows from the client; rich-text fields are
+    cleaned with the allowlist sanitiser, like the create/update handlers
+    (flense ship W)."""
+
+    @staticmethod
+    def _deps(caps: dict[str, dict[str, int]]) -> tuple[object, object]:
+        from unittest.mock import AsyncMock, MagicMock
+
+        from dazzle.http.runtime.test_routes import _TestDeps
+
+        repo = MagicMock()
+        repo._field_types = {"title": "str", "body": "text"}
+        repo.create = AsyncMock(side_effect=lambda data: data)
+        deps = _TestDeps(
+            db_manager=MagicMock(),
+            repositories={"Note": repo},
+            entities=[],
+            entity_sql={},
+            auth_store=None,
+            personas=[],
+            rich_text_fields=caps,
+        )
+        return deps, repo
+
+    @pytest.mark.asyncio
+    async def test_rich_text_fixture_value_is_sanitised(self) -> None:
+        from dazzle.http.runtime.test_routes import _create_one_fixture
+
+        deps, repo = self._deps({"Note": {"body": 1000}})
+        fixture = FixtureData(
+            id="n1",
+            entity="Note",
+            data={"title": "<b>t</b>", "body": "<p>ok</p><script>alert(1)</script>"},
+        )
+        await _create_one_fixture(deps, fixture, {"n1": "id-1"}, [])
+        written = repo.create.await_args.args[0]
+        assert written["body"] == "<p>ok</p>alert(1)"
+        assert written["title"] == "<b>t</b>"  # not a rich-text field: as sent
+
+    @pytest.mark.asyncio
+    async def test_over_cap_fixture_is_422_and_not_written(self) -> None:
+        from fastapi import HTTPException
+
+        from dazzle.http.runtime.test_routes import _create_one_fixture
+
+        deps, repo = self._deps({"Note": {"body": 5}})
+        fixture = FixtureData(id="n1", entity="Note", data={"body": "<p>too long</p>"})
+        with pytest.raises(HTTPException) as exc_info:
+            await _create_one_fixture(deps, fixture, {"n1": "id-1"}, [])
+        assert exc_info.value.status_code == 422
+        repo.create.assert_not_awaited()

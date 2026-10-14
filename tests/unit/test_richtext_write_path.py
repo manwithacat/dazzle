@@ -41,7 +41,7 @@ _HOSTILE = (
     "<script>alert(1)</script>"
     '<img src=x onerror="alert(2)">'
     '<a href="javascript:alert(3)">bad</a>'
-    # Both pass the service layer's regex denylist (`sanitizer.py`):
+    # Both passed the regex denylist removed in flense ship W:
     "<svg/onload=alert(4)>"
     '<a href="&#106;avascript:alert(5)">enc</a>'
 )
@@ -221,3 +221,102 @@ async def test_experience_form_inprocess_create_is_sanitised() -> None:
     written = _written(service)
     assert written["body"] == _SANITISED
     assert written["plain"] == _PLAIN
+
+
+# ---------------------------------------------------------------------------
+# Service layer (flense ship W): `text` values are stored as sent
+# ---------------------------------------------------------------------------
+#
+# `CRUDService._sanitize_fields` ran a regex denylist over every `text` field.
+# It deleted ` one=two` (matched as an event-handler attribute) from plain
+# text, and ran again over the allowlist sanitiser's output for rich text.
+# Plain text is data, escaped where it is rendered (see the render tests
+# below); rich text is cleaned once, by `clean_rich_text`, in the handler.
+
+_PLAIN_W = "I set one=two today; a<b and c > d, <x onclick=1> & 'q'"
+_RICH_W = '<p>I set one=two today, <a href="https://example.com/?a=b">see</a></p>'
+
+
+class _NoteModel(BaseModel):
+    id: Any = None
+    title: str | None = None
+    body: str | None = None
+    plain: str | None = None
+
+
+def _crud_service() -> Any:
+    from dazzle.http.runtime.service_generator import CRUDService
+    from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+
+    def _f(name: str, scalar: ScalarType) -> FieldSpec:
+        return FieldSpec(name=name, type=FieldType(kind="scalar", scalar_type=scalar))
+
+    spec = EntitySpec(
+        name="Note",
+        fields=[
+            _f("id", ScalarType.UUID),
+            _f("title", ScalarType.STR),
+            _f("body", ScalarType.TEXT),
+            _f("plain", ScalarType.TEXT),
+        ],
+    )
+    return CRUDService(
+        entity_name="Note",
+        model_class=_NoteModel,
+        create_schema=_Schema,
+        update_schema=_Schema,
+        entity_spec=spec,
+    )
+
+
+@pytest.mark.asyncio
+async def test_plain_text_round_trips_byte_identical_through_service() -> None:
+    service = _crud_service()
+    created = await service.create(_Schema(title="T", plain=_PLAIN_W))
+    assert (await service.read(created.id)).plain == _PLAIN_W
+    edited = _PLAIN_W + " (onload=again)"
+    await service.update(created.id, _Schema(plain=edited))
+    assert (await service.read(created.id)).plain == edited
+
+
+@pytest.mark.asyncio
+async def test_str_field_still_has_tags_stripped() -> None:
+    """Control: single-line `str` fields keep the #135 tag strip."""
+    service = _crud_service()
+    created = await service.create(_Schema(title="<b>Bold</b> one=two"))
+    assert (await service.read(created.id)).title == "Bold one=two"
+
+
+@pytest.mark.asyncio
+async def test_rich_text_is_cleaned_once_through_handler_and_service() -> None:
+    from dazzle.http.runtime.richtext_field import clean_rich_text
+
+    service = _crud_service()
+    await _create(service, _CAPS)(_request({"title": "T", "body": _HOSTILE + _RICH_W}))
+    (stored,) = service._store.values()
+    assert stored.body == clean_rich_text(_HOSTILE + _RICH_W)
+    assert "one=two" in stored.body
+
+
+# ---------------------------------------------------------------------------
+# The render side of the ship W decision: plain text is escaped on output
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("truncate", [True, False])
+def test_entity_cell_renderer_escapes_plain_text(truncate: bool) -> None:
+    """List rows and the detail seam (`fragment_adapter`) share this core."""
+    from dazzle.render.fragment.renderer._data_row import _render_cell_display
+
+    html = _render_cell_display({"type": "text"}, "<script>x</script> one=two", truncate=truncate)
+    assert "<script>" not in html
+    assert "&lt;script&gt;x&lt;/script&gt; one=two" in html
+
+
+def test_workspace_region_cell_escapes_plain_text() -> None:
+    from dazzle.render.fragment import RawHTML
+    from dazzle.render.fragment.region._shared import _render_typed_value
+
+    frag = _render_typed_value({"plain": "<img src=x onerror=1>"}, {"key": "plain"})
+    assert isinstance(frag, RawHTML)
+    assert frag.html == "&lt;img src=x onerror=1&gt;"

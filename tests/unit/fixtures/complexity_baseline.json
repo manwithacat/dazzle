@@ -8743,8 +8743,7 @@
       "RouteGenerator._add_route": 10,
       "RouteGenerator.generate_all_routes": 7,
       "RouteGenerator.generate_route": 85,
-      "RouteGenerator.router": 1,
-      "generate_crud_routes": 3
+      "RouteGenerator.router": 1
     },
     "mi_rank": "A"
   },
@@ -8825,7 +8824,6 @@
   },
   "dazzle/http/runtime/sanitizer.py": {
     "functions": {
-      "strip_dangerous_tags": 2,
       "strip_html_tags": 2
     },
     "mi_rank": "A"
@@ -8994,7 +8992,7 @@
       "CRUDService._notify_created": 1,
       "CRUDService._notify_deleted": 1,
       "CRUDService._notify_updated": 1,
-      "CRUDService._sanitize_fields": 11,
+      "CRUDService._sanitize_fields": 9,
       "CRUDService._validate_references": 9,
       "CRUDService.add_pre_create_hook": 1,
       "CRUDService.add_pre_delete_hook": 1,

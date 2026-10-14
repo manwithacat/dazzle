@@ -73,9 +73,9 @@ surface note_view "Note":
     field plain "Plain"
 """
 
-# `<svg/onload=…>` and an entity-encoded `javascript:` href both pass the
-# service layer's regex denylist (`sanitizer.strip_dangerous_tags`, which runs
-# on every `text` field); only the allowlist sanitiser removes them.
+# `<svg/onload=…>` and an entity-encoded `javascript:` href both passed the
+# regex denylist the service layer ran on `text` fields until flense ship W
+# removed it; only the allowlist sanitiser removes them.
 _HOSTILE = (
     '<p>Hi <strong>there</strong> <a href="https://example.com/x">link</a></p>'
     "<script>alert(1)</script>"
@@ -150,3 +150,33 @@ async def test_over_cap_value_is_rejected_not_stored(client: Any) -> None:
 
     listing = (await client.get("/notes")).json()
     assert all(row["title"] != "Long" for row in listing["items"])
+
+
+# Flense ship W: the service layer no longer runs its regex denylist over
+# `text` fields. It matched ` one=two` as an event-handler attribute and
+# deleted it, from plain text and from bleach's rich-text output alike.
+_PLAIN_W = "I set one=two today; a<b and c > d, <x onclick=1> stays text"
+_RICH_W = '<p>I set one=two today, <a href="https://example.com/?a=b">see</a></p>'
+
+
+async def test_plain_text_round_trips_byte_identical(client: Any) -> None:
+    resp = await client.post("/notes", json={"title": "W", "plain": _PLAIN_W})
+    assert resp.status_code in (200, 201), resp.text[:400]
+    note_id = resp.json()["id"]
+    assert (await client.get(f"/notes/{note_id}")).json()["plain"] == _PLAIN_W
+
+    edited = _PLAIN_W + " (onload=again)"
+    resp = await client.put(f"/notes/{note_id}", json={"title": "W", "plain": edited})
+    assert resp.status_code == 200, resp.text[:400]
+    assert (await client.get(f"/notes/{note_id}")).json()["plain"] == edited
+
+
+async def test_rich_text_is_cleaned_once_not_mangled_by_the_service(client: Any) -> None:
+    from dazzle.http.runtime.richtext_field import clean_rich_text
+
+    resp = await client.post("/notes", json={"title": "W", "body": _RICH_W})
+    assert resp.status_code in (200, 201), resp.text[:400]
+    note_id = resp.json()["id"]
+    stored = (await client.get(f"/notes/{note_id}")).json()["body"]
+    assert stored == clean_rich_text(_RICH_W)
+    assert "one=two" in stored

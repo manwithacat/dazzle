@@ -14,7 +14,7 @@
   "src/dazzle/cli/common.py": 1,
   "src/dazzle/cli/compliance.py": 8,
   "src/dazzle/cli/coverage.py": 1,
-  "src/dazzle/cli/db.py": 36,
+  "src/dazzle/cli/db.py": 35,
   "src/dazzle/cli/demo.py": 15,
   "src/dazzle/cli/deploy.py": 1,
   "src/dazzle/cli/docs.py": 1,

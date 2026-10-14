@@ -1,7 +1,7 @@
 {
-  "src_lines": 341359,
-  "test_lines": 350554,
-  "docs_lines": 47637,
+  "src_lines": 341452,
+  "test_lines": 351032,
+  "docs_lines": 47663,
   "construct_count": 31,
   "written": "2026-10-14",
   "exceptions": [
@@ -97,6 +97,15 @@
         "test_lines"
       ],
       "reason": "ship T: rich-text sanitiser wired (+src/+tests), security"
+    },
+    {
+      "date": "2026-10-14",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "ship W: sanitiser follow-ups and db resanitize-rich-text (+src/+tests)"
     }
   ]
 }

@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Annotated, Any
 import typer
 from rich.console import Console
 
+from dazzle.cli.dotenv import load_project_dotenv
+from dazzle.cli.env import get_active_env
 from dazzle.cli.utils import load_project_appspec
 from dazzle.core.environment import DAZZLE_ENV_VAR
 from dazzle.core.ir import TenancyMode
@@ -1529,8 +1531,6 @@ def _resolve_target(database_url: str) -> "DbTarget":
     Never reads ``.dazzle/runtime.json`` (#1775) — that file is a running
     server's port/secret discovery and outlives it.
     """
-    from dazzle.cli.dotenv import load_project_dotenv
-    from dazzle.cli.env import get_active_env
     from dazzle.db.connection import resolve_db_target
 
     project_root = Path.cwd().resolve()
@@ -2018,6 +2018,77 @@ def cleanup_command(
         f"\n[green]Cleanup complete: {result['total_deleted']} orphans removed "
         f"in {result['iterations']} iteration(s).[/green]"
     )
+
+
+@db_app.command(name="resanitize-rich-text")
+def resanitize_rich_text_command(
+    database_url: DatabaseUrlOption = "",
+    tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Report rows that would change (the default)"
+    ),
+    apply: bool = typer.Option(False, "--apply", help="Write the sanitised values"),
+    as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Re-run the rich-text sanitiser over stored rich-text values.
+
+    Walks every field a surface renders with ``widget=rich_text`` and runs
+    ``clean_rich_text`` (the allowlist sanitiser the write path uses since flense
+    ship T) over each stored value. Without ``--apply`` it only reports, per
+    entity and field, how many rows would change — counts only, never values.
+    Values longer than the field's cap after sanitising are reported and left
+    untouched. Safe to re-run: an already-clean value is unchanged.
+    """
+    import json as json_mod
+
+    if dry_run and apply:
+        console.print("[red]--dry-run and --apply are mutually exclusive.[/red]")
+        raise typer.Exit(2)
+
+    from dazzle.db.resanitize_rich_text import (
+        PgRichTextStore,
+        resanitize_rich_text,
+        rich_text_targets,
+    )
+
+    project_root = Path.cwd().resolve()
+    appspec = load_project_appspec(project_root)
+    targets = rich_text_targets(appspec)
+    if not targets:
+        if as_json:
+            console.print(json_mod.dumps({"applied": False, "fields": []}))
+        else:
+            console.print("[dim]No rich-text fields (no surface uses widget=rich_text).[/dim]")
+        return
+
+    target = _resolve_target(database_url)
+    schema = _resolve_tenant_schema(tenant) if tenant else ""
+    if not as_json:
+        console.print(
+            f"[dim]Target database: {_redact_url(target.url)} (from {target.source})[/dim]"
+        )
+
+    async def _run(conn: Any) -> Any:
+        return await resanitize_rich_text(targets, PgRichTextStore(conn), apply=apply)
+
+    report = asyncio.run(_run_with_connection(project_root, target.url, _run, schema=schema))
+
+    if as_json:
+        console.print(json_mod.dumps(report.model_dump(), indent=2))
+        return
+
+    verb = "Updated" if apply else "Would update"
+    for f in report.fields:
+        line = f"  {f.entity}.{f.field}: {f.changed} of {f.scanned} rows"
+        if f.over_cap:
+            line += f" [yellow]({f.over_cap} over cap, left untouched)[/yellow]"
+        console.print(line)
+    summary = f"\n{verb} {report.total_changed} rich-text values"
+    if report.total_over_cap:
+        summary += f"; {report.total_over_cap} over-cap values left untouched"
+    console.print(summary + ".")
+    if not apply and report.total_changed:
+        console.print("Run with --apply to write them.")
 
 
 @db_app.command(name="snapshot")

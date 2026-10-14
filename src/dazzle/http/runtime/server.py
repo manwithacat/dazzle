@@ -2500,6 +2500,9 @@ class DazzleBackendApp:
                 personas=self._personas,
                 project_root=self._project_root,
                 user_ir_spec=self._user_ir_entity(),
+                rich_text_fields=(
+                    rich_text_fields_by_entity(self._appspec) if self._appspec else None
+                ),
             )
             self._app.include_router(test_router)
 

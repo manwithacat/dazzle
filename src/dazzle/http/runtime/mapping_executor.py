@@ -53,6 +53,10 @@ from dazzle.http.runtime.retry_accumulator import (
     RetryAccumulator,
     RetryEvent,
 )
+from dazzle.http.runtime.richtext_field import (
+    rich_text_fields_by_entity,
+    sanitise_rich_text_values,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +143,10 @@ class MappingExecutor:
         self._appspec = appspec
         self._event_bus = event_bus
         self._update_entity = update_entity
+        # Flense ship W: external systems can carry HTML, so write-backs into
+        # `widget=rich_text` fields go through the same allowlist sanitiser
+        # as the create/update handlers (see `_write_back`).
+        self._rich_text_fields = rich_text_fields_by_entity(appspec)
         # Index: entity_name → list of (integration, mapping)
         self._mappings_by_entity: dict[str, list[tuple[IntegrationSpec, IntegrationMapping]]] = {}
         self._results: list[MappingResult] = []
@@ -156,6 +164,21 @@ class MappingExecutor:
         # #1769: tests inject the hook. Production loads it from the project
         # module the first time a transport: app mapping sends.
         self._app_transport = app_transport
+
+    async def _write_back(self, entity_name: str, entity_id: str, fields: dict[str, Any]) -> None:
+        """Persist mapped fields through ``update_entity``, rich text sanitised.
+
+        Rich-text fields of ``entity_name`` are cleaned with ``clean_rich_text``
+        first. A value over its cap raises ``RichTextTooLongError`` and nothing
+        is written; every caller catches and logs it, as for any failed write.
+        """
+        if self._update_entity is None:
+            return
+        values = dict(fields)
+        caps = self._rich_text_fields.get(entity_name)
+        if caps:
+            sanitise_rich_text_values(values, caps)
+        await self._update_entity(entity_name, entity_id, values)
 
     @property
     def results(self) -> list[MappingResult]:
@@ -262,7 +285,7 @@ class MappingExecutor:
                     and entity_id
                 ):
                     try:
-                        await self._update_entity(entity_name, entity_id, result.mapped_fields)
+                        await self._write_back(entity_name, entity_id, result.mapped_fields)
                     except Exception as e:
                         logger.warning(
                             "Failed to update entity %s/%s: %s",
@@ -456,9 +479,7 @@ class MappingExecutor:
                         result.mapped_fields = mapped
                         if mapped and self._update_entity and event:
                             try:
-                                await self._update_entity(
-                                    event.entity_name, event.entity_id, mapped
-                                )
+                                await self._write_back(event.entity_name, event.entity_id, mapped)
                             except Exception as e:
                                 logger.warning(
                                     "Failed to update entity %s/%s: %s",
@@ -853,7 +874,7 @@ class MappingExecutor:
                     prev_state = entity_data.get("_previous_state")
                     if prev_state:
                         try:
-                            await self._update_entity(
+                            await self._write_back(
                                 event.entity_name,
                                 event.entity_id,
                                 {"status": prev_state},
@@ -872,7 +893,7 @@ class MappingExecutor:
         # Apply set_fields overrides
         if strategy.set_fields and event and self._update_entity:
             try:
-                await self._update_entity(
+                await self._write_back(
                     event.entity_name,
                     event.entity_id,
                     dict(strategy.set_fields),

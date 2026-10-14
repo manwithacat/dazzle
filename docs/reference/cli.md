@@ -323,6 +323,32 @@ dazzle db COMMAND [OPTIONS]
 | `downgrade` | Rollback migrations |
 | `current` | Show current revision |
 | `history` | Show migration history |
+| `resanitize-rich-text` | Re-run the rich-text sanitiser over stored `widget=rich_text` values |
+
+#### dazzle db resanitize-rich-text
+
+Rows written before rich-text sanitising reached the write path (flense ship T)
+still hold whatever HTML was posted. This walks every field a surface renders
+with `widget=rich_text` and runs the same allowlist sanitiser
+(`clean_rich_text`) over each stored value. The target database resolves like
+every `dazzle db` command: `--database-url` > `DATABASE_URL` > `dazzle.toml`.
+
+```bash
+dazzle db resanitize-rich-text --dry-run   # default: per entity.field, rows that would change
+dazzle db resanitize-rich-text --apply     # write the sanitised values
+```
+
+| Option | Description |
+|--------|-------------|
+| `--dry-run` | Report only (the default). Counts per entity and field; stored values are never printed |
+| `--apply` | Write the sanitised values |
+| `--tenant SLUG` | Run against one tenant schema (schema-per-tenant isolation) |
+| `--database-url URL` | Target database |
+| `--json` | Machine-readable report |
+
+A value longer than the field's cap after sanitising is reported and left
+untouched. A visually empty value becomes NULL (or `""` on a `required` field).
+Re-running is safe: clean values are unchanged.
 
 ---
 

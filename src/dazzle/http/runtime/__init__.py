@@ -42,10 +42,7 @@ from dazzle.http.runtime.repository import (
     Repository,
     RepositoryFactory,
 )
-from dazzle.http.runtime.route_generator import (
-    RouteGenerator,
-    generate_crud_routes,
-)
+from dazzle.http.runtime.route_generator import RouteGenerator
 from dazzle.http.runtime.server import (
     DazzleBackendApp,
     ServerConfig,
@@ -93,7 +90,6 @@ __all__ = [
     "ServiceContext",
     # Routes
     "RouteGenerator",
-    "generate_crud_routes",
     # Server
     "DazzleBackendApp",
     "ServerConfig",

@@ -1277,3 +1277,77 @@ class TestAppTransport:
             assert seen[0].integration == "hmrc_mtd"
         finally:
             sys.modules.pop("pipeline.serve.app_init", None)
+
+
+# ---------------------------------------------------------------------------
+# Write-backs into rich-text fields are sanitised (flense ship W)
+# ---------------------------------------------------------------------------
+
+
+class TestRichTextWriteBack:
+    """External responses can carry HTML; a write-back into a field a surface
+    renders with ``widget=rich_text`` goes through ``clean_rich_text`` first,
+    like the create/update handlers. Other fields are written as received."""
+
+    @staticmethod
+    def _executor(update_fn: AsyncMock, cap: str | None = None) -> MappingExecutor:
+        from types import SimpleNamespace
+
+        options = {"widget": "rich_text"}
+        if cap:
+            options["rich_text_max_length"] = cap
+        element = SimpleNamespace(field_name="bio", options=options)
+        surface = SimpleNamespace(
+            entity_ref="Company", sections=[SimpleNamespace(elements=[element])]
+        )
+        appspec = _make_appspec()
+        appspec.surfaces = [surface]
+        return MappingExecutor(appspec, EntityEventBus(), update_entity=update_fn)
+
+    def test_rich_text_field_is_sanitised_other_fields_untouched(self) -> None:
+        update_fn = AsyncMock()
+        executor = self._executor(update_fn)
+        fields = {"bio": '<p>ok</p><img src=x onerror="alert(1)">', "note": "<b>raw</b>"}
+        _run(executor._write_back("Company", "abc-123", fields))
+        update_fn.assert_awaited_once_with(
+            "Company", "abc-123", {"bio": "<p>ok</p>", "note": "<b>raw</b>"}
+        )
+        assert fields["bio"].endswith('onerror="alert(1)">')  # caller's dict not mutated
+
+    def test_other_entities_are_written_as_received(self) -> None:
+        update_fn = AsyncMock()
+        _run(self._executor(update_fn)._write_back("Other", "1", {"bio": "<script>x</script>"}))
+        update_fn.assert_awaited_once_with("Other", "1", {"bio": "<script>x</script>"})
+
+    def test_over_cap_value_is_not_written(self) -> None:
+        from dazzle.http.runtime.richtext_field import RichTextTooLongError
+
+        update_fn = AsyncMock()
+        executor = self._executor(update_fn, cap="10")
+        with pytest.raises(RichTextTooLongError):
+            _run(executor._write_back("Company", "1", {"bio": "<p>" + "x" * 50 + "</p>"}))
+        update_fn.assert_not_awaited()
+
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
+    def test_response_mapping_write_back_is_sanitised(self, mock_client_cls: MagicMock) -> None:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"bio": "<p>hi</p><script>alert(1)</script>"}
+        mock_resp.text = "{}"
+        mock_client = AsyncMock()
+        mock_client.request = AsyncMock(return_value=mock_resp)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_cls.return_value = mock_client
+
+        mapping = _make_mapping(
+            response_mapping=[
+                MappingRule(target_field="bio", source=Expression(path="response.bio")),
+            ],
+        )
+        update_fn = AsyncMock()
+        executor = self._executor(update_fn)
+        executor._appspec.integrations = [_make_integration(mappings=[mapping])]
+        executor.register_all()
+        _run(executor.handle_event(_make_event(event_type=EntityEventType.CREATED)))
+        update_fn.assert_awaited_once_with("Company", "abc-123", {"bio": "<p>hi</p>alert(1)"})
