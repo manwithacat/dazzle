@@ -34,6 +34,7 @@ class ServiceParserMixin:
         _parse_dotted_path: Any  # From ProcessParserMixin
         _source_location: Any  # v0.31.0: Source location helper from BaseParser
         _parse_construct_header: Any
+        _parse_warning: Any
 
     def parse_service(self) -> ir.APISpec | ir.DomainServiceSpec:
         """Parse service declaration (external API or domain service).
@@ -214,11 +215,17 @@ class ServiceParserMixin:
 
             # stub: python | typescript
             elif self.match(TokenType.STUB):
-                self.advance()
+                stub_tok = self.advance()
                 self.expect(TokenType.COLON)
                 lang_token = self.expect(TokenType.IDENTIFIER)
                 stub_language = self.enum_from_token(ir.StubLanguage, lang_token)
                 self.skip_newlines()
+                # Flense ship U: nothing reads `stub_language`.
+                self._parse_warning(
+                    stub_tok,
+                    f"W_DECLARED_NOT_READ: service '{name}': `stub:` declared but not "
+                    f"read by the runtime; no DD",
+                )
 
             else:
                 break

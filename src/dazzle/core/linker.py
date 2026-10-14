@@ -307,6 +307,8 @@ def build_appspec(
             "link_warnings": [
                 *unused_import_warnings,  # v0.14.1
                 *subtype_panel_warnings,  # v0.71.184 (#1217 Phase 3e.v)
+                # Flense ship U: unknown keys and unread clauses the parser skipped.
+                *(w for m in sorted_modules for w in m.fragment.parse_warnings),
             ],
         },
     )

@@ -148,15 +148,6 @@
     ]
   },
   {
-    "signature": "exact:a395079a55f01be3d2ae9b2e87378e9d",
-    "count": 3,
-    "names": [
-      "dazzle/core/dsl_parser_impl/llm.py::_on_unknown_llm_config",
-      "dazzle/core/dsl_parser_impl/llm.py::_on_unknown_llm_intent",
-      "dazzle/core/dsl_parser_impl/llm.py::_on_unknown_llm_model"
-    ]
-  },
-  {
     "signature": "f4a23354446ebfcf45ddf3e150d9c3bc",
     "count": 2,
     "names": [

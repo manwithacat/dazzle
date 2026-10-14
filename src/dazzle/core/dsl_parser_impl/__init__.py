@@ -472,6 +472,8 @@ class Parser(
                 # Skip unknown tokens
                 self.advance()
 
+        if self.parse_warnings:
+            fragment = fragment.model_copy(update={"parse_warnings": list(self.parse_warnings)})
         return fragment
 
 

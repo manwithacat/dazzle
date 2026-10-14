@@ -53,6 +53,7 @@ class WorkspaceParserMixin:
         file: Any
         _source_location: Any
         _parse_construct_header: Any
+        _parse_warning: Any
 
     # v0.60.0: Valid units for bucket(field, unit) — keep in sync with
     # aggregate.TruncateUnit. The parser rejects other units at parse
@@ -1516,6 +1517,13 @@ class WorkspaceParserMixin:
             if key == "scope_param":
                 scope_param_str = self.expect_identifier_or_keyword().value
                 self.skip_newlines()
+                # Flense ship U: the entity_card adapter renders the primary
+                # source's first row and never reads `scope_param`.
+                self._parse_warning(
+                    key_tok,
+                    "W_DECLARED_NOT_READ: entity_card_config: `scope_param:` declared "
+                    "but not read by the runtime; no DD",
+                )
             elif key == "sections":
                 self.skip_newlines()
                 self.expect(TokenType.INDENT)

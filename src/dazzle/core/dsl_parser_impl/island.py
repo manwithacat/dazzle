@@ -31,6 +31,7 @@ class IslandParserMixin:
         current_token: Any
         file: Any
         _parse_construct_header: Any
+        _skip_unknown_block_key: Any
 
     def parse_island(self) -> ir.IslandSpec:
         """Parse an island block."""
@@ -66,7 +67,7 @@ class IslandParserMixin:
                 self.skip_newlines()
 
             else:
-                self.advance()
+                self._skip_unknown_block_key("island")
                 self.skip_newlines()
 
         if self.match(TokenType.DEDENT):

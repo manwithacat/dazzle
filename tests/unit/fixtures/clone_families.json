@@ -39,7 +39,6 @@
   "exact:9fed46369caf6cca1b8be96f01aa84fa": "auth-domain-and-connection-helpers",
   "exact:a0b61b5525770e33703711db0c73ed03": "cli-entrypoint-scaffolding",
   "exact:a260340dad02293e416fb010f1a177b9": "cell-and-label-formatters",
-  "exact:a395079a55f01be3d2ae9b2e87378e9d": "parser-keyword-error-helpers",
   "exact:a7c40e0d37b39fd293c6912fbb799994": "per-module-sql-and-connection-helpers",
   "exact:a9616cdd1461bf466f7e055f98555212": "ir-facade-accessors",
   "exact:a9c30de44754ab949d6e41a7b7841fb3": "dataclass-and-store-boilerplate",

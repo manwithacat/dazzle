@@ -157,6 +157,10 @@ class ModuleFragment(BaseModel):
     # `WorkspaceSpec.nav_ref`; resolved by the linker which inlines the
     # named definition's groups into `WorkspaceSpec.nav_groups`.
     navs: list[NavSpec] = Field(default_factory=list)
+    # Non-fatal parser diagnostics (flense ship U): unknown keys a lenient
+    # block skipped and clauses the runtime never reads. The linker folds them
+    # into ``AppSpec.metadata['link_warnings']``.
+    parse_warnings: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

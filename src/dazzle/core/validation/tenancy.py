@@ -43,6 +43,29 @@ def validate_tenancy_partition_key(
     return errors, warnings
 
 
+def validate_tenancy_mode_implemented(
+    appspec: ir.AppSpec,
+) -> tuple[list[str], list[str]]:
+    """Warn that a non-default ``tenancy: mode:`` fences nothing (flense ship U).
+
+    Partition-key injection, RLS, the RLS GUCs, Alembic tenant metadata,
+    ``dazzle db apply-rls``, ``archetype: profile`` and sentinel MT-01 all gate
+    on ``shared_schema`` (ship R). No runtime implements schema- or
+    database-per-tenant isolation from this field, so those modes leave the app
+    with no tenant fencing at all.
+    """
+    tenancy = appspec.tenancy
+    if tenancy is None or tenancy.isolation is None:
+        return [], []
+    mode = tenancy.isolation.mode
+    if mode in (ir.TenancyMode.SHARED_SCHEMA, ir.TenancyMode.SINGLE):
+        return [], []
+    return [], [
+        f"W_TENANCY_MODE_UNIMPLEMENTED: tenancy mode '{mode.value}' is not implemented "
+        f"by the runtime: no tenant fencing is applied; use shared_schema or single"
+    ]
+
+
 # =============================================================================
 # tenant_host: validator rules (#1289)
 # =============================================================================

@@ -1364,6 +1364,7 @@ ir_class: ModuleFragment
     - llm_models: list[LLMModelSpec] = []
     - navs: list[NavSpec] = []
     - params: list[ParamSpec] = []
+    - parse_warnings: list[str] = []
     - personas: list[PersonaSpec] = []
     - policies: PoliciesSpec | None = None
     - processes: list[ProcessSpec] = []

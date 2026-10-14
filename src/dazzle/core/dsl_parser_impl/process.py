@@ -44,7 +44,7 @@ from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..ir.process import EffectAction, StepEffect
-from ..lexer import TokenType
+from ..lexer import Token, TokenType
 from .dispatch import KeywordParser, parse_block_with_dispatch
 
 
@@ -76,6 +76,8 @@ class _ScheduleParseContext:
     overlap: ir.OverlapPolicy = ir.OverlapPolicy.SKIP
     steps: list[ir.ProcessStepSpec] = field(default_factory=list)
     timeout_seconds: int | ir.ParamRef = 3600  # Default 1h
+    # Declared clauses no runtime reads (flense ship U): (label, keyword token).
+    unread: list[tuple[str, Token]] = field(default_factory=list)
 
 
 def parse_duration(s: str, *, parser: Any = None) -> int:
@@ -181,6 +183,8 @@ class ProcessParserMixin:
         _source_location: Any
         _parse_construct_header: Any
         _parse_string_or_param: Any
+        _skip_unknown_block_key: Any
+        _parse_warning: Any
 
     def parse_process(self) -> ir.ProcessSpec:
         """Parse a process block."""
@@ -259,10 +263,7 @@ class ProcessParserMixin:
             ctx.overlap_policy = self._parse_overlap_policy(str(overlap_str))
             self.skip_newlines()
         else:
-            self.advance()
-            if self.match(TokenType.COLON):
-                self.advance()
-                self._skip_to_next_process_field()
+            self._skip_unknown_block_key("process")
 
     def parse_schedule(self) -> ir.ScheduleSpec:
         """Parse a schedule block."""
@@ -280,6 +281,15 @@ class ProcessParserMixin:
             self._parse_schedule_field(ctx)
 
         self.expect(TokenType.DEDENT)
+
+        if ctx.unread:
+            # Flense ship U: no scheduler reads catch_up/overlap.
+            declared = "/".join(f"`{label}`" for label, _ in ctx.unread)
+            self._parse_warning(
+                ctx.unread[0][1],
+                f"W_DECLARED_NOT_READ: schedule '{name}': {declared} declared but not "
+                f"read by the runtime; no DD",
+            )
 
         return ir.ScheduleSpec(
             name=str(name),
@@ -319,13 +329,13 @@ class ProcessParserMixin:
             ctx.timezone = self._parse_string_or_param(param_type="str", default="UTC")
             self.skip_newlines()
         elif self.match(TokenType.CATCH_UP):
-            self.advance()
+            ctx.unread.append(("catch_up:", self.advance()))
             self.expect(TokenType.COLON)
             catch_up_token = self.expect_identifier_or_keyword()
             ctx.catch_up = str(catch_up_token.value).lower() == "true"
             self.skip_newlines()
         elif self.match(TokenType.OVERLAP):
-            self.advance()
+            ctx.unread.append(("overlap:", self.advance()))
             self.expect(TokenType.COLON)
             overlap_str = self.expect_identifier_or_keyword().value
             ctx.overlap = self._parse_overlap_policy(str(overlap_str))
@@ -338,10 +348,7 @@ class ProcessParserMixin:
         elif self.match(TokenType.TIMEOUT):
             self._parse_schedule_timeout_field(ctx)
         else:
-            self.advance()
-            if self.match(TokenType.COLON):
-                self.advance()
-                self._skip_to_next_process_field()
+            self._skip_unknown_block_key("schedule")
 
     def _parse_schedule_timeout_field(self, ctx: _ScheduleParseContext) -> None:
         """Parse the timeout field in a schedule block (supports param refs)."""
@@ -696,7 +703,7 @@ class ProcessParserMixin:
             first_class_keywords=_STEP_FIELD_KEYWORDS,
             state=fields,
             ident_keywords=_STEP_FIELD_IDENT_KEYWORDS,
-            on_unknown=lambda _p: self._skip_unknown_step_field(),
+            on_unknown=lambda _p: self._skip_unknown_block_key("process step"),
         )
 
         self.expect(TokenType.DEDENT)
@@ -727,17 +734,6 @@ class ProcessParserMixin:
             compensate_with=fields.compensate_with,
             effects=fields.effects,
         )
-
-    def _skip_unknown_step_field(self) -> None:
-        """Dispatch fallback for a step-field keyword that isn't recognised.
-
-        Mirrors the legacy ``else`` arm: consume the token (and a trailing
-        ``COLON``/value) so the block loop makes progress instead of spinning.
-        """
-        self.advance()
-        if self.match(TokenType.COLON):
-            self.advance()
-            self._skip_to_next_step_field()
 
     def _parse_step_service_field(self, f: _StepFields) -> None:
         self.advance()
@@ -1489,52 +1485,10 @@ class ProcessParserMixin:
 
         return value
 
-    def _skip_to_next_process_field(self) -> None:
-        """Skip tokens until we reach the next process field or end of block."""
-        while not self.match(
-            TokenType.IMPLEMENTS,
-            TokenType.TRIGGER,
-            TokenType.INPUT,
-            TokenType.OUTPUT,
-            TokenType.STEPS,
-            TokenType.COMPENSATIONS,
-            TokenType.TIMEOUT,
-            TokenType.OVERLAP,
-            TokenType.DEDENT,
-            TokenType.EOF,
-        ):
-            self.advance()
-            self.skip_newlines()
-
     def _skip_to_next_step(self) -> None:
         """Skip tokens until we reach the next step or end of block."""
         while not self.match(
             TokenType.MINUS,
-            TokenType.DEDENT,
-            TokenType.EOF,
-        ):
-            self.advance()
-            self.skip_newlines()
-
-    def _skip_to_next_step_field(self) -> None:
-        """Skip tokens until we reach the next step field or end of block."""
-        while not self.match(
-            TokenType.SERVICE,
-            TokenType.CHANNEL,
-            TokenType.MESSAGE,
-            TokenType.WAIT,
-            TokenType.HUMAN_TASK,
-            TokenType.SUBPROCESS,
-            TokenType.CONDITION,
-            TokenType.GOTO,
-            TokenType.ON_SUCCESS,
-            TokenType.ON_FAILURE,
-            TokenType.COMPENSATE,
-            TokenType.TIMEOUT,
-            TokenType.RETRY,
-            TokenType.INPUTS,
-            TokenType.OUTPUT,
-            TokenType.EFFECTS,
             TokenType.DEDENT,
             TokenType.EOF,
         ):

@@ -45,6 +45,8 @@ class ParserProtocol(Protocol):
     def error(self, message: str) -> NoReturn: ...
     def skip_newlines(self) -> None: ...
     def _is_keyword_as_identifier(self) -> bool: ...
+    def _parse_warning(self, token: Token, message: str) -> None: ...
+    def _skip_unknown_block_key(self, block: str) -> None: ...
     def _parse_construct_header(
         self,
         token_type: TokenType,
@@ -83,6 +85,10 @@ class BaseParser:
         self.tokens = tokens
         self.file = file
         self.pos = 0
+        # Non-fatal diagnostics (flense ship U): declarations the parser accepts
+        # but that change nothing. Carried out on ``ModuleFragment.parse_warnings``
+        # and surfaced by ``dazzle validate`` / ``dazzle lint`` via the linker.
+        self.parse_warnings: list[str] = []
 
     def _source_location(self, token: Token | None = None) -> SourceLocation:
         """Create a SourceLocation from a token (defaults to current token)."""
@@ -279,6 +285,61 @@ class BaseParser:
         """Skip any NEWLINE tokens."""
         while self.match(TokenType.NEWLINE):
             self.advance()
+
+    def _parse_warning(self, token: Token, message: str) -> None:
+        """Record a non-fatal diagnostic positioned at ``token`` (flense ship U)."""
+        self.parse_warnings.append(f"{message} ({Path(self.file).name}:{token.line})")
+
+    def _at_line_start(self) -> bool:
+        """True when the current token is the first token on its line."""
+        if self.pos == 0:
+            return True
+        return self.tokens[self.pos - 1].type in (
+            TokenType.NEWLINE,
+            TokenType.INDENT,
+            TokenType.DEDENT,
+        )
+
+    def _skip_unknown_block_key(self, block: str) -> None:
+        """Skip a token a lenient block does not recognise (flense ship U).
+
+        A word at the start of a line is an entry the block does not know — a
+        typo, or a clause removed from the grammar — so it warns
+        ``W_UNKNOWN_BLOCK_KEY`` and skips the whole entry: the rest of its line
+        and any indented block under it. Any other token (a value a key handler
+        left behind) is skipped alone, as the blocks always did.
+        """
+        tok = self.current_token()
+        value = tok.value
+        is_entry = (
+            tok.type not in (TokenType.NEWLINE, TokenType.INDENT, TokenType.DEDENT, TokenType.EOF)
+            and isinstance(value, str)
+            and value.isidentifier()
+            and self._at_line_start()
+        )
+        if not is_entry:
+            self.advance()
+            return
+        self._parse_warning(
+            tok, f"W_UNKNOWN_BLOCK_KEY: unknown key `{value}` in `{block}` block ignored"
+        )
+        while not self.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+            self.advance()
+        offset = 0
+        while self.peek_token(offset).type == TokenType.NEWLINE:
+            offset += 1
+        if self.peek_token(offset).type != TokenType.INDENT:
+            return
+        self.skip_newlines()
+        depth = 0
+        while not self.match(TokenType.EOF):
+            if self.match(TokenType.INDENT):
+                depth += 1
+            elif self.match(TokenType.DEDENT):
+                depth -= 1
+            self.advance()
+            if depth == 0:
+                return
 
     def error(self, message: str) -> NoReturn:
         """Raise a ParseError at the current token position."""

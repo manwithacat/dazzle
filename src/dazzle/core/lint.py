@@ -1,5 +1,7 @@
 from . import ir
 from .discovery import RelevanceGroup, suggest_capabilities
+from .validation.grants import validate_grant_relation_clauses
+from .validation.tenancy import validate_tenancy_mode_implemented
 from .validator import (
     extended_lint,
     validate_admin_personas_scope_conflict,
@@ -180,6 +182,12 @@ def lint_appspec(
     errors, warnings = validate_island_render_fields(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
+
+    # Flense ship U: declarations the runtime does not honour
+    for ship_u_check in (validate_tenancy_mode_implemented, validate_grant_relation_clauses):
+        errors, warnings = ship_u_check(appspec)
+        all_errors.extend(errors)
+        all_warnings.extend(warnings)
 
     # Money field validation (FACT/INTENT streams must use Money type)
     errors, warnings = validate_money_fields(appspec)

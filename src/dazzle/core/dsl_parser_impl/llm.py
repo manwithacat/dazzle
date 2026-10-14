@@ -676,8 +676,8 @@ _LLM_INTENT_IDENT_KEYWORDS: dict[str, KeywordParser[_LLMIntentState]] = {
 
 
 def _on_unknown_llm_intent(parser: Any) -> None:
-    """Silently skip unknown keywords + their newline (mirrors legacy else branch)."""
-    parser.advance()
+    """Skip an unknown ``llm_intent`` key (warns W_UNKNOWN_BLOCK_KEY) + its newline."""
+    parser._skip_unknown_block_key("llm_intent")
     parser.skip_newlines()
 
 
@@ -838,8 +838,8 @@ _LLM_MODEL_IDENT_KEYWORDS: dict[str, KeywordParser[_LLMModelState]] = {
 
 
 def _on_unknown_llm_model(parser: Any) -> None:
-    """Silently skip unknown keywords + their newline (mirrors legacy else branch)."""
-    parser.advance()
+    """Skip an unknown ``llm_model`` key (warns W_UNKNOWN_BLOCK_KEY) + its newline."""
+    parser._skip_unknown_block_key("llm_model")
     parser.skip_newlines()
 
 
@@ -909,8 +909,17 @@ def _lc_kw_default_model(parser: Any, state: _LLMConfigState) -> None:
 
 
 def _lc_kw_artifact_store(parser: Any, state: _LLMConfigState) -> None:
-    """``artifact_store: local | s3 | gcs`` — validated."""
-    parser.advance()
+    """``artifact_store: local | s3 | gcs`` — validated, but nothing reads it.
+
+    No framework code stores prompts/completions by this setting, so the clause
+    warns ``W_DECLARED_NOT_READ`` (flense ship U).
+    """
+    key_tok = parser.advance()
+    parser._parse_warning(
+        key_tok,
+        "W_DECLARED_NOT_READ: llm_config: `artifact_store:` declared but not read "
+        "by the runtime; no DD",
+    )
     parser.expect(TokenType.COLON)
     store_str = parser.expect_identifier_or_keyword().value
     try:
@@ -934,10 +943,32 @@ def _lc_kw_logging(parser: Any, state: _LLMConfigState) -> None:
     state.logging = parser._parse_logging_policy()
 
 
+def _lc_scalar_map_value_ignored(parser: Any, key_tok: Any) -> bool:
+    """Warn and skip when a ``<model>: <limit>`` map clause got a scalar instead.
+
+    ``concurrency: 3`` reads as a global limit but the clause is a per-model
+    block; the value is ignored with ``W_CLAUSE_VALUE_IGNORED`` rather than a
+    parse error (flense ship U). Returns True when the line was skipped.
+    """
+    if parser.match(TokenType.NEWLINE, TokenType.INDENT):
+        return False
+    parser._parse_warning(
+        key_tok,
+        f"W_CLAUSE_VALUE_IGNORED: llm_config: `{key_tok.value}:` takes an indented "
+        f"block of `<model>: <limit>` lines; the inline value is ignored",
+    )
+    while not parser.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+        parser.advance()
+    parser.skip_newlines()
+    return True
+
+
 def _lc_kw_rate_limits(parser: Any, state: _LLMConfigState) -> None:
     """``rate_limits:`` — nested map of model_name → int RPM."""
-    parser.advance()
+    key_tok = parser.advance()
     parser.expect(TokenType.COLON)
+    if _lc_scalar_map_value_ignored(parser, key_tok):
+        return
     parser.skip_newlines()
     state.rate_limits = parser._parse_rate_limits()
 
@@ -947,8 +978,10 @@ def _lc_kw_rate_limits(parser: Any, state: _LLMConfigState) -> None:
 
 def _lc_kw_concurrency(parser: Any, state: _LLMConfigState) -> None:
     """``concurrency:`` — nested map (same shape as rate_limits)."""
-    parser.advance()
+    key_tok = parser.advance()
     parser.expect(TokenType.COLON)
+    if _lc_scalar_map_value_ignored(parser, key_tok):
+        return
     parser.skip_newlines()
     state.concurrency = parser._parse_concurrency_limits()
 
@@ -970,8 +1003,8 @@ _LLM_CONFIG_IDENT_KEYWORDS: dict[str, KeywordParser[_LLMConfigState]] = {
 
 
 def _on_unknown_llm_config(parser: Any) -> None:
-    """Silently skip unknown keywords + their newline (mirrors legacy else)."""
-    parser.advance()
+    """Skip an unknown ``llm_config`` key (warns W_UNKNOWN_BLOCK_KEY) + its newline."""
+    parser._skip_unknown_block_key("llm_config")
     parser.skip_newlines()
 
 

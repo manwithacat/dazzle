@@ -86,6 +86,7 @@ from .governance import (
     validate_llm_subject_surface,
     validate_sensitive_fields,
 )
+from .grants import validate_grant_relation_clauses
 from .graphs import (
     _NUMERIC_FIELD_TYPES,
     _validate_graph_edge,
@@ -120,6 +121,7 @@ from .surfaces import (
 )
 from .tenancy import (
     _get_entities,
+    validate_tenancy_mode_implemented,
     validate_tenancy_partition_key,
     validate_tenant_hierarchy_and_membership,
     validate_tenant_host_blocks,
@@ -209,6 +211,8 @@ __all__ = [
     "validate_money_fields",
     "validate_insight_summaries",
     "validate_island_render_fields",
+    "validate_grant_relation_clauses",
+    "validate_tenancy_mode_implemented",
     "validate_outlier_decorators",
     "validate_rag_decorators",
     "validate_nav_curation",

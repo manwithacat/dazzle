@@ -869,11 +869,14 @@ policy_line   ::= "classify" IDENT "." IDENT "as" IDENT NEWLINE
 tenancy_decl  ::= "tenancy" ":" NEWLINE
                   INDENT
                     ("mode" ":" tenancy_mode NEWLINE)?
+                    ("topics" ":" tenancy_topics NEWLINE)?
                     (IDENT ":" (STRING | IDENT | BOOLEAN) NEWLINE)*
                   DEDENT ;
 
 tenancy_mode  ::= "single" | "shared_schema" | "schema_per_tenant"
                 | "database_per_tenant" ;
+
+tenancy_topics ::= "shared" | "namespace_per_tenant" ;
 
 (* =============================================================================
    LLM Jobs

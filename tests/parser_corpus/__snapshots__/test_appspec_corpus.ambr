@@ -762,6 +762,9 @@
           'title': 'Claude Sonnet',
         }),
       ]),
+      'parse_warnings': list([
+        'W_DECLARED_NOT_READ: llm_config: `artifact_store:` declared but not read by the runtime; no DD (llm_constructs.dsl:28)',
+      ]),
     }),
     'snapshot_version': 1,
   })

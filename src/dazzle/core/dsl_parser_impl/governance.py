@@ -49,8 +49,10 @@ class GovernanceParserMixin:
         skip_newlines: Any
         file: Any
         peek: Any
+        peek_token: Any
         check: Any
         _is_keyword_as_identifier: Any
+        _skip_unknown_block_key: Any
 
     # =========================================================================
     # Policies Section Parsing
@@ -85,16 +87,17 @@ class GovernanceParserMixin:
             elif self.match(TokenType.ERASURE):
                 erasure = self._parse_erasure()
                 erasures.append(erasure)
-            elif self.match(TokenType.IDENTIFIER):
-                # Handle config options like "audit_access: true"
-                key = self.current_token().value
-                self.advance()
-                if key == "audit_access" and self.match(TokenType.COLON):
-                    self.advance()  # consume COLON
-                    value = self.expect_identifier_or_keyword().value
-                    audit_access = value.lower() in ("true", "yes", "on")
+            elif (
+                self.match(TokenType.IDENTIFIER)
+                and self.current_token().value == "audit_access"
+                and self.peek_token().type == TokenType.COLON
+            ):
+                self.advance()  # consume "audit_access"
+                self.advance()  # consume COLON
+                value = self.expect_identifier_or_keyword().value
+                audit_access = value.lower() in ("true", "yes", "on")
             else:
-                self.advance()
+                self._skip_unknown_block_key("policies")
 
             self.skip_newlines()
 
@@ -278,14 +281,24 @@ def _t_kw_partition_key(parser: Any, state: _TenancyState) -> None:
 
 
 def _t_kw_topics(parser: Any, state: _TenancyState) -> None:
-    """``topics: shared | namespace_per_tenant`` — tolerant of unknown values."""
+    """``topics: shared | namespace_per_tenant``.
+
+    The value set is closed (``ir.TopicNamespaceMode``), so an unknown value is a
+    parse error rather than a silent fall-back to ``shared`` (flense ship U).
+    """
     parser.advance()
     parser.expect(TokenType.COLON)
-    value = parser.expect_identifier_or_keyword().value
+    tok = parser.expect_identifier_or_keyword()
     try:
-        state.topic_namespace = ir.TopicNamespaceMode(value.lower())
+        state.topic_namespace = ir.TopicNamespaceMode(tok.value.lower())
     except ValueError:
-        pass
+        allowed = ", ".join(m.value for m in ir.TopicNamespaceMode)
+        raise make_parse_error(
+            f"Unknown tenancy topics '{tok.value}'. Expected one of: {allowed}",
+            parser.file,
+            tok.line,
+            tok.column,
+        ) from None
 
 
 def _t_kw_exclude(parser: Any, state: _TenancyState) -> None:
@@ -384,15 +397,16 @@ _TENANCY_IDENT_KEYWORDS: dict[str, KeywordParser[_TenancyState]] = {
 
 
 def _on_unknown_tenancy(parser: Any) -> None:
-    """Silently skip a stray token in the ``tenancy:`` block.
+    """Skip a token the ``tenancy:`` block does not recognise.
 
-    NOTE: this fires for value tokens the keyword handlers leave behind (not only
-    unrecognized keywords), so it can't warn without false positives. The #1447 B2
-    silent-drop was a keyword-name mismatch (the DSL ``entities_excluded`` vs a
-    parser that only knew ``exclude``) — fixed by aligning the dispatch key to the
-    IR field name, so the keyword is now consumed rather than skipped here.
+    This fires for value tokens the keyword handlers leave behind as well as for
+    unknown keys, so ``_skip_unknown_block_key`` warns only for a word at the
+    start of a line (an entry) and skips any other token silently (flense ship U).
+    The #1447 B2 silent-drop was a keyword-name mismatch (the DSL
+    ``entities_excluded`` vs a parser that only knew ``exclude``) — fixed by
+    aligning the dispatch key to the IR field name.
     """
-    parser.advance()
+    parser._skip_unknown_block_key("tenancy")
 
 
 def _build_tenancy(state: _TenancyState) -> ir.TenancySpec:

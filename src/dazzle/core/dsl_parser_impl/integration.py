@@ -62,6 +62,7 @@ class IntegrationParserMixin:
         collect_line_as_expr: Any
         _source_location: Any
         _parse_construct_header: Any
+        _skip_unknown_block_key: Any
 
     def parse_integration(self) -> ir.IntegrationSpec:
         """Parse integration declaration."""
@@ -572,8 +573,7 @@ class IntegrationParserMixin:
                     self.expect(TokenType.DEDENT)
 
             else:
-                # Skip unknown tokens
-                self.advance()
+                self._skip_unknown_block_key("integration action")
 
         return ir.IntegrationAction(
             name=action_name,
@@ -629,8 +629,7 @@ class IntegrationParserMixin:
                 self.expect(TokenType.DEDENT)
 
             else:
-                # Skip unknown tokens
-                self.advance()
+                self._skip_unknown_block_key("integration sync")
 
         return ir.IntegrationSync(
             name=sync_name,

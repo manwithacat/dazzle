@@ -38,6 +38,7 @@ class ViewParserMixin:
         file: Any
         parse_type_spec: Any
         _parse_construct_header: Any
+        _skip_unknown_block_key: Any
 
     def parse_view(self) -> ir.ViewSpec:
         """
@@ -114,7 +115,7 @@ class ViewParserMixin:
                     self.expect(TokenType.INDENT)
                     fields = self._parse_view_fields()
                 else:
-                    self.advance()
+                    self._skip_unknown_block_key("view")
                     self.skip_newlines()
 
         if self.match(TokenType.DEDENT):

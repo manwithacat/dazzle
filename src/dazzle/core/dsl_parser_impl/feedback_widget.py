@@ -34,6 +34,7 @@ class FeedbackWidgetParserMixin:
         expect_identifier_or_keyword: Any
         current_token: Any
         file: Any
+        _parse_warning: Any
 
     def parse_feedback_widget(self) -> ir.FeedbackWidgetSpec:
         """Parse a feedback_widget block."""
@@ -86,6 +87,24 @@ class FeedbackWidgetParserMixin:
 
             if self.match(TokenType.DEDENT):
                 self.advance()
+
+        # Flense ship U: no framework code reads these three, so declaring
+        # them changes nothing.
+        unread = [
+            f"`{label}`"
+            for label, value in (
+                ("shortcut:", shortcut),
+                ("categories:", categories),
+                ("severities:", severities),
+            )
+            if value is not None
+        ]
+        if unread:
+            self._parse_warning(
+                value_token,
+                f"W_DECLARED_NOT_READ: feedback_widget: {'/'.join(unread)} declared but "
+                f"not read by the runtime; no DD",
+            )
 
         kwargs: dict[str, Any] = {"enabled": enabled}
         if position is not None:

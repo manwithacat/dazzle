@@ -28,11 +28,11 @@
     },
     "fixtures/pra": {
       "expected_errors": 7,
-      "expected_warnings_min": 350,
+      "expected_warnings_min": 361,
       "expected_error_patterns": [
         "resolve to the same route"
       ],
-      "rationale": "pra is the parser-conformance kitchen-sink corpus. The 350+ warnings are entities with permit-but-no-scope and adjacent default-deny gates by design plus 15 #1324-FR-6 nav auto-discovery-reliance notices (personas with no `uses nav`) \u2014 fixing these would lose the example's coverage. The 7 errors are route collisions (#1489): the corpus deliberately declares multiple surfaces sharing the same (mode, entity) \u2014 e.g. multiple `view` surfaces on Invoice, list+kanban on Task \u2014 which all resolve to the same auto-route and collide. Real apps must use one surface per (mode, entity) (secondary views go in workspace regions); the corpus keeps them for parser coverage. (The 7 decimal-money stream errors went with the HLESS streams in flense ship F, DD-006.)"
+      "rationale": "pra is the parser-conformance kitchen-sink corpus. The 350+ warnings are entities with permit-but-no-scope and adjacent default-deny gates by design plus 15 #1324-FR-6 nav auto-discovery-reliance notices (personas with no `uses nav`) and 17 flense-ship-U W_DECLARED_NOT_READ notices (service `stub:`, schedule `catch_up:`/`overlap:`, llm_config `artifact_store:` \u2014 the corpus keeps the clauses for parser coverage) \u2014 fixing these would lose the example's coverage. The 7 errors are route collisions (#1489): the corpus deliberately declares multiple surfaces sharing the same (mode, entity) \u2014 e.g. multiple `view` surfaces on Invoice, list+kanban on Task \u2014 which all resolve to the same auto-route and collide. Real apps must use one surface per (mode, entity) (secondary views go in workspace regions); the corpus keeps them for parser coverage. (The 7 decimal-money stream errors went with the HLESS streams in flense ship F, DD-006.)"
     },
     "examples/hr_records": {
       "expected_errors": 0,
