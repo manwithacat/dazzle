@@ -192,7 +192,7 @@ Copied into `scripts/ci_local.sh` — do not invent a third list.
 
 | Job | Extras |
 |-----|--------|
-| type-check | `dev,llm,mcp,postgres,i18n,viewport,perf` |
+| type-check | `dev,llm,mcp,postgres,viewport,perf` |
 | python-tests | `dev,llm,mcp,postgres,perf,saml,test-full` |
 | lint | `dev,llm,mcp,postgres,perf` |
 | security-tests | `dev,sso,postgres,perf` |

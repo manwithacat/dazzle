@@ -315,8 +315,14 @@ def profile_from_param_resolver(
     *,
     tenant_id: str | None = None,
     user_id: str | None = None,
+    tenant_config: Mapping[str, Any] | None = None,
 ) -> DisplayLocaleProfile:
-    """Resolve profile via :class:`~dazzle.http.runtime.param_store.ParamResolver`."""
+    """Resolve profile via :class:`~dazzle.http.runtime.param_store.ParamResolver`.
+
+    *tenant_config* is the tenant's coerced per-tenant config
+    (``request.state.tenant_config``); it fills any ``locale.*`` key the
+    resolver leaves unset.
+    """
 
     def getter(key: str) -> Any:
         if resolver is None:
@@ -327,24 +333,42 @@ def profile_from_param_resolver(
         except KeyError:
             return None
 
-    return resolve_display_locale(param_getter=getter)
+    return resolve_display_locale(param_getter=getter, tenant_config=tenant_config)
+
+
+def _request_tenant_id(state: Any) -> str | None:
+    """The resolved tenant's id, whichever tenancy middleware bound it.
+
+    Schema-per-tenant (``TenantMiddleware``) binds a ``TenantRecord``; host
+    tenancy (``TenantResolutionMiddleware``) binds a ``ResolvedTenant``. Both
+    carry ``.id``; param overrides are keyed by its string form.
+    """
+    tenant = getattr(state, "tenant", None)
+    tenant_id = getattr(tenant, "id", None)
+    return str(tenant_id) if tenant_id is not None else None
 
 
 def bind_display_locale_for_request(
     request: Any,
     *,
     param_resolver: Any = None,
-    tenant_id: str | None = None,
 ) -> Token[DisplayLocaleProfile]:
-    """Resolve + bind profile on *request* and the ContextVar.
+    """Resolve + bind the display profile on *request* and the ContextVar.
 
-    Call from request middleware after tenant is known. Safe with no resolver
-    (binds product default).
+    Called by ``LocaleMiddleware``, which sits inside the tenancy middleware
+    so ``request.state.tenant`` / ``request.state.tenant_config`` are already
+    bound. Precedence per key: tenant param override → DSL param default →
+    tenant config → product default. Safe with no resolver and no tenant
+    (binds the DSL defaults, else the product default). The caller resets
+    the returned token when the request ends.
     """
-    tid = tenant_id
-    if tid is None:
-        tid = getattr(getattr(request, "state", None), "tenant_id", None)
-    profile = profile_from_param_resolver(param_resolver, tenant_id=tid)
-    if hasattr(request, "state"):
-        request.state.display_locale = profile
+    state = getattr(request, "state", None)
+    tenant_config = getattr(state, "tenant_config", None)
+    profile = profile_from_param_resolver(
+        param_resolver,
+        tenant_id=_request_tenant_id(state),
+        tenant_config=tenant_config if isinstance(tenant_config, Mapping) else None,
+    )
+    if state is not None:
+        state.display_locale = profile
     return set_display_locale(profile)

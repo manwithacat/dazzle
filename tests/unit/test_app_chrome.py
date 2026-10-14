@@ -10,7 +10,11 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-from dazzle.page.runtime.app_chrome import AppChrome, resolve_app_chrome
+import pytest
+
+from dazzle.page.runtime.app_chrome import FEEDBACK_WIDGET_JS, AppChrome, resolve_app_chrome
+from dazzle.render.context import PageContext
+from dazzle.render.dispatch import dispatch_render_page
 
 
 class TestResolveAppChrome:
@@ -30,7 +34,6 @@ class TestResolveAppChrome:
         assert chrome.theme_map == {}
         assert chrome.font_preconnect == ()
         assert chrome.favicon == "/static/assets/dazzle-favicon.svg"
-        assert chrome.feedback_widget_enabled is False
         assert chrome.use_cdn is False
 
     def test_manifest_favicon_overrides_default(self) -> None:
@@ -71,21 +74,18 @@ class TestResolveAppChrome:
             "/static/dist/dazzle.min.js",
         )
 
-    def test_feedback_widget_threaded_from_appspec(self) -> None:
-        appspec = SimpleNamespace(
-            feedback_widget=SimpleNamespace(enabled=True),
-            app_config=None,
-        )
+    @pytest.mark.parametrize(
+        ("feedback_widget", "mounted"),
+        [
+            (SimpleNamespace(enabled=True), True),
+            (SimpleNamespace(enabled=False), False),
+            (None, False),
+        ],
+    )
+    def test_feedback_widget_script_iff_enabled(self, feedback_widget: Any, mounted: bool) -> None:
+        appspec = SimpleNamespace(feedback_widget=feedback_widget, app_config=None)
         chrome = resolve_app_chrome(appspec, project_root=None, manifest=None)
-        assert chrome.feedback_widget_enabled is True
-
-    def test_feedback_widget_disabled_by_default(self) -> None:
-        appspec = SimpleNamespace(
-            feedback_widget=SimpleNamespace(enabled=False),
-            app_config=None,
-        )
-        chrome = resolve_app_chrome(appspec, project_root=None, manifest=None)
-        assert chrome.feedback_widget_enabled is False
+        assert (FEEDBACK_WIDGET_JS in chrome.js_scripts) is mounted
 
     def test_missing_theme_returns_default_chain(self) -> None:
         """Themes that don't exist return the default chain — the
@@ -138,3 +138,35 @@ class TestResolveAppChrome:
         chrome = resolve_app_chrome(None, project_root=None, manifest=manifest)
         assert chrome.use_cdn is True
         assert chrome.css_links == ("/static/dist/dazzle.min.css",)
+
+
+class TestFeedbackWidgetPage:
+    """The chromed page carries the widget script and the signed-in identity
+    the widget reads (``<meta name="dz-user-email|dz-user-role">``)."""
+
+    @staticmethod
+    def _render(js_scripts: tuple[str, ...], email: str) -> str:
+        ctx = PageContext(
+            page_title="Tasks",
+            app_name="Demo",
+            is_authenticated=bool(email),
+            user_email=email,
+            user_roles=["role_teacher"],
+        )
+        return dispatch_render_page(ctx, "<p>body</p>", js_scripts=js_scripts)
+
+    def test_enabled_emits_script_and_identity(self) -> None:
+        html = self._render(("/static/dist/dazzle.min.js", FEEDBACK_WIDGET_JS), "ada@example.test")
+        assert f'<script defer src="{FEEDBACK_WIDGET_JS}"></script>' in html
+        assert '<meta name="dz-user-email" content="ada@example.test">' in html
+        assert '<meta name="dz-user-role" content="teacher">' in html
+
+    def test_disabled_emits_neither(self) -> None:
+        html = self._render(("/static/dist/dazzle.min.js",), "ada@example.test")
+        assert "feedback-widget" not in html
+        assert "dz-user-email" not in html
+
+    def test_anonymous_gets_script_without_identity(self) -> None:
+        html = self._render(("/static/dist/dazzle.min.js", FEEDBACK_WIDGET_JS), "")
+        assert FEEDBACK_WIDGET_JS in html
+        assert "dz-user-email" not in html

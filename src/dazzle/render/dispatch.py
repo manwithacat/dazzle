@@ -434,10 +434,30 @@ def build_app_chrome_page(
         css_links=css_links,
         js_scripts=js_scripts,
         favicon=favicon,
-        meta=extra_meta,
+        meta=extra_meta + _feedback_identity_meta(ctx, js_scripts),
         og_meta=og_meta,
         font_preconnect=font_preconnect,
     )
+
+
+def _feedback_identity_meta(
+    ctx: PageContext, js_scripts: tuple[str, ...]
+) -> tuple[tuple[str, str], ...]:
+    """Signed-in identity for the feedback widget, emitted only when it is mounted.
+
+    ``feedback-widget.js`` stamps ``reported_by`` / ``persona`` on a report and
+    polls for the user's resolved reports; the FeedbackReport scope is
+    ``reported_by = current_user.email``. The pre-#1042 ``base.html`` wrote these
+    onto ``body.dataset``; the typed shell emits ``<meta>`` tags instead.
+    """
+    if not any("/feedback-widget" in url for url in js_scripts):
+        return ()
+    email = (getattr(ctx, "user_email", "") or "").strip()
+    if not email:
+        return ()
+    roles = [r for r in (getattr(ctx, "user_roles", None) or []) if r]
+    role = normalize_role(roles[0]) if roles else ""
+    return (("dz-user-email", email), ("dz-user-role", role))
 
 
 def dispatch_render_page(

@@ -21,6 +21,7 @@ from typing import Any
 import typer
 
 from dazzle.cli.dotenv import load_project_dotenv as _load_dotenv
+from dazzle.cli.runtime_impl.dsl_watch import DslWatcher
 from dazzle.cli.utils import load_project_appspec
 from dazzle.core.db_url import normalise_postgres_scheme
 from dazzle.core.environment import (
@@ -175,7 +176,6 @@ class _ServeContext:
         "database_url",
         "redis_url",
         "watch",
-        "watch_source",
         "enable_dev_mode",
         "enable_test_mode",
         "auto_mock",
@@ -203,7 +203,6 @@ class _ServeContext:
         self.database_url: str = ""
         self.redis_url: str = ""
         self.watch: bool = False
-        self.watch_source: bool = False
         self.enable_dev_mode: bool = False
         self.enable_test_mode: bool = False
         self.auto_mock: bool | None = False
@@ -279,7 +278,6 @@ def _configure_production_mode(ctx: _ServeContext) -> None:
         os.environ["REDIS_URL"] = ctx.redis_url
 
     ctx.watch = False
-    ctx.watch_source = False
     ctx.enable_dev_mode = False
     ctx.enable_test_mode = False
     ctx.auto_mock = False
@@ -383,9 +381,6 @@ def _allocate_ports_and_runtime(ctx: _ServeContext) -> None:
     )
 
     register_runtime_file_cleanup(ctx.project_root)
-
-    if ctx.watch_source:
-        ctx.watch = True
 
 
 def _validate_and_finalize_infra(ctx: _ServeContext) -> None:
@@ -601,7 +596,7 @@ def _serve_combined(ctx: _ServeContext) -> None:
     if ctx.enable_test_mode:
         typer.echo("  • Test mode: ENABLED (/__test__/* endpoints available)")
     if ctx.watch:
-        typer.echo("  • Hot reload: ENABLED (watching DSL files)")
+        typer.echo("  • DSL watch: re-validates on change (restart to apply)")
 
     # Infrastructure banner — reflect the ACTUAL event bus, not just intent.
     # (The preflight already refuses to boot if REDIS_URL is set without the
@@ -679,15 +674,12 @@ def _serve_combined(ctx: _ServeContext) -> None:
 
     run_unified_server(
         appspec=appspec,
-        ui_spec=ui_spec,
         port=ctx.port,
         enable_test_mode=ctx.enable_test_mode,
         enable_dev_mode=ctx.enable_dev_mode,
         enable_auth=ctx.auth_enabled,
         auth_config=mf.auth if ctx.auth_enabled else None,
         host=ctx.host,
-        enable_watch=ctx.watch,
-        watch_source=ctx.watch_source,
         project_root=ctx.project_root,
         personas=personas,
         scenarios=scenarios,
@@ -730,13 +722,10 @@ def serve_command(
         False,
         "--watch",
         "-w",
-        help="Enable hot reload: watch DSL files and auto-refresh browser on changes",
-    ),
-    watch_source: bool = typer.Option(
-        False,
-        "--watch-source",
-        "-W",
-        help="Also watch framework source files (Python, CSS, JS). Implies --watch.",
+        help=(
+            "Re-validate the DSL whenever dsl/ or dazzle.toml changes and print the "
+            "result to the console. The running server keeps its boot spec — restart to apply."
+        ),
     ),
     database_url: str = typer.Option(
         "",
@@ -794,15 +783,16 @@ def serve_command(
 
     Examples:
         dazzle serve                    # Run against $DATABASE_URL / $REDIS_URL
-        dazzle serve --watch            # With hot reload (DSL file watching)
+        dazzle serve --watch            # Re-validate the DSL on every change
         dazzle serve --backend-only     # API server only (for separate frontend)
         dazzle serve --port 4000        # Frontend on 4000
         dazzle serve --api-port 9000    # API on 9000
         dazzle serve --ui-only          # Static UI only (no API)
         dazzle serve --no-test-mode     # Disable E2E test endpoints
 
-    Hot reload (--watch):
-        Watch DSL files for changes and auto-refresh browser.
+    DSL watch (--watch):
+        Re-parse and lint the DSL on every change and print the result; the
+        server keeps serving the spec it booted with until you restart it.
     """
     # Build context from CLI args
     ctx = _ServeContext()
@@ -812,7 +802,6 @@ def serve_command(
     ctx.api_port = api_port
     ctx.database_url = database_url
     ctx.watch = watch
-    ctx.watch_source = watch_source
     ctx.auto_mock = auto_mock
     ctx.ui_only = ui_only
     ctx.backend_only = backend_only
@@ -867,7 +856,22 @@ def serve_command(
     # Phase 7: Dispatch to the appropriate server mode
     if ctx.ui_only:
         _serve_ui_only(ctx)
-    elif ctx.backend_only:
-        _serve_backend_only(ctx)
-    else:
-        _serve_combined(ctx)
+        return
+    watcher = _start_dsl_watch(ctx) if ctx.watch else None
+    try:
+        if ctx.backend_only:
+            _serve_backend_only(ctx)
+        else:
+            _serve_combined(ctx)
+    finally:
+        if watcher is not None:
+            watcher.stop()
+
+
+def _start_dsl_watch(ctx: _ServeContext) -> DslWatcher | None:
+    """``--watch``: re-validate the DSL on change while the server runs."""
+    watcher = DslWatcher(ctx.project_root)
+    if not watcher.start():
+        typer.echo("  • DSL watch: no dsl/ or dazzle.toml to watch", err=True)
+        return None
+    return watcher

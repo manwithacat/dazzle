@@ -322,7 +322,7 @@ Returns HTTP 403 for any authenticated user without an admin role. Returns HTTP 
 When `feedback_widget: enabled` is declared at the module level, the runtime:
 
 1. **Auto-generates** a `FeedbackReport` entity with fields for category, severity, description, and auto-captured context (URL, persona, viewport, user agent, console errors, navigation history, page snapshot, screenshot, and annotation data).
-2. **Injects** the widget JavaScript and CSS into every authenticated page via the base template.
+2. **Mounts** the widget on every signed-in app page: the app chrome adds `/static/js/feedback-widget.js` (CSS ships in `dazzle.min.css`) plus `dz-user-email` / `dz-user-role` meta tags the widget reads. A user is toasted once per newly resolved report (`notification_sent` is set on display).
 3. **Exposes** the widget status in `/_diagnostics` under `features.feedback_widget`.
 
 ```dsl

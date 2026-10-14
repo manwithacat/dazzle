@@ -1064,7 +1064,7 @@ entity Task "Task":
                 },
                 {
                     "problem": "Changes not appearing",
-                    "solution": "Restart 'dazzle serve' - hot reload coming in v0.3.3",
+                    "solution": "Restart 'dazzle serve' — the running server keeps the spec it booted with (`--watch` re-validates on change but does not apply)",
                 },
             ],
         },

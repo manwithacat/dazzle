@@ -35,7 +35,7 @@ fi
 
 # ── CI extras (from .github/workflows/ci.yml + setup-dazzle/action.yml) ──────
 # type-check job:
-EXTRAS_TYPE="dev,llm,mcp,postgres,i18n,viewport,perf"
+EXTRAS_TYPE="dev,llm,mcp,postgres,viewport,perf"
 # python-tests job:
 EXTRAS_TEST="dev,llm,mcp,postgres,perf,saml,test-full"
 # lint job (subset; tier1 uses TYPE for one sync rather than three):
@@ -269,7 +269,7 @@ cmd_tier1() {
   # Prefer one frozen 3.12 test sync (superset of lint/security needs for collection).
   if [ "${CI_LOCAL_SKIP_SYNC:-0}" != "1" ]; then
     cmd_sync_test
-    # Type extras are a strict superset for mypy (i18n/viewport).
+    # Type extras are a strict superset for mypy (viewport).
     cmd_sync_type
   else
     printf 'WARN: CI_LOCAL_SKIP_SYNC=1 — using current .venv (concordance not guaranteed)\n' >&2

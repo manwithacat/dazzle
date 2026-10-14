@@ -1,7 +1,7 @@
 {
-  "src_lines": 340453,
-  "test_lines": 351246,
-  "docs_lines": 47717,
+  "src_lines": 339071,
+  "test_lines": 350728,
+  "docs_lines": 47806,
   "construct_count": 31,
   "written": "2026-10-14",
   "exceptions": [
@@ -131,6 +131,13 @@
         "test_lines"
       ],
       "reason": "ship AA: scope/FTS/grant runtime correctness (+src/+tests), consumer-forced"
+    },
+    {
+      "date": "2026-10-14",
+      "rose": [
+        "docs_lines"
+      ],
+      "reason": "ship AB: locale middleware and feedback widget wired, hot reload retired, DD-012 (+docs)"
     }
   ]
 }

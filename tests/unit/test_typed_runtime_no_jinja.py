@@ -137,7 +137,6 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle/compliance/renderer.py",
     "src/dazzle/page/runtime/template_renderer.py",
     "src/dazzle/http/runtime/combined_server.py",
-    "src/dazzle/page/runtime/hot_reload.py",
     "src/dazzle/http/runtime/subsystems/system_routes.py",
 )
 

@@ -254,7 +254,6 @@ app.add_typer(qa_app, name="qa")
 app.add_typer(sentinel_app, name="sentinel")
 app.add_typer(ux_app, name="ux")
 
-from dazzle.cli.i18n import i18n_app  # noqa: E402
 from dazzle.cli.inspect import inspect_app  # noqa: E402
 
 # v0.71.23 (#1120): the old `dazzle inspect-api` is renamed to
@@ -269,7 +268,6 @@ from dazzle.cli.inspect import inspect_app  # noqa: E402
 # namespace for the new group.
 inspect_app.command(name="project")(inspect_command)
 app.add_typer(inspect_app, name="inspect")
-app.add_typer(i18n_app, name="i18n")
 
 
 # =============================================================================

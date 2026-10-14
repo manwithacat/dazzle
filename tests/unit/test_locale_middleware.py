@@ -7,13 +7,17 @@ Pins:
   * primary-subtag fallback (en-GB → en when only "en" is supported)
   * empty supported list = "any locale OK" — pick highest-quality candidate
   * malformed inputs fall through cleanly (no crashes, no surprises)
+  * the mounted middleware binds the tenant display profile (locale.* params)
+    that date/datetime cells render with
 """
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from starlette.requests import Request
 
 from dazzle.http.runtime.locale_middleware import (
     LocaleMiddleware,
@@ -215,3 +219,101 @@ paths = ["./dsl"]
         manifest = load_manifest(toml)
         assert manifest.i18n.default_locale == "en"
         assert manifest.i18n.supported_locales == []
+
+
+# ---------------------------------------------------------------------------
+# Display profile binding (flense ship AB): the mounted middleware carries the
+# tenant's locale.* params to every date renderer.
+# ---------------------------------------------------------------------------
+
+
+def _locale_app(*, tenant_id: str | None, tenant_config: dict[str, str] | None = None) -> Any:
+    """Tenancy stub (outer) -> LocaleMiddleware (inner) -> a route rendering cells,
+    mirroring the server's stack order."""
+    from datetime import UTC, date, datetime
+    from types import SimpleNamespace
+
+    from fastapi import FastAPI
+    from fastapi.responses import JSONResponse
+    from starlette.middleware.base import BaseHTTPMiddleware
+
+    from dazzle.core.ir.params import ParamSpec
+    from dazzle.http.runtime.param_store import ParamResolver
+    from dazzle.render.fragment.format_cell import format_cell
+    from dazzle.render.fragment.region._shared import _render_typed_value
+
+    app = FastAPI()
+    specs = {
+        "locale.date_format": ParamSpec(
+            key="locale.date_format", param_type="str", default="D MMM YYYY", scope="tenant"
+        ),
+        "locale.timezone": ParamSpec(
+            key="locale.timezone", param_type="str", default="Europe/London", scope="tenant"
+        ),
+    }
+    resolver = ParamResolver(specs=specs)
+    resolver.set_override("locale.date_format", "tenant", "t-us", "MM/DD/YYYY")
+    resolver.set_override("locale.timezone", "tenant", "t-us", "America/New_York")
+    app.state.param_resolver = resolver
+
+    @app.get("/cells")
+    async def cells(request: Request) -> JSONResponse:
+        stamp = datetime(2026, 7, 16, 13, 30, tzinfo=UTC)
+        workspace_cell = _render_typed_value(
+            {"due": date(2026, 7, 16)}, {"key": "due", "type": "date"}
+        )
+        return JSONResponse(
+            {
+                "date": format_cell(date(2026, 7, 16), "date"),
+                "datetime": format_cell(stamp, "datetime"),
+                "workspace": str(getattr(workspace_cell, "html", workspace_cell)),
+                "state_format": request.state.display_locale.date_format,
+            }
+        )
+
+    app.add_middleware(LocaleMiddleware)
+
+    async def _tenancy(request: Request, call_next: Any) -> Any:
+        request.state.tenant = SimpleNamespace(id=tenant_id) if tenant_id else None
+        request.state.tenant_config = tenant_config or {}
+        return await call_next(request)
+
+    app.add_middleware(BaseHTTPMiddleware, dispatch=_tenancy)
+    return app
+
+
+class TestDisplayProfileBinding:
+    def test_tenant_param_override_reaches_rendered_cells(self) -> None:
+        from fastapi.testclient import TestClient
+
+        body = TestClient(_locale_app(tenant_id="t-us")).get("/cells").json()
+        assert body["state_format"] == "MM/DD/YYYY"
+        assert body["date"] == "07/16/2026"
+        assert body["datetime"] == "07/16/2026 09:30"  # 13:30 UTC in New York
+        assert "07/16/2026" in body["workspace"]
+
+    def test_tenant_without_override_gets_dsl_default(self) -> None:
+        from fastapi.testclient import TestClient
+
+        body = TestClient(_locale_app(tenant_id="t-uk")).get("/cells").json()
+        assert body["date"] == "16 Jul 2026"
+        assert body["datetime"] == "16 Jul 2026 14:30"  # BST
+        assert "16 Jul 2026" in body["workspace"]
+
+    def test_profile_does_not_leak_past_the_request(self) -> None:
+        from fastapi.testclient import TestClient
+
+        from dazzle.i18n.display_locale import PRODUCT_DEFAULT_PROFILE, get_display_locale
+
+        TestClient(_locale_app(tenant_id="t-us")).get("/cells")
+        assert get_display_locale() == PRODUCT_DEFAULT_PROFILE
+
+    def test_server_mounts_locale_middleware(self) -> None:
+        from dazzle.http.runtime.server import DazzleBackendApp
+        from tests.unit.test_build_server_config import _appspec
+
+        builder = DazzleBackendApp(_appspec(), enable_auth=False)
+        builder._create_app()
+        assert builder._app is not None
+        mounted = [getattr(mw, "cls", None) for mw in builder._app.user_middleware]
+        assert LocaleMiddleware in mounted

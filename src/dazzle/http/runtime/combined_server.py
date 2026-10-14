@@ -27,15 +27,12 @@ class UnifiedServerConfig:
     """Configuration for run_unified_server(), replacing 19 individual parameters."""
 
     appspec: AppSpec
-    ui_spec: Any = None
     port: int = 3000
     enable_test_mode: bool = False
     enable_dev_mode: bool = True
     enable_auth: bool = True
     auth_config: Any = None
     host: str = "127.0.0.1"
-    enable_watch: bool = False
-    watch_source: bool = False
     project_root: Path | None = None
     personas: list[dict[str, Any]] | None = None
     scenarios: list[dict[str, Any]] | None = None
@@ -161,15 +158,12 @@ def _set_factory_env(
 
 def run_unified_server(
     appspec: AppSpec | None = None,
-    ui_spec: Any = None,
     port: int = 3000,
     enable_test_mode: bool = False,
     enable_dev_mode: bool = True,
     enable_auth: bool = True,
     auth_config: Any = None,
     host: str = "127.0.0.1",
-    enable_watch: bool = False,
-    watch_source: bool = False,
     project_root: Path | None = None,
     personas: list[dict[str, Any]] | None = None,
     scenarios: list[dict[str, Any]] | None = None,
@@ -196,19 +190,14 @@ def run_unified_server(
             When provided, individual parameters are ignored.
     """
     # If config provided, unpack it — otherwise use individual params
-    enable_watch = False
-    watch_source = False
     if config is not None:
         appspec = config.appspec
-        ui_spec = config.ui_spec
         port = config.port
         enable_test_mode = config.enable_test_mode
         enable_dev_mode = config.enable_dev_mode
         enable_auth = config.enable_auth
         auth_config = config.auth_config
         host = config.host
-        enable_watch = config.enable_watch
-        watch_source = config.watch_source
         project_root = config.project_root
         personas = config.personas
         scenarios = config.scenarios
@@ -372,27 +361,6 @@ def run_unified_server(
     print("-" * 60)
     print()
 
-    # ---- Hot reload (single-worker only — multi-worker fork conflicts with watchers) ----
-    hot_reload_manager = None
-    if enable_watch and (workers is None or workers == 1) and project_root is not None:
-        try:
-            from dazzle.page.runtime.hot_reload import HotReloadManager, create_reload_callback
-
-            hot_reload_manager = HotReloadManager(
-                project_root=project_root,
-                on_reload=create_reload_callback(project_root),
-                watch_source=watch_source,
-            )
-            if appspec is not None and ui_spec is not None:
-                hot_reload_manager.set_specs(appspec, ui_spec)
-            hot_reload_manager.start()
-            app.state.hot_reload_manager = hot_reload_manager
-        except Exception:
-            logger.debug("Hot reload manager failed to start", exc_info=True)
-            hot_reload_manager = None
-    elif enable_watch and workers and workers > 1:
-        print("[Dazzle] Warning: --watch is ignored when --workers > 1 (multi-process)")
-
     uvicorn_kwargs: dict[str, Any] = {
         "host": host,
         "port": port,
@@ -422,9 +390,6 @@ def run_unified_server(
             print(f"[Dazzle] Hint: lsof -i :{port} | grep LISTEN")
         else:
             raise
-    finally:
-        if hot_reload_manager is not None:
-            hot_reload_manager.stop()
 
 
 # =============================================================================

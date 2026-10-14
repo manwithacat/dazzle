@@ -107,11 +107,12 @@ dazzle serve
 ## Development Workflow
 
 ```bash
-# Terminal 1: Serve with hot reload
+# Terminal 1: Serve, re-validating the DSL on every change
 dazzle serve --watch
 
 # Terminal 2: Edit your DSL files
-# Changes are picked up automatically
+# Terminal 1 prints validation errors as you save;
+# restart `dazzle serve` to apply a valid change
 ```
 
 ## Useful Commands
@@ -121,7 +122,7 @@ dazzle serve --watch
 | `dazzle validate` | Check DSL for errors |
 | `dazzle lint` | Extended validation with style checks |
 | `dazzle serve` | Start the full-stack app |
-| `dazzle serve --watch` | Serve with hot reload |
+| `dazzle serve --watch` | Serve and re-validate the DSL on change |
 | `dazzle doctor` | Check environment health |
 | `dazzle inspect` | Inspect project structure |
 

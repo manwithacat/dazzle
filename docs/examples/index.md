@@ -43,7 +43,10 @@ dazzle serve
 - **UI**: http://localhost:3000
 - **API**: http://localhost:8000/docs
 
-### Running with Hot Reload
+### Re-validating on Change
+
+`--watch` re-parses and lints the DSL on every save and prints the result;
+restart the server to apply a valid change.
 
 ```bash
 dazzle serve --watch

@@ -1,22 +1,21 @@
-"""Locale-resolution middleware (#955 cycle 1).
+"""Locale-resolution middleware (#955, #1597).
 
-Resolves the request's locale from (in order):
+Per request it binds two things:
 
-  1. Explicit cookie override (default name ``dazzle_locale``) — set by
-     the locale-switcher UI primitive in cycle 6.
-  2. ``Accept-Language`` header — quality-weighted, narrowed to the
-     project's supported locales.
-  3. Project default (``[i18n] default = "en"`` in dazzle.toml).
+* ``request.state.locale`` — the user's language tag, resolved from (in
+  order) the explicit ``dazzle_locale`` cookie written by
+  ``POST /_dazzle/i18n/locale``, the ``Accept-Language`` header narrowed to
+  ``[i18n] supported``, then ``[i18n] default`` in dazzle.toml. Available to
+  project code; the framework ships no string catalogue (DD-012).
+* the :class:`~dazzle.i18n.display_locale.DisplayLocaleProfile` — date
+  format, timezone and default currency from the app's ``locale.*`` params
+  (tenant overrides first) and the tenant's per-tenant config. Bound on
+  ``request.state.display_locale`` and the display ContextVar that every
+  date/datetime/currency renderer reads. The browser's language never
+  drives this profile (#1597: presentation is a tenant decision).
 
-Sets ``request.state.locale`` (a ``str``) and ``request.state.locale_supported``
-(a ``frozenset[str]``). Templates and route handlers read these to drive
-gettext lookups, date/number formatting, and per-locale layout choices.
-
-Cycle 1 scope is **resolution only** — no message catalogue is loaded yet
-and the ``_()`` Jinja filter passes its argument through unchanged. The
-state attributes still land on every request so adopters can probe locale
-selection in templates today (``request.state.locale``) and the wiring is
-in place for cycle 2's gettext catalogue.
+Mounted by ``DazzleBackendApp`` inside the tenancy middleware so the tenant
+is already resolved when the profile is built.
 """
 
 from __future__ import annotations
@@ -28,12 +27,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from dazzle.i18n import locale_ctxvar
 from dazzle.i18n.display_locale import (
-    PRODUCT_DEFAULT_PROFILE,
-    profile_from_param_resolver,
+    bind_display_locale_for_request,
     reset_display_locale,
-    set_display_locale,
 )
 
 logger = logging.getLogger(__name__)
@@ -117,7 +113,7 @@ def _pick_supported(
 
 
 class LocaleMiddleware(BaseHTTPMiddleware):
-    """Sets ``request.state.locale`` from cookie / Accept-Language / default.
+    """Binds the request locale and the tenant's display-locale profile.
 
     Configuration is captured at construction time from
     :class:`~dazzle.core.manifest.I18nConfig` so the request hot-path
@@ -141,30 +137,17 @@ class LocaleMiddleware(BaseHTTPMiddleware):
         self._cookie_name = cookie_name
 
     async def dispatch(self, request: Request, call_next: Any) -> Response:
-        locale = self._resolve(request)
-        request.state.locale = locale
+        request.state.locale = self._resolve(request)
         request.state.locale_supported = self._supported
-
-        # #955 cycle 2: also set the i18n ContextVar so the `_()` Jinja
-        # filter can read the locale at render time without templates
-        # threading it through their context. The reset on the way out
-        # is good hygiene for test environments where multiple requests
-        # share a worker.
-        token = locale_ctxvar.set(locale)
-        # #1597: display profile from DSL param defaults / tenant overrides.
-        # Browser Accept-Language drives gettext only — never date/number display.
         app_state = getattr(getattr(request, "app", None), "state", None)
-        param_resolver = getattr(app_state, "param_resolver", None) if app_state else None
-        tenant_id = getattr(request.state, "tenant_id", None)
-        display_profile = profile_from_param_resolver(param_resolver, tenant_id=tenant_id)
-        request.state.display_locale = display_profile or PRODUCT_DEFAULT_PROFILE
-        disp_token = set_display_locale(request.state.display_locale)
+        token = bind_display_locale_for_request(
+            request, param_resolver=getattr(app_state, "param_resolver", None)
+        )
         try:
             response: Response = await call_next(request)
             return response
         finally:
-            locale_ctxvar.reset(token)
-            reset_display_locale(disp_token)
+            reset_display_locale(token)
 
     def _resolve(self, request: Request) -> str:
         # 1. Cookie override

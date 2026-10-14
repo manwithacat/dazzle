@@ -115,7 +115,7 @@ from dazzle.perf.instrument import instrument_app
 
 if TYPE_CHECKING:
     from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
-    from dazzle.core.manifest import StorageConfig, TenantConfig
+    from dazzle.core.manifest import I18nConfig, StorageConfig, TenantConfig
     from dazzle.core.process.adapter import ProcessAdapter
     from dazzle.http.events.framework import EventFramework
     from dazzle.http.runtime.audit_log import AuditLogger
@@ -779,6 +779,20 @@ class DazzleBackendApp:
 
         install_theme_middleware(self._app)
 
+        # Locale + display profile (#955, #1597): binds request.state.locale
+        # and the tenant's DisplayLocaleProfile (locale.* params) that every
+        # date/currency renderer reads. Added before the tenancy middleware so
+        # it runs inside it — the tenant is resolved when the profile is built.
+        from dazzle.http.runtime.locale_middleware import LocaleMiddleware
+
+        _i18n_cfg = self._load_i18n_config()
+        self._app.add_middleware(
+            LocaleMiddleware,
+            default_locale=_i18n_cfg.default_locale,
+            supported_locales=list(_i18n_cfg.supported_locales),
+            cookie_name=_i18n_cfg.cookie_name,
+        )
+
         # Metrics middleware (v0.27.0)
         try:
             from dazzle.http.runtime.metrics import add_metrics_middleware
@@ -1188,28 +1202,6 @@ class DazzleBackendApp:
 
         # Wire project-level service hooks (v0.29.0)
         self._wire_service_hooks()
-        self._load_i18n_translations()
-
-    def _load_i18n_translations(self) -> None:
-        """Discover + register project translation files (#955 cycle 5).
-
-        Reads ``locale/<locale>/LC_MESSAGES/messages.{mo,po}`` under the
-        project root and registers each into the global
-        :class:`~dazzle.i18n.MessageCatalogue`. The cycle-2 ``_()``
-        filter then returns translated strings instead of source text.
-
-        No-op when the project has no ``locale/`` tree — that's the
-        common case for English-only apps. Failures are caught + logged
-        because a malformed .po file shouldn't block boot.
-        """
-        if not self._project_root:
-            return
-        try:
-            from dazzle.i18n.loader import load_translations
-
-            load_translations(self._project_root)
-        except Exception:
-            logger.warning("i18n translation load failed", exc_info=True)
 
     def _resolve_pdf_branding(self) -> "PdfBranding | None":
         """Build a ``PdfBranding`` for the signing routes from the
@@ -2146,26 +2138,28 @@ class DazzleBackendApp:
             )
             self._app.include_router(audit_history_router)
 
+    def _load_i18n_config(self) -> "I18nConfig":
+        """``[i18n]`` from dazzle.toml (defaults when absent or unreadable)."""
+        from dazzle.core.manifest import I18nConfig, load_manifest
+
+        if self._project_root is not None:
+            manifest_path = self._project_root / "dazzle.toml"
+            if manifest_path.is_file():
+                try:
+                    return load_manifest(manifest_path).i18n
+                except Exception:
+                    logger.debug("i18n manifest load skipped — using defaults", exc_info=True)
+        return I18nConfig()
+
     def _mount_locale_routes(self) -> None:
         assert self._app is not None
-        # #955 cycle 6 — locale switcher endpoint (`POST /_dazzle/i18n/locale`).
-        # Always mounted; the macro template only renders when supported_locales
-        # is non-empty. Cookie name + supported set come from manifest I18nConfig.
+        # #955 cycle 6 — `POST /_dazzle/i18n/locale` writes the cookie that
+        # LocaleMiddleware reads into request.state.locale. Cookie name +
+        # supported set come from manifest I18nConfig.
         try:
-            from dazzle.core.manifest import I18nConfig, load_manifest
             from dazzle.http.runtime.locale_routes import create_locale_routes
 
-            i18n_cfg = I18nConfig()
-            if self._project_root is not None:
-                manifest_path = self._project_root / "dazzle.toml"
-                if manifest_path.is_file():
-                    try:
-                        i18n_cfg = load_manifest(manifest_path).i18n
-                    except Exception:
-                        logger.debug(
-                            "i18n manifest load skipped — using defaults",
-                            exc_info=True,
-                        )
+            i18n_cfg = self._load_i18n_config()
             locale_router = create_locale_routes(
                 cookie_name=i18n_cfg.cookie_name,
                 supported_locales=frozenset(i18n_cfg.supported_locales)

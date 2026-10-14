@@ -85,7 +85,6 @@ there requires a row here.
 | `dazzle docs` | Documentation generation, validation, and maintenance |
 | `dazzle fitness` | Framework structural-fitness ratchets (complexity, clones) |
 | `dazzle inspect` | Introspect framework extension points and the public API surface |
-| `dazzle i18n` | Internationalisation tools — `extract` a .pot, `init` and `compile` locale catalogues, `stats` |
 | `dazzle mcp` | MCP (Model Context Protocol) server commands |
 | `dazzle perf` | On-demand local OpenTelemetry tracing |
 | `dazzle pipeline` | Run the deterministic quality pipeline |
@@ -197,8 +196,7 @@ dazzle serve [OPTIONS]
 | `--api-port` | | auto | Backend API port (default 8000) |
 | `--host` | | `127.0.0.1` | Host to bind to |
 | `--local` | | | Run locally without Docker |
-| `--watch` | `-w` | | Hot reload on DSL changes |
-| `--watch-source` | `-W` | | Also watch framework source files |
+| `--watch` | `-w` | | Re-validate the DSL on every change and print the result (restart to apply) |
 | `--ui-only` | | | Serve static UI only (no API) |
 | `--backend-only` | | | Serve API only (no frontend) |
 | `--rebuild` | | | Force Docker image rebuild |
@@ -211,7 +209,7 @@ dazzle serve [OPTIONS]
 # Docker mode (default)
 dazzle serve
 
-# Local mode with hot reload
+# Re-validate the DSL on every change (restart to apply)
 dazzle serve --watch
 
 # API server only
@@ -391,7 +389,7 @@ dazzle story COMMAND [OPTIONS]
 ### Development
 
 ```bash
-# Validate, then serve with hot reload
+# Validate, then serve and re-validate on every DSL change
 dazzle validate && dazzle serve --watch
 ```
 

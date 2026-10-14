@@ -289,13 +289,6 @@ aws = [
     "aioboto3>=13.0",
     "boto3>=1.35",
 ]
-# Internationalisation (#955 cycle 4+) — Babel for locale-aware
-# date/number/currency formatting. Optional; without it the
-# `format_date` / `format_number` / `format_currency` Jinja filters
-# fall back to locale-independent output.
-i18n = [
-    "babel>=2.13",
-]
 # moto-based S3 mocks for storage primitive integration tests (#932 cycle 2).
 # Pulled into the dev install via `pip install -e ".[dev,aws-test]"`. The
 # in-memory FakeStorageProvider in dazzle_http.runtime.storage.testing

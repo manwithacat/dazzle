@@ -160,8 +160,9 @@ defaults (read directly from `src/dazzle/http/runtime/csrf.py`):
 - `/qa/` — QA magic-link generator (#768), triple-gated by env flags +
   mount-time + request-time checks.
 - `/_dazzle/i18n/` — locale-switcher cookie endpoint (#955); writes the
-  `dz_locale` cookie after validating against the project's
-  `supported_locales` allow-list.
+  `dazzle_locale` cookie (read by `LocaleMiddleware` into
+  `request.state.locale`) after validating against the project's
+  `[i18n] supported` allow-list.
 
 Bearer-authenticated requests (`Authorization: Bearer …`) are exempt
 regardless of path — the Bearer token is itself non-forgeable.

@@ -70,15 +70,12 @@ class TestRunUnifiedServerSignature:
         sig = inspect.signature(run_unified_server)
         expected = {
             "appspec",
-            "ui_spec",
             "port",
             "enable_test_mode",
             "enable_dev_mode",
             "enable_auth",
             "auth_config",
             "host",
-            "enable_watch",
-            "watch_source",
             "project_root",
             "personas",
             "scenarios",

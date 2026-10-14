@@ -308,7 +308,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,llm,mcp,postgres,i18n,viewport,perf
+        extras: dev,llm,mcp,postgres,viewport,perf
 
     - name: Run mypy
       # #1056 (v0.67.99): full mypy check across the merged dazzle/

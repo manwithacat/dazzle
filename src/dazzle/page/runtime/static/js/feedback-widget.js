@@ -6,9 +6,19 @@
  *
  * Security: description and auto-captured context are submitted as JSON via
  * fetch() and rendered server-side by Dazzle's auto-escaping templates.
+ *
+ * Mounted by the app chrome when the DSL declares `feedback_widget: enabled`.
+ * The signed-in identity comes from `<meta name="dz-user-email">` /
+ * `<meta name="dz-user-role">`, emitted alongside the script on signed-in
+ * pages; without it the widget does not mount. Mounting is
+ * idempotent (a second load of the script is a no-op) and the widget's nodes
+ * are re-attached after an htmx swap replaces the body. Nothing is shown on
+ * load except a one-shot toast per newly resolved report (#869).
  */
 (function () {
   "use strict";
+
+  if (window.feedbackWidget) return;
 
   var MAX_REPORTS_PER_HOUR = 10;
   var RATE_LIMIT_KEY = "dz_feedback_rate";
@@ -33,6 +43,16 @@
     return svg;
   }
 
+  /** Content of `<meta name="...">`, or "". */
+  function metaContent(name) {
+    var el = document.querySelector('meta[name="' + name + '"]');
+    return el ? (el.getAttribute("content") || "").trim() : "";
+  }
+
+  function userEmail() {
+    return metaContent("dz-user-email");
+  }
+
   function FeedbackWidget() {
     this._errors = [];
     this._category = null;
@@ -42,6 +62,7 @@
     this._trackNavigation();
     this._buildUI();
     this._bindShortcut();
+    this._bindSwapReattach();
     this._retryPending();
     this._checkResolved();
   }
@@ -305,6 +326,22 @@
   };
 
   /* ------------------------------------------------------------------ */
+  /* htmx body swaps                                                      */
+  /* ------------------------------------------------------------------ */
+
+  /** A boosted navigation swaps the body and drops the appended nodes;
+   *  put them back (state lives on the existing nodes, so nothing resets). */
+  FeedbackWidget.prototype._bindSwapReattach = function () {
+    var self = this;
+    var reattach = function () {
+      [self._btn, self._backdrop, self._panel, self._toast].forEach(function (el) {
+        if (el && !document.body.contains(el)) document.body.appendChild(el);
+      });
+    };
+    document.addEventListener("htmx:after:swap", reattach);
+  };
+
+  /* ------------------------------------------------------------------ */
   /* Open / Close                                                         */
   /* ------------------------------------------------------------------ */
 
@@ -349,13 +386,13 @@
     }
 
     var payload = {
-      reported_by: document.body.dataset.userEmail || "",
+      reported_by: userEmail(),
       category: this._category,
       severity: this._severity,
       description: description,
       page_url: location.href,
       page_title: document.title,
-      persona: document.body.dataset.userRole || "",
+      persona: metaContent("dz-user-role"),
       viewport: window.innerWidth + "x" + window.innerHeight,
       user_agent: navigator.userAgent,
       console_errors: this._errors.join("\n"),
@@ -460,7 +497,7 @@
   /* ------------------------------------------------------------------ */
 
   FeedbackWidget.prototype._checkResolved = function () {
-    var email = (document.body.dataset.userEmail || "").trim();
+    var email = userEmail();
     if (!email) return;
     var self = this;
     fetch(
@@ -517,12 +554,16 @@
     }, 3000);
   };
 
-  // Auto-init when DOM ready
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function () {
-      window.feedbackWidget = new FeedbackWidget();
-    });
-  } else {
+  /** Mount once, and only for a signed-in user (the identity meta is
+   *  emitted on authenticated app pages; public pages get no widget). */
+  function mount() {
+    if (window.feedbackWidget || !userEmail()) return;
     window.feedbackWidget = new FeedbackWidget();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mount);
+  } else {
+    mount();
   }
 })();

@@ -78,6 +78,7 @@ below, link from the issue body (not only a comment).
 | [DD-009](DD-009-verified-domain-join.md) | Verified-domain self-service join | PARKED | #1424 | SSO domain verification kept; reopen when AegisMark school email domains need it |
 | [DD-010](DD-010-process-step-ai-executor.md) | Process-step AI executor (`llm_intent` steps in a `process`) | PARKED | #1454, #1457 | Never mounted (ADR-0043); removed in flense ship O; reopen when a consumer runs an `llm_intent` step inside a process |
 | [DD-011](DD-011-island-rendering.md) | Rendering DSL-declared islands (`src:` / `title` / `fallback:`) | PARKED | — | Only `entity:` is live (data route); `dazzle validate` warns since flense ship R; reopen when cyfuture or AegisMark needs a rendered island |
+| [DD-012](DD-012-string-translation-catalogue.md) | String translation catalogue (`.po`/`.mo`, `translate`, `dazzle i18n`) | PARKED | #955 | Removed in flense ship AB (display-locale profile kept, middleware now mounted); restore from `3844ec995` when a consumer ships `.po` files |
 
 ## Related
 

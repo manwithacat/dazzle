@@ -49,8 +49,6 @@ class AppChrome:
         font_preconnect: External font origins to emit as
             ``<link rel="preconnect" href="...">`` in ``<head>``.
         favicon: Favicon URL (defaults to the framework asset).
-        feedback_widget_enabled: Whether to mount the feedback-widget
-            JS island. Set from ``appspec.feedback_widget.enabled``.
         use_cdn: ``True`` when the project opted into CDN-hosted
             assets via ``[ui] cdn = true`` in dazzle.toml. Currently
             informational — the typed substrate always serves local
@@ -76,7 +74,6 @@ class AppChrome:
     theme_map: dict[str, list[str]] = field(default_factory=dict)
     font_preconnect: tuple[str, ...] = ()
     favicon: str = "/static/assets/dazzle-favicon.svg"
-    feedback_widget_enabled: bool = False
     use_cdn: bool = False
 
 
@@ -90,6 +87,9 @@ _LUCIDE_UMD_JS = "/static/dist/dazzle-icons.min.js"
 # HMC-018 slice 3. combobox/tags are now HM-native controllers inside the
 # framework bundle, so no separate vendor widget JS is needed.
 _DEFAULT_FAVICON = "/static/assets/dazzle-favicon.svg"
+# `feedback_widget: enabled` mounts the in-app feedback widget (button +
+# panel posting to /feedbackreports). Its CSS ships inside dazzle.min.css.
+FEEDBACK_WIDGET_JS = "/static/js/feedback-widget.js"
 
 
 def _theme_css_url(theme: Any) -> str:
@@ -210,14 +210,11 @@ def resolve_app_chrome(
             )
             leaf_theme = None
 
-    # Feedback widget toggle.
-    feedback_enabled = False
-    if (
-        appspec is not None
-        and getattr(appspec, "feedback_widget", None) is not None
-        and getattr(appspec.feedback_widget, "enabled", False)
-    ):
-        feedback_enabled = True
+    # Feedback widget (`feedback_widget: enabled`) — the FeedbackReport entity
+    # and /feedbackreports API are linker-generated; this mounts the client.
+    feedback_widget = getattr(appspec, "feedback_widget", None) if appspec is not None else None
+    if feedback_widget is not None and getattr(feedback_widget, "enabled", False):
+        js_scripts.append(FEEDBACK_WIDGET_JS)
 
     # Onboarding overlay JS (v0.71.6) — auto-mount when the project
     # declares any `guide` block. Apps without guides don't pay the
@@ -251,6 +248,5 @@ def resolve_app_chrome(
         theme_map=theme_map,
         font_preconnect=_dedup_preserving_order(font_preconnect),
         favicon=favicon,
-        feedback_widget_enabled=feedback_enabled,
         use_cdn=use_cdn,
     )
