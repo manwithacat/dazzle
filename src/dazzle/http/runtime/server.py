@@ -56,6 +56,7 @@ from dazzle.http.runtime.rate_limit import apply_rate_limiting
 from dazzle.http.runtime.relation_loader import RelationLoader, RelationRegistry
 from dazzle.http.runtime.renderers.init import register_default_renderers
 from dazzle.http.runtime.repository import RepositoryFactory
+from dazzle.http.runtime.richtext_field import rich_text_fields_by_entity
 from dazzle.http.runtime.rls_schema import build_all_rls_ddl, physical_cast_overrides
 from dazzle.http.runtime.route_generator import RouteGenerator
 from dazzle.http.runtime.route_validator import route_paths, validate_routes
@@ -1970,6 +1971,12 @@ class DazzleBackendApp:
         # otherwise it builds one from the same inputs when a DB is present.
         self._wire_byte_audit(audit_logger)
 
+        # Flense ship T: rich-text fields (any surface `widget=rich_text`) are
+        # sanitised by the create/update handlers before persistence.
+        _entity_rich_text_fields: dict[str, dict[str, int]] = {}
+        if self._appspec:
+            _entity_rich_text_fields = rich_text_fields_by_entity(self._appspec)
+
         route_generator = RouteGenerator(
             security_profile=self._security_profile,
             services=self._services,
@@ -1999,6 +2006,7 @@ class DazzleBackendApp:
             admin_personas=_admin_personas,
             file_service=self._file_service,
             entity_file_fields=_entity_file_fields or None,
+            entity_rich_text_fields=_entity_rich_text_fields or None,
         )
 
         # Cycle 249 (EX-049): populate persona_backed_entities from appspec

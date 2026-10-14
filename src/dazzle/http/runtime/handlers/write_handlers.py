@@ -39,6 +39,7 @@ from dazzle.http.runtime.htmx_render import _with_htmx_triggers
 from dazzle.http.runtime.http_errors import require_found
 from dazzle.http.runtime.next_record import leftover_honest_origin, resolve_after_next_url
 from dazzle.http.runtime.repository import ConstraintViolationError
+from dazzle.http.runtime.richtext_field import RichTextTooLongError, sanitise_rich_text_values
 
 # Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
 # 2026-06-20). Was lazily imported from route_generator to dodge an import cycle;
@@ -109,6 +110,31 @@ async def _parse_request_body(request: Any) -> dict[str, Any]:
         body = await request.json()
     # Convert empty strings to None for optional field validation
     return {k: (None if v == "" else v) for k, v in body.items()}
+
+
+def _sanitise_rich_text_body(body: dict[str, Any], rich_text_fields: dict[str, int] | None) -> None:
+    """Run ``clean_rich_text`` over the body's rich-text fields (flense ship T).
+
+    Every persisted ``widget=rich_text`` value passes the IR allowlist
+    before Pydantic validation and the repository write. An over-cap value
+    is a 422 in FastAPI's validation-error shape (``loc``/``msg``/``type``),
+    so form and experience-step error rendering show it against the field.
+    """
+    if not rich_text_fields:
+        return
+    try:
+        sanitise_rich_text_values(body, rich_text_fields)
+    except RichTextTooLongError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=[
+                {
+                    "type": "rich_text_too_long",
+                    "loc": ["body", exc.field],
+                    "msg": str(exc),
+                }
+            ],
+        ) from exc
 
 
 async def resolve_backed_entity_refs(
@@ -254,6 +280,7 @@ def create_create_handler(
     persona_ref_map: dict[str, tuple[str, str, Any]] | None = None,
     file_service: Any = None,
     file_fields: list[str] | None = None,
+    rich_text_fields: dict[str, int] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for create operations with optional Cedar-style access control.
 
@@ -278,6 +305,10 @@ def create_create_handler(
             when ``file_service`` is ``None`` (caller did not opt in).
         file_fields: Names of ``file``-type fields on this entity. See
             ``verify_file_triple`` in ``document_routes`` for the contract.
+        rich_text_fields: ``{field: length cap}`` for this entity's
+            ``widget=rich_text`` fields (``rich_text_fields_by_entity``).
+            Their values are sanitised with ``clean_rich_text`` before
+            validation; an over-cap value is a 422.
     """
 
     service = spec.service
@@ -312,6 +343,9 @@ def create_create_handler(
             body = {k: (None if v == "" else v) for k, v in _pre_body.items()}
         else:
             body = await _parse_request_body(request)
+
+        # Flense ship T: sanitise rich-text HTML before anything else reads it.
+        _sanitise_rich_text_body(body, rich_text_fields)
 
         # #932 cycle 4: verify any storage-bound s3_key in the body
         # against the caller's prefix sandbox + object existence. Runs
@@ -456,6 +490,7 @@ def create_update_handler(
     entity_slug: str = "",
     file_service: Any = None,
     file_fields: list[str] | None = None,
+    rich_text_fields: dict[str, int] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for update operations with optional Cedar-style access control.
 
@@ -470,6 +505,8 @@ def create_update_handler(
             metadata before the write proceeds (#1551). Guards are inactive
             when ``file_service`` is ``None`` (caller did not opt in).
         file_fields: Names of ``file``-type fields on this entity.
+        rich_text_fields: ``{field: length cap}`` for this entity's
+            ``widget=rich_text`` fields; sanitised as on create.
     """
 
     service = spec.service
@@ -496,6 +533,9 @@ def create_update_handler(
         **_extra: Any,
     ) -> Any:
         body = await _parse_request_body(request)
+
+        # Flense ship T: sanitise rich-text HTML before anything else reads it.
+        _sanitise_rich_text_body(body, rich_text_fields)
 
         # #932 cycle 4: same verification gate as the create path —
         # an update that swaps in a new s3_key must satisfy the

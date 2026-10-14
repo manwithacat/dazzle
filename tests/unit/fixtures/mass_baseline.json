@@ -1,7 +1,7 @@
 {
-  "src_lines": 347823,
-  "test_lines": 353282,
-  "docs_lines": 47687,
+  "src_lines": 347965,
+  "test_lines": 353657,
+  "docs_lines": 47686,
   "construct_count": 31,
   "written": "2026-10-14",
   "exceptions": [
@@ -89,6 +89,14 @@
         "docs_lines"
       ],
       "reason": "ship R: tenancy mode dispatch + island warning/DD-011 (+src/+tests/+docs), consumer-forced"
+    },
+    {
+      "date": "2026-10-14",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "ship T: rich-text sanitiser wired (+src/+tests), security"
     }
   ]
 }

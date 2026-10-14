@@ -232,6 +232,7 @@ class RouteGenerator:
         security_profile: str = "basic",
         file_service: Any | None = None,
         entity_file_fields: dict[str, list[str]] | None = None,
+        entity_rich_text_fields: dict[str, dict[str, int]] | None = None,
     ):
         """
         Initialize the route generator.
@@ -261,6 +262,9 @@ class RouteGenerator:
                 rejected before the write reaches the database.
             entity_file_fields: Maps entity_name → [file_field_name, …]. Used with
                 ``file_service`` to activate triple verification on file-type fields.
+            entity_rich_text_fields: Maps entity_name → {rich_text_field: length cap}
+                (``richtext_field.rich_text_fields_by_entity``). The create/update
+                handlers sanitise those fields with ``clean_rich_text`` before the write.
         """
         self.services = services
         self.models = models
@@ -327,6 +331,9 @@ class RouteGenerator:
         # so forged file references are rejected before the write proceeds.
         self.file_service: Any | None = file_service
         self.entity_file_fields: dict[str, list[str]] = entity_file_fields or {}
+        # Flense ship T: per-entity rich-text fields → length cap, sanitised by
+        # the create/update handlers (and the experience-form in-process create).
+        self.entity_rich_text_fields: dict[str, dict[str, int]] = entity_rich_text_fields or {}
         self._router = _APIRouter()
 
     def generate_route(
@@ -467,6 +474,7 @@ class RouteGenerator:
                     persona_ref_map=_persona_ref_map,
                     file_service=self.file_service if _file_fields else None,
                     file_fields=_file_fields,
+                    rich_text_fields=self.entity_rich_text_fields.get(entity_name or "") or None,
                 )
                 # #1422: register the in-process create invoker. Every create
                 # handler variant (cedar / auth / noauth) now exposes
@@ -640,6 +648,7 @@ class RouteGenerator:
                     entity_slug=_entity_slug,
                     file_service=self.file_service if _file_fields else None,
                     file_fields=_file_fields,
+                    rich_text_fields=self.entity_rich_text_fields.get(entity_name or "") or None,
                 )
                 self._add_route(endpoint, handler, response_model=model)
             else:
