@@ -1601,7 +1601,6 @@ ir_class: PersonaVariant
     - purpose: str | None = None
     - read_only: bool = False
     - scope: ConditionExpr | None = None
-    - scope_all: bool = False
     - show: list[str] = []
 
 ir_class: PhaseSpec

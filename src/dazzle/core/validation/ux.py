@@ -460,6 +460,37 @@ def validate_emits_targets(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     return errors, []
 
 
+def validate_island_render_fields(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Flense ship R: warn that an island's ``title``/``src:``/``fallback:`` change nothing.
+
+    Only ``entity:`` has a runtime effect today (it adds the
+    ``/_dazzle/islands/{name}/data`` route). No DSL construct references an island
+    from a page, so nothing emits its mount point and the other declarations are
+    unread. Rendering is parked in DD-011; until it is forced, the consumer sees
+    a WARNING rather than a silent no-op.
+
+    Returns:
+        Tuple of (errors, warnings)
+    """
+    warnings: list[str] = []
+    for island in appspec.islands:
+        declared = [
+            f"`{label}`"
+            for label, value in (
+                ("title", island.title),
+                ("src:", island.src),
+                ("fallback:", island.fallback),
+            )
+            if value
+        ]
+        if declared:
+            warnings.append(
+                f"island '{island.name}': {'/'.join(declared)} declared but not rendered "
+                f"(only `entity:` has runtime effect); see DD-011"
+            )
+    return [], warnings
+
+
 _TENANT_CONFIG_PREFIX = "tenant_config."
 
 

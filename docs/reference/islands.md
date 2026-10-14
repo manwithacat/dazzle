@@ -24,15 +24,26 @@ island <name> "<Title>":
 
 All fields except `name` are optional.
 
+> **Status today: only `entity:` has a runtime effect.** It mounts the data
+> route described under [API Routes](#api-routes). No DSL construct places an
+> island on a page, so the framework does not render any island mount point:
+> `title`, `src:` and `fallback:` are parsed and stored on `IslandSpec` but not
+> read, and `dazzle validate` emits a warning naming DD-011 for each island that
+> declares them. Rendering is parked in
+> [DD-011](../decisions/DD-011-island-rendering.md). To mount an island today,
+> emit the mount point yourself (see [Mount-point HTML](#mount-point-html)) from a
+> custom route or `render:` surface and load `dz-islands.js` via
+> `[ui] app_scripts = ["/static/js/dz-islands.js"]` in `dazzle.toml`.
+
 ### Fields
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | Unique identifier. Used for mount points and API routes. |
-| `title` | No | Human-readable display name |
-| `entity` | No | Entity reference. Generates a data API at `/_dazzle/islands/{name}/data` |
-| `src` | No | JavaScript entry point. Defaults to `/static/islands/{name}/index.js` |
-| `fallback` | No | HTML rendered server-side before JavaScript loads |
+| Field | Required | Runtime effect today |
+|-------|----------|----------------------|
+| `name` | Yes | Unique identifier; names the API route |
+| `title` | No | None (parsed, not rendered — DD-011) |
+| `entity` | No | Generates a data API at `/_dazzle/islands/{name}/data` |
+| `src` | No | None (parsed, not rendered — DD-011) |
+| `fallback` | No | None (parsed, not rendered — DD-011) |
 
 ## JavaScript Contract
 
@@ -60,9 +71,11 @@ The cleanup function is called when:
 - htmx swaps content that contains the island
 - The page navigates away
 
-## Generated HTML
+## Mount-point HTML
 
-The framework renders each island as:
+The framework does not generate this markup from the DSL yet (DD-011). The
+island loader mounts any element of this shape, which is what a custom route
+or `render:` surface emits by hand (the built-in signing pad does the same):
 
 ```html
 <div data-island="task_chart"

@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
+from ..errors import make_parse_error
 from ..lexer import TokenType
 from .dispatch import KeywordParser, parse_block_with_dispatch
 
@@ -185,9 +186,10 @@ class GovernanceParserMixin:
     def parse_tenancy(self) -> ir.TenancySpec:
         """Parse a ``tenancy:`` declaration.
 
-        Refactored to dispatch-table style (follow-on to #1098). All 7
-        keys are IDENT-text-matched (no dedicated lexer tokens) — they're
-        routed through :data:`_TENANCY_IDENT_KEYWORDS`. Builder assembles
+        Refactored to dispatch-table style (follow-on to #1098). ``mode``
+        lexes as the ``MODE`` keyword token and is routed through
+        :data:`_TENANCY_FIRST_CLASS_KEYWORDS`; the other keys are
+        IDENT-text-matched via :data:`_TENANCY_IDENT_KEYWORDS`. Builder assembles
         :class:`ir.TenantIsolationSpec` + :class:`ir.TenancySpec` from the
         accumulated state.
 
@@ -206,7 +208,7 @@ class GovernanceParserMixin:
         state = _TenancyState()
         parse_block_with_dispatch(
             self,
-            first_class_keywords={},
+            first_class_keywords=_TENANCY_FIRST_CLASS_KEYWORDS,
             ident_keywords=_TENANCY_IDENT_KEYWORDS,
             state=state,
             on_unknown=_on_unknown_tenancy,
@@ -220,8 +222,8 @@ class GovernanceParserMixin:
 # ================================================================ #
 #
 # The 170-line monolith was replaced (v0.70.19) with the dispatch
-# pattern shipped in #1097. All 7 keys are IDENT-text-matched (no
-# dedicated lexer tokens) — they live in :data:`_TENANCY_IDENT_KEYWORDS`.
+# pattern shipped in #1097. ``mode`` is the ``MODE`` keyword token (first-class
+# dispatch); the rest are IDENT-text-matched in :data:`_TENANCY_IDENT_KEYWORDS`.
 # Builder assembles the nested IsolationSpec from
 # the flat state.
 
@@ -246,14 +248,27 @@ class _TenancyState:
 
 
 def _t_kw_mode(parser: Any, state: _TenancyState) -> None:
-    """``mode: shared_schema | ...`` — tolerant of unknown values (kept as default)."""
+    """``mode: single | shared_schema | schema_per_tenant | database_per_tenant``.
+
+    ``mode`` lexes as the ``MODE`` keyword token, so it must be dispatched
+    first-class — as an IDENT-table entry it never matched and the declared
+    mode was silently dropped (always ``shared_schema``; flense ship R). An
+    unknown value is a parse error rather than a silent fall-back to the
+    default, because the mode gates partition-key injection and RLS.
+    """
     parser.advance()
     parser.expect(TokenType.COLON)
-    value = parser.expect_identifier_or_keyword().value
+    tok = parser.expect_identifier_or_keyword()
     try:
-        state.mode = ir.TenancyMode(value.lower())
+        state.mode = ir.TenancyMode(tok.value.lower())
     except ValueError:
-        pass
+        allowed = ", ".join(m.value for m in ir.TenancyMode)
+        raise make_parse_error(
+            f"Unknown tenancy mode '{tok.value}'. Expected one of: {allowed}",
+            parser.file,
+            tok.line,
+            tok.column,
+        ) from None
 
 
 def _t_kw_partition_key(parser: Any, state: _TenancyState) -> None:
@@ -350,8 +365,11 @@ def _t_kw_per_tenant_config(parser: Any, state: _TenancyState) -> None:
 # ---------- Dispatch table + unknown handler + builder ---------- #
 
 
+_TENANCY_FIRST_CLASS_KEYWORDS: dict[TokenType, KeywordParser[_TenancyState]] = {
+    TokenType.MODE: _t_kw_mode,
+}
+
 _TENANCY_IDENT_KEYWORDS: dict[str, KeywordParser[_TenancyState]] = {
-    "mode": _t_kw_mode,
     "partition_key": _t_kw_partition_key,
     "topics": _t_kw_topics,
     # #1447 B2: the canonical keyword matches the IR field + runtime reader; the

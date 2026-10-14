@@ -4,9 +4,9 @@ Covers policies and tenancy top-level blocks.
 Part of v0.18.0 Event-First Architecture (Issue #25).
 
 Notes on parser behaviour verified by these tests:
-- The `mode:` key inside tenancy is tokenised as TokenType.MODE (a keyword),
-  so the generic IDENTIFIER-keyed branch silently skips it; the isolation
-  mode always defaults to TenancyMode.SHARED_SCHEMA.
+- The `mode:` key inside tenancy is tokenised as TokenType.MODE (a keyword) and
+  is dispatched first-class; until flense ship R it was silently skipped and the
+  isolation mode always resolved to TenancyMode.SHARED_SCHEMA.
 """
 
 from pathlib import Path
@@ -244,14 +244,27 @@ policies:
 
 
 class TestTenancyParser:
-    """Parser tests for the tenancy: block.
+    """Parser tests for the tenancy: block."""
 
-    Note: The `mode:` key is tokenised as TokenType.MODE (a keyword) rather
-    than TokenType.IDENTIFIER, so the generic key-dispatch branch inside the
-    parser silently skips the line.  The isolation mode therefore always
-    resolves to the default value (TenancyMode.SHARED_SCHEMA).  Tests here
-    verify the keys that *are* handled correctly via IDENTIFIER tokens.
-    """
+    @pytest.mark.parametrize(
+        "mode",
+        ["single", "shared_schema", "schema_per_tenant", "database_per_tenant"],
+    )
+    def test_tenancy_mode_declared_value_lands_in_ir(self, mode: str) -> None:
+        """Flense ship R: `mode` lexes as the MODE keyword; the declared value must
+        reach the IR (it was silently dropped → always shared_schema)."""
+        from dazzle.core.ir.governance import TenancyMode
+
+        fragment = _parse(_HEADER + f"tenancy:\n  mode: {mode}\n  partition_key: org_id\n")
+        assert fragment.tenancy is not None
+        assert fragment.tenancy.isolation.mode == TenancyMode(mode)
+        assert fragment.tenancy.isolation.partition_key == "org_id"
+
+    def test_tenancy_mode_unknown_value_is_a_parse_error(self) -> None:
+        from dazzle.core.errors import ParseError
+
+        with pytest.raises(ParseError, match="Unknown tenancy mode 'per_row'"):
+            _parse(_HEADER + "tenancy:\n  mode: per_row\n")
 
     @pytest.mark.parametrize(
         ("body", "extractor_factory"),

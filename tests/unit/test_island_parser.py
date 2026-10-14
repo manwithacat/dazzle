@@ -154,3 +154,31 @@ class TestIslandIRModels:
         assert app.get_island("chart") is not None
         assert app.get_island("chart").title == "Chart"
         assert app.get_island("missing") is None
+
+
+class TestIslandRenderFieldWarning:
+    """Flense ship R / DD-011: title/src:/fallback: are parsed but never rendered."""
+
+    @staticmethod
+    def _warnings(*islands: IslandSpec) -> list[str]:
+        from dazzle.core.ir.appspec import AppSpec
+        from dazzle.core.ir.domain import DomainSpec
+        from dazzle.core.validation import validate_island_render_fields
+
+        errors, warnings = validate_island_render_fields(
+            AppSpec(name="test", domain=DomainSpec(entities=[]), islands=list(islands))
+        )
+        assert errors == []
+        return warnings
+
+    def test_declared_render_fields_warn_and_name_dd_011(self) -> None:
+        warnings = self._warnings(
+            IslandSpec(name="video_call", title="Video Call", entity="X", src="a.js", fallback="…")
+        )
+        assert warnings == [
+            "island 'video_call': `title`/`src:`/`fallback:` declared but not rendered "
+            "(only `entity:` has runtime effect); see DD-011"
+        ]
+
+    def test_entity_only_island_is_silent(self) -> None:
+        assert self._warnings(IslandSpec(name="data_only", entity="X")) == []

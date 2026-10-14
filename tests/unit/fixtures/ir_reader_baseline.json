@@ -12,7 +12,6 @@
   "grants.GrantSchemaSpec.source_location",
   "integrations.MatchRule.entity_field",
   "integrations.MatchRule.foreign_field",
-  "islands.IslandSpec.fallback",
   "money.Money.amount_minor",
   "money.MoneyWithScale.scale_override",
   "rhythm.Gap.rhythm",

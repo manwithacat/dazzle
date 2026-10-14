@@ -14,6 +14,7 @@ from .validator import (
     validate_graph_declarations,
     validate_insight_summaries,
     validate_integrations,
+    validate_island_render_fields,
     validate_legal_entity_money_span,
     validate_lifecycles,
     validate_list_without_read_scope,
@@ -172,6 +173,11 @@ def lint_appspec(
 
     # insight_summary deterministic-narrative validation (#1470)
     errors, warnings = validate_insight_summaries(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Flense ship R: island title/src:/fallback: are parsed but never rendered (DD-011)
+    errors, warnings = validate_island_render_fields(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

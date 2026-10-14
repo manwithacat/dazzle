@@ -393,7 +393,6 @@ class _PersonaVariantState:
     """
 
     scope: ir.ConditionExpr | None = None
-    scope_all: bool = False
     purpose: str | None = None
     show: list[str] = field(default_factory=list)
     hide: list[str] = field(default_factory=list)
@@ -408,12 +407,14 @@ class _PersonaVariantState:
 
 
 def _pv_kw_scope(parser: Any, state: _PersonaVariantState) -> None:
-    """``scope: all`` OR ``scope: <condition_expr>``"""
+    """``scope: all`` OR ``scope: <condition_expr>``.
+
+    ``scope: all`` leaves ``state.scope`` as ``None`` — the IR's "all" encoding.
+    """
     parser.advance()
     parser.expect(TokenType.COLON)
     if parser.match(TokenType.ALL):
         parser.advance()
-        state.scope_all = True
     else:
         state.scope = parser.parse_condition_expr()
     parser.skip_newlines()
@@ -528,7 +529,6 @@ def _build_persona_variant(persona: str, state: _PersonaVariantState) -> ir.Pers
     return ir.PersonaVariant(
         persona=persona,
         scope=state.scope,
-        scope_all=state.scope_all,
         purpose=state.purpose,
         show=state.show,
         hide=state.hide,

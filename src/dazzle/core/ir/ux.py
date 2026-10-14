@@ -63,7 +63,8 @@ class PersonaVariant(BaseModel):
 
     Attributes:
         persona: Persona identifier (e.g., "volunteer", "coordinator")
-        scope: Filter expression limiting data visibility, or "all"
+        scope: Filter expression limiting data visibility; ``None`` (the
+            default, and what ``scope: all`` parses to) means all rows
         purpose: Persona-specific purpose description
         show: Fields to explicitly show (overrides base)
         hide: Fields to hide from base
@@ -81,8 +82,7 @@ class PersonaVariant(BaseModel):
     """
 
     persona: str
-    scope: ConditionExpr | None = None  # None means "all"
-    scope_all: bool = False  # True if "scope: all" was specified
+    scope: ConditionExpr | None = None  # None means "all" (also what `scope: all` parses to)
     purpose: str | None = None
     show: list[str] = Field(default_factory=list)
     hide: list[str] = Field(default_factory=list)

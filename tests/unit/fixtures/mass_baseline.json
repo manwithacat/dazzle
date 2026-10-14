@@ -1,7 +1,7 @@
 {
-  "src_lines": 347761,
-  "test_lines": 353241,
-  "docs_lines": 47569,
+  "src_lines": 347823,
+  "test_lines": 353282,
+  "docs_lines": 47687,
   "construct_count": 31,
   "written": "2026-10-14",
   "exceptions": [
@@ -80,6 +80,15 @@
         "test_lines"
       ],
       "reason": "ship H: in-package http/page tests moved to tests/ (src -12,672, tests +6,324; net -6,348)"
+    },
+    {
+      "date": "2026-10-14",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "ship R: tenancy mode dispatch + island warning/DD-011 (+src/+tests/+docs), consumer-forced"
     }
   ]
 }

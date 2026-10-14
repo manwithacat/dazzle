@@ -218,7 +218,7 @@ class TestUXParsing:
         assert volunteer.read_only is False
 
         coordinator = next(p for p in personas if p.persona == "coordinator")
-        assert coordinator.scope_all is True
+        assert coordinator.scope is None  # `scope: all` → no filter
 
     def test_parse_workspace(self):
         """Test parsing workspace declarations."""
