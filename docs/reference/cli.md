@@ -245,28 +245,21 @@ dazzle test COMMAND [OPTIONS]
 |------------|-------------|
 | `generate` | Generate E2E test spec from AppSpec |
 | `run` | Run Playwright tests |
-| `list` | List available test flows |
 | `walk` | Scene walks list/validate/run/pack-dry-run (#1638) |
 | `docs claims` | Job claim registry check (#1638 PR3) |
-| `dsl-generate` | Generate tests from DSL definitions |
 | `dsl-run` | **Tier 1**: Run API-based tests against a server |
 | `tier2-generate` | **Tier 2**: Generate Playwright tests from surfaces |
 | `agent` | **Tier 3**: Run LLM-agent-powered E2E tests |
 | `populate` | Auto-populate stories and test designs from DSL |
-| `run-all` | Run tests across all tiers |
 | `create-sessions` | Create authenticated sessions for DSL personas |
 | `diff-personas` | Compare route responses across personas |
-| `feedback` | Track regressions and corrections |
 
 ```bash
 # Run API-level tests
 dazzle test dsl-run --base-url http://localhost:8000
 
-# Run all tiers
-dazzle test run-all
-
-# Generate tests from DSL
-dazzle test dsl-generate
+# Generate Tier 2 Playwright tests from surfaces
+dazzle test tier2-generate
 ```
 
 ---
@@ -383,8 +376,8 @@ dazzle validate && dazzle serve --watch
 dazzle serve &
 dazzle test dsl-run
 
-# Run full test suite
-dazzle test run-all
+# Run the generated E2E flows
+dazzle test run
 ```
 
 ### CI/CD

@@ -24,6 +24,7 @@
   "rhythm.GapsSummary.by_severity",
   "rhythm.LifecycleReport.current_focus",
   "rhythm.LifecycleStep.suggestions",
+  "rhythm.SceneDimensionScore.root_cause",
   "rhythm.SceneEvaluation.phase_name",
   "rhythm.SceneEvaluation.scene_name",
   "rhythm.SceneEvaluation.story_ref",

@@ -52,10 +52,10 @@ class TestIntrospectionCompleteness:
         "inspect oauth-providers",
         "test generate",
         "test run",
-        "test list",
+        "test populate",
         "test dsl-run",
         "test agent",
-        "test run-all",
+        "test verify-story",
         "pipeline run",
         "story propose",
         "mcp run",
@@ -70,9 +70,9 @@ class TestIntrospectionCompleteness:
     ]
 
     NESTED = [
-        "test feedback record-regression",
-        "test feedback summary",
-        "test feedback patterns",
+        "test walk list",
+        "test walk validate",
+        "test walk run",
     ]
 
     @pytest.mark.parametrize("cmd", TOP_LEVEL)

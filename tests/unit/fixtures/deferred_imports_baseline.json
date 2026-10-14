@@ -40,7 +40,7 @@
   "src/dazzle/cli/spec.py": 1,
   "src/dazzle/cli/story.py": 4,
   "src/dazzle/cli/tenant.py": 8,
-  "src/dazzle/cli/testing.py": 28,
+  "src/dazzle/cli/testing.py": 14,
   "src/dazzle/cli/utils.py": 1,
   "src/dazzle/cli/ux.py": 20,
   "src/dazzle/cli/ux_interactions.py": 3,

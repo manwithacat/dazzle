@@ -98,9 +98,6 @@ dazzle test generate -o testspec.json
 
 # Run E2E tests
 dazzle test run --verbose
-
-# List available test flows
-dazzle test list
 ```
 
 ## Screenshots

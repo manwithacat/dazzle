@@ -184,13 +184,13 @@ combination is what caught the cross-tenant leak.
 ```bash
 dazzle test dsl-run          # Tier 1 API — no browser
 dazzle test run              # Tier 2 Playwright scripted UI
-dazzle test run-all          # all tiers
 ```
 
-**Tier 3 — E2E with UX coverage tracking:**
+**Tier 3 — LLM-agent E2E and persona journeys:**
 
 ```bash
-dazzle e2e run               # E2E tests for the project
+dazzle test agent            # LLM-agent-driven E2E tests
+dazzle e2e journey           # persona journey run against a deployment
 dazzle e2e coverage          # analyse E2E coverage
 ```
 

@@ -164,41 +164,6 @@ class TestDslRunFormatJson:
 
 
 # ---------------------------------------------------------------------------
-# test run-all --format json
-# ---------------------------------------------------------------------------
-
-
-class TestRunAllFormatJson:
-    def test_json_format(self, tmp_path: Path) -> None:
-        mock_result = MagicMock()
-        mock_result.get_summary.return_value = {
-            "total_tests": 3,
-            "passed": 3,
-            "failed": 0,
-            "skipped": 0,
-            "success_rate": 100.0,
-        }
-
-        mock_runner_cls = MagicMock()
-        mock_runner_cls.return_value.run_all.return_value = mock_result
-
-        with patch.dict(
-            "sys.modules",
-            {"dazzle.testing.unified_runner": MagicMock(UnifiedTestRunner=mock_runner_cls)},
-        ):
-            # Tier 1 only for simpler mocking
-            result = runner.invoke(
-                app,
-                ["test", "run-all", *_manifest_args(tmp_path), "--tier", "1", "--format", "json"],
-            )
-
-        if result.exit_code == 0:
-            data = json.loads(result.output)
-            assert "tiers" in data
-            assert "overall" in data
-
-
-# ---------------------------------------------------------------------------
 # test dsl-run --base-url
 # ---------------------------------------------------------------------------
 
