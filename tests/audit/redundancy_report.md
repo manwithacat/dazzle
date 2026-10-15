@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 641
-- **Tests inside those clusters**: 2,390
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **1,749 tests** (≈ 12.2% of the suite)
+- **Clusters of ≥3**: 627
+- **Tests inside those clusters**: 2,339
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **1,712 tests** (≈ 12.0% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -15,9 +15,9 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | Size | Clusters |
 |---|---:|
 | 20+ | 0 |
-| 10-19 | 3 |
+| 10-19 | 2 |
 | 5-9 | 98 |
-| 3-4 | 540 |
+| 3-4 | 527 |
 
 ## Top 30 largest clusters
 
@@ -25,7 +25,6 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 |---|---|---:|---|
 | `tests/unit/test_hm_contract_dom_conformance.py` | `(module)` | 15 | test_money_field_fixed_conforms_to_money_contract, test_search_result_row_conforms_to_result_contract, test_metric_tile_emission_conforms_to_metrics_contract… |
 | `tests/unit/test_dedup_footgun_gates.py` | `(module)` | 11 | test_no_inline_entity_slug, test_no_inline_404_guard, test_logger_uses_dunder_name_not_string_bucket… |
-| `tests/unit/test_goal_b_coat.py` | `(module)` | 10 | test_stamp_pair_grids_saturate_media, test_note_kind_chrome_saturates_conversation, test_tree_people_org_saturates… |
 | `tests/unit/test_auth_views_password_reset.py` | `(module)` | 9 | test_forgot_password_view_posts_to_submit_endpoint, test_forgot_password_view_uses_product_name_in_brand, test_forgot_password_view_links_back_to_login… |
 | `tests/unit/test_onboarding_renderer.py` | `(module)` | 9 | test_popover_cta_href_when_target_set, test_popover_placement_threads_into_data_attr, test_every_supported_kind_emits_htmx_complete… |
 | `tests/unit/test_scope_create_eval.py` | `(module)` | 9 | test_user_attr_check_passes_when_field_equals_user_id, test_user_attr_check_rejects_when_field_does_not_equal_user_id, test_user_attr_check_missing_attr_rejects… |
@@ -53,6 +52,7 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_pip_audit.py` | `(module)` | 7 | test_parse_findings_reads_the_id_column_not_the_whole_line, test_parse_findings_keeps_only_three_columns, test_parse_findings_dedupes_the_alias_rows_pip_audit_repeats… |
 | `tests/unit/test_rate_limit_key_1296.py` | `(module)` | 7 | test_default_zero_trusted_proxies_uses_client_host_ignoring_xff, test_one_trusted_proxy_takes_rightmost_xff, test_two_trusted_proxies_takes_second_from_right… |
 | `tests/unit/test_scope_create_eval.py` | `(module)` | 7 | test_user_attr_check_resolves_named_user_attribute, test_column_check_literal_eq, test_column_check_with_current_user_value_ref… |
+| `tests/unit/test_workspace_live_refresh_1391.py` | `TestTerminalStateStop` | 7 | test_all_rows_terminal_is_complete, test_any_non_terminal_row_keeps_polling, test_empty_region_keeps_polling… |
 
 ## Top 10 files by collapse-saving potential
 
@@ -63,11 +63,11 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_scope_create_eval.py` | 14 |
 | `tests/unit/test_task_inbox_data_resolution.py` | 14 |
 | `tests/unit/test_onboarding_renderer.py` | 13 |
-| `tests/unit/test_goal_b_coat.py` | 12 |
 | `tests/unit/test_landing_resolver.py` | 12 |
 | `tests/unit/test_tenant_middleware.py` | 12 |
 | `tests/integration/test_auth_password_mode_chrome_gate.py` | 12 |
 | `tests/unit/test_nav_model_render_1324.py` | 12 |
+| `tests/unit/test_auth_views_password_reset.py` | 11 |
 
 ## Fuzz-target worklist (property/fuzz-candidate clusters)
 

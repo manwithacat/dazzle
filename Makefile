@@ -157,8 +157,8 @@ test-fast:
 	$(UV) run pytest tests/ -x -q --ignore=tests/integration/ -m "not slow"
 
 # Fast infrastructure-drift gate used by /ux-cycle (cycles 312 + 314).
-# Runs the 4 horizontal-discipline lints + snapshot tests + card-safety invariants
-# + mypy on the UI subtree. Budget <6s. Catches the drift class that accumulated
+# Runs the field-reader parity and no-jinja gates + mypy on the UI subtree.
+# Budget <6s. Catches the drift class that accumulated
 # for ~40 cycles before cycle 311 surfaced 9 red tests in the full suite, AND
 # the hypothesized 4th class (type-error drift in dazzle_page/) that cycle 313 flagged.
 test-ux-preflight:
@@ -174,9 +174,10 @@ test-ux-preflight:
 	@# filters were still live, so it guarded a substrate ADR-0023 retired.
 	@# It stayed in this list after the file was deleted, which made
 	@# `make test-ux-preflight` exit 4 ("file not found"). The 4 remaining
-	@# tests still guard meaningful invariants
-	@# (canonical-pointer linkage, external-resource SRI, IR↔field-reader
-	@# parity, typed-runtime no-jinja).
+	@# Ship AX (ADR-0057) removed two more: the canonical-pointer and
+	@# external-resource lints scanned src/dazzle/page/templates/, which the
+	@# Jinja retirement deleted, so both passed vacuously. The 2 remaining
+	@# tests guard IR↔field-reader parity and typed-runtime no-jinja.
 	@# Do not prefix these tools with the uv runner. The unit suite shells
 	@# out to this target. UV_MANAGED_PYTHON=1 plus .python-version 3.14
 	@# makes that runner delete a 3.12 or 3.13 .venv and recreate it as
@@ -184,9 +185,7 @@ test-ux-preflight:
 	@# a tree that is being replaced. The laptop is already 3.14, so
 	@# nothing local notices. Use the interpreter that is already there.
 	@test -x .venv/bin/python || { echo "missing .venv/bin/python; run make dev-install"; exit 1; }
-	.venv/bin/python -m pytest tests/unit/test_canonical_pointer_lint.py \
-	       tests/unit/test_external_resource_lint.py \
-	       tests/unit/test_ir_field_reader_parity.py \
+	.venv/bin/python -m pytest tests/unit/test_ir_field_reader_parity.py \
 	       tests/unit/test_typed_runtime_no_jinja.py \
 	       -q
 	@# src/dazzle_page/ merged into src/dazzle/page/ in v0.67.98 (#1055).

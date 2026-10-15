@@ -49,32 +49,31 @@ def text() -> str:
     return DOC.read_text(encoding="utf-8")
 
 
-def test_required_anchors_present(text: str) -> None:
-    missing = [a for a in REQUIRED_ANCHORS if a not in text]
-    assert not missing, f"proof model missing anchors: {missing}"
+# (clause, terms the clause must state). Downstream WPs and the WP-7 claim
+# ledger key off these, so a dropped term is a broken reference.
+_CLAUSES: dict[str, tuple[str, ...]] = {
+    "anchors": tuple(REQUIRED_ANCHORS),
+    "effective-decision-composition": (
+        "allow(p, r, a,",
+        "tenant_RLS",
+        "role_perm",
+        "scope_pred",
+        "rebac_grant",
+    ),
+    "theorem-directions": tuple(REQUIRED_THEOREM_TERMS),
+    "assumption-set": tuple(REQUIRED_ASSUMPTIONS),
+    "trust-chain-links": ("PROOF", "TEST", "ASSUMED"),
+    "rebac-declared-classes-only": ("grant_schema", "out of scope", "residual"),
+    "non-goals-scoped-tcb": ("scoped", "TCB"),
+}
 
 
-def test_effective_decision_composition_present(text: str) -> None:
-    # The single-source-of-truth allow() composition must be stated verbatim-ish.
-    assert "allow(p, r, a," in text
-    for term in ("tenant_RLS", "role_perm", "scope_pred", "rebac_grant"):
-        assert term in text, f"formalisation missing conjunct: {term}"
-
-
-def test_theorem_directions_named(text: str) -> None:
-    missing = [t for t in REQUIRED_THEOREM_TERMS if t not in text]
-    assert not missing, f"theorem missing directions: {missing}"
-
-
-def test_assumption_set_complete(text: str) -> None:
-    missing = [a for a in REQUIRED_ASSUMPTIONS if a not in text]
-    assert not missing, f"assumption set A incomplete: {missing}"
-
-
-def test_trust_chain_three_links(text: str) -> None:
-    # The honest core: proof / test / assumed must all appear in the trust chain.
-    for label in ("PROOF", "TEST", "ASSUMED"):
-        assert label in text, f"trust chain missing link label: {label}"
+@pytest.mark.parametrize("terms", list(_CLAUSES.values()), ids=list(_CLAUSES))
+def test_clause_states_its_terms(text: str, terms: tuple[str, ...]) -> None:
+    lowered = text.lower()
+    # all-lowercase terms match case-insensitively; anything else exactly
+    missing = [t for t in terms if t not in (lowered if t == t.lower() else text)]
+    assert not missing, f"proof model clause lost: {missing}"
 
 
 def test_evidence_class_table_complete(text: str) -> None:
@@ -93,15 +92,3 @@ def test_evidence_class_table_complete(text: str) -> None:
         if not (EVIDENCE_CLASSES & set(re.split(r"[ +/]", " ".join(cells)))):
             classless.append(row)
     assert not classless, f"evidence-class rows without a valid class: {classless}"
-
-
-def test_rebac_stance_declared_classes_only(text: str) -> None:
-    # The locked stance: provable over declared grant classes; builder-minted = residual.
-    assert "grant_schema" in text
-    assert "out of scope" in text.lower() or "out-of-scope" in text.lower()
-    assert "residual" in text.lower()
-
-
-def test_non_goals_disclaim_unconditional_proof(text: str) -> None:
-    assert "scoped" in text.lower()
-    assert "TCB" in text

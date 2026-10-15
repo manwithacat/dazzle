@@ -1,15 +1,13 @@
-"""Tests for signing_validation fixture."""
+"""The signing_validation fixture (booted by the opt-in Postgres signing trials)
+still parses and declares exactly one signable entity, TestDoc."""
 
 from pathlib import Path
+
+from dazzle.core.appspec_loader import load_project_appspec
 
 FIXTURE = Path(__file__).resolve().parents[3] / "fixtures" / "signing_validation"
 
 
-def test_fixture_dazzle_toml_exists():
-    assert (FIXTURE / "dazzle.toml").is_file()
-
-
-def test_fixture_has_signable_entity():
-    dsl_text = (FIXTURE / "dsl" / "app.dsl").read_text()
-    assert "signable: true" in dsl_text
-    assert "entity TestDoc" in dsl_text
+def test_fixture_declares_one_signable_entity() -> None:
+    appspec = load_project_appspec(FIXTURE)
+    assert [e.name for e in appspec.domain.entities if e.signable] == ["TestDoc"]

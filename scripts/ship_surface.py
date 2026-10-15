@@ -102,7 +102,7 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2169: bulk all-matching echo include_closed / as_of must not invent 422
     "tests/unit/test_bulk_temporal_echo_leftover.py",
     # cycle 2170: grid ownedKeys / buildQuery drop include_closed / as_of
-    "tests/unit/test_grid_temporal_query_leftover.py",
+    "tests/unit/test_js_source_pins.py::test_source_pin[grid-temporal-leftover-keys-2170]",
     # cycle 2172: list-region sort-header hx-get drops include_closed / as_of
     "tests/unit/test_list_sort_header_temporal_leftover.py",
     # cycle 2174: list-region CSV data-dz-csv-endpoint drops include_closed / as_of
@@ -456,7 +456,7 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2156: leftover-zoom prove must not use 1.25 (fit collision)
     "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[hm-behaviour-pdf-zoom-avoids-fit-collision-2156]",
     # cycle 2171: setup-uv v8.2.0 still fetched uv.ndjson (GUIDE_WALK flake)
-    "tests/unit/test_setup_dazzle_action.py",
+    "tests/unit/test_workflow_action_pins.py::test_setup_dazzle_pins_an_explicit_uv_version",
     # cycle 2142/2147: stale-red hunt + wait-reset + CI --wait floor
     "tests/unit/test_hm_standalone_ci_status.py",
     # cycle 2146: darwin leftover-honesty must land matching linux visual PNGs
@@ -468,9 +468,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_auth_views_password_reset.py::test_reset_password_done_view_no_form",
     "tests/unit/test_auth_views_password_reset.py::test_forgot_password_sent_view_does_not_render_form",
     "tests/unit/test_app_error_views.py::test_app_500_no_form_no_inline_script",
-    "tests/unit/test_widget_contract.py::test_bridge_kind_allowlist_matches_registry_handlers",
-    # simple_task Goal B document (cycle 1656 TaskBrief composition + dual-open)
-    "tests/unit/test_simple_task_document_goal_b.py",
+    # simple_task Goal B depth pins (AppSpec tables; folded in flense ship AX)
+    "tests/unit/test_simple_task_goal_b.py",
     "tests/unit/test_open_via_1603.py::test_simple_task_brief_list_dual_open",
     # cycle 1714 — person chip + non-person ref Link open discovery (leaf open_discovery)
     "tests/unit/test_ref_link_open_discovery_1714.py",
@@ -495,67 +494,25 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_sidebar_nav_open_discovery_1818.py",
     # cycle 1735 — #1646 detail money _minor/_currency + related tab finger budget
     "tests/unit/test_detail_money_related_budget_1646.py",
-    # invoice_ops Goal B conversation (cycle 1662 InvoiceNote + finance desks)
-    "tests/unit/test_invoice_ops_conversation_goal_b.py",
-    # invoice_ops Goal B document (cycle 1724 composition on finance_ops/my_invoices)
-    "tests/unit/test_invoice_ops_document_goal_b.py",
-    # invoice_ops Goal B command_density (cycle 1793 pay_desk dual attention)
-    "tests/unit/test_invoice_ops_command_density_goal_b.py",
-    # cycle 1820 — Goal B empty_region honesty @invoice_ops primary desks
-    "tests/unit/test_invoice_ops_empty_region_goal_b.py",
-    # invoice_ops Goal B media (cycle 1884 concurrent)
-    "tests/unit/test_invoice_ops_media_goal_b.py",
-    # invoice_ops Goal B org_structure (cycle 1863 team title+dept + suppliers region boards)
-    "tests/unit/test_invoice_ops_org_structure_goal_b.py",
-    # hr_records Goal B conversation (cycle 1668 PersonNote + staff trail)
-    "tests/unit/test_hr_records_conversation_goal_b.py",
-    # hr_records Goal B org_structure (cycle 1731 my_team level/dept boards)
-    "tests/unit/test_hr_records_org_structure_goal_b.py",
-    # hr_records Goal B media (cycle 1879 staff_directory media_shelf headshots)
-    "tests/unit/test_hr_records_media_goal_b.py",
-    # hr_records Goal B empty_region_honesty (cycle 1819 staff + my_team prune)
-    "tests/unit/test_hr_records_empty_region_goal_b.py",
-    # hr_records Goal B command_density (cycle 1837 dual attention before trail)
-    "tests/unit/test_hr_records_command_density_goal_b.py",
-    "tests/unit/test_hr_records_document_goal_b.py",
-    # simple_task Goal B conversation (cycle 1674 TaskComment live trail)
-    "tests/unit/test_simple_task_conversation_goal_b.py",
-    # simple_task Goal B command_density (cycle 1835 dual attention before trail)
-    "tests/unit/test_simple_task_command_density_goal_b.py",
-    # simple_task Goal B org_structure (cycle 1732 people_desk by role + dept)
-    "tests/unit/test_simple_task_org_structure_goal_b.py",
-    # simple_task Goal B empty_region_honesty (cycle 1817 prune charts/twin dumps)
-    "tests/unit/test_simple_task_empty_region_goal_b.py",
-    # simple_task Goal B media (cycle 1884 admin/team media_shelf headshots)
-    "tests/unit/test_simple_task_media_goal_b.py",
+    # invoice_ops Goal B depth pins (AppSpec tables; folded in flense ship AX)
+    "tests/unit/test_invoice_ops_goal_b.py",
+    # hr_records Goal B depth pins (AppSpec tables; folded in flense ship AX)
+    "tests/unit/test_hr_records_goal_b.py",
     # framework null-default / null-filter (cycle 1884)
     "tests/unit/test_scope_filters_null_ne.py",
     # framework null-default / null-filter (cycle 1884)
     "tests/unit/test_repository_null_bool_default.py",
     # Goal B coat freeze (conversation/rail/focus/metric ratchet — must not grow)
     "tests/unit/test_goal_b_coat.py",
-    "tests/unit/test_interesting_product_portfolio.py",
-    # support_tickets Goal B conversation (Comment display_field + manager_ops trail)
-    "tests/unit/test_support_tickets_conversation_goal_b.py",
-    # support_tickets Goal B command_density (cycle 1727 manager_ops dual attention)
-    "tests/unit/test_support_tickets_command_density_goal_b.py",
-    # support_tickets Goal B org_structure (cycle 1847 people_desk role+dept)
-    "tests/unit/test_support_tickets_org_structure_goal_b.py",
-    # support_tickets Goal B document (cycle 1798 SlaWaiver composition + dual-open)
-    "tests/unit/test_support_tickets_document_goal_b.py",
+    # support_tickets Goal B depth pins (AppSpec tables; folded in flense ship AX)
+    "tests/unit/test_support_tickets_goal_b.py",
     "tests/unit/test_open_via_1603.py::test_support_tickets_sla_waiver_list_dual_open",
-    # support_tickets Goal B empty_region (cycle 1812 agent_dashboard + my_tickets prune)
-    "tests/unit/test_support_tickets_empty_region_goal_b.py",
     # cycle 2087: context_selector.filter emptied INTERACTION_WALK + PG e2e
     # when UX User fixtures skipped department/support_tier (NULL != External).
     "tests/unit/test_ux_fixtures.py::TestFixtureGeneration::test_support_tickets_user_fixtures_pass_staff_selector_filter",
     # cycle 2089: INTERACTION_WALK must seed (same as --contracts) or
     # context_selector.filter sees only the login User and stays empty.
     "tests/unit/test_cli_ux_interactions.py::TestSeedInteractionApp::test_sets_secret_and_delegates_to_reset_and_seed",
-    # support_tickets Goal B media (cycle 1883 headshot shelf; cycle 2044 pin lag
-    # after priority_awaiting_customer focus strip ×3 Pythons — conversation/
-    # command_density/empty_region were already in ship-surface; media was not)
-    "tests/unit/test_support_tickets_media_goal_b.py",
     # cycle 2378 cimonitor: example_hub supervisor `from registry` shadowed
     # by packages/hatchi-maxchi/site/registry.py under pytest-xdist
     "tests/unit/test_example_eval_hub.py::TestSupervisorOurs::test_load_survives_hm_registry_shadow",

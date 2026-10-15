@@ -6,16 +6,18 @@ Three structural views the per-file Pass-2 redundancy report doesn't capture.
 
 Tests sharing the same `(class_name, assertion_shape, public_target)` across multiple files — same assert shape AND the same deduped set of public dazzle callables. A cluster here is a genuinely copy-pasted pattern that one shared parametrised helper could replace. (Pre-#1530 this view keyed on shape alone, which matched hundreds of unrelated files; the target discriminator makes the numbers actionable.)
 
-- **Clusters of size ≥4 across ≥2 files**: 2
-- **Tests inside cross-file clusters**: 12
-- **Theoretical saving**: ~10 if each cluster collapses to one parametric test
-- **Skipped (no attributable public target)**: 1,192 tests — shape matches without a shared target are not actionable
+- **Clusters of size ≥4 across ≥2 files**: 4
+- **Tests inside cross-file clusters**: 31
+- **Theoretical saving**: ~27 if each cluster collapses to one parametric test
+- **Skipped (no attributable public target)**: 822 tests — shape matches without a shared target are not actionable
 
 ### Top 25 cross-file clusters
 
 | Class | Size | Target | Files | Sample tests |
 |---|---:|---|---|---|
+| `(module)` | 12 | load_project_appspec | `test_hr_records_goal_b.py`, `test_invoice_ops_goal_b.py`, `test_fixture_signing_validation.py` (+1 more) | test_workspace_regions, test_workspace_focus… |
 | `(module)` | 8 | ParseError | `test_cohort_strip_composite_parser_1144.py`, `test_day_timeline_config_parser.py`, `test_entity_card_config_parser.py` (+2 more) | test_default_separator_when_omitted, test_parses_minimal_config… |
+| `(module)` | 7 | load_project_appspec | `test_hr_records_goal_b.py`, `test_invoice_ops_goal_b.py`, `test_simple_task_goal_b.py` | test_entity_shape, test_person_detail_related_groups… |
 | `(module)` | 4 | ir | `test_ir.py`, `test_repository_temporal_retry.py`, `test_rhythm_ir_integration.py` | test_api, test_end_date_fallback_resolves_after_rollback… |
 
 ## View 2 — Implementation-mirror file candidates
@@ -43,7 +45,7 @@ Files dominated by tests that pin internal call shapes (high mocks, short body, 
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 6935
+- **Twin pairs**: 7074
 
 ### Top 30 twin pairs
 

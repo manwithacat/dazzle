@@ -5,7 +5,8 @@ AGENTS.md is canonical (see archive/docs-superpowers/specs/
 pre-#1367 full-content AGENTS.md rotted 21 minor versions behind the
 codebase because nothing watched it; the durable fix is single-source +
 structural gates. These gates pin the adapters thin so duplicated facts
-cannot accrete, and pin the canonical file's version stamp to pyproject.
+cannot accrete, pin every version location to pyproject, and keep the
+epistemic layout AGENTS.md teaches (stems, Deferred Decisions) navigable.
 """
 
 from __future__ import annotations
@@ -123,19 +124,6 @@ def test_no_vendor_names_outside_capability_mapping() -> None:
     assert not offenders, (
         "Vendor names in portable instruction files (generalise to capability "
         "language, or move to a harness adapter):\n  " + "\n  ".join(offenders)
-    )
-
-
-def test_agents_md_version_matches_pyproject() -> None:
-    agents_match = re.search(r"\*\*Version\*\*: (\d+\.\d+\.\d+)", AGENTS.read_text())
-    assert agents_match, "AGENTS.md has lost its version footer (bump target)."
-    py_match = re.search(
-        r'^version = "(\d+\.\d+\.\d+)"', (REPO_ROOT / "pyproject.toml").read_text(), re.M
-    )
-    assert py_match
-    assert agents_match.group(1) == py_match.group(1), (
-        f"AGENTS.md footer says {agents_match.group(1)} but pyproject.toml is "
-        f"{py_match.group(1)} — the bump workflow must update both."
     )
 
 
@@ -261,3 +249,89 @@ def test_bump_implementations_agree_on_the_location_set() -> None:
         "`.agents/skills/bump/SKILL.md` verification grep does not cover these "
         f"version locations: {missing_from_skill}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Epistemic layout: stems + Deferred Decisions (AGENTS.md "Epistemic layout")
+# ---------------------------------------------------------------------------
+
+_MD_LINK = re.compile(r"\]\(([^)#\s]+)(?:#[^)]*)?\)")
+
+
+def _example_stem_indexes() -> list[str]:
+    return sorted(
+        str(p.relative_to(REPO_ROOT)) for p in (REPO_ROOT / "examples").glob("*/stems/INDEX.md")
+    )
+
+
+# (document, pointers it must carry). Every relative link must resolve.
+_LAYOUT_DOCS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("AGENTS.md", ("stems/INDEX.md", "docs/decisions/")),
+    ("packages/hatchi-maxchi/AGENTS.md", ("stems/INDEX.md",)),
+    ("stems/INDEX.md", ()),
+    ("packages/hatchi-maxchi/stems/INDEX.md", ()),
+    ("docs/decisions/INDEX.md", ()),
+    ("docs/llms.txt", ("/stems",)),
+    *((rel, ()) for rel in _example_stem_indexes()),
+)
+
+
+@pytest.mark.parametrize(("rel", "required"), _LAYOUT_DOCS, ids=[r for r, _ in _LAYOUT_DOCS])
+def test_layout_links_resolve(rel: str, required: tuple[str, ...]) -> None:
+    doc = REPO_ROOT / rel
+    text = doc.read_text(encoding="utf-8")
+    targets = _MD_LINK.findall(text)
+    assert targets, f"{rel} has no links; the curriculum entry is gone"
+    broken = [
+        t for t in targets if not t.startswith(("http", "mailto")) and not (doc.parent / t).exists()
+    ]
+    assert not broken, f"{rel} has broken links: {broken}"
+    for needle in required:
+        assert needle in text, f"{rel} no longer points at {needle!r}"
+
+
+def test_every_example_carries_a_stems_tree() -> None:
+    """Every example app mirrors the framework stems with its own stems/ tree."""
+    apps = sorted(p.parent.name for p in (REPO_ROOT / "examples").glob("*/dsl"))
+    assert apps, "no example apps found"
+    missing = [
+        app
+        for app in apps
+        if not (REPO_ROOT / "examples" / app / "stems" / "README.md").is_file()
+        or not (REPO_ROOT / "examples" / app / "stems" / "INDEX.md").is_file()
+    ]
+    assert not missing, f"examples without a stems/ README + INDEX: {missing}"
+
+
+def test_framework_stems_carry_claim_reconstruct_expressions() -> None:
+    stems = sorted(
+        p for p in (REPO_ROOT / "stems").glob("*.md") if p.name not in {"README.md", "INDEX.md"}
+    )
+    assert stems
+    for path in stems:
+        body = path.read_text(encoding="utf-8")
+        for section in ("## Claim", "## Reconstruct", "## Expressions"):
+            assert section in body, f"stems/{path.name} lacks {section}"
+
+
+_DD_HEADER = re.compile(r"```yaml\s*\n(.*?)```", re.DOTALL)
+
+
+def test_each_deferred_decision_has_header_sections_and_index_row() -> None:
+    """A parked plan stays greppable: yaml header, valid status, INDEX row, plan + reopen."""
+    decisions = REPO_ROOT / "docs" / "decisions"
+    index_text = (decisions / "INDEX.md").read_text(encoding="utf-8")
+    files = sorted(decisions.glob("DD-*.md"))
+    assert files, "expected at least one DD-*.md"
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        header = _DD_HEADER.search(text)
+        assert header, f"{path.name}: missing ```yaml header block"
+        dd_id = re.search(r"^id:\s*(DD-\d+)\s*$", header.group(1), re.M)
+        status = re.search(r"^status:\s*(\w+)\s*$", header.group(1), re.M)
+        assert dd_id and status, f"{path.name}: header needs id: and status:"
+        assert status.group(1) in {"PARKED", "FORCED", "DONE", "SUPERSEDED"}, path.name
+        assert dd_id.group(1) in path.name, f"{path.name}: filename should include {dd_id.group(1)}"
+        assert dd_id.group(1) in index_text, f"INDEX.md missing row for {dd_id.group(1)}"
+        assert "Reopen when" in text, f"{path.name}: missing Reopen when section"
+        assert "Plan" in text, f"{path.name}: missing Plan section"

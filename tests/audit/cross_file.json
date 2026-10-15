@@ -4,6 +4,28 @@
       "class_name": "(module)",
       "assertion_shape": "('eq',)",
       "public_target": [
+        "dazzle.core.appspec_loader.load_project_appspec"
+      ],
+      "files": [
+        "tests/unit/test_hr_records_goal_b.py",
+        "tests/unit/test_invoice_ops_goal_b.py",
+        "tests/unit/test_qa/test_fixture_signing_validation.py",
+        "tests/unit/test_simple_task_goal_b.py"
+      ],
+      "size": 12,
+      "samples": [
+        "tests/unit/test_hr_records_goal_b.py::test_workspace_regions",
+        "tests/unit/test_hr_records_goal_b.py::test_workspace_focus",
+        "tests/unit/test_hr_records_goal_b.py::test_region_clauses",
+        "tests/unit/test_hr_records_goal_b.py::test_metric_aggregates",
+        "tests/unit/test_invoice_ops_goal_b.py::test_workspace_regions",
+        "tests/unit/test_invoice_ops_goal_b.py::test_region_clauses"
+      ]
+    },
+    {
+      "class_name": "(module)",
+      "assertion_shape": "('eq',)",
+      "public_target": [
         "dazzle.core.errors.ParseError"
       ],
       "files": [
@@ -21,6 +43,27 @@
         "tests/unit/test_entity_card_config_parser.py::test_parses_all_section_modes",
         "tests/unit/test_rhythm_parser.py::test_parse_rhythm_with_cadence",
         "tests/unit/test_rhythm_parser.py::test_parse_multiple_phases"
+      ]
+    },
+    {
+      "class_name": "(module)",
+      "assertion_shape": "('eq', 'eq')",
+      "public_target": [
+        "dazzle.core.appspec_loader.load_project_appspec"
+      ],
+      "files": [
+        "tests/unit/test_hr_records_goal_b.py",
+        "tests/unit/test_invoice_ops_goal_b.py",
+        "tests/unit/test_simple_task_goal_b.py"
+      ],
+      "size": 7,
+      "samples": [
+        "tests/unit/test_hr_records_goal_b.py::test_entity_shape",
+        "tests/unit/test_hr_records_goal_b.py::test_person_detail_related_groups",
+        "tests/unit/test_hr_records_goal_b.py::test_hr_document_surfaces_dual_open",
+        "tests/unit/test_invoice_ops_goal_b.py::test_workspace_focus",
+        "tests/unit/test_invoice_ops_goal_b.py::test_metric_counts",
+        "tests/unit/test_simple_task_goal_b.py::test_entity_shape"
       ]
     },
     {

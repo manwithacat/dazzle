@@ -1,84 +1,56 @@
-"""Regression tests for #901 — cross-entity per-stage aggregate counts
-silently returning 0.
+"""#901: a pipeline stage counting a different entity runs unscoped, with a warning.
 
-`display: pipeline_steps` declares per-stage aggregate expressions that
-can target ANY entity, not just the region's `source:` entity. Pre-fix,
-the runtime unconditionally passed `_scope_only_filters` (resolved
-against the source entity) into the per-stage repo, causing
-silent SQL failures and 0-values when the entities differed.
-
-Fix: gate scope_filters on `entity_name == ctx.source`. When
-entities differ, pass `None` and log a warning so operators can
-audit. Destination entity's own RBAC still applies at navigation
-time; the count badge becomes "all rows the runtime can read"
-which is a known UX cost (cross-entity counts are unscoped).
+``display: pipeline_steps`` stages may count ANY entity. The region's scope
+filters are resolved against the region's ``source:`` entity, so passing them to
+another entity's count failed silently and showed 0. ``compute_pipeline_steps``
+passes the scope only when the stage entity is the source entity; otherwise it
+passes ``None`` and logs a cross-entity warning for operators to audit.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
+import asyncio
+import logging
+from typing import Any
+
+import pytest
+
+from dazzle.core.ir import AggregateRef
+from dazzle.http.runtime import workspace_aggregation
+from dazzle.http.runtime.workspace_region_computes import compute_pipeline_steps
+
+_SCOPE = {"__scope_predicate": ("owner_id = %s", ["u-1"])}
 
 
-class TestCrossEntityScopeGate:
-    """Static-source guard pinning the #901 fix."""
+@pytest.mark.parametrize(
+    ("scope", "expected_scopes", "warns"),
+    [
+        pytest.param(_SCOPE, [_SCOPE, None], True, id="scoped-region-drops-scope-cross-entity"),
+        pytest.param(None, [None, None], False, id="unscoped-region-no-warning"),
+    ],
+)
+def test_stage_scope_follows_the_counted_entity(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    scope: dict[str, Any] | None,
+    expected_scopes: list[Any],
+    warns: bool,
+) -> None:
+    seen: list[tuple[str, Any]] = []
 
-    def _read_runtime(self) -> str:
-        # v0.67.108 (#1057 cut 9): pipeline_steps moved to
-        # workspace_region_computes (compute_pipeline_steps).
-        return (
-            Path(__file__).resolve().parents[2]
-            / "src/dazzle/http/runtime/workspace_region_computes.py"
-        ).read_text()
+    async def fake_count(name: str, repo: Any, where: Any, scope_filters: Any = None, **kw: Any):
+        seen.append((kw["source_entity"], scope_filters))
+        return name, 7
 
-    def test_pipeline_steps_per_stage_gates_scope_on_entity_match(self) -> None:
-        """The pipeline_steps per-stage branch must gate scope_filters on
-        whether the per-stage entity matches the region source — a bare
-        ``scope_only_filters`` pass-through regresses #901."""
-        src = self._read_runtime()
-        assert "stage_scope" in src and "entity_name == source_entity" in src, (
-            "pipeline_steps per-stage branch missing #901 entity-match gate"
-        )
+    monkeypatch.setattr(workspace_aggregation, "_fetch_count_metric", fake_count)
+    stages = [
+        {"label": "Marked", "value": AggregateRef(func="count", entity="MarkingResult")},
+        {"label": "Events", "value": AggregateRef(func="count", entity="AssessmentEvent")},
+    ]
+    repos = {"MarkingResult": object(), "AssessmentEvent": object()}
+    with caplog.at_level(logging.WARNING):
+        out = asyncio.run(compute_pipeline_steps(stages, repos, "MarkingResult", scope, False))
 
-    def test_warning_logged_on_cross_entity_unscoped_query(self) -> None:
-        """The branch must log a warning when the entity differs from
-        the source — this is the operator's audit signal that the count
-        is unscoped."""
-        src = self._read_runtime()
-        assert src.count("cross-entity") >= 1, (
-            "cross-entity warning missing — operators "
-            "won't notice that some counts are running unscoped"
-        )
-
-    def test_fix_documented_in_comments(self) -> None:
-        """The branch references #901 in a comment so future edits
-        understand WHY the gate is there. Removing the gate would
-        regress the bug."""
-        src = self._read_runtime()
-        assert src.count("#901") >= 1, (
-            "The pipeline_steps branch must cite #901 in a "
-            "comment so future edits don't strip the gate accidentally"
-        )
-
-
-class TestSimulatedScopeGateBehaviour:
-    """Pure-function simulation of the gate logic — verifies the
-    decision rule without booting the runtime."""
-
-    def _gate(self, entity_name: str, source: str, scope: object) -> object:
-        """Mirror the runtime's `_card_scope = ...` / `_stage_scope = ...`
-        expression."""
-        return scope if entity_name == source else None
-
-    def test_same_entity_passes_scope_through(self) -> None:
-        scope = {"__scope_predicate": ("col = %s", ["x"])}
-        assert self._gate("MarkingResult", "MarkingResult", scope) is scope
-
-    def test_different_entity_drops_scope(self) -> None:
-        scope = {"__scope_predicate": ("col = %s", ["x"])}
-        assert self._gate("AssessmentEvent", "MarkingResult", scope) is None
-
-    def test_no_scope_no_warn_no_op(self) -> None:
-        """When scope is None (admin / no scope rules), the gate is
-        a no-op — no warning, just None passes through."""
-        assert self._gate("AssessmentEvent", "MarkingResult", None) is None
-        assert self._gate("MarkingResult", "MarkingResult", None) is None
+    assert seen == list(zip(["MarkingResult", "AssessmentEvent"], expected_scopes, strict=True))
+    assert [s["value"] for s in out] == [7, 7]
+    assert ("cross-entity count is unscoped" in caplog.text) is warns

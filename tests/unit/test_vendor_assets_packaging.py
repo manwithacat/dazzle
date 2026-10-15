@@ -1,51 +1,68 @@
-"""Every vendored asset in the hash manifest must be matched by the
-package-data globs — the #1308 packaging bug class (hx-pdf P3 review):
-a repo checkout serves any file from source, so CI and all quality
-gates are structurally blind to wheel/sdist exclusions. The vendored
-PDF.js `.mjs` files were invisible to `*.js`/`*.css` globs, which would
-have 404'd every pip-installed viewer.
+"""Vendored static assets must ship in the distributions (#1308, #1572).
+
+A repo checkout serves any file from source, so CI and every quality gate are
+blind to wheel/sdist exclusions. Three times an asset existed in-repo but the
+packaging manifest omitted it: the PDF.js ``.mjs`` files (#1308, hx-pdf P3), the
+fragment HTML (#1032) and the Geist fonts (#1572; every pip-installed deploy
+404'd on both ``@font-face`` URLs).
+
+``static/`` has no ``__init__.py``, so the assets reach the distributions through
+the ``MANIFEST.in`` recursive-include plus ``include-package-data``; the fonts
+also have an explicit ``dazzle.page.runtime`` package-data entry. OFL 1.1
+requires the licence to accompany the fonts.
 """
 
-import json
+from __future__ import annotations
+
 import re
 from fnmatch import fnmatch
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.gate
+
 REPO = Path(__file__).resolve().parents[2]
-MANIFEST = REPO / "scripts" / "vendor_hashes.json"
-STATIC_REL = "static/vendor"
+STATIC = REPO / "src" / "dazzle" / "page" / "runtime" / "static"
 
 
-def _package_data_globs() -> list[str]:
-    """Extract the dazzle.page.runtime.static package-data globs."""
-    text = (REPO / "pyproject.toml").read_text(encoding="utf-8")
-    m = re.search(r'"dazzle\.page\.runtime\.static"\s*=\s*\[([^\]]*)\]', text)
-    assert m, "package-data key for dazzle.page.runtime.static missing"
-    return re.findall(r'"([^"]+)"', m.group(1))
+def _manifest_in_static_patterns() -> list[str]:
+    lines = [
+        ln.split()
+        for ln in (REPO / "MANIFEST.in").read_text(encoding="utf-8").splitlines()
+        if ln.startswith("recursive-include src/dazzle/page/runtime/static")
+    ]
+    assert lines, "MANIFEST.in lost its page/runtime/static recursive-include"
+    return [pattern for line in lines for pattern in line[2:]]
 
 
-def test_every_vendored_asset_is_packaged() -> None:
-    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
-    globs = _package_data_globs()
-    missing = []
-    for rel in manifest["files"]:
-        path = f"vendor/{rel}"
-        if not any(fnmatch(path, g) for g in globs):
-            missing.append(rel)
+@pytest.mark.parametrize("subdir", ["vendor", "fonts"])
+def test_every_vendored_file_is_in_the_sdist(subdir: str) -> None:
+    patterns = _manifest_in_static_patterns()
+    files = [p for p in (STATIC / subdir).rglob("*") if p.is_file()]
+    assert files, f"static/{subdir} is empty"
+    missing = sorted(
+        str(p.relative_to(STATIC)) for p in files if not any(fnmatch(p.name, g) for g in patterns)
+    )
     assert not missing, (
-        "vendored assets excluded from the wheel (extend the package-data "
-        "globs in pyproject.toml AND MANIFEST.in):\n  " + "\n  ".join(missing)
+        "vendored assets excluded from the distributions (extend the MANIFEST.in "
+        "static recursive-include):\n  " + "\n  ".join(missing)
     )
 
 
-def test_manifest_extensions_are_in_manifest_in() -> None:
-    """MANIFEST.in (the sdist side) must cover every vendored extension."""
-    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
-    exts = {Path(rel).suffix for rel in manifest["files"]}
-    manifest_in = (REPO / "MANIFEST.in").read_text(encoding="utf-8")
-    line = next(
-        (ln for ln in manifest_in.splitlines() if "page/runtime/static" in ln),
-        "",
-    )
-    missing = sorted(e for e in exts if f"*{e}" not in line)
-    assert not missing, f"MANIFEST.in static line missing extensions: {missing}"
+def test_fonts_and_licence_ship_in_the_wheel() -> None:
+    for name in ("geist-var.woff2", "geist-mono-var.woff2", "OFL.txt"):
+        assert (STATIC / "fonts" / name).is_file(), f"static/fonts/{name} missing (#1572)"
+    pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
+    entry = re.search(r'^"dazzle\.page\.runtime" = \[([^\]]*)\]', pyproject, re.M)
+    assert entry, "pyproject lost the dazzle.page.runtime package-data entry (#1572)"
+    assert "static/**/*.woff2" in entry.group(1)
+    assert "static/fonts/OFL.txt" in entry.group(1)
+
+
+def test_served_css_references_the_shipped_fonts() -> None:
+    """The pin cannot outlive the @font-face rules silently."""
+    css = (STATIC / "dist" / "dazzle.min.css").read_text(encoding="utf-8")
+    refs = set(re.findall(r"/static/fonts/([\w.-]+\.woff2)", css))
+    assert refs == {"geist-var.woff2", "geist-mono-var.woff2"}
+    assert all((STATIC / "fonts" / ref).is_file() for ref in refs)

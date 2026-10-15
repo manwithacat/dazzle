@@ -1,4 +1,4 @@
-"""Every third-party `uses:` in a workflow must pin a full commit SHA.
+"""Every third-party `uses:` in a workflow or composite action must pin a full commit SHA.
 
 Why this exists
 ---------------
@@ -36,6 +36,7 @@ pytestmark = pytest.mark.gate
 
 REPO = Path(__file__).resolve().parents[2]
 WORKFLOWS = REPO / ".github" / "workflows"
+ACTIONS = REPO / ".github" / "actions"
 
 _SHA = re.compile(r"^[0-9a-f]{40}$")
 _USES = re.compile(r"uses:\s*(?P<action>[\w.-]+/[\w./-]+)@(?P<ref>[^\s#]+)")
@@ -63,8 +64,10 @@ _TAG_ALLOWLIST: dict[str, str] = {
 
 def _pins() -> list[tuple[str, str, str, str]]:
     found: list[tuple[str, str, str, str]] = []
-    for path in sorted(WORKFLOWS.glob("*.yml")):
+    for path in sorted([*WORKFLOWS.glob("*.yml"), *ACTIONS.glob("*/action.yml")]):
         for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if line.lstrip().startswith("#"):
+                continue
             m = _USES.search(line)
             if not m:
                 continue
@@ -101,4 +104,17 @@ def test_tag_allowlist_entries_are_still_needed() -> None:
     assert not stale, (
         f"`_TAG_ALLOWLIST` names actions that now pin a SHA: {stale}. Remove them, "
         "or the allowlist becomes a place where exemptions quietly accumulate."
+    )
+
+
+def test_setup_dazzle_pins_an_explicit_uv_version() -> None:
+    """setup-uv >= v10.0.1 (retries the uv.ndjson fetch; v8.2.0 flaked GUIDE_WALK in
+    cycle 2171) installing a pinned uv, never resolving latest."""
+    action = (ACTIONS / "setup-dazzle" / "action.yml").read_text(encoding="utf-8")
+    step = action[action.index("astral-sh/setup-uv@") :]
+    tag = re.match(r"astral-sh/setup-uv@[0-9a-f]{40}\s+#\s*v(\d+)\.(\d+)\.(\d+)", step)
+    assert tag, "setup-uv pin lost its `# vX.Y.Z` comment"
+    assert tuple(int(g) for g in tag.groups()) >= (10, 0, 1)
+    assert re.search(r'^\s+version: "\d+\.\d+\.\d+"$', step, re.M), (
+        "setup-dazzle must pass an explicit uv version to setup-uv"
     )

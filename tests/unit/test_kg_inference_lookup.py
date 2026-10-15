@@ -4,6 +4,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 
 def _import_knowledge_graph_module(module_name: str):
     """Import knowledge graph modules directly to avoid MCP package init issues."""
@@ -120,3 +122,24 @@ class TestInferenceLookupViaKG:
         assert len(inference_entities) >= 40, (
             f"Expected >=40 inference entities, got {len(inference_entities)}"
         )
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "belongs_to polymorphic",
+        "commentable_type",
+        "comments on any entity",
+        "tags across entities",
+        "attachments on many entities",
+    ],
+)
+def test_polymorphic_association_phrasings_get_the_refusal(query: str) -> None:
+    """#1240 wontfix-by-design (ADR-0027): however an agent phrases a Rails-style
+    polymorphic association, inference lookup returns the anti-pattern entry with
+    its alternatives, so the shape is refused rather than proposed."""
+    graph = _make_seeded_graph()
+    matches = {m.id: m for m in graph.lookup_inference_matches(query)}
+    entry = matches.get("inference:modeling_guidance.polymorphic_association_antipattern")
+    assert entry is not None, sorted(matches)
+    assert entry.metadata["anti_pattern"] and entry.metadata["prefer"]
