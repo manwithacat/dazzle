@@ -8,6 +8,7 @@ Covers:
 """
 
 from datetime import date, datetime, timedelta
+from typing import Any
 
 import pytest
 
@@ -18,6 +19,7 @@ from dazzle.core.ir.expressions import (
     BinaryExpr,
     BinaryOp,
     DurationLiteral,
+    Expr,
     FieldRef,
     FuncCall,
     IfExpr,
@@ -164,191 +166,99 @@ class TestTokenizer:
 # ============================================================================
 
 
-class TestParserLiterals:
-    """Parser handles all literal types."""
-
-    def test_integer(self) -> None:
-        expr = parse_expr("42")
-        assert isinstance(expr, Literal)
-        assert expr.value == 42
-
-    def test_float(self) -> None:
-        expr = parse_expr("3.14")
-        assert isinstance(expr, Literal)
-        assert expr.value == 3.14
-
-    def test_string(self) -> None:
-        expr = parse_expr('"hello"')
-        assert isinstance(expr, Literal)
-        assert expr.value == "hello"
-
-    def test_true(self) -> None:
-        expr = parse_expr("true")
-        assert isinstance(expr, Literal)
-        assert expr.value is True
-
-    def test_false(self) -> None:
-        expr = parse_expr("false")
-        assert isinstance(expr, Literal)
-        assert expr.value is False
-
-    def test_null(self) -> None:
-        expr = parse_expr("null")
-        assert isinstance(expr, Literal)
-        assert expr.value is None
-
-    def test_duration(self) -> None:
-        expr = parse_expr("7d")
-        assert isinstance(expr, DurationLiteral)
-        assert expr.value == 7
-        assert expr.unit == "d"
-
-    def test_duration_months(self) -> None:
-        expr = parse_expr("9m")
-        assert isinstance(expr, DurationLiteral)
-        assert expr.value == 9
-        assert expr.unit == "m"
+def _f(*path: str) -> FieldRef:
+    return FieldRef(path=list(path))
 
 
-class TestParserFieldRef:
-    """Parser handles field references."""
-
-    def test_simple_field(self) -> None:
-        expr = parse_expr("amount")
-        assert isinstance(expr, FieldRef)
-        assert expr.path == ["amount"]
-
-    def test_dotted_field(self) -> None:
-        expr = parse_expr("contact.name")
-        assert isinstance(expr, FieldRef)
-        assert expr.path == ["contact", "name"]
-
-    def test_arrow_field(self) -> None:
-        expr = parse_expr("self->contact->aml_status")
-        assert isinstance(expr, FieldRef)
-        assert expr.path == ["self", "contact", "aml_status"]
-
-    def test_mixed_dot_arrow(self) -> None:
-        expr = parse_expr("order.customer->address.city")
-        assert isinstance(expr, FieldRef)
-        assert expr.path == ["order", "customer", "address", "city"]
+def _bin(left: Expr, op: BinaryOp, right: Expr) -> BinaryExpr:
+    return BinaryExpr(left=left, op=op, right=right)
 
 
-class TestParserArithmetic:
-    """Parser handles arithmetic with correct precedence."""
-
-    def test_addition(self) -> None:
-        expr = parse_expr("a + b")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.ADD
-
-    def test_subtraction(self) -> None:
-        expr = parse_expr("a - b")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.SUB
-
-    def test_multiplication(self) -> None:
-        expr = parse_expr("a * b")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.MUL
-
-    def test_mul_before_add(self) -> None:
-        # a + b * c should be a + (b * c)
-        expr = parse_expr("a + b * c")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.ADD
-        assert isinstance(expr.right, BinaryExpr)
-        assert expr.right.op == BinaryOp.MUL
-
-    def test_parentheses_override_precedence(self) -> None:
-        # (a + b) * c
-        expr = parse_expr("(a + b) * c")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.MUL
-        assert isinstance(expr.left, BinaryExpr)
-        assert expr.left.op == BinaryOp.ADD
-
-    def test_unary_minus(self) -> None:
-        expr = parse_expr("-x")
-        assert isinstance(expr, UnaryExpr)
-        assert expr.op == UnaryOp.NEG
-
-    def test_chained_addition(self) -> None:
-        # a + b + c is (a + b) + c (left-associative)
-        expr = parse_expr("a + b + c")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.ADD
-        assert isinstance(expr.left, BinaryExpr)
-        assert expr.left.op == BinaryOp.ADD
+_A, _B, _C = _f("a"), _f("b"), _f("c")
 
 
-class TestParserComparison:
-    """Parser handles comparison operators."""
-
-    @pytest.mark.parametrize(
-        ("source", "expected_op"),
-        [
-            ('status == "active"', BinaryOp.EQ),
-            ("x != 0", BinaryOp.NE),
-            ("age < 18", BinaryOp.LT),
-            ("score >= 90", BinaryOp.GE),
-        ],
-        ids=["test_equality", "test_inequality", "test_less_than", "test_greater_equal"],
-    )
-    def test_comparison_operator(self, source: str, expected_op: BinaryOp) -> None:
-        expr = parse_expr(source)
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == expected_op
-
-    def test_is_null(self) -> None:
-        expr = parse_expr("name is null")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.EQ
-        assert isinstance(expr.right, Literal)
-        assert expr.right.value is None
-
-    def test_is_not_null(self) -> None:
-        expr = parse_expr("name is not null")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.NE
-        assert isinstance(expr.right, Literal)
-        assert expr.right.value is None
-
-
-class TestParserLogic:
-    """Parser handles logical operators with correct precedence."""
-
-    def test_and(self) -> None:
-        expr = parse_expr("a and b")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.AND
-
-    def test_or(self) -> None:
-        expr = parse_expr("a or b")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.OR
-
-    def test_not(self) -> None:
-        expr = parse_expr("not x")
-        assert isinstance(expr, UnaryExpr)
-        assert expr.op == UnaryOp.NOT
-
-    def test_and_before_or(self) -> None:
-        # a or b and c should be a or (b and c)
-        expr = parse_expr("a or b and c")
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.OR
-        assert isinstance(expr.right, BinaryExpr)
-        assert expr.right.op == BinaryOp.AND
-
-    def test_comparison_and_logic(self) -> None:
-        expr = parse_expr('x > 0 and y == "ok"')
-        assert isinstance(expr, BinaryExpr)
-        assert expr.op == BinaryOp.AND
-        assert isinstance(expr.left, BinaryExpr)
-        assert expr.left.op == BinaryOp.GT
-        assert isinstance(expr.right, BinaryExpr)
-        assert expr.right.op == BinaryOp.EQ
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        # ── literals ──
+        pytest.param("42", Literal(value=42), id="int"),
+        pytest.param("3.14", Literal(value=3.14), id="float"),
+        pytest.param('"hello"', Literal(value="hello"), id="string"),
+        pytest.param("true", Literal(value=True), id="true"),
+        pytest.param("false", Literal(value=False), id="false"),
+        pytest.param("null", Literal(value=None), id="null"),
+        pytest.param("7d", DurationLiteral(value=7, unit="d"), id="duration-days"),
+        pytest.param("9m", DurationLiteral(value=9, unit="m"), id="duration-months"),
+        # ── field references ──
+        pytest.param("amount", _f("amount"), id="simple-field"),
+        pytest.param("contact.name", _f("contact", "name"), id="dotted-field"),
+        pytest.param(
+            "self->contact->aml_status", _f("self", "contact", "aml_status"), id="arrow-field"
+        ),
+        pytest.param(
+            "order.customer->address.city",
+            _f("order", "customer", "address", "city"),
+            id="mixed-dot-arrow",
+        ),
+        # ── arithmetic + precedence ──
+        pytest.param("a + b", _bin(_A, BinaryOp.ADD, _B), id="addition"),
+        pytest.param("a - b", _bin(_A, BinaryOp.SUB, _B), id="subtraction"),
+        pytest.param("a * b", _bin(_A, BinaryOp.MUL, _B), id="multiplication"),
+        pytest.param("-x", UnaryExpr(op=UnaryOp.NEG, operand=_f("x")), id="unary-minus"),
+        pytest.param(
+            "a + b * c", _bin(_A, BinaryOp.ADD, _bin(_B, BinaryOp.MUL, _C)), id="mul-before-add"
+        ),
+        pytest.param(
+            "(a + b) * c",
+            _bin(_bin(_A, BinaryOp.ADD, _B), BinaryOp.MUL, _C),
+            id="parentheses-override-precedence",
+        ),
+        pytest.param(
+            "a + b + c",
+            _bin(_bin(_A, BinaryOp.ADD, _B), BinaryOp.ADD, _C),
+            id="chained-addition-left-assoc",
+        ),
+        # ── comparison ──
+        pytest.param(
+            'status == "active"',
+            _bin(_f("status"), BinaryOp.EQ, Literal(value="active")),
+            id="equality",
+        ),
+        pytest.param("x != 0", _bin(_f("x"), BinaryOp.NE, Literal(value=0)), id="inequality"),
+        pytest.param("age < 18", _bin(_f("age"), BinaryOp.LT, Literal(value=18)), id="less-than"),
+        pytest.param(
+            "score >= 90", _bin(_f("score"), BinaryOp.GE, Literal(value=90)), id="greater-equal"
+        ),
+        pytest.param(
+            "name is null", _bin(_f("name"), BinaryOp.EQ, Literal(value=None)), id="is-null"
+        ),
+        pytest.param(
+            "name is not null",
+            _bin(_f("name"), BinaryOp.NE, Literal(value=None)),
+            id="is-not-null",
+        ),
+        # ── logic + precedence ──
+        pytest.param("a and b", _bin(_A, BinaryOp.AND, _B), id="and"),
+        pytest.param("a or b", _bin(_A, BinaryOp.OR, _B), id="or"),
+        pytest.param("not x", UnaryExpr(op=UnaryOp.NOT, operand=_f("x")), id="not"),
+        pytest.param(
+            "a or b and c", _bin(_A, BinaryOp.OR, _bin(_B, BinaryOp.AND, _C)), id="and-before-or"
+        ),
+        pytest.param(
+            'x > 0 and y == "ok"',
+            _bin(
+                _bin(_f("x"), BinaryOp.GT, Literal(value=0)),
+                BinaryOp.AND,
+                _bin(_f("y"), BinaryOp.EQ, Literal(value="ok")),
+            ),
+            id="comparison-and-logic",
+        ),
+    ],
+)
+def test_parse_tree(source: str, expected: Expr) -> None:
+    """Parser builds the exact IR tree. Compared via repr because pydantic
+    ``==`` conflates ``True`` with ``1`` and ``42`` with ``42.0``."""
+    assert repr(parse_expr(source)) == repr(expected)
 
 
 class TestParserIn:
@@ -517,6 +427,10 @@ class TestEvalComparison:
             ("score >= 90", {"score": 90}, {"score": 89}),
             ("x is null", {"x": None}, {"x": 5}),
             ("x is not null", {"x": 5}, {"x": None}),
+            # Membership: 'in' / 'not in'
+            ('status in ["open", "pending"]', {"status": "open"}, {"status": "closed"}),
+            ('status not in ["closed", "archived"]', {"status": "open"}, {"status": "closed"}),
+            ("priority in [1, 2, 3]", {"priority": 2}, {"priority": 5}),
         ],
         ids=[
             "equality",
@@ -525,9 +439,13 @@ class TestEvalComparison:
             "greater_equal",
             "null_equality",
             "null_inequality",
+            "in_string_list",
+            "not_in",
+            "in_number_list",
         ],
     )
     def test_comparison(self, expr_str, ctx_true, ctx_false) -> None:
+        """Comparison and membership predicates: True for one ctx, False for another."""
         expr = parse_expr(expr_str)
         assert evaluate(expr, ctx_true) is True
         assert evaluate(expr, ctx_false) is False
@@ -564,25 +482,6 @@ class TestEvalLogic:
     )
     def test_logic(self, expr_str, ctx, expected) -> None:
         assert evaluate(parse_expr(expr_str), ctx) is expected
-
-
-class TestEvalIn:
-    """Evaluator handles 'in' and 'not in'."""
-
-    def test_in_string_list(self) -> None:
-        expr = parse_expr('status in ["open", "pending"]')
-        assert evaluate(expr, {"status": "open"}) is True
-        assert evaluate(expr, {"status": "closed"}) is False
-
-    def test_not_in(self) -> None:
-        expr = parse_expr('status not in ["closed", "archived"]')
-        assert evaluate(expr, {"status": "open"}) is True
-        assert evaluate(expr, {"status": "closed"}) is False
-
-    def test_in_number_list(self) -> None:
-        expr = parse_expr("priority in [1, 2, 3]")
-        assert evaluate(expr, {"priority": 2}) is True
-        assert evaluate(expr, {"priority": 5}) is False
 
 
 class TestEvalFunctions:
@@ -638,15 +537,16 @@ class TestEvalFunctions:
         result = evaluate(parse_expr("now()"), {})
         assert isinstance(result, datetime)
 
-    def test_days_since(self) -> None:
-        past = calendar_today() - timedelta(days=10)
-        result = evaluate(parse_expr("days_since(created)"), {"created": past})
-        assert result == 10
-
-    def test_days_until(self) -> None:
-        future = calendar_today() + timedelta(days=5)
-        result = evaluate(parse_expr("days_until(due)"), {"due": future})
-        assert result == 5
+    @pytest.mark.parametrize(
+        ("expr_str", "offset_days", "expected"),
+        [
+            pytest.param("days_since(d)", -10, 10, id="days_since"),
+            pytest.param("days_until(d)", 5, 5, id="days_until"),
+        ],
+    )
+    def test_days_relative_to_today(self, expr_str: str, offset_days: int, expected: int) -> None:
+        d = calendar_today() + timedelta(days=offset_days)
+        assert evaluate(parse_expr(expr_str), {"d": d}) == expected
 
     def test_days_null_returns_null(self) -> None:
         assert evaluate(parse_expr("days_until(due)"), {"due": None}) is None
@@ -656,24 +556,23 @@ class TestEvalFunctions:
             evaluate(parse_expr("unknown_fn()"), {})
 
 
-class TestEvalDateArithmetic:
-    """Evaluator handles date + duration arithmetic."""
-
-    def test_date_plus_days(self) -> None:
-        d = date(2026, 1, 1)
-        result = evaluate(parse_expr("start + 7d"), {"start": d})
-        assert result == date(2026, 1, 8)
-
-    def test_date_minus_days(self) -> None:
-        d = date(2026, 1, 15)
-        result = evaluate(parse_expr("due - 3d"), {"due": d})
-        assert result == date(2026, 1, 12)
-
-    def test_date_plus_months(self) -> None:
-        d = date(2026, 1, 1)
-        result = evaluate(parse_expr("start + 9m"), {"start": d})
+@pytest.mark.parametrize(
+    ("expr_str", "start", "expected"),
+    [
+        pytest.param("start + 7d", date(2026, 1, 1), date(2026, 1, 8), id="date-plus-days"),
+        pytest.param("start - 3d", date(2026, 1, 15), date(2026, 1, 12), id="date-minus-days"),
         # 9m ≈ 270 days
-        assert result == d + timedelta(days=270)
+        pytest.param(
+            "start + 9m",
+            date(2026, 1, 1),
+            date(2026, 1, 1) + timedelta(days=270),
+            id="date-plus-months",
+        ),
+    ],
+)
+def test_date_plus_duration(expr_str: str, start: date, expected: date) -> None:
+    """Evaluator handles date + duration arithmetic."""
+    assert evaluate(parse_expr(expr_str), {"start": start}) == expected
 
 
 class TestEvalIfExpr:
@@ -704,19 +603,29 @@ class TestEvalIfExpr:
 class TestEvalFieldRef:
     """Evaluator resolves field references correctly."""
 
-    def test_simple_field(self) -> None:
-        assert evaluate(parse_expr("amount"), {"amount": 100}) == 100
+    @pytest.mark.parametrize(
+        ("expr_str", "ctx", "expected"),
+        [
+            pytest.param("amount", {"amount": 100}, 100, id="simple_field"),
+            pytest.param(
+                "contact.name",
+                {"contact": {"name": "John", "email": "john@example.com"}},
+                "John",
+                id="nested_dict",
+            ),
+            pytest.param(
+                "self.contact.address.city",
+                {"self": {"contact": {"address": {"city": "London"}}}},
+                "London",
+                id="deep_nested",
+            ),
+        ],
+    )
+    def test_resolves(self, expr_str: str, ctx: dict[str, Any], expected: Any) -> None:
+        assert evaluate(parse_expr(expr_str), ctx) == expected
 
     def test_missing_field_returns_none(self) -> None:
         assert evaluate(parse_expr("missing"), {}) is None
-
-    def test_nested_dict(self) -> None:
-        ctx = {"contact": {"name": "John", "email": "john@example.com"}}
-        assert evaluate(parse_expr("contact.name"), ctx) == "John"
-
-    def test_deep_nested(self) -> None:
-        ctx = {"self": {"contact": {"address": {"city": "London"}}}}
-        assert evaluate(parse_expr("self.contact.address.city"), ctx) == "London"
 
     def test_missing_nested(self) -> None:
         assert evaluate(parse_expr("a.b.c"), {"a": {"x": 1}}) is None
@@ -758,54 +667,54 @@ class TestRealWorldExpressions:
         box5 = evaluate(parse_expr("box3 - box4"), ctx)
         assert box5 == 1200
 
-    def test_utilization_percentage(self) -> None:
-        """(current_tasks * 100) / max_tasks"""
-        ctx = {"current_tasks": 7, "max_tasks": 10}
-        result = evaluate(parse_expr("(current_tasks * 100) / max_tasks"), ctx)
-        assert result == pytest.approx(70.0)
+    @pytest.mark.parametrize(
+        ("expr_str", "ctx", "expected"),
+        [
+            pytest.param(
+                "(current_tasks * 100) / max_tasks",
+                {"current_tasks": 7, "max_tasks": 10},
+                pytest.approx(70.0),
+                id="utilization_percentage",
+            ),
+            # Default value for missing field.
+            pytest.param(
+                "coalesce(nickname, first_name, email)",
+                {"nickname": None, "first_name": None, "email": "j@ex.com"},
+                "j@ex.com",
+                id="coalesce_with_default",
+            ),
+            # Round a computed percentage.
+            pytest.param(
+                "round(completed * 100 / total, 1)",
+                {"completed": 7, "total": 9},
+                pytest.approx(77.8),
+                id="nested_arithmetic_with_function",
+            ),
+        ],
+    )
+    def test_computed_value(self, expr_str: str, ctx: dict[str, Any], expected: Any) -> None:
+        assert evaluate(parse_expr(expr_str), ctx) == expected
 
-    def test_compliance_deadline_rag(self) -> None:
-        """Classify deadline urgency."""
-        expr = parse_expr(
-            'if days_remaining < 0: "red" elif days_remaining < 7: "amber" else: "green"'
-        )
-        assert evaluate(expr, {"days_remaining": -1}) == "red"
-        assert evaluate(expr, {"days_remaining": 3}) == "amber"
-        assert evaluate(expr, {"days_remaining": 30}) == "green"
-
-    def test_cross_entity_guard(self) -> None:
-        """Guard: self->signatory->aml_status == "completed" """
-        ctx = {
-            "self": {
-                "signatory": {
-                    "aml_status": "completed",
-                }
-            }
-        }
-        expr = parse_expr('self.signatory.aml_status == "completed"')
-        assert evaluate(expr, ctx) is True
-
-    def test_compound_guard(self) -> None:
-        """Multiple conditions combined."""
-        ctx = {"status": "viewed", "aml_status": "completed"}
-        expr = parse_expr('aml_status == "completed" and status == "viewed"')
-        assert evaluate(expr, ctx) is True
-
-    def test_status_in_list(self) -> None:
-        """Process guard with stage check."""
-        ctx = {"stage": "business_details"}
-        expr = parse_expr('stage in ["business_details", "complete"]')
-        assert evaluate(expr, ctx) is True
-
-    def test_coalesce_with_default(self) -> None:
-        """Default value for missing field."""
-        expr = parse_expr("coalesce(nickname, first_name, email)")
-        ctx = {"nickname": None, "first_name": None, "email": "j@ex.com"}
-        assert evaluate(expr, ctx) == "j@ex.com"
-
-    def test_nested_arithmetic_with_function(self) -> None:
-        """Round a computed percentage."""
-        ctx = {"completed": 7, "total": 9}
-        expr = parse_expr("round(completed * 100 / total, 1)")
-        result = evaluate(expr, ctx)
-        assert result == pytest.approx(77.8)
+    @pytest.mark.parametrize(
+        ("expr_str", "ctx"),
+        [
+            pytest.param(
+                'self.signatory.aml_status == "completed"',
+                {"self": {"signatory": {"aml_status": "completed"}}},
+                id="cross_entity_guard",
+            ),
+            pytest.param(
+                'aml_status == "completed" and status == "viewed"',
+                {"status": "viewed", "aml_status": "completed"},
+                id="compound_guard",
+            ),
+            # Process guard with stage check.
+            pytest.param(
+                'stage in ["business_details", "complete"]',
+                {"stage": "business_details"},
+                id="status_in_list",
+            ),
+        ],
+    )
+    def test_guard_passes(self, expr_str: str, ctx: dict[str, Any]) -> None:
+        assert evaluate(parse_expr(expr_str), ctx) is True

@@ -43,29 +43,19 @@ Files dominated by tests that pin internal call shapes (high mocks, short body, 
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 7597
+- **Twin pairs**: 6993
 
 ### Top 30 twin pairs
 
 | File A | File B | A | B | Shared | Overlap |
 |---|---|---:|---:|---:|---:|
-| `test_fidelity_scorer.py` | `test_rbac_verifier.py` | 39 | 43 | 29 | 0.74 |
-| `test_expression_lang.py` | `test_org_activation.py` | 82 | 36 | 26 | 0.72 |
-| `test_expression_lang.py` | `test_rbac_ui_fixes.py` | 82 | 30 | 26 | 0.87 |
 | `test_persona_journey.py` | `test_ux_contract_checker.py` | 55 | 36 | 26 | 0.72 |
-| `test_expression_lang.py` | `test_sla_manager.py` | 82 | 32 | 23 | 0.72 |
+| `test_fidelity_scorer.py` | `test_persona_journey.py` | 26 | 55 | 23 | 0.88 |
 | `test_workspace_layout_prefs.py` | `test_workspace_rendering.py` | 31 | 42 | 23 | 0.74 |
-| `test_curl_test_generator.py` | `test_pdf_viewer_component.py` | 28 | 52 | 22 | 0.79 |
-| `test_expression_lang.py` | `test_workspace_layout_prefs.py` | 82 | 31 | 22 | 0.71 |
-| `test_onboarding_renderer.py` | `test_pdf_viewer_component.py` | 25 | 52 | 22 | 0.88 |
 | `test_demo_data_loader.py` | `test_persona_journey.py` | 27 | 55 | 21 | 0.78 |
-| `test_demo_data_loader.py` | `test_schema_diff.py` | 27 | 40 | 21 | 0.78 |
-| `test_expression_lang.py` | `test_rbac_enforcement.py` | 82 | 30 | 21 | 0.7 |
-| `test_expression_lang.py` | `test_vendor_mock_generator.py` | 82 | 27 | 21 | 0.78 |
-| `test_rbac_enforcement.py` | `test_scope_rules.py` | 30 | 49 | 21 | 0.7 |
+| `test_fidelity_scorer.py` | `test_ux_contract_checker.py` | 26 | 36 | 21 | 0.81 |
 | `test_rbac_enforcement.py` | `test_sla_manager.py` | 30 | 32 | 21 | 0.7 |
 | `test_rbac_enforcement.py` | `test_structured_content.py` | 30 | 32 | 21 | 0.7 |
-| `test_css_clip_check.py` | `test_expression_lang.py` | 21 | 82 | 20 | 0.95 |
 | `test_css_clip_check.py` | `test_persona_journey.py` | 21 | 55 | 20 | 0.95 |
 | `test_css_clip_check.py` | `test_workspace_layout_prefs.py` | 21 | 31 | 20 | 0.95 |
 | `test_css_clip_check.py` | `test_workspace_rendering.py` | 21 | 42 | 20 | 0.95 |
@@ -73,9 +63,19 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_parser.py` | `test_workspace_layout_prefs.py` | 25 | 31 | 20 | 0.8 |
 | `test_parser.py` | `test_workspace_rendering.py` | 25 | 42 | 20 | 0.8 |
 | `test_persona_journey.py` | `test_python_audit_agent.py` | 55 | 27 | 20 | 0.74 |
-| `test_persona_journey.py` | `test_vendor_mock_generator.py` | 55 | 27 | 20 | 0.74 |
 | `test_predicate_policy_mode.py` | `test_workspace_rendering.py` | 28 | 42 | 20 | 0.71 |
-| `test_rbac_enforcement.py` | `test_vendor_mock_generator.py` | 30 | 27 | 20 | 0.74 |
-| `test_sla_manager.py` | `test_vendor_mock_generator.py` | 32 | 27 | 20 | 0.74 |
-| `test_vendor_mock_generator.py` | `test_workspace_rendering.py` | 27 | 42 | 20 | 0.74 |
-| `test_computed_evaluator.py` | `test_expression_lang.py` | 21 | 82 | 19 | 0.9 |
+| `test_css_clip_check.py` | `test_expression_lang.py` | 21 | 43 | 19 | 0.9 |
+| `test_css_clip_check.py` | `test_rbac_enforcement.py` | 21 | 30 | 19 | 0.9 |
+| `test_css_clip_check.py` | `test_sla_manager.py` | 21 | 32 | 19 | 0.9 |
+| `test_expression_lang.py` | `test_grant_store.py` | 43 | 23 | 19 | 0.83 |
+| `test_expression_lang.py` | `test_session_manager.py` | 43 | 26 | 19 | 0.73 |
+| `test_parser.py` | `test_persona_journey.py` | 25 | 55 | 19 | 0.76 |
+| `test_python_audit_agent.py` | `test_workspace_rendering.py` | 27 | 42 | 19 | 0.7 |
+| `test_session_manager.py` | `test_workspace_rendering.py` | 26 | 42 | 19 | 0.73 |
+| `test_aws_config.py` | `test_peek_when_empty_1494.py` | 24 | 50 | 18 | 0.75 |
+| `test_computed_evaluator.py` | `test_expression_lang.py` | 21 | 43 | 18 | 0.86 |
+| `test_css_clip_check.py` | `test_parser.py` | 21 | 25 | 18 | 0.86 |
+| `test_expression_lang.py` | `test_money_expansion.py` | 43 | 24 | 18 | 0.75 |
+| `test_money_expansion.py` | `test_peek_when_empty_1494.py` | 24 | 50 | 18 | 0.75 |
+| `test_parser.py` | `test_rbac_enforcement.py` | 25 | 30 | 18 | 0.72 |
+| `test_app_error_views.py` | `test_pdf_viewer_component.py` | 22 | 36 | 17 | 0.77 |

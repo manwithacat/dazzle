@@ -37,33 +37,42 @@ class TestEffectIRTypes:
         assert EffectAction.CREATE == "create"
         assert EffectAction.UPDATE == "update"
 
-    def test_step_effect_create(self):
+    @pytest.mark.parametrize(
+        ("action", "entity_name", "where", "assignments"),
+        [
+            pytest.param(
+                EffectAction.CREATE,
+                "Task",
+                None,
+                [
+                    FieldAssignment(field_path="title", value='"Confirm close"'),
+                    FieldAssignment(field_path="task_type", value='"period_close"'),
+                ],
+                id="create-no-where",
+            ),
+            pytest.param(
+                EffectAction.UPDATE,
+                "ComplianceDeadline",
+                "linked_return_id = self.id",
+                [
+                    FieldAssignment(field_path="status", value='"completed"'),
+                    FieldAssignment(field_path="completed_at", value="now()"),
+                ],
+                id="update-with-where",
+            ),
+        ],
+    )
+    def test_step_effect_holds_fields(self, action, entity_name, where, assignments):
+        kwargs = {"where": where} if where is not None else {}
         effect = StepEffect(
-            action=EffectAction.CREATE,
-            entity_name="Task",
-            assignments=[
-                FieldAssignment(field_path="title", value='"Confirm close"'),
-                FieldAssignment(field_path="task_type", value='"period_close"'),
-            ],
+            action=action, entity_name=entity_name, assignments=assignments, **kwargs
         )
-        assert effect.action == EffectAction.CREATE
-        assert effect.entity_name == "Task"
-        assert effect.where is None
-        assert len(effect.assignments) == 2
-
-    def test_step_effect_update_with_where(self):
-        effect = StepEffect(
-            action=EffectAction.UPDATE,
-            entity_name="ComplianceDeadline",
-            where="linked_return_id = self.id",
-            assignments=[
-                FieldAssignment(field_path="status", value='"completed"'),
-                FieldAssignment(field_path="completed_at", value="now()"),
-            ],
+        assert (effect.action, effect.entity_name, effect.where, effect.assignments) == (
+            action,
+            entity_name,
+            where,
+            assignments,
         )
-        assert effect.action == EffectAction.UPDATE
-        assert effect.where == "linked_return_id = self.id"
-        assert len(effect.assignments) == 2
 
     def test_step_effect_frozen(self):
         from pydantic import ValidationError
@@ -413,34 +422,30 @@ class TestSideEffectExecutor:
         assert all(r.success for r in results)
         assert mock_service.create.call_count == 2
 
-    def test_resolve_string_literal(self, executor, effect_context):
-        assert executor._resolve_value('"hello"', effect_context) == "hello"
-        assert executor._resolve_value("'world'", effect_context) == "world"
-
-    def test_resolve_self_reference(self, executor, effect_context):
-        assert executor._resolve_value("self.id", effect_context) == "trigger-123"
-        assert executor._resolve_value("self.name", effect_context) == "Test Order"
+    @pytest.mark.parametrize(
+        ("expr", "expected"),
+        [
+            pytest.param('"hello"', "hello", id="double-quoted-literal"),
+            pytest.param("'world'", "world", id="single-quoted-literal"),
+            pytest.param("self.id", "trigger-123", id="self-id"),
+            pytest.param("self.name", "Test Order", id="self-field"),
+            pytest.param("current_user()", "admin", id="current-user"),
+            pytest.param("true", True, id="bool-true"),
+            pytest.param("false", False, id="bool-false"),
+            pytest.param("42", 42, id="int"),
+            pytest.param("3.14", 3.14, id="float"),
+            pytest.param("completed", "completed", id="bare-string"),
+        ],
+    )
+    def test_resolve_value(self, executor, effect_context, expr, expected):
+        result = executor._resolve_value(expr, effect_context)
+        assert (type(result), result) == (type(expected), expected)
 
     def test_resolve_now(self, executor, effect_context):
         from datetime import datetime
 
         result = executor._resolve_value("now()", effect_context)
         assert isinstance(result, datetime)
-
-    def test_resolve_current_user(self, executor, effect_context):
-        result = executor._resolve_value("current_user()", effect_context)
-        assert result == "admin"
-
-    def test_resolve_boolean(self, executor, effect_context):
-        assert executor._resolve_value("true", effect_context) is True
-        assert executor._resolve_value("false", effect_context) is False
-
-    def test_resolve_numeric(self, executor, effect_context):
-        assert executor._resolve_value("42", effect_context) == 42
-        assert executor._resolve_value("3.14", effect_context) == 3.14
-
-    def test_resolve_bare_string(self, executor, effect_context):
-        assert executor._resolve_value("completed", effect_context) == "completed"
 
     def test_resolve_assignments_strips_entity_prefix(self, executor, effect_context):
         assignments = [
@@ -515,89 +520,67 @@ class TestProcessEffectsValidation:
             processes=[process],
         )
 
-    def test_valid_effects_no_warnings(self):
-        from dazzle.core.validator import _lint_process_effects
-
-        appspec = self._make_appspec_with_effects(
-            [
+    @pytest.mark.parametrize(
+        "effect",
+        [
+            pytest.param(
                 StepEffect(
                     action=EffectAction.CREATE,
                     entity_name="Task",
-                    assignments=[
-                        FieldAssignment(field_path="title", value='"Test"'),
-                    ],
-                )
-            ]
-        )
-        warnings = _lint_process_effects(appspec)
-        assert len(warnings) == 0
-
-    def test_invalid_entity_reference(self):
-        from dazzle.core.validator import _lint_process_effects
-
-        appspec = self._make_appspec_with_effects(
-            [
-                StepEffect(
-                    action=EffectAction.CREATE,
-                    entity_name="NonExistent",
-                    assignments=[],
-                )
-            ]
-        )
-        warnings = _lint_process_effects(appspec)
-        assert any("non-existent entity" in w for w in warnings)
-
-    def test_invalid_field_reference(self):
-        from dazzle.core.validator import _lint_process_effects
-
-        appspec = self._make_appspec_with_effects(
-            [
+                    assignments=[FieldAssignment(field_path="title", value='"Test"')],
+                ),
+                id="valid-effect",
+            ),
+            # Task.title -> field_name="title", which exists
+            pytest.param(
                 StepEffect(
                     action=EffectAction.CREATE,
                     entity_name="Task",
-                    assignments=[
-                        FieldAssignment(field_path="nonexistent_field", value='"x"'),
-                    ],
-                )
-            ]
-        )
-        warnings = _lint_process_effects(appspec)
-        assert any("non-existent field" in w for w in warnings)
-
-    def test_update_without_where_warning(self):
+                    assignments=[FieldAssignment(field_path="Task.title", value='"ok"')],
+                ),
+                id="dotted-field-path",
+            ),
+        ],
+    )
+    def test_clean_effect_has_no_warnings(self, effect):
         from dazzle.core.validator import _lint_process_effects
 
-        appspec = self._make_appspec_with_effects(
-            [
+        assert _lint_process_effects(self._make_appspec_with_effects([effect])) == []
+
+    @pytest.mark.parametrize(
+        ("effect", "needles"),
+        [
+            pytest.param(
+                StepEffect(action=EffectAction.CREATE, entity_name="NonExistent", assignments=[]),
+                ("non-existent entity 'NonExistent'",),
+                id="invalid-entity",
+            ),
+            pytest.param(
+                StepEffect(
+                    action=EffectAction.CREATE,
+                    entity_name="Task",
+                    assignments=[FieldAssignment(field_path="nonexistent_field", value='"x"')],
+                ),
+                ("non-existent field 'nonexistent_field'",),
+                id="invalid-field",
+            ),
+            pytest.param(
                 StepEffect(
                     action=EffectAction.UPDATE,
                     entity_name="Task",
-                    assignments=[
-                        FieldAssignment(field_path="status", value='"done"'),
-                    ],
-                )
-            ]
-        )
-        warnings = _lint_process_effects(appspec)
-        assert any("without" in w and "where" in w for w in warnings)
-
-    def test_dotted_field_path_validated(self):
+                    assignments=[FieldAssignment(field_path="status", value='"done"')],
+                ),
+                ("without", "'where'"),
+                id="update-without-where",
+            ),
+        ],
+    )
+    def test_bad_effect_warns_once(self, effect, needles):
         from dazzle.core.validator import _lint_process_effects
 
-        appspec = self._make_appspec_with_effects(
-            [
-                StepEffect(
-                    action=EffectAction.CREATE,
-                    entity_name="Task",
-                    assignments=[
-                        FieldAssignment(field_path="Task.title", value='"ok"'),
-                    ],
-                )
-            ]
-        )
-        # Task.title -> field_name="title" which exists
-        warnings = _lint_process_effects(appspec)
-        assert len(warnings) == 0
+        warnings = _lint_process_effects(self._make_appspec_with_effects([effect]))
+        assert len(warnings) == 1
+        assert [n for n in needles if n not in warnings[0]] == []
 
 
 # =========================================================================

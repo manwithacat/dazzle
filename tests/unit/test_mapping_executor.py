@@ -1,11 +1,13 @@
 """Tests for the integration mapping executor (v0.30.0)."""
 
 import asyncio
+import base64
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, Literal
 from dazzle.core.ir.integrations import (
     AuthSpec,
     AuthType,
@@ -87,6 +89,29 @@ def _make_event(
         entity_id=entity_id,
         data=data or {"id": entity_id, "name": "Test Co"},
     )
+
+
+def _resp(status_code: int, json_body: Any, text: str) -> MagicMock:
+    """A canned httpx response."""
+    resp = MagicMock()
+    resp.status_code = status_code
+    resp.json.return_value = json_body
+    resp.text = text
+    return resp
+
+
+def _install_http(mock_client_cls: MagicMock, *responses: MagicMock) -> AsyncMock:
+    """Make the patched ``httpx.AsyncClient`` answer with ``responses`` in order
+    (one response is returned for every call)."""
+    client = AsyncMock()
+    if len(responses) == 1:
+        client.request = AsyncMock(return_value=responses[0])
+    else:
+        client.request = AsyncMock(side_effect=list(responses))
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=False)
+    mock_client_cls.return_value = client
+    return client
 
 
 def _run(coro: Any) -> Any:
@@ -264,57 +289,41 @@ class TestRequestMapping:
 # ---------------------------------------------------------------------------
 
 
-class TestResponseMapping:
-    def test_simple_response_mapping(self) -> None:
-        appspec = _make_appspec()
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
-        rules = [
-            MappingRule(
-                target_field="company_name",
-                source=Expression(path="response.company_name"),
-            ),
-            MappingRule(
-                target_field="status",
-                source=Expression(path="response.company_status"),
-            ),
-        ]
-
-        result = executor._apply_response_mapping(
-            rules, {"company_name": "Acme Ltd", "company_status": "active"}
-        )
-        assert result == {"company_name": "Acme Ltd", "status": "active"}
-
-    def test_literal_in_response(self) -> None:
-        appspec = _make_appspec()
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
-        rules = [
-            MappingRule(
-                target_field="synced",
-                source=Expression(literal=True),
-            ),
-        ]
-
-        result = executor._apply_response_mapping(rules, {})
-        assert result == {"synced": True}
-
-    def test_missing_response_field(self) -> None:
-        appspec = _make_appspec()
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
-        rules = [
-            MappingRule(
-                target_field="status",
-                source=Expression(path="response.nonexistent"),
-            ),
-        ]
-
-        result = executor._apply_response_mapping(rules, {"other": "data"})
-        assert result == {"status": None}
+@pytest.mark.parametrize(
+    ("rules", "response", "expected"),
+    [
+        pytest.param(
+            [
+                MappingRule(
+                    target_field="company_name", source=Expression(path="response.company_name")
+                ),
+                MappingRule(
+                    target_field="status", source=Expression(path="response.company_status")
+                ),
+            ],
+            {"company_name": "Acme Ltd", "company_status": "active"},
+            {"company_name": "Acme Ltd", "status": "active"},
+            id="paths",
+        ),
+        pytest.param(
+            [MappingRule(target_field="synced", source=Expression(literal=True))],
+            {},
+            {"synced": True},
+            id="literal",
+        ),
+        pytest.param(
+            [MappingRule(target_field="status", source=Expression(path="response.nonexistent"))],
+            {"other": "data"},
+            {"status": None},
+            id="missing-field-is-none",
+        ),
+    ],
+)
+def test_response_mapping(
+    rules: list[MappingRule], response: dict[str, Any], expected: dict[str, Any]
+) -> None:
+    executor = MappingExecutor(_make_appspec(), EntityEventBus())
+    assert executor._apply_response_mapping(rules, response) == expected
 
 
 # ---------------------------------------------------------------------------
@@ -323,44 +332,42 @@ class TestResponseMapping:
 
 
 class TestAuthResolution:
-    def test_api_key_auth(self) -> None:
-        auth = AuthSpec(auth_type=AuthType.API_KEY, credentials=["MY_API_KEY"])
-        integration = _make_integration(auth=auth)
-        appspec = _make_appspec(integration)
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
+    @pytest.mark.parametrize(
+        ("auth_type", "credentials", "env", "expected"),
+        [
+            pytest.param(
+                AuthType.API_KEY,
+                ["MY_API_KEY"],
+                {"MY_API_KEY": "secret-key-123"},
+                "Token secret-key-123",
+                id="api-key",
+            ),
+            pytest.param(
+                AuthType.BEARER,
+                ["MY_TOKEN"],
+                {"MY_TOKEN": "bearer-token-123"},
+                "Bearer bearer-token-123",
+                id="bearer",
+            ),
+            pytest.param(
+                AuthType.BASIC,
+                ["USER", "PASS"],
+                {"USER": "admin", "PASS": "secret"},
+                "Basic " + base64.b64encode(b"admin:secret").decode(),
+                id="basic",
+            ),
+        ],
+    )
+    def test_authorization_header(
+        self, auth_type: AuthType, credentials: list[str], env: dict[str, str], expected: str
+    ) -> None:
+        integration = _make_integration(auth=AuthSpec(auth_type=auth_type, credentials=credentials))
+        executor = MappingExecutor(_make_appspec(integration), EntityEventBus())
 
-        with patch.dict("os.environ", {"MY_API_KEY": "secret-key-123"}):
+        with patch.dict("os.environ", env):
             headers = executor._resolve_auth_headers(integration)
 
-        assert headers["Authorization"] == "Token secret-key-123"
-
-    def test_bearer_auth(self) -> None:
-        auth = AuthSpec(auth_type=AuthType.BEARER, credentials=["MY_TOKEN"])
-        integration = _make_integration(auth=auth)
-        appspec = _make_appspec(integration)
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
-        with patch.dict("os.environ", {"MY_TOKEN": "bearer-token-123"}):
-            headers = executor._resolve_auth_headers(integration)
-
-        assert headers["Authorization"] == "Bearer bearer-token-123"
-
-    def test_basic_auth(self) -> None:
-        auth = AuthSpec(auth_type=AuthType.BASIC, credentials=["USER", "PASS"])
-        integration = _make_integration(auth=auth)
-        appspec = _make_appspec(integration)
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
-        with patch.dict("os.environ", {"USER": "admin", "PASS": "secret"}):
-            headers = executor._resolve_auth_headers(integration)
-
-        import base64
-
-        expected = base64.b64encode(b"admin:secret").decode()
-        assert headers["Authorization"] == f"Basic {expected}"
+        assert headers["Authorization"] == expected
 
     def test_no_auth(self) -> None:
         integration = _make_integration()
@@ -450,16 +457,9 @@ class TestEventHandling:
     @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_on_create_triggers_mapping(self, mock_client_cls: MagicMock) -> None:
         """Entity created event triggers an ON_CREATE mapping."""
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json.return_value = {"id": "ext-1", "status": "created"}
-        mock_resp.text = '{"id": "ext-1"}'
-
-        mock_client = AsyncMock()
-        mock_client.request = AsyncMock(return_value=mock_resp)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client_cls.return_value = mock_client
+        _install_http(
+            mock_client_cls, _resp(200, {"id": "ext-1", "status": "created"}, '{"id": "ext-1"}')
+        )
 
         mapping = _make_mapping(
             trigger_type=MappingTriggerType.ON_CREATE,
@@ -487,16 +487,7 @@ class TestEventHandling:
 
     @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_on_update_triggers_mapping(self, mock_client_cls: MagicMock) -> None:
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json.return_value = {}
-        mock_resp.text = "{}"
-
-        mock_client = AsyncMock()
-        mock_client.request = AsyncMock(return_value=mock_resp)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client_cls.return_value = mock_client
+        _install_http(mock_client_cls, _resp(200, {}, "{}"))
 
         mapping = _make_mapping(
             trigger_type=MappingTriggerType.ON_UPDATE,
@@ -558,16 +549,7 @@ class TestEventHandling:
 class TestRequestMappingIntegration:
     @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_request_body_built_from_mapping(self, mock_client_cls: MagicMock) -> None:
-        mock_resp = MagicMock()
-        mock_resp.status_code = 201
-        mock_resp.json.return_value = {"id": "new-1"}
-        mock_resp.text = '{"id": "new-1"}'
-
-        mock_client = AsyncMock()
-        mock_client.request = AsyncMock(return_value=mock_resp)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client_cls.return_value = mock_client
+        mock_client = _install_http(mock_client_cls, _resp(201, {"id": "new-1"}, '{"id": "new-1"}'))
 
         mapping = _make_mapping(
             method=HttpMethod.POST,
@@ -608,47 +590,62 @@ class TestRequestMappingIntegration:
 
 
 class TestErrorStrategy:
+    @pytest.mark.parametrize(
+        ("action", "responses", "expected_calls", "expected_success"),
+        [
+            pytest.param(
+                ErrorAction.IGNORE,
+                [_resp(500, {"error": "internal"}, '{"error": "internal"}')],
+                1,
+                False,
+                id="ignore-records-one-failed-result",
+            ),
+            # Retry attempts up to 3 times in total.
+            pytest.param(
+                ErrorAction.RETRY,
+                [_resp(503, {"error": "unavailable"}, "unavailable")],
+                3,
+                False,
+                id="retry-gives-up-after-three-attempts",
+            ),
+            pytest.param(
+                ErrorAction.RETRY,
+                [_resp(503, {}, "unavailable"), _resp(200, {"ok": True}, '{"ok": true}')],
+                2,
+                True,
+                id="retry-succeeds-on-second-attempt",
+            ),
+        ],
+    )
     @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
-    def test_ignore_error(self, mock_client_cls: MagicMock) -> None:
-        mock_resp = MagicMock()
-        mock_resp.status_code = 500
-        mock_resp.json.return_value = {"error": "internal"}
-        mock_resp.text = '{"error": "internal"}'
-
-        mock_client = AsyncMock()
-        mock_client.request = AsyncMock(return_value=mock_resp)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client_cls.return_value = mock_client
-
-        mapping = _make_mapping(
-            on_error=ErrorStrategy(actions=[ErrorAction.IGNORE]),
+    def test_failure_attempts_and_result(
+        self,
+        mock_client_cls: MagicMock,
+        action: ErrorAction,
+        responses: list[MagicMock],
+        expected_calls: int,
+        expected_success: bool,
+    ) -> None:
+        mock_client = _install_http(mock_client_cls, *responses)
+        mapping = _make_mapping(on_error=ErrorStrategy(actions=[action]))
+        executor = MappingExecutor(
+            _make_appspec(_make_integration(mappings=[mapping])), EntityEventBus()
         )
-        integration = _make_integration(mappings=[mapping])
-        appspec = _make_appspec(integration)
-        bus = EntityEventBus()
-
-        executor = MappingExecutor(appspec, bus)
         executor.register_all()
 
-        event = _make_event()
-        _run(executor.handle_event(event))
+        # Patch sleep so retry back-off doesn't slow the test.
+        with patch("dazzle.http.runtime.mapping_executor.asyncio.sleep", new_callable=AsyncMock):
+            _run(executor.handle_event(_make_event()))
 
+        assert mock_client.request.call_count == expected_calls
         assert len(executor.results) == 1
-        assert executor.results[0].success is False
+        assert executor.results[0].success is expected_success
 
     @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_set_fields_on_error(self, mock_client_cls: MagicMock) -> None:
-        mock_resp = MagicMock()
-        mock_resp.status_code = 422
-        mock_resp.json.return_value = {"error": "validation"}
-        mock_resp.text = '{"error": "validation"}'
-
-        mock_client = AsyncMock()
-        mock_client.request = AsyncMock(return_value=mock_resp)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client_cls.return_value = mock_client
+        _install_http(
+            mock_client_cls, _resp(422, {"error": "validation"}, '{"error": "validation"}')
+        )
 
         mapping = _make_mapping(
             on_error=ErrorStrategy(
@@ -673,16 +670,7 @@ class TestErrorStrategy:
 
     @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_revert_transition(self, mock_client_cls: MagicMock) -> None:
-        mock_resp = MagicMock()
-        mock_resp.status_code = 500
-        mock_resp.json.return_value = {}
-        mock_resp.text = "{}"
-
-        mock_client = AsyncMock()
-        mock_client.request = AsyncMock(return_value=mock_resp)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client_cls.return_value = mock_client
+        _install_http(mock_client_cls, _resp(500, {}, "{}"))
 
         mapping = _make_mapping(
             triggers=[
@@ -716,74 +704,6 @@ class TestErrorStrategy:
         # Should revert status to previous state
         update_fn.assert_any_call("Company", "abc-123", {"status": "reviewed"})
 
-    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
-    def test_retry_on_failure(self, mock_client_cls: MagicMock) -> None:
-        """Retry should attempt up to 3 times."""
-        mock_resp = MagicMock()
-        mock_resp.status_code = 503
-        mock_resp.json.return_value = {"error": "unavailable"}
-        mock_resp.text = "unavailable"
-
-        mock_client = AsyncMock()
-        mock_client.request = AsyncMock(return_value=mock_resp)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client_cls.return_value = mock_client
-
-        mapping = _make_mapping(
-            on_error=ErrorStrategy(actions=[ErrorAction.RETRY]),
-        )
-        integration = _make_integration(mappings=[mapping])
-        appspec = _make_appspec(integration)
-        bus = EntityEventBus()
-
-        executor = MappingExecutor(appspec, bus)
-        executor.register_all()
-
-        # Patch sleep to speed up test
-        with patch("dazzle.http.runtime.mapping_executor.asyncio.sleep", new_callable=AsyncMock):
-            event = _make_event()
-            _run(executor.handle_event(event))
-
-        # Should have retried 3 times total
-        assert mock_client.request.call_count == 3
-        assert executor.results[0].success is False
-
-    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
-    def test_retry_succeeds_on_second_attempt(self, mock_client_cls: MagicMock) -> None:
-        fail_resp = MagicMock()
-        fail_resp.status_code = 503
-        fail_resp.json.return_value = {}
-        fail_resp.text = "unavailable"
-
-        success_resp = MagicMock()
-        success_resp.status_code = 200
-        success_resp.json.return_value = {"ok": True}
-        success_resp.text = '{"ok": true}'
-
-        mock_client = AsyncMock()
-        mock_client.request = AsyncMock(side_effect=[fail_resp, success_resp])
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client_cls.return_value = mock_client
-
-        mapping = _make_mapping(
-            on_error=ErrorStrategy(actions=[ErrorAction.RETRY]),
-        )
-        integration = _make_integration(mappings=[mapping])
-        appspec = _make_appspec(integration)
-        bus = EntityEventBus()
-
-        executor = MappingExecutor(appspec, bus)
-        executor.register_all()
-
-        with patch("dazzle.http.runtime.mapping_executor.asyncio.sleep", new_callable=AsyncMock):
-            event = _make_event()
-            _run(executor.handle_event(event))
-
-        assert mock_client.request.call_count == 2
-        assert executor.results[0].success is True
-
 
 # ---------------------------------------------------------------------------
 # No Base URL
@@ -816,16 +736,9 @@ class TestNoBaseUrl:
 class TestManualExecution:
     @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_execute_manual(self, mock_client_cls: MagicMock) -> None:
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json.return_value = {"company_name": "Acme"}
-        mock_resp.text = '{"company_name": "Acme"}'
-
-        mock_client = AsyncMock()
-        mock_client.request = AsyncMock(return_value=mock_resp)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client_cls.return_value = mock_client
+        _install_http(
+            mock_client_cls, _resp(200, {"company_name": "Acme"}, '{"company_name": "Acme"}')
+        )
 
         mapping = _make_mapping(
             name="lookup",
@@ -863,16 +776,7 @@ class TestManualExecution:
 class TestTransitionTrigger:
     @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_transition_match(self, mock_client_cls: MagicMock) -> None:
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json.return_value = {}
-        mock_resp.text = "{}"
-
-        mock_client = AsyncMock()
-        mock_client.request = AsyncMock(return_value=mock_resp)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client_cls.return_value = mock_client
+        _install_http(mock_client_cls, _resp(200, {}, "{}"))
 
         mapping = _make_mapping(
             triggers=[
@@ -933,18 +837,23 @@ class TestTransitionTrigger:
 
 
 class TestExpressionEvaluation:
-    def test_path_resolution(self) -> None:
-        expr = Expression(path="self.name")
-        assert resolve_expression(expr, {"self": {"name": "Acme"}}) == "Acme"
-
-    def test_literal_value(self) -> None:
-        expr = Expression(literal=42)
-        assert resolve_expression(expr, {}) == 42
-
-    def test_nested_path(self) -> None:
-        expr = Expression(path="response.data.id")
-        ctx = {"response": {"data": {"id": "x-1"}}}
-        assert resolve_expression(expr, ctx) == "x-1"
+    @pytest.mark.parametrize(
+        ("expr", "ctx", "expected"),
+        [
+            pytest.param(
+                Expression(path="self.name"), {"self": {"name": "Acme"}}, "Acme", id="path"
+            ),
+            pytest.param(Expression(literal=42), {}, 42, id="literal"),
+            pytest.param(
+                Expression(path="response.data.id"),
+                {"response": {"data": {"id": "x-1"}}},
+                "x-1",
+                id="nested-path",
+            ),
+        ],
+    )
+    def test_resolves(self, expr: Expression, ctx: dict[str, Any], expected: Any) -> None:
+        assert resolve_expression(expr, ctx) == expected
 
     def test_missing_path_returns_none(self) -> None:
         expr = Expression(path="response.missing.field")
@@ -955,55 +864,34 @@ class TestExpressionEvaluation:
 # Condition Evaluation
 # ---------------------------------------------------------------------------
 
+_COMPANY_NUMBER_NOT_NULL = BinaryExpr(
+    left=FieldRef(path=["company_number"]), op=BinaryOp.NE, right=Literal(value=None)
+)
 
-class TestConditionEvaluation:
-    def test_no_condition(self) -> None:
-        appspec = _make_appspec()
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
 
-        trigger = MappingTriggerSpec(trigger_type=MappingTriggerType.ON_CREATE)
-        assert executor._evaluate_condition(trigger, {"name": "Test"}) is True
-
-    def test_ne_null_condition_with_value(self) -> None:
-        """When field is not null, condition should pass."""
-        appspec = _make_appspec()
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
-        from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, Literal
-
-        condition = BinaryExpr(
-            left=FieldRef(path=["company_number"]),
-            op=BinaryOp.NE,
-            right=Literal(value=None),
-        )
-        trigger = MappingTriggerSpec(
-            trigger_type=MappingTriggerType.ON_CREATE,
-            condition_expr=condition,
-        )
-
-        assert executor._evaluate_condition(trigger, {"company_number": "123"}) is True
-
-    def test_ne_null_condition_without_value(self) -> None:
-        """When field is null, condition should fail."""
-        appspec = _make_appspec()
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
-        from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, Literal
-
-        condition = BinaryExpr(
-            left=FieldRef(path=["company_number"]),
-            op=BinaryOp.NE,
-            right=Literal(value=None),
-        )
-        trigger = MappingTriggerSpec(
-            trigger_type=MappingTriggerType.ON_CREATE,
-            condition_expr=condition,
-        )
-
-        assert executor._evaluate_condition(trigger, {"name": "Test"}) is False
+@pytest.mark.parametrize(
+    ("condition", "data", "expected"),
+    [
+        pytest.param(None, {"name": "Test"}, True, id="no-condition-passes"),
+        pytest.param(
+            _COMPANY_NUMBER_NOT_NULL,
+            {"company_number": "123"},
+            True,
+            id="ne-null-with-value-passes",
+        ),
+        pytest.param(
+            _COMPANY_NUMBER_NOT_NULL, {"name": "Test"}, False, id="ne-null-without-value-fails"
+        ),
+    ],
+)
+def test_evaluate_condition(
+    condition: BinaryExpr | None, data: dict[str, Any], expected: bool
+) -> None:
+    executor = MappingExecutor(_make_appspec(), EntityEventBus())
+    trigger = MappingTriggerSpec(
+        trigger_type=MappingTriggerType.ON_CREATE, condition_expr=condition
+    )
+    assert executor._evaluate_condition(trigger, data) is expected
 
 
 # ---------------------------------------------------------------------------
@@ -1011,37 +899,29 @@ class TestConditionEvaluation:
 # ---------------------------------------------------------------------------
 
 
-class TestSetNestedValue:
-    def test_flat_key(self) -> None:
-        d: dict[str, Any] = {}
-        MappingExecutor._set_nested_value(d, "name", "Test")
-        assert d == {"name": "Test"}
-
-    def test_dotted_key(self) -> None:
-        d: dict[str, Any] = {}
-        MappingExecutor._set_nested_value(d, "info.name", "Test")
-        assert d == {"info": {"name": "Test"}}
-
-    def test_deep_dotted_key(self) -> None:
-        d: dict[str, Any] = {}
-        MappingExecutor._set_nested_value(d, "a.b.c", 42)
-        assert d == {"a": {"b": {"c": 42}}}
-
-    def test_index_grows_a_list(self) -> None:
-        d: dict[str, Any] = {}
-        MappingExecutor._set_nested_value(d, "otherGains.0.assetType", "other-property")
-        MappingExecutor._set_nested_value(d, "otherGains.1.assetType", "shares")
-        assert d == {
-            "otherGains": [
-                {"assetType": "other-property"},
-                {"assetType": "shares"},
-            ]
-        }
-
-    def test_higher_index_leaves_a_hole(self) -> None:
-        d: dict[str, Any] = {}
-        MappingExecutor._set_nested_value(d, "rows.2.name", "third")
-        assert d == {"rows": [None, None, {"name": "third"}]}
+@pytest.mark.parametrize(
+    ("assignments", "expected"),
+    [
+        pytest.param([("name", "Test")], {"name": "Test"}, id="flat-key"),
+        pytest.param([("info.name", "Test")], {"info": {"name": "Test"}}, id="dotted-key"),
+        pytest.param([("a.b.c", 42)], {"a": {"b": {"c": 42}}}, id="deep-dotted-key"),
+        pytest.param(
+            [("otherGains.0.assetType", "other-property"), ("otherGains.1.assetType", "shares")],
+            {"otherGains": [{"assetType": "other-property"}, {"assetType": "shares"}]},
+            id="index-grows-a-list",
+        ),
+        pytest.param(
+            [("rows.2.name", "third")],
+            {"rows": [None, None, {"name": "third"}]},
+            id="higher-index-leaves-a-hole",
+        ),
+    ],
+)
+def test_set_nested_value(assignments: list[tuple[str, Any]], expected: dict[str, Any]) -> None:
+    d: dict[str, Any] = {}
+    for key, value in assignments:
+        MappingExecutor._set_nested_value(d, key, value)
+    assert d == expected
 
 
 # ---------------------------------------------------------------------------
@@ -1315,15 +1195,9 @@ class TestRichTextWriteBack:
 
     @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
     def test_response_mapping_write_back_is_sanitised(self, mock_client_cls: MagicMock) -> None:
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json.return_value = {"bio": "<p>hi</p><script>alert(1)</script>"}
-        mock_resp.text = "{}"
-        mock_client = AsyncMock()
-        mock_client.request = AsyncMock(return_value=mock_resp)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client_cls.return_value = mock_client
+        _install_http(
+            mock_client_cls, _resp(200, {"bio": "<p>hi</p><script>alert(1)</script>"}, "{}")
+        )
 
         mapping = _make_mapping(
             response_mapping=[

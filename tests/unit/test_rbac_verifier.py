@@ -5,6 +5,14 @@ from pathlib import Path
 
 import pytest
 
+from dazzle.core.ir.predicates import (
+    BoolComposite,
+    BoolOp,
+    ColumnCheck,
+    CompOp,
+    UserAttrCheck,
+    ValueRef,
+)
 from dazzle.rbac.audit import AccessDecisionRecord
 from dazzle.rbac.matrix import AccessMatrix, PolicyDecision, PolicyWarning
 from dazzle.rbac.verifier import (
@@ -103,122 +111,84 @@ def make_report(**overrides) -> VerificationReport:
 
 
 # ---------------------------------------------------------------------------
-# compare_cell — exhaustive 9-case table
+# compare_cell — the full decision x status table
 # ---------------------------------------------------------------------------
 
-
-class TestCompareCellDeny:
-    def test_deny_403_is_pass(self):
-        assert compare_cell(PolicyDecision.DENY, 403, None) == CellResult.PASS
-
-    def test_deny_200_is_violation(self):
-        assert compare_cell(PolicyDecision.DENY, 200, None) == CellResult.VIOLATION
-
-    def test_deny_500_is_warning(self):
-        # Edge case — not in main table, treated as WARNING.
-        assert compare_cell(PolicyDecision.DENY, 500, None) == CellResult.WARNING
+_D = PolicyDecision
+_R = CellResult
 
 
-class TestCompareCellPermit:
-    def test_permit_200_is_pass(self):
-        assert compare_cell(PolicyDecision.PERMIT, 200, None) == CellResult.PASS
-
-    def test_permit_403_is_violation(self):
-        assert compare_cell(PolicyDecision.PERMIT, 403, None) == CellResult.VIOLATION
-
-    def test_permit_500_is_warning(self):
-        assert compare_cell(PolicyDecision.PERMIT, 500, None) == CellResult.WARNING
-
-
-class TestCompareCellPermitFiltered:
-    @pytest.mark.parametrize(
-        ("status", "count", "kwargs", "expected"),
-        [
-            (200, 3, {"total": 10}, CellResult.PASS),
-            (200, 10, {"total": 10}, CellResult.VIOLATION),
-            (200, 0, {"total": 10}, CellResult.WARNING),
-            (200, None, {}, CellResult.WARNING),
-            (403, None, {}, CellResult.WARNING),
-            (200, 1, {"total": 100}, CellResult.PASS),
+@pytest.mark.parametrize(
+    ("decision", "status", "count", "kwargs", "expected"),
+    [
+        # DENY: 403 is the pass signal; 500 is outside the main table -> WARNING.
+        pytest.param(_D.DENY, 403, None, {}, _R.PASS, id="deny-403-pass"),
+        pytest.param(_D.DENY, 200, None, {}, _R.VIOLATION, id="deny-200-violation"),
+        pytest.param(_D.DENY, 500, None, {}, _R.WARNING, id="deny-500-warning"),
+        # PERMIT
+        pytest.param(_D.PERMIT, 200, None, {}, _R.PASS, id="permit-200-pass"),
+        pytest.param(_D.PERMIT, 403, None, {}, _R.VIOLATION, id="permit-403-violation"),
+        pytest.param(_D.PERMIT, 500, None, {}, _R.WARNING, id="permit-500-warning"),
+        # PERMIT_FILTERED: verdict hinges on observed count vs total.
+        pytest.param(
+            _D.PERMIT_FILTERED, 200, 3, {"total": 10}, _R.PASS, id="filtered-200-partial-pass"
+        ),
+        pytest.param(
+            _D.PERMIT_FILTERED,
+            200,
+            10,
+            {"total": 10},
+            _R.VIOLATION,
+            id="filtered-200-count-equals-total-violation",
+        ),
+        pytest.param(
+            _D.PERMIT_FILTERED, 200, 0, {"total": 10}, _R.WARNING, id="filtered-200-zero-warning"
+        ),
+        pytest.param(
+            _D.PERMIT_FILTERED, 200, None, {}, _R.WARNING, id="filtered-200-no-count-warning"
+        ),
+        pytest.param(_D.PERMIT_FILTERED, 403, None, {}, _R.WARNING, id="filtered-non-200-warning"),
+        pytest.param(
+            _D.PERMIT_FILTERED, 200, 1, {"total": 100}, _R.PASS, id="filtered-one-of-many-pass"
+        ),
+        # PERMIT_UNPROTECTED
+        pytest.param(_D.PERMIT_UNPROTECTED, 200, None, {}, _R.PASS, id="unprotected-200-pass"),
+        pytest.param(
+            _D.PERMIT_UNPROTECTED, 403, None, {}, _R.VIOLATION, id="unprotected-403-violation"
+        ),
+        pytest.param(
+            _D.PERMIT_UNPROTECTED, 500, None, {}, _R.WARNING, id="unprotected-500-warning"
+        ),
+        # PERMIT_SCOPED (#1171 Task 6): before it, every scoped cell fell
+        # through to WARNING. 403 contradicts the grant; 404 on a single-id op
+        # is the scope filter correctly hiding an unowned row -> PASS; 404 on
+        # list, or with no operation hint, is inconclusive.
+        pytest.param(_D.PERMIT_SCOPED, 200, None, {}, _R.PASS, id="scoped-200-pass-1171"),
+        pytest.param(_D.PERMIT_SCOPED, 403, None, {}, _R.VIOLATION, id="scoped-403-violation"),
+        *[
+            pytest.param(
+                _D.PERMIT_SCOPED, 404, None, {"operation": op}, _R.PASS, id=f"scoped-404-{op}-pass"
+            )
+            for op in ("read", "update", "delete")
         ],
-        ids=[
-            "test_filtered_200_partial_count_is_pass",
-            "test_filtered_200_count_equals_total_is_violation",
-            "test_filtered_200_count_zero_is_warning",
-            "test_filtered_200_no_count_is_warning",
-            "test_filtered_non_200_is_warning",
-            "test_filtered_count_one_of_many_is_pass",
-        ],
-    )
-    def test_compare_cell_permit_filtered(self, status, count, kwargs, expected):
-        assert compare_cell(PolicyDecision.PERMIT_FILTERED, status, count, **kwargs) == expected
-
-
-class TestCompareCellPermitUnprotected:
-    def test_unprotected_200_is_pass(self):
-        assert compare_cell(PolicyDecision.PERMIT_UNPROTECTED, 200, None) == CellResult.PASS
-
-    def test_unprotected_403_is_violation(self):
-        assert compare_cell(PolicyDecision.PERMIT_UNPROTECTED, 403, None) == CellResult.VIOLATION
-
-    def test_unprotected_500_is_warning(self):
-        assert compare_cell(PolicyDecision.PERMIT_UNPROTECTED, 500, None) == CellResult.WARNING
-
-
-class TestCompareCellPermitScoped:
-    """`PERMIT_SCOPED` — access granted, rows filtered by a `scope:` rule.
-
-    The matrix generator emits PERMIT_SCOPED for every scope-block-governed
-    cell; before #1171 Task 6 `compare_cell` had no case for it, so all such
-    cells fell through to an inconclusive WARNING.
-    """
-
-    def test_scoped_200_is_pass(self):
-        assert compare_cell(PolicyDecision.PERMIT_SCOPED, 200, None) == CellResult.PASS
-
-    def test_scoped_403_is_violation(self):
-        # A scoped grant that 403s contradicts the permit decision.
-        assert compare_cell(PolicyDecision.PERMIT_SCOPED, 403, None) == CellResult.VIOLATION
-
-    @pytest.mark.parametrize("operation", ["read", "update", "delete"])
-    def test_scoped_404_on_single_id_op_is_pass(self, operation):
-        # 404 on a single-id op = the scope filter correctly hid a row the
-        # role does not own. Definitively correct RBAC, so PASS.
-        assert (
-            compare_cell(PolicyDecision.PERMIT_SCOPED, 404, None, operation=operation)
-            == CellResult.PASS
-        )
-
-    def test_scoped_404_on_list_is_warning(self):
-        # 404 on list is not the scoped-out signal — inconclusive.
-        assert (
-            compare_cell(PolicyDecision.PERMIT_SCOPED, 404, None, operation="list")
-            == CellResult.WARNING
-        )
-
-    def test_scoped_404_without_operation_is_warning(self):
-        # No operation hint — cannot claim a definitive scoped-out PASS.
-        assert compare_cell(PolicyDecision.PERMIT_SCOPED, 404, None) == CellResult.WARNING
-
-    def test_scoped_500_is_warning(self):
-        assert compare_cell(PolicyDecision.PERMIT_SCOPED, 500, None) == CellResult.WARNING
-
-
-class TestCompareCellPermitNoScope:
-    """`PERMIT_NO_SCOPE` — permitted but no matching `scope:` rule (config gap).
-
-    The only definitive verdict the verifier can add is that a 403 still
-    contradicts the permit grant; everything else stays WARNING.
-    """
-
-    def test_no_scope_403_is_violation(self):
-        assert compare_cell(PolicyDecision.PERMIT_NO_SCOPE, 403, None) == CellResult.VIOLATION
-
-    def test_no_scope_200_is_warning(self):
-        assert compare_cell(PolicyDecision.PERMIT_NO_SCOPE, 200, None) == CellResult.WARNING
-
-    def test_no_scope_404_is_warning(self):
-        assert compare_cell(PolicyDecision.PERMIT_NO_SCOPE, 404, None) == CellResult.WARNING
+        pytest.param(
+            _D.PERMIT_SCOPED,
+            404,
+            None,
+            {"operation": "list"},
+            _R.WARNING,
+            id="scoped-404-list-warning",
+        ),
+        pytest.param(_D.PERMIT_SCOPED, 404, None, {}, _R.WARNING, id="scoped-404-no-op-warning"),
+        pytest.param(_D.PERMIT_SCOPED, 500, None, {}, _R.WARNING, id="scoped-500-warning"),
+        # PERMIT_NO_SCOPE (config gap): only a 403 is definitive.
+        pytest.param(_D.PERMIT_NO_SCOPE, 403, None, {}, _R.VIOLATION, id="no-scope-403-violation"),
+        pytest.param(_D.PERMIT_NO_SCOPE, 200, None, {}, _R.WARNING, id="no-scope-200-warning"),
+        pytest.param(_D.PERMIT_NO_SCOPE, 404, None, {}, _R.WARNING, id="no-scope-404-warning"),
+    ],
+)
+def test_compare_cell(decision, status, count, kwargs, expected):
+    assert compare_cell(decision, status, count, **kwargs) == expected
 
 
 # ---------------------------------------------------------------------------
@@ -226,25 +196,79 @@ class TestCompareCellPermitNoScope:
 # ---------------------------------------------------------------------------
 
 
-def _matrix(cells: dict[tuple[str, str, str], PolicyDecision]) -> AccessMatrix:
+def _matrix(
+    cells: dict[tuple[str, str, str], PolicyDecision], roles: list[str] | None = None
+) -> AccessMatrix:
     """Build an AccessMatrix from an explicit cell map for unit tests.
 
     Roles/entities/operations are derived from the cell keys (sorted for a
-    stable order); no warnings are attached.
+    stable order) unless ``roles`` pins an explicit order; no warnings.
     """
-    roles = sorted({k[0] for k in cells})
-    entities = sorted({k[1] for k in cells})
-    operations = sorted({k[2] for k in cells})
     return AccessMatrix(
         cells=cells,
         warnings=[],
-        roles=roles,
-        entities=entities,
-        operations=operations,
+        roles=roles if roles is not None else sorted({k[0] for k in cells}),
+        entities=sorted({k[1] for k in cells}),
+        operations=sorted({k[2] for k in cells}),
     )
 
 
-class TestCreateCapableRole:
+@pytest.mark.parametrize(
+    ("cells", "roles", "entity", "expected"),
+    [
+        pytest.param(
+            {("admin", "Widget", "create"): _D.PERMIT, ("viewer", "Widget", "create"): _D.DENY},
+            None,
+            "Widget",
+            "admin",
+            id="role-with-create-permit",
+        ),
+        # The whole PERMIT* family satisfies the create gate.
+        *[
+            pytest.param(
+                {("editor", "Widget", "create"): decision},
+                None,
+                "Widget",
+                "editor",
+                id=f"permit-family-{decision.name.lower()}",
+            )
+            for decision in (
+                _D.PERMIT_SCOPED,
+                _D.PERMIT_NO_SCOPE,
+                _D.PERMIT_UNPROTECTED,
+                _D.PERMIT_FILTERED,
+            )
+        ],
+        # Every role DENY on create — un-seedable framework/admin entity.
+        pytest.param(
+            {
+                ("admin", "SystemHealth", "create"): _D.DENY,
+                ("viewer", "SystemHealth", "create"): _D.DENY,
+            },
+            None,
+            "SystemHealth",
+            None,
+            id="no-role-can-create-none",
+        ),
+        # Entity absent from the matrix: matrix.get() returns DENY.
+        pytest.param(
+            {("admin", "Widget", "create"): _D.PERMIT},
+            None,
+            "Gadget",
+            None,
+            id="unknown-entity-none",
+        ),
+        # Several capable roles: first in matrix.roles order wins.
+        pytest.param(
+            {("manager", "Widget", "create"): _D.PERMIT, ("admin", "Widget", "create"): _D.PERMIT},
+            ["manager", "admin"],
+            "Widget",
+            "manager",
+            id="first-capable-role-follows-role-order",
+        ),
+    ],
+)
+def test_create_capable_role(cells, roles, entity, expected):
     """`_create_capable_role` picks a role that can seed an entity's baseline
     row, or returns None when the entity is legitimately un-seedable.
 
@@ -253,70 +277,9 @@ class TestCreateCapableRole:
     baseline row to target and correctly remain WARNING rather than producing
     a false verdict.
     """
+    from dazzle.rbac.verifier import _create_capable_role
 
-    def test_returns_role_with_create_permit(self):
-        from dazzle.rbac.verifier import _create_capable_role
-
-        m = _matrix(
-            {
-                ("admin", "Widget", "create"): PolicyDecision.PERMIT,
-                ("viewer", "Widget", "create"): PolicyDecision.DENY,
-            }
-        )
-        assert _create_capable_role(m, "Widget") == "admin"
-
-    def test_accepts_any_permit_family_decision(self):
-        # PERMIT_SCOPED / PERMIT_NO_SCOPE / PERMIT_UNPROTECTED all satisfy the
-        # create gate — the helper matches the whole PERMIT* family.
-        from dazzle.rbac.verifier import _create_capable_role
-
-        for decision in (
-            PolicyDecision.PERMIT_SCOPED,
-            PolicyDecision.PERMIT_NO_SCOPE,
-            PolicyDecision.PERMIT_UNPROTECTED,
-            PolicyDecision.PERMIT_FILTERED,
-        ):
-            m = _matrix({("editor", "Widget", "create"): decision})
-            assert _create_capable_role(m, "Widget") == "editor", decision
-
-    def test_returns_none_when_no_role_can_create(self):
-        # Every role is DENY on create — the entity is un-seedable. This is the
-        # framework/admin-entity case (no CRUD surface, read-only exposure).
-        from dazzle.rbac.verifier import _create_capable_role
-
-        m = _matrix(
-            {
-                ("admin", "SystemHealth", "create"): PolicyDecision.DENY,
-                ("viewer", "SystemHealth", "create"): PolicyDecision.DENY,
-            }
-        )
-        assert _create_capable_role(m, "SystemHealth") is None
-
-    def test_returns_none_for_unknown_entity(self):
-        # An entity absent from the matrix has no create cell — matrix.get()
-        # returns DENY, so the helper yields None (un-seedable).
-        from dazzle.rbac.verifier import _create_capable_role
-
-        m = _matrix({("admin", "Widget", "create"): PolicyDecision.PERMIT})
-        assert _create_capable_role(m, "Gadget") is None
-
-    def test_first_capable_role_follows_matrix_role_order(self):
-        # When multiple roles can create, the first in matrix.roles order wins
-        # — deterministic but declaration-order-dependent.
-        from dazzle.rbac.verifier import _create_capable_role
-
-        m = AccessMatrix(
-            cells={
-                ("manager", "Widget", "create"): PolicyDecision.PERMIT,
-                ("admin", "Widget", "create"): PolicyDecision.PERMIT,
-            },
-            warnings=[],
-            # Explicit role order: manager declared before admin.
-            roles=["manager", "admin"],
-            entities=["Widget"],
-            operations=["create"],
-        )
-        assert _create_capable_role(m, "Widget") == "manager"
+    assert _create_capable_role(_matrix(cells, roles), entity) == expected
 
 
 # ---------------------------------------------------------------------------
@@ -356,120 +319,80 @@ def _entity_with_create_scope(predicate, personas=("*",), entity_name="Widget"):
     return AppSpec(name="test_app", domain=DomainSpec(entities=[entity]))
 
 
-class TestScopeCreateOverlay:
+_EMAIL_EQ = UserAttrCheck(field="reported_by", op=CompOp.EQ, user_attr="email")
+
+
+@pytest.mark.parametrize(
+    ("predicate", "personas", "expected"),
+    [
+        # The FeedbackReport regression shape: `reported_by = current_user.email`.
+        pytest.param(_EMAIL_EQ, ("*",), {"reported_by": "m@x.test"}, id="user-attr-email-1174"),
+        pytest.param(
+            ColumnCheck(field="created_by", op=CompOp.EQ, value=ValueRef(current_user=True)),
+            ("*",),
+            {"created_by": "u-1"},
+            id="bare-current-user-is-auth-id",
+        ),
+        pytest.param(
+            ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="draft")),
+            ("*",),
+            {"status": "draft"},
+            id="literal-constraint",
+        ),
+        # `current_user.org` needs a seeded domain User row the generic probe
+        # lacks — left unset, the cell stays a WARNING.
+        pytest.param(
+            UserAttrCheck(field="org", op=CompOp.EQ, user_attr="org"),
+            ("*",),
+            {},
+            id="unresolvable-user-attr-skipped",
+        ),
+        pytest.param(
+            BoolComposite(
+                op=BoolOp.AND,
+                children=[
+                    _EMAIL_EQ,
+                    ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="new")),
+                ],
+            ),
+            ("*",),
+            {"reported_by": "m@x.test", "status": "new"},
+            id="and-composite-overlays-every-child",
+        ),
+        # Rule binds only `admin`; a `member` probe matches no rule.
+        pytest.param(_EMAIL_EQ, ("admin",), {}, id="non-matching-role-no-overlay"),
+    ],
+)
+def test_scope_create_overlay(predicate, personas, expected):
     """`_scope_create_overlay` builds the create-body field values that satisfy
     an entity's `scope: create:` predicate — the fix for #1174, where the
     verifier's minimal probe body omitted optional scope-referenced fields
     (FeedbackReport's `reported_by`) and 403'd a correct-by-design create.
     """
+    from dazzle.rbac.verifier import _scope_create_overlay
 
-    def test_user_attr_email_resolves_to_role_email(self):
-        # The FeedbackReport regression shape: `reported_by = current_user.email`.
-        from dazzle.core.ir.predicates import CompOp, UserAttrCheck
-        from dazzle.rbac.verifier import _scope_create_overlay
+    appspec = _entity_with_create_scope(predicate, personas=personas)
+    overlay = _scope_create_overlay(
+        "Widget", appspec, role="member", user_email="m@x.test", user_id="u-1"
+    )
+    assert overlay == expected
 
-        appspec = _entity_with_create_scope(
-            UserAttrCheck(field="reported_by", op=CompOp.EQ, user_attr="email")
-        )
-        overlay = _scope_create_overlay(
-            "Widget", appspec, role="member", user_email="m@x.test", user_id="u-1"
-        )
-        assert overlay == {"reported_by": "m@x.test"}
 
-    def test_bare_current_user_resolves_to_auth_id(self):
-        from dazzle.core.ir.predicates import ColumnCheck, CompOp, ValueRef
-        from dazzle.rbac.verifier import _scope_create_overlay
+def test_simple_task_feedbackreport_create_scope_is_satisfiable():
+    # End-to-end against the real regression app: the FeedbackReport
+    # `*`-persona create scope resolves to `reported_by = <role email>`.
+    from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.rbac.verifier import _scope_create_overlay
 
-        appspec = _entity_with_create_scope(
-            ColumnCheck(field="created_by", op=CompOp.EQ, value=ValueRef(current_user=True))
-        )
-        overlay = _scope_create_overlay(
-            "Widget", appspec, role="member", user_email="m@x.test", user_id="u-1"
-        )
-        assert overlay == {"created_by": "u-1"}
-
-    def test_literal_constraint_is_overlaid(self):
-        from dazzle.core.ir.predicates import ColumnCheck, CompOp, ValueRef
-        from dazzle.rbac.verifier import _scope_create_overlay
-
-        appspec = _entity_with_create_scope(
-            ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="draft"))
-        )
-        overlay = _scope_create_overlay(
-            "Widget", appspec, role="member", user_email="m@x.test", user_id="u-1"
-        )
-        assert overlay == {"status": "draft"}
-
-    def test_unresolvable_user_attr_is_skipped(self):
-        # `current_user.org` needs a seeded domain User row the generic probe
-        # does not have — the field is left unset, the cell stays a WARNING.
-        from dazzle.core.ir.predicates import CompOp, UserAttrCheck
-        from dazzle.rbac.verifier import _scope_create_overlay
-
-        appspec = _entity_with_create_scope(
-            UserAttrCheck(field="org", op=CompOp.EQ, user_attr="org")
-        )
-        overlay = _scope_create_overlay(
-            "Widget", appspec, role="member", user_email="m@x.test", user_id="u-1"
-        )
-        assert overlay == {}
-
-    def test_and_composite_overlays_every_child(self):
-        from dazzle.core.ir.predicates import (
-            BoolComposite,
-            BoolOp,
-            ColumnCheck,
-            CompOp,
-            UserAttrCheck,
-            ValueRef,
-        )
-        from dazzle.rbac.verifier import _scope_create_overlay
-
-        predicate = BoolComposite(
-            op=BoolOp.AND,
-            children=[
-                UserAttrCheck(field="reported_by", op=CompOp.EQ, user_attr="email"),
-                ColumnCheck(field="status", op=CompOp.EQ, value=ValueRef(literal="new")),
-            ],
-        )
-        appspec = _entity_with_create_scope(predicate)
-        overlay = _scope_create_overlay(
-            "Widget", appspec, role="member", user_email="m@x.test", user_id="u-1"
-        )
-        assert overlay == {"reported_by": "m@x.test", "status": "new"}
-
-    def test_non_matching_role_yields_no_overlay(self):
-        # The create-scope rule binds only `admin`; a `member` probe matches no
-        # rule, so there is nothing to overlay (the create will default-deny).
-        from dazzle.core.ir.predicates import CompOp, UserAttrCheck
-        from dazzle.rbac.verifier import _scope_create_overlay
-
-        appspec = _entity_with_create_scope(
-            UserAttrCheck(field="reported_by", op=CompOp.EQ, user_attr="email"),
-            personas=("admin",),
-        )
-        overlay = _scope_create_overlay(
-            "Widget", appspec, role="member", user_email="m@x.test", user_id="u-1"
-        )
-        assert overlay == {}
-
-    def test_simple_task_feedbackreport_create_scope_is_satisfiable(self):
-        # End-to-end against the real regression app: the FeedbackReport
-        # `*`-persona create scope resolves to `reported_by = <role email>`.
-        from pathlib import Path
-
-        from dazzle.core.appspec_loader import load_project_appspec
-        from dazzle.rbac.verifier import _scope_create_overlay
-
-        appspec = load_project_appspec(Path("examples/simple_task"))
-        overlay = _scope_create_overlay(
-            "FeedbackReport",
-            appspec,
-            role="member",
-            user_email="verify-member@dazzle.test",
-            user_id="u-1",
-        )
-        assert overlay == {"reported_by": "verify-member@dazzle.test"}
+    appspec = load_project_appspec(Path("examples/simple_task"))
+    overlay = _scope_create_overlay(
+        "FeedbackReport",
+        appspec,
+        role="member",
+        user_email="verify-member@dazzle.test",
+        user_id="u-1",
+    )
+    assert overlay == {"reported_by": "verify-member@dazzle.test"}
 
 
 # ---------------------------------------------------------------------------

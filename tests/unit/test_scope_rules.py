@@ -45,52 +45,44 @@ def _parse(dsl: str):
 class TestScopeRule:
     """Tests for ScopeRule dataclass / Pydantic model."""
 
-    def test_scope_rule_with_field_condition(self):
-        """ScopeRule stores operation and condition correctly."""
-        condition = _make_condition()
-        rule = ScopeRule(
-            operation=PermissionKind.READ,
-            condition=condition,
-            personas=["manager"],
-        )
+    @pytest.mark.parametrize(
+        ("kwargs", "condition", "personas"),
+        [
+            pytest.param(
+                {"operation": PermissionKind.READ, "personas": ["manager"]},
+                _make_condition(),
+                ["manager"],
+                id="field-condition",
+            ),
+            # condition=None means 'all records' — no row filter applied.
+            pytest.param(
+                {"operation": PermissionKind.LIST, "personas": ["admin"]},
+                None,
+                ["admin"],
+                id="condition-none-means-all",
+            ),
+            # personas=['*'] means all authorized roles.
+            pytest.param(
+                {"operation": PermissionKind.READ, "personas": ["*"]},
+                _make_condition(),
+                ["*"],
+                id="wildcard-personas",
+            ),
+            # personas defaults to empty list when not supplied; every kind accepted.
+            *[
+                pytest.param({"operation": kind}, None, [], id=f"default-personas-{kind.value}")
+                for kind in PermissionKind
+            ],
+        ],
+    )
+    def test_scope_rule_stores_operation_condition_and_personas(
+        self, kwargs: dict[str, Any], condition: ConditionExpr | None, personas: list[str]
+    ) -> None:
+        rule = ScopeRule(**kwargs, condition=condition)
 
-        assert rule.operation == PermissionKind.READ
+        assert rule.operation == kwargs["operation"]
         assert rule.condition == condition
-        assert rule.personas == ["manager"]
-
-    def test_scope_rule_condition_none_means_all(self):
-        """condition=None means 'all records' — no row filter applied."""
-        rule = ScopeRule(
-            operation=PermissionKind.LIST,
-            condition=None,
-            personas=["admin"],
-        )
-
-        assert rule.operation == PermissionKind.LIST
-        assert rule.condition is None
-        assert rule.personas == ["admin"]
-
-    def test_scope_rule_wildcard_personas(self):
-        """personas=['*'] means all authorized roles."""
-        rule = ScopeRule(
-            operation=PermissionKind.READ,
-            condition=_make_condition(),
-            personas=["*"],
-        )
-
-        assert rule.personas == ["*"]
-
-    def test_scope_rule_default_personas_empty(self):
-        """personas defaults to empty list when not supplied."""
-        rule = ScopeRule(operation=PermissionKind.DELETE)
-
-        assert rule.personas == []
-
-    def test_scope_rule_all_permission_kinds(self):
-        """ScopeRule accepts every PermissionKind value."""
-        for kind in PermissionKind:
-            rule = ScopeRule(operation=kind)
-            assert rule.operation == kind
+        assert rule.personas == personas
 
 
 class TestAccessSpecScopes:
@@ -281,9 +273,11 @@ entity Task "Task":
 class TestPermitFieldConditionRejection:
     """Tests that field conditions in permit: blocks are rejected."""
 
-    def test_field_condition_in_permit_raises_error(self):
-        """A field comparison in a permit: block raises ParseError."""
-        dsl = """\
+    @pytest.mark.parametrize(
+        "dsl",
+        [
+            pytest.param(
+                """\
 module test
 
 entity Shape "Shape":
@@ -292,13 +286,34 @@ entity Shape "Shape":
 
   permit:
     list: school = current_user.school
-"""
+""",
+                id="field-comparison",
+            ),
+            # role(x) or field = value is rejected because of the comparison.
+            pytest.param(
+                """\
+module test
+
+entity Thing "Thing":
+  id: uuid pk
+  realm: str(100) optional
+
+  permit:
+    list: role(teacher) or realm = current_user.realm
+""",
+                id="mixed-or-with-comparison",
+            ),
+        ],
+    )
+    def test_field_condition_in_permit_raises_error(self, dsl: str) -> None:
         with pytest.raises(ParseError, match="Field condition in permit: block"):
             _parse(dsl)
 
-    def test_role_check_in_permit_is_allowed(self):
-        """role(teacher) in a permit: block is valid — not a field condition."""
-        dsl = """\
+    @pytest.mark.parametrize(
+        ("dsl", "permission_count"),
+        [
+            pytest.param(
+                """\
 module test
 
 entity Shape "Shape":
@@ -308,15 +323,12 @@ entity Shape "Shape":
     list: role(teacher)
     read: role(teacher) or role(admin)
     create: role(admin)
-"""
-        fragment = _parse(dsl)
-        entity = fragment.entities[0]
-        assert entity.access is not None
-        assert len(entity.access.permissions) == 3
-
-    def test_authenticated_in_permit_is_allowed(self):
-        """'authenticated' in permit: is a plain auth check — allowed."""
-        dsl = """\
+""",
+                3,
+                id="role-check",
+            ),
+            pytest.param(
+                """\
 module test
 
 entity Log "Log":
@@ -324,30 +336,14 @@ entity Log "Log":
 
   permit:
     read: authenticated
-"""
-        fragment = _parse(dsl)
-        entity = fragment.entities[0]
-        assert entity.access is not None
-        assert len(entity.access.permissions) == 1
-
-    def test_mixed_or_in_permit_raises_error(self):
-        """role(x) or field = value in permit: is rejected because of the comparison."""
-        dsl = """\
-module test
-
-entity Thing "Thing":
-  id: uuid pk
-  realm: str(100) optional
-
-  permit:
-    list: role(teacher) or realm = current_user.realm
-"""
-        with pytest.raises(ParseError, match="Field condition in permit: block"):
-            _parse(dsl)
-
-    def test_forbid_with_field_condition_is_allowed(self):
-        """Field conditions in forbid: blocks are permitted (only permit: rejects them)."""
-        dsl = """\
+""",
+                1,
+                id="authenticated",
+            ),
+            # Only permit: rejects field conditions; forbid: keeps them (pra example).
+            # Count is permit read + forbid delete.
+            pytest.param(
+                """\
 module test
 
 entity Resource "Resource":
@@ -359,16 +355,12 @@ entity Resource "Resource":
 
   forbid:
     delete: classification = restricted
-"""
-        # This is from the existing pra example — must still work
-        fragment = _parse(dsl)
-        entity = fragment.entities[0]
-        assert entity.access is not None
-        assert len(entity.access.permissions) == 2  # permit read + forbid delete
-
-    def test_grant_check_in_permit_is_allowed(self):
-        """has_grant(...) in permit: is an authorization check — allowed."""
-        dsl = """\
+""",
+                2,
+                id="forbid-with-field-condition",
+            ),
+            pytest.param(
+                """\
 module test
 
 entity Record "Record":
@@ -377,11 +369,18 @@ entity Record "Record":
 
   permit:
     read: has_grant("observer", department)
-"""
-        fragment = _parse(dsl)
-        entity = fragment.entities[0]
+""",
+                1,
+                id="grant-check",
+            ),
+        ],
+    )
+    def test_authorization_checks_are_allowed(self, dsl: str, permission_count: int) -> None:
+        """Role, authenticated and grant checks in permit:, and field conditions in
+        forbid:, are not rejected."""
+        entity = _parse(dsl).entities[0]
         assert entity.access is not None
-        assert len(entity.access.permissions) == 1
+        assert len(entity.access.permissions) == permission_count
 
 
 # =============================================================================
@@ -411,53 +410,44 @@ class TestConvertScopeRule:
         assert result.condition.value == "current_user"
         assert result.personas == ["manager"]
 
-    def test_convert_scope_rule_condition_none(self):
-        """_convert_scope_rule with condition=None produces condition=None in spec."""
-        ir_rule = ScopeRule(
-            operation=PermissionKind.LIST,
-            condition=None,
-            personas=["admin"],
-        )
-
+    @pytest.mark.parametrize(
+        ("ir_rule", "operation", "personas"),
+        [
+            # condition=None produces condition=None in the spec.
+            pytest.param(
+                ScopeRule(operation=PermissionKind.LIST, condition=None, personas=["admin"]),
+                AccessOperationKind.LIST,
+                ["admin"],
+                id="condition-none",
+            ),
+            pytest.param(
+                ScopeRule(operation=PermissionKind.READ, personas=["*"]),
+                AccessOperationKind.READ,
+                ["*"],
+                id="wildcard-personas",
+            ),
+            # Every PermissionKind maps to its AccessOperationKind; empty personas kept.
+            *[
+                pytest.param(ScopeRule(operation=ir_kind), op, [], id=f"operation-{op.value}")
+                for ir_kind, op in (
+                    (PermissionKind.CREATE, AccessOperationKind.CREATE),
+                    (PermissionKind.READ, AccessOperationKind.READ),
+                    (PermissionKind.UPDATE, AccessOperationKind.UPDATE),
+                    (PermissionKind.DELETE, AccessOperationKind.DELETE),
+                    (PermissionKind.LIST, AccessOperationKind.LIST),
+                )
+            ],
+        ],
+    )
+    def test_convert_scope_rule_maps_operation_and_preserves_personas(
+        self, ir_rule: ScopeRule, operation: AccessOperationKind, personas: list[str]
+    ) -> None:
         result = _convert_scope_rule(ir_rule)
 
         assert isinstance(result, ScopeRuleSpec)
-        assert result.operation == AccessOperationKind.LIST
+        assert result.operation == operation
         assert result.condition is None
-        assert result.personas == ["admin"]
-
-    def test_convert_scope_rule_all_operations(self):
-        """_convert_scope_rule maps every PermissionKind to the correct AccessOperationKind."""
-        expected = {
-            PermissionKind.CREATE: AccessOperationKind.CREATE,
-            PermissionKind.READ: AccessOperationKind.READ,
-            PermissionKind.UPDATE: AccessOperationKind.UPDATE,
-            PermissionKind.DELETE: AccessOperationKind.DELETE,
-            PermissionKind.LIST: AccessOperationKind.LIST,
-        }
-        for ir_kind, expected_kind in expected.items():
-            result = _convert_scope_rule(ScopeRule(operation=ir_kind))
-            assert result.operation == expected_kind
-
-    def test_convert_scope_rule_wildcard_personas(self):
-        """_convert_scope_rule preserves ['*'] persona list."""
-        ir_rule = ScopeRule(
-            operation=PermissionKind.READ,
-            condition=_make_condition(),
-            personas=["*"],
-        )
-
-        result = _convert_scope_rule(ir_rule)
-
-        assert result.personas == ["*"]
-
-    def test_convert_scope_rule_empty_personas(self):
-        """_convert_scope_rule preserves empty personas list."""
-        ir_rule = ScopeRule(operation=PermissionKind.DELETE)
-
-        result = _convert_scope_rule(ir_rule)
-
-        assert result.personas == []
+        assert result.personas == personas
 
 
 # =============================================================================
@@ -929,74 +919,74 @@ class TestDualRoleScopeUnion:
     instead of stopping at the first.
     """
 
-    @staticmethod
-    def _frag(sql: str, *params: Any) -> dict[str, Any]:
-        return {"__scope_predicate": (sql, list(params))}
+    _OWNER = {"__scope_predicate": ('"owner_id" = %s', ["user-1"])}
+    _CLASS = {"__scope_predicate": ('"class_id" = %s', ["c-9"])}
 
-    def test_two_roles_union_their_predicates(self) -> None:
-        """The acceptance case: a student sees own rows, a teacher sees their
-        class's, and a user holding both sees the union."""
+    @pytest.mark.parametrize(
+        ("rules", "expected"),
+        [
+            # The acceptance case: a student sees own rows, a teacher sees their
+            # class's, and a user holding both sees the union. Each rule keeps its
+            # own parentheses so its ANDs cannot leak across; params follow the
+            # fragment order.
+            pytest.param(
+                [_OWNER, _CLASS],
+                {
+                    "__scope_predicate": (
+                        '("owner_id" = %s) OR ("class_id" = %s)',
+                        ["user-1", "c-9"],
+                    )
+                },
+                id="two-roles-union-1742",
+            ),
+            # Swapping the rules changes the order of the fragments, never the set
+            # of rows visible — which was the whole defect.
+            pytest.param(
+                [_CLASS, _OWNER],
+                {
+                    "__scope_predicate": (
+                        '("class_id" = %s) OR ("owner_id" = %s)',
+                        ["c-9", "user-1"],
+                    )
+                },
+                id="swapped-order-same-fragments-1742",
+            ),
+            pytest.param([_OWNER], _OWNER, id="single-rule-passes-through"),
+            # A role expressing no row restriction contributes none, which is
+            # unconditional access.
+            pytest.param(
+                [{"__scope_predicate": ('"x" = %s', [1])}, {"__scope_predicate": ("", [])}],
+                {},
+                id="unrestricted-role-makes-union-unconditional",
+            ),
+        ],
+    )
+    def test_union_of_rule_filters(
+        self, rules: list[dict[str, Any]], expected: dict[str, Any]
+    ) -> None:
         from dazzle.http.runtime.scope_filters import _union_rule_filters
 
-        rules = [
-            self._frag('"owner_id" = %s', "user-1"),
-            self._frag('"class_id" = %s', "c-9"),
-        ]
+        assert _union_rule_filters(rules, "Doc") == expected
 
-        result = _union_rule_filters(rules, "Doc")
-
-        sql, params = result["__scope_predicate"]
-        # Each rule keeps its own parentheses so its ANDs cannot leak across.
-        assert sql == '("owner_id" = %s) OR ("class_id" = %s)'
-        assert params == ["user-1", "c-9"], "params must follow the fragment order"
-
-    def test_union_does_not_depend_on_declaration_order(self) -> None:
-        """Swapping the rules changes the order of the fragments, never the set of
-        rows visible — which was the whole defect."""
+    @pytest.mark.parametrize(
+        "rules",
+        [
+            # The legacy condition path produces column filters, which have no SQL
+            # to OR-join. It keeps the pre-#1742 behaviour loudly rather than
+            # dropping a role's scope silently.
+            pytest.param(
+                [{"school": "school-42"}, {"district": "d-7"}], id="legacy-column-filters"
+            ),
+            pytest.param(
+                [{"__scope_predicate": ('"owner_id" = %s', ["u1"])}, {"district": "d-7"}],
+                id="mixed-shapes",
+            ),
+        ],
+    )
+    def test_unjoinable_filters_keep_first_declared_and_say_so(
+        self, rules: list[dict[str, Any]], caplog
+    ) -> None:
         from dazzle.http.runtime.scope_filters import _union_rule_filters
-
-        a = self._frag('"owner_id" = %s', "user-1")
-        b = self._frag('"class_id" = %s', "c-9")
-
-        first = _union_rule_filters([a, b], "Doc")["__scope_predicate"][0]
-        second = _union_rule_filters([b, a], "Doc")["__scope_predicate"][0]
-
-        assert {f.strip() for f in first.split(" OR ")} == {f.strip() for f in second.split(" OR ")}
-
-    def test_single_rule_passes_through_unchanged(self) -> None:
-        from dazzle.http.runtime.scope_filters import _union_rule_filters
-
-        rule = self._frag('"owner_id" = %s', "user-1")
-
-        assert _union_rule_filters([rule], "Doc") == rule
-
-    def test_a_role_with_no_row_restriction_makes_the_union_unconditional(self) -> None:
-        """Union means each role's scope applies — a role expressing no row
-        restriction contributes none, which is unconditional access."""
-        from dazzle.http.runtime.scope_filters import _union_rule_filters
-
-        result = _union_rule_filters([self._frag('"x" = %s', 1), self._frag("")], "Doc")
-
-        assert result == {}
-
-    def test_legacy_column_filters_keep_first_declared_and_say_so(self, caplog) -> None:
-        """The legacy condition path produces column filters, which have no SQL to
-        OR-join. It keeps the pre-#1742 behaviour loudly rather than dropping a
-        role's scope silently."""
-        from dazzle.http.runtime.scope_filters import _union_rule_filters
-
-        rules = [{"school": "school-42"}, {"district": "d-7"}]
-
-        with caplog.at_level("WARNING"):
-            result = _union_rule_filters(rules, "Doc")
-
-        assert result == {"school": "school-42"}
-        assert "first-declared rule" in caplog.text
-
-    def test_mixed_shapes_keep_first_declared_and_say_so(self, caplog) -> None:
-        from dazzle.http.runtime.scope_filters import _union_rule_filters
-
-        rules = [self._frag('"owner_id" = %s', "u1"), {"district": "d-7"}]
 
         with caplog.at_level("WARNING"):
             result = _union_rule_filters(rules, "Doc")

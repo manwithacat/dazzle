@@ -1,5 +1,7 @@
 """Tests for the FK graph used in scope path validation."""
 
+from collections.abc import Callable
+
 import pytest
 
 from dazzle.core import ir
@@ -31,109 +33,145 @@ def _pk() -> FieldSpec:
     )
 
 
+def _ref(name: str, target: str, kind: FieldTypeKind = FieldTypeKind.REF) -> FieldSpec:
+    return _field(name, kind, ref=target)
+
+
+def _chain_graph() -> FKGraph:
+    """4-entity chain: School → Department → Teacher → Manuscript."""
+    return FKGraph.from_entities(
+        [
+            _entity("School", [_pk(), _field("name")]),
+            _entity("Department", [_pk(), _ref("school_id", "School")]),
+            _entity("Teacher", [_pk(), _ref("department_id", "Department")]),
+            _entity("Manuscript", [_pk(), _ref("teacher_id", "Teacher")]),
+        ]
+    )
+
+
+def _order_item_graph() -> FKGraph:
+    """OrderItem.order_id is a belongs_to FK to Order."""
+    return FKGraph.from_entities(
+        [
+            _entity("Order", [_pk()]),
+            _entity("OrderItem", [_pk(), _ref("order_id", "Order", FieldTypeKind.BELONGS_TO)]),
+        ]
+    )
+
+
+def _invoice_graph() -> FKGraph:
+    """Invoice (root) ← Order(invoice) ← LineItem(order); plus an independent Tag."""
+    return FKGraph.from_entities(
+        [
+            _entity("Invoice", [_pk()]),
+            _entity("Order", [_pk(), _ref("invoice_id", "Invoice")]),
+            _entity("LineItem", [_pk(), _ref("order_id", "Order")]),
+            _entity("Tag", [_pk()]),
+        ]
+    )
+
+
 # ---------------------------------------------------------------------------
-# TestFKGraphConstruction
+# Construction
 # ---------------------------------------------------------------------------
 
 
-class TestFKGraphConstruction:
-    def test_build_from_entities_with_ref_fields_has_edge(self) -> None:
-        """Entities with ref fields produce edges in the graph."""
-        author = _entity("Author", [_pk(), _field("name")])
-        book = _entity(
-            "Book",
-            [_pk(), _field("author_id", FieldTypeKind.REF, ref="Author")],
-        )
-        graph = FKGraph.from_entities([author, book])
-
-        assert graph.has_edge("Book", "author_id") is True
-        assert graph.resolve_target("Book", "author_id") == "Author"
-
-    def test_no_edge_for_non_ref_field(self) -> None:
-        """Non-ref fields do not produce edges."""
-        entity = _entity("Task", [_pk(), _field("title")])
-        graph = FKGraph.from_entities([entity])
-
-        assert graph.has_edge("Task", "title") is False
-
-    def test_empty_entities_produces_empty_entity_names(self) -> None:
-        """Empty entity list results in empty entity_names set."""
-        graph = FKGraph.from_entities([])
-        assert graph.entity_names() == set()
-
-    def test_self_referential_fk(self) -> None:
-        """Self-referential FK (e.g. Employee.manager_id → Employee) is handled."""
-        employee = _entity(
-            "Employee",
+@pytest.mark.parametrize(
+    ("entities", "source", "field", "expected_target"),
+    [
+        pytest.param(
             [
-                _pk(),
-                _field("name"),
-                _field("manager_id", FieldTypeKind.REF, ref="Employee"),
+                _entity("Author", [_pk(), _field("name")]),
+                _entity("Book", [_pk(), _ref("author_id", "Author")]),
             ],
-        )
-        graph = FKGraph.from_entities([employee])
-
-        assert graph.has_edge("Employee", "manager_id") is True
-        assert graph.resolve_target("Employee", "manager_id") == "Employee"
-
-    def test_belongs_to_produces_edge(self) -> None:
-        """belongs_to relationship fields are treated as FK edges."""
-        order = _entity("Order", [_pk()])
-        item = _entity(
+            "Book",
+            "author_id",
+            "Author",
+            id="ref-field-has-edge",
+        ),
+        pytest.param(
+            [_entity("Employee", [_pk(), _field("name"), _ref("manager_id", "Employee")])],
+            "Employee",
+            "manager_id",
+            "Employee",
+            id="self-referential-fk",
+        ),
+        pytest.param(
+            [
+                _entity("Order", [_pk()]),
+                _entity("OrderItem", [_pk(), _ref("order_id", "Order", FieldTypeKind.BELONGS_TO)]),
+            ],
             "OrderItem",
-            [_pk(), _field("order_id", FieldTypeKind.BELONGS_TO, ref="Order")],
-        )
-        graph = FKGraph.from_entities([order, item])
+            "order_id",
+            "Order",
+            id="belongs-to-is-edge",
+        ),
+        pytest.param(
+            [_entity("Task", [_pk(), _field("title")])],
+            "Task",
+            "title",
+            None,
+            id="non-ref-field-no-edge",
+        ),
+    ],
+)
+def test_fk_edge(
+    entities: list[ir.EntitySpec], source: str, field: str, expected_target: str | None
+) -> None:
+    """Ref and belongs_to fields (incl. self-refs) become edges; other fields don't."""
+    graph = FKGraph.from_entities(entities)
+    assert graph.has_edge(source, field) is (expected_target is not None)
+    assert graph.resolve_target(source, field) == expected_target
 
-        assert graph.has_edge("OrderItem", "order_id") is True
-        assert graph.resolve_target("OrderItem", "order_id") == "Order"
 
-    def test_entity_names_includes_all_entities(self) -> None:
-        """entity_names returns all entity names, including those with no FKs."""
-        school = _entity("School", [_pk()])
-        dept = _entity(
-            "Department",
-            [_pk(), _field("school_id", FieldTypeKind.REF, ref="School")],
-        )
-        graph = FKGraph.from_entities([school, dept])
-        assert graph.entity_names() == {"School", "Department"}
+@pytest.mark.parametrize(
+    ("entities", "expected"),
+    [
+        pytest.param([], set(), id="empty"),
+        pytest.param(
+            [
+                _entity("School", [_pk()]),
+                _entity("Department", [_pk(), _ref("school_id", "School")]),
+            ],
+            {"School", "Department"},
+            id="includes-entities-without-fks",
+        ),
+    ],
+)
+def test_entity_names(entities: list[ir.EntitySpec], expected: set[str]) -> None:
+    assert FKGraph.from_entities(entities).entity_names() == expected
 
 
 # ---------------------------------------------------------------------------
-# TestPathResolution
+# Path resolution
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("graph_factory", "entity", "segment", "expected"),
+    [
+        pytest.param(
+            _chain_graph, "Manuscript", "teacher", ("teacher_id", "Teacher"), id="relation-name"
+        ),
+        pytest.param(
+            _chain_graph, "Manuscript", "teacher_id", ("teacher_id", "Teacher"), id="fk-field-name"
+        ),
+        pytest.param(
+            _order_item_graph, "OrderItem", "order", ("order_id", "Order"), id="belongs-to-as-ref"
+        ),
+    ],
+)
+def test_resolve_segment(
+    graph_factory: Callable[[], FKGraph], entity: str, segment: str, expected: tuple[str, str]
+) -> None:
+    """resolve_segment accepts the relation name or the FK field name -> (fk_field, target)."""
+    assert graph_factory().resolve_segment(entity, segment) == expected
 
 
 class TestPathResolution:
     @pytest.fixture()
     def chain_graph(self) -> FKGraph:
-        """4-entity chain: School → Department → Teacher → Manuscript."""
-        school = _entity("School", [_pk(), _field("name")])
-        department = _entity(
-            "Department",
-            [_pk(), _field("school_id", FieldTypeKind.REF, ref="School")],
-        )
-        teacher = _entity(
-            "Teacher",
-            [_pk(), _field("department_id", FieldTypeKind.REF, ref="Department")],
-        )
-        manuscript = _entity(
-            "Manuscript",
-            [_pk(), _field("teacher_id", FieldTypeKind.REF, ref="Teacher")],
-        )
-        return FKGraph.from_entities([school, department, teacher, manuscript])
-
-    def test_resolve_segment_by_relation_name(self, chain_graph: FKGraph) -> None:
-        """resolve_segment with relation name 'teacher' returns FK field + target."""
-        fk_field, target = chain_graph.resolve_segment("Manuscript", "teacher")
-        assert fk_field == "teacher_id"
-        assert target == "Teacher"
-
-    def test_resolve_segment_by_fk_field_name(self, chain_graph: FKGraph) -> None:
-        """resolve_segment with explicit FK field name returns same result."""
-        fk_field, target = chain_graph.resolve_segment("Manuscript", "teacher_id")
-        assert fk_field == "teacher_id"
-        assert target == "Teacher"
+        return _chain_graph()
 
     def test_resolve_path_three_deep(self, chain_graph: FKGraph) -> None:
         """resolve_path through 3 FK hops returns 3 PathSteps."""
@@ -178,18 +216,6 @@ class TestPathResolution:
         """field_exists returns False for unknown fields."""
         assert chain_graph.field_exists("Manuscript", "nonexistent") is False
 
-    def test_resolve_segment_belongs_to_same_as_ref(self) -> None:
-        """belongs_to FK resolved identically to ref FK."""
-        order = _entity("Order", [_pk()])
-        item = _entity(
-            "OrderItem",
-            [_pk(), _field("order_id", FieldTypeKind.BELONGS_TO, ref="Order")],
-        )
-        graph = FKGraph.from_entities([order, item])
-        fk_field, target = graph.resolve_segment("OrderItem", "order")
-        assert fk_field == "order_id"
-        assert target == "Order"
-
     def test_resolve_path_empty_raises(self, chain_graph: FKGraph) -> None:
         """resolve_path with empty list raises ValueError."""
         with pytest.raises(ValueError):
@@ -205,51 +231,47 @@ class TestPathResolution:
 # ---------------------------------------------------------------------------
 
 
-class TestCreationOrder:
-    def _graph(self) -> FKGraph:
-        # Invoice (root) ← Order(invoice) ← LineItem(order); plus an independent Tag.
-        invoice = _entity("Invoice", [_pk()])
-        order = _entity("Order", [_pk(), _field("invoice_id", FieldTypeKind.REF, ref="Invoice")])
-        line = _entity("LineItem", [_pk(), _field("order_id", FieldTypeKind.REF, ref="Order")])
-        tag = _entity("Tag", [_pk()])
-        return FKGraph.from_entities([invoice, order, line, tag])
+def _self_ref_graph() -> FKGraph:
+    return FKGraph.from_entities([_entity("Employee", [_pk(), _ref("manager_id", "Employee")])])
 
-    def test_orders_parents_before_children(self) -> None:
-        graph = self._graph()
-        # Declared child-first; expect parent-before-child.
-        order = graph.creation_order(["LineItem", "Order", "Invoice"])
-        assert order is not None
-        assert order.index("Invoice") < order.index("Order") < order.index("LineItem")
 
-    def test_already_ordered_is_stable(self) -> None:
-        graph = self._graph()
-        assert graph.creation_order(["Invoice", "Order", "LineItem"]) == [
-            "Invoice",
-            "Order",
-            "LineItem",
+def _cycle_graph() -> FKGraph:
+    return FKGraph.from_entities(
+        [
+            _entity("A", [_pk(), _ref("b_id", "B")]),
+            _entity("B", [_pk(), _ref("a_id", "A")]),
         ]
+    )
 
-    def test_independent_entities_keep_declared_order(self) -> None:
-        graph = self._graph()
-        # Invoice and Tag have no FK between them → declared order preserved.
-        assert graph.creation_order(["Tag", "Invoice"]) == ["Tag", "Invoice"]
 
-    def test_self_referential_fk_returns_none(self) -> None:
-        emp = _entity("Employee", [_pk(), _field("manager_id", FieldTypeKind.REF, ref="Employee")])
-        graph = FKGraph.from_entities([emp])
-        assert graph.creation_order(["Employee"]) is None
-
-    def test_cycle_returns_none(self) -> None:
-        a = _entity("A", [_pk(), _field("b_id", FieldTypeKind.REF, ref="B")])
-        b = _entity("B", [_pk(), _field("a_id", FieldTypeKind.REF, ref="A")])
-        graph = FKGraph.from_entities([a, b])
-        assert graph.creation_order(["A", "B"]) is None
-
-    def test_duplicate_entities_returns_none(self) -> None:
-        graph = self._graph()
-        assert graph.creation_order(["Invoice", "Invoice"]) is None
-
-    def test_fk_to_outside_set_does_not_constrain(self) -> None:
-        graph = self._graph()
-        # Only Order in the set; its FK target Invoice is outside → no constraint.
-        assert graph.creation_order(["Order"]) == ["Order"]
+@pytest.mark.parametrize(
+    ("graph_factory", "entities", "expected"),
+    [
+        # Declared child-first; parents are placed before children.
+        pytest.param(
+            _invoice_graph,
+            ["LineItem", "Order", "Invoice"],
+            ["Invoice", "Order", "LineItem"],
+            id="parents-before-children-1315",
+        ),
+        pytest.param(
+            _invoice_graph,
+            ["Invoice", "Order", "LineItem"],
+            ["Invoice", "Order", "LineItem"],
+            id="already-ordered-is-stable",
+        ),
+        # No FK between Invoice and Tag -> declared order preserved.
+        pytest.param(
+            _invoice_graph, ["Tag", "Invoice"], ["Tag", "Invoice"], id="independent-keep-order"
+        ),
+        # Order's FK target Invoice is outside the set -> no constraint.
+        pytest.param(_invoice_graph, ["Order"], ["Order"], id="fk-outside-set-unconstrained"),
+        pytest.param(_self_ref_graph, ["Employee"], None, id="self-referential-fk-none"),
+        pytest.param(_cycle_graph, ["A", "B"], None, id="cycle-none"),
+        pytest.param(_invoice_graph, ["Invoice", "Invoice"], None, id="duplicates-none"),
+    ],
+)
+def test_creation_order(
+    graph_factory: Callable[[], FKGraph], entities: list[str], expected: list[str] | None
+) -> None:
+    assert graph_factory().creation_order(entities) == expected

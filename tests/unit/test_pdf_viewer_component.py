@@ -148,50 +148,66 @@ class TestTemplateRendering:
 
 
 class TestJsController:
-    def _load(self) -> str:
-        return JS_PATH.read_text()
+    """Source-level pins on ``pdf-viewer.js``: each needle is one
+    behaviour the controller must keep wiring (#942 cycle 1b, #943
+    cycles 5a/5c)."""
 
-    def test_registers_with_bridge(self) -> None:
-        source = self._load()
-        assert 'bridge.registerWidget("pdf-viewer"' in source
+    @pytest.mark.parametrize(
+        "needles",
+        [
+            pytest.param(('bridge.registerWidget("pdf-viewer"',), id="registers-with-bridge"),
+            # getAttribute rather than dataset: hyphenated data-* names
+            # translate to camelCase via dataset; getAttribute keeps the
+            # name explicit and survives a rename to a non-data-* attribute.
+            pytest.param(
+                (
+                    'el.getAttribute("data-dz-back-url")',
+                    'el.getAttribute("data-dz-prev-url")',
+                    'el.getAttribute("data-dz-next-url")',
+                ),
+                id="module-scope-attribute-reads",
+            ),
+            pytest.param(("Escape", '"j"', '"k"', "ArrowLeft", "ArrowRight"), id="keys-handled"),
+            # Cmd-/Ctrl-/Alt-modified keystrokes must NOT navigate — they
+            # are reserved for browser shortcuts (Cmd+R, Ctrl+L).
+            pytest.param(("metaKey", "ctrlKey", "altKey"), id="meta-keys-pass-through"),
+            # Typing into a form field inside the viewer (e.g. an
+            # annotation overlay) must not trigger j/k sibling nav.
+            pytest.param(
+                ("isEditableTarget", "INPUT", "TEXTAREA", "isContentEditable"),
+                id="editable-target-suppression",
+            ),
+            pytest.param(("removeEventListener",), id="unmount-removes-listener"),
+            # #943 cycle 5a — multi-panel
+            pytest.param((".dz-pdf-viewer-panel-toggle",), id="queries-toggles-by-class-943"),
+            pytest.param(("data-dz-panel-key",), id="dispatches-keys-via-data-attr-943"),
+            pytest.param(("findOpenToggle",), id="finds-open-toggle-for-esc-943"),
+            pytest.param(("closeOtherPanels",), id="close-others-on-open-943"),
+            # #943 cycle 5c — help overlay: .showModal() so the browser
+            # provides backdrop + focus trap; j/k/p/... no-op while open.
+            pytest.param((".showModal()",), id="help-opened-via-show-modal-943"),
+            pytest.param((".close()",), id="help-closed-via-close-method-943"),
+            pytest.param(('e.key === "?"',), id="question-mark-opens-help-943"),
+            pytest.param(
+                ("if (helpIsOpen()) return",), id="other-keys-suppressed-while-help-open-943"
+            ),
+        ],
+    )
+    def test_source_wires(self, needles: tuple[str, ...]) -> None:
+        source = JS_PATH.read_text()
+        missing = [n for n in needles if n not in source]
+        assert missing == []
 
-    def test_uses_module_scope_attribute_reads(self) -> None:
-        """`getAttribute` rather than dataset because the data-* names
-        with hyphens (data-dz-back-url) translate to camelCase via
-        `dataset` — getAttribute keeps the name explicit and survives
-        any future rename to a non-data-* attribute."""
-        source = self._load()
-        assert 'el.getAttribute("data-dz-back-url")' in source
-        assert 'el.getAttribute("data-dz-prev-url")' in source
-        assert 'el.getAttribute("data-dz-next-url")' in source
-
-    def test_keys_handled(self) -> None:
-        source = self._load()
-        for key in ("Escape", '"j"', '"k"', "ArrowLeft", "ArrowRight"):
-            assert key in source, f"Missing key handling for {key}"
-
-    def test_meta_keys_pass_through(self) -> None:
-        """Cmd-/Ctrl-/Alt-modified keystrokes must NOT navigate —
-        they're typically reserved for browser shortcuts (Cmd+R,
-        Ctrl+L) and shouldn't be hijacked by the viewer."""
-        source = self._load()
-        assert "metaKey" in source
-        assert "ctrlKey" in source
-        assert "altKey" in source
-
-    def test_editable_target_suppression(self) -> None:
-        """When the user's typing into a form field that happens to
-        be inside the viewer (e.g. an annotation overlay), the j/k
-        shortcuts must not trigger sibling nav."""
-        source = self._load()
-        assert "isEditableTarget" in source
-        assert "INPUT" in source
-        assert "TEXTAREA" in source
-        assert "isContentEditable" in source
-
-    def test_unmount_removes_listener(self) -> None:
-        source = self._load()
-        assert "removeEventListener" in source
+    def test_esc_priority_help_then_panel_then_back(self) -> None:
+        """#943 cycle 5c: Esc closes layers in priority order:
+        cheat-sheet (if open) → panel (if any open) → back-nav."""
+        source = JS_PATH.read_text()
+        assert "helpIsOpen" in source
+        esc_idx = source.index('e.key === "Escape"')
+        block = source[esc_idx : esc_idx + 800]
+        help_idx = block.index("helpIsOpen()")
+        panel_idx = block.index("findOpenToggle()")
+        assert help_idx < panel_idx
 
 
 # ---------------------------------------------------------------------------
@@ -522,57 +538,32 @@ class TestMultiPanel:
 
 
 # ---------------------------------------------------------------------------
-# #943 cycle 5a — JS controller updates
-# ---------------------------------------------------------------------------
-
-
-class TestMultiPanelJsController:
-    def _load(self) -> str:
-        return JS_PATH.read_text()
-
-    def test_queries_toggles_by_class_not_id(self) -> None:
-        source = self._load()
-        assert ".dz-pdf-viewer-panel-toggle" in source
-
-    def test_dispatches_keys_via_data_attr(self) -> None:
-        source = self._load()
-        assert "data-dz-panel-key" in source
-
-    def test_finds_open_toggle_for_esc(self) -> None:
-        source = self._load()
-        assert "findOpenToggle" in source
-
-    def test_close_others_on_open(self) -> None:
-        source = self._load()
-        assert "closeOtherPanels" in source
-
-
-# ---------------------------------------------------------------------------
 # #943 cycle 5c — keyboard cheat-sheet overlay
 # ---------------------------------------------------------------------------
 
 
 class TestHelpOverlay:
-    def test_dialog_renders_with_help_overlay_attribute(self) -> None:
-        """The overlay is a `<dialog>` with `data-dz-help-overlay`
-        attribute the bridge JS uses to find it."""
+    @pytest.mark.parametrize(
+        "needles",
+        [
+            # The overlay is a <dialog> with the data-dz-help-overlay hook
+            # the bridge JS uses to find it.
+            pytest.param(
+                ("<dialog", "data-dz-help-overlay", 'class="dz-pdf-viewer-help"'),
+                id="dialog-with-overlay-attribute",
+            ),
+            # Close button found by hook, not the cosmetic class name.
+            pytest.param(("data-dz-help-close",), id="close-button-data-hook"),
+            # The cheat-sheet documents itself: `?` is a listed binding.
+            pytest.param(("<kbd>?</kbd>",), id="lists-question-mark-binding"),
+            # The footer legend advertises the cheat-sheet.
+            pytest.param((">Help<",), id="footer-help-chip"),
+        ],
+    )
+    def test_default_render_contains(self, needles: tuple[str, ...]) -> None:
         html = _render(src="/x", back_url="/back")
-        assert "<dialog" in html
-        assert "data-dz-help-overlay" in html
-        assert 'class="dz-pdf-viewer-help"' in html
-
-    def test_help_close_button_carries_data_hook(self) -> None:
-        """The close button carries `data-dz-help-close` so the
-        bridge can find it without coupling to the cosmetic class
-        name."""
-        html = _render(src="/x", back_url="/back")
-        assert "data-dz-help-close" in html
-
-    def test_help_lists_question_mark_binding(self) -> None:
-        """The cheat-sheet documents itself: `?` is one of the
-        bindings listed inside the dialog."""
-        html = _render(src="/x", back_url="/back")
-        assert "<kbd>?</kbd>" in html
+        missing = [n for n in needles if n not in html]
+        assert missing == []
 
     def test_help_lists_panel_keys_when_panels_set(self) -> None:
         html = _render(
@@ -606,48 +597,6 @@ class TestHelpOverlay:
         dialog_block = html[dialog_start:dialog_end]
         assert "<kbd>j</kbd>" in dialog_block
         assert "<kbd>k</kbd>" in dialog_block
-
-    def test_footer_advertises_help_chip(self) -> None:
-        """The footer keyboard legend includes a `?` chip so users
-        know the cheat-sheet exists."""
-        html = _render(src="/x", back_url="/back")
-        assert ">Help<" in html
-
-
-class TestHelpOverlayJsController:
-    def _load(self) -> str:
-        return JS_PATH.read_text()
-
-    def test_dialog_opened_via_show_modal(self) -> None:
-        """The bridge calls .showModal() so the browser provides
-        backdrop + focus trap rather than us hand-rolling them."""
-        source = self._load()
-        assert ".showModal()" in source
-
-    def test_dialog_closed_via_close_method(self) -> None:
-        source = self._load()
-        assert ".close()" in source
-
-    def test_question_mark_key_opens_help(self) -> None:
-        source = self._load()
-        # Handler must reference the literal `?` key
-        assert 'e.key === "?"' in source
-
-    def test_esc_priority_help_then_panel_then_back(self) -> None:
-        """Esc closes layers in priority order: cheat-sheet (if
-        open) → panel (if any open) → back-nav."""
-        source = self._load()
-        assert "helpIsOpen" in source
-        esc_idx = source.index('e.key === "Escape"')
-        block = source[esc_idx : esc_idx + 800]
-        help_idx = block.index("helpIsOpen()")
-        panel_idx = block.index("findOpenToggle()")
-        assert help_idx < panel_idx
-
-    def test_other_keys_suppressed_while_help_open(self) -> None:
-        """j/k/p/m/f/etc are no-ops while the cheat-sheet is open."""
-        source = self._load()
-        assert "if (helpIsOpen()) return" in source
 
 
 class TestPageKeyAffordances1552:

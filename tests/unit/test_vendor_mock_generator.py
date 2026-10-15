@@ -1,5 +1,6 @@
 """Tests for vendor mock server generator."""
 
+from collections.abc import Callable
 from unittest.mock import MagicMock
 
 import pytest
@@ -201,13 +202,6 @@ class TestNoAuthMockServer:
         app = _build_app(pack, seed=42)
         return TestClient(app)
 
-    def test_health_check(self, client: TestClient) -> None:
-        resp = client.get("/health")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["status"] == "ok"
-        assert data["provider"] == "Simple"
-
     def test_create_item(self, client: TestClient) -> None:
         resp = client.post("/items", json={"name": "Widget"})
         assert resp.status_code == 201
@@ -215,16 +209,33 @@ class TestNoAuthMockServer:
         assert data["id"] == 1
         assert data["name"] == "Widget"
 
-    def test_get_item(self, client: TestClient) -> None:
-        create_resp = client.post("/items", json={"name": "Gadget"})
-        item_id = create_resp.json()["id"]
-        resp = client.get(f"/items/{item_id}")
+    @pytest.mark.parametrize(
+        ("method", "body", "expected_name"),
+        [
+            pytest.param("GET", None, "Gadget", id="get"),
+            pytest.param("PUT", {"name": "New"}, "New", id="update"),
+        ],
+    )
+    def test_existing_item_round_trips(
+        self, client: TestClient, method: str, body: dict | None, expected_name: str
+    ) -> None:
+        item_id = client.post("/items", json={"name": "Gadget"}).json()["id"]
+        resp = client.request(method, f"/items/{item_id}", json=body)
         assert resp.status_code == 200
-        assert resp.json()["name"] == "Gadget"
+        assert resp.json()["name"] == expected_name
 
-    def test_get_missing_item(self, client: TestClient) -> None:
-        resp = client.get("/items/999")
-        assert resp.status_code == 404
+    @pytest.mark.parametrize(
+        ("method", "body"),
+        [
+            pytest.param("GET", None, id="get"),
+            pytest.param("PUT", {"name": "X"}, id="update"),
+            pytest.param("DELETE", None, id="delete"),
+        ],
+    )
+    def test_missing_item_returns_404(
+        self, client: TestClient, method: str, body: dict | None
+    ) -> None:
+        assert client.request(method, "/items/999", json=body).status_code == 404
 
     def test_list_items(self, client: TestClient) -> None:
         client.post("/items", json={"name": "A"})
@@ -235,17 +246,6 @@ class TestNoAuthMockServer:
         assert isinstance(data, list)
         assert len(data) == 2
 
-    def test_update_item(self, client: TestClient) -> None:
-        create_resp = client.post("/items", json={"name": "Old"})
-        item_id = create_resp.json()["id"]
-        resp = client.put(f"/items/{item_id}", json={"name": "New"})
-        assert resp.status_code == 200
-        assert resp.json()["name"] == "New"
-
-    def test_update_missing_item(self, client: TestClient) -> None:
-        resp = client.put("/items/999", json={"name": "X"})
-        assert resp.status_code == 404
-
     def test_delete_item(self, client: TestClient) -> None:
         create_resp = client.post("/items", json={"name": "Doomed"})
         item_id = create_resp.json()["id"]
@@ -254,10 +254,6 @@ class TestNoAuthMockServer:
         # Verify deletion
         get_resp = client.get(f"/items/{item_id}")
         assert get_resp.status_code == 404
-
-    def test_delete_missing_item(self, client: TestClient) -> None:
-        resp = client.delete("/items/999")
-        assert resp.status_code == 404
 
     def test_request_log(self, client: TestClient) -> None:
         client.post("/items", json={"name": "Logged"})
@@ -283,27 +279,6 @@ class TestHmacAuthMockServer:
         pack = _hmac_pack()
         app = _build_app(pack, seed=42)
         return TestClient(app, raise_server_exceptions=False)
-
-    def test_health_bypasses_auth(self, client: TestClient) -> None:
-        resp = client.get("/health")
-        assert resp.status_code == 200
-
-    def test_missing_auth_returns_401(self, client: TestClient) -> None:
-        resp = client.post("/resources/applicants", json={"type": "individual"})
-        assert resp.status_code == 401
-
-    def test_valid_hmac_headers_accepted(self, client: TestClient) -> None:
-        resp = client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
-            headers={
-                "X-App-Token": "test-token",
-                "X-App-Access-Ts": "1700000000",
-                "X-App-Access-Sig": "dummy-sig",
-            },
-        )
-        # Without auth_tokens configured, any correctly-formatted auth is accepted
-        assert resp.status_code == 201
 
     def test_create_and_get_applicant(self, client: TestClient) -> None:
         headers = {
@@ -344,84 +319,140 @@ class TestHmacAuthMockServer:
 
 
 # ---------------------------------------------------------------------------
-# Integration tests: bearer/api_key auth
+# Integration tests: health and the auth gate across auth schemes
 # ---------------------------------------------------------------------------
 
 
-class TestBearerAuthMockServer:
-    """Test mock server with bearer token auth."""
-
-    @pytest.fixture()
-    def client(self) -> TestClient:
-        from dazzle.testing.vendor_mock.generator import _build_app
-
-        item_fm = _make_foreign_model(
-            "Record",
-            "id",
-            {
-                "id": _make_field("uuid", required=True, pk=True),
-                "title": _make_field("str(200)", required=True),
-            },
-        )
-        pack = _make_pack(
-            name="bearer_test",
-            provider="BearerVendor",
-            foreign_models=[item_fm],
-            operations=[_make_operation("list_records", "GET", "/records")],
-            auth=_make_auth("bearer"),
-        )
-        app = _build_app(pack, seed=1)
-        return TestClient(app, raise_server_exceptions=False)
-
-    def test_missing_bearer_returns_401(self, client: TestClient) -> None:
-        resp = client.get("/records")
-        assert resp.status_code == 401
-
-    def test_valid_bearer_accepted(self, client: TestClient) -> None:
-        resp = client.get("/records", headers={"Authorization": "Bearer test-token"})
-        assert resp.status_code == 200
-
-    def test_wrong_format_returns_401(self, client: TestClient) -> None:
-        resp = client.get("/records", headers={"Authorization": "Basic dGVzdDp0ZXN0"})
-        assert resp.status_code == 401
+def _bearer_pack() -> MagicMock:
+    record_fm = _make_foreign_model(
+        "Record",
+        "id",
+        {
+            "id": _make_field("uuid", required=True, pk=True),
+            "title": _make_field("str(200)", required=True),
+        },
+    )
+    return _make_pack(
+        name="bearer_test",
+        provider="BearerVendor",
+        foreign_models=[record_fm],
+        operations=[_make_operation("list_records", "GET", "/records")],
+        auth=_make_auth("bearer"),
+    )
 
 
-class TestApiKeyAuthWithTokenValidation:
-    """Test mock server with API key auth and specific token validation."""
+def _api_key_pack() -> MagicMock:
+    entry_fm = _make_foreign_model(
+        "Entry",
+        "id",
+        {
+            "id": _make_field("int", required=True, pk=True),
+            "value": _make_field("str(50)", required=True),
+        },
+    )
+    return _make_pack(
+        name="apikey_test",
+        provider="ApiKeyVendor",
+        foreign_models=[entry_fm],
+        operations=[_make_operation("list_entries", "GET", "/entries")],
+        auth=_make_auth("api_key", header="X-API-Key"),
+    )
 
-    @pytest.fixture()
-    def client(self) -> TestClient:
-        from dazzle.testing.vendor_mock.generator import _build_app
 
-        item_fm = _make_foreign_model(
-            "Entry",
-            "id",
-            {
-                "id": _make_field("int", required=True, pk=True),
-                "value": _make_field("str(50)", required=True),
-            },
-        )
-        pack = _make_pack(
-            name="apikey_test",
-            provider="ApiKeyVendor",
-            foreign_models=[item_fm],
-            operations=[_make_operation("list_entries", "GET", "/entries")],
-            auth=_make_auth("api_key", header="X-API-Key"),
-        )
-        app = _build_app(pack, seed=1, auth_tokens={"api_key": "secret-key-123"})
-        return TestClient(app, raise_server_exceptions=False)
+# The API-key pack runs with specific token validation configured.
+_API_KEY_TOKENS = {"api_key": "secret-key-123"}
+_HMAC_HEADERS = {
+    "X-App-Token": "test-token",
+    "X-App-Access-Ts": "1700000000",
+    "X-App-Access-Sig": "dummy-sig",
+}
 
-    def test_correct_api_key_accepted(self, client: TestClient) -> None:
-        resp = client.get("/entries", headers={"X-API-Key": "secret-key-123"})
-        assert resp.status_code == 200
 
-    def test_missing_api_key_returns_401(self, client: TestClient) -> None:
-        resp = client.get("/entries")
-        assert resp.status_code == 401
+def _client(pack: MagicMock, auth_tokens: dict[str, str] | None = None) -> TestClient:
+    from dazzle.testing.vendor_mock.generator import _build_app
 
-    def test_wrong_api_key_returns_401(self, client: TestClient) -> None:
-        resp = client.get("/entries", headers={"X-API-Key": "wrong-key"})
-        assert resp.status_code == 401
+    app = _build_app(pack, seed=1, auth_tokens=auth_tokens)
+    return TestClient(app, raise_server_exceptions=False)
+
+
+@pytest.mark.parametrize(
+    ("pack", "auth_tokens", "provider"),
+    [
+        pytest.param(_noauth_pack, None, "Simple", id="no-auth"),
+        pytest.param(_hmac_pack, None, "HmacVendor", id="hmac-bypasses-auth"),
+        pytest.param(_bearer_pack, None, "BearerVendor", id="bearer-bypasses-auth"),
+        pytest.param(_api_key_pack, _API_KEY_TOKENS, "ApiKeyVendor", id="api-key-bypasses-auth"),
+    ],
+)
+def test_health_check_reports_provider_without_auth(
+    pack: Callable[[], MagicMock], auth_tokens: dict[str, str] | None, provider: str
+) -> None:
+    resp = _client(pack(), auth_tokens).get("/health")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok", "provider": provider}
+
+
+@pytest.mark.parametrize(
+    ("pack", "auth_tokens", "method", "path", "headers", "expected_status"),
+    [
+        pytest.param(_hmac_pack, None, "POST", "/resources/applicants", {}, 401, id="hmac-missing"),
+        # Without auth_tokens configured, any correctly-formatted auth is accepted.
+        pytest.param(
+            _hmac_pack, None, "POST", "/resources/applicants", _HMAC_HEADERS, 201, id="hmac-valid"
+        ),
+        pytest.param(_bearer_pack, None, "GET", "/records", {}, 401, id="bearer-missing"),
+        pytest.param(
+            _bearer_pack,
+            None,
+            "GET",
+            "/records",
+            {"Authorization": "Bearer test-token"},
+            200,
+            id="bearer-valid",
+        ),
+        pytest.param(
+            _bearer_pack,
+            None,
+            "GET",
+            "/records",
+            {"Authorization": "Basic dGVzdDp0ZXN0"},
+            401,
+            id="bearer-wrong-format",
+        ),
+        pytest.param(
+            _api_key_pack,
+            _API_KEY_TOKENS,
+            "GET",
+            "/entries",
+            {"X-API-Key": "secret-key-123"},
+            200,
+            id="api-key-correct",
+        ),
+        pytest.param(
+            _api_key_pack, _API_KEY_TOKENS, "GET", "/entries", {}, 401, id="api-key-missing"
+        ),
+        pytest.param(
+            _api_key_pack,
+            _API_KEY_TOKENS,
+            "GET",
+            "/entries",
+            {"X-API-Key": "wrong-key"},
+            401,
+            id="api-key-wrong",
+        ),
+    ],
+)
+def test_auth_gate_status(
+    pack: Callable[[], MagicMock],
+    auth_tokens: dict[str, str] | None,
+    method: str,
+    path: str,
+    headers: dict[str, str],
+    expected_status: int,
+) -> None:
+    body = {"type": "individual"} if method == "POST" else None
+    resp = _client(pack(), auth_tokens).request(method, path, headers=headers, json=body)
+    assert resp.status_code == expected_status
 
 
 # ---------------------------------------------------------------------------

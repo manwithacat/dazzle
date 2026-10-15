@@ -8,6 +8,7 @@ from dazzle.http.runtime.auth.models import MembershipRecord
 from dazzle.http.runtime.auth.org_activation import (
     FORBIDDEN_SENTINEL,
     Activated,
+    ActivationOutcome,
     HostForbidden,
     NeedsPicker,
     NoOrgs,
@@ -25,90 +26,154 @@ def _appspec(*tenant_host_flags: object) -> SimpleNamespace:
     return SimpleNamespace(domain=SimpleNamespace(entities=entities))
 
 
-class TestDeriveMembershipsRequired:
+def _host(domain: str, **kw: object) -> SimpleNamespace:
+    return SimpleNamespace(domain=domain, **kw)
+
+
+@pytest.mark.parametrize(
+    ("spec", "auto_provision", "expected"),
+    [
+        pytest.param(
+            _appspec(None, _host("acme.example")),
+            False,
+            True,
+            id="tenant-host-implies-required-1393",
+        ),
+        pytest.param(_appspec(None, None), True, True, id="auto-provision-implies-required"),
+        pytest.param(_appspec(None, None), False, False, id="neither-not-required"),
+        pytest.param(_appspec(), False, False, id="no-entities-not-required"),
+        pytest.param(SimpleNamespace(), False, False, id="missing-domain-is-safe"),
+        # #1418: a tenant_host that opts out doesn't imply membership gating ...
+        pytest.param(
+            _appspec(_host("acme.example", membership_gated=False)),
+            False,
+            False,
+            id="membership-gated-false-does-not-gate-1418",
+        ),
+        # ... but any gated tenant_host (default True) keeps the gate on ...
+        pytest.param(
+            _appspec(
+                _host("a.example", membership_gated=False),
+                _host("b.example", membership_gated=True),
+            ),
+            False,
+            True,
+            id="mixed-gated-and-ungated-gates-1418",
+        ),
+        # ... and auto_provision overrides — membership model is on regardless.
+        pytest.param(
+            _appspec(_host("a.example", membership_gated=False)),
+            True,
+            True,
+            id="ungated-host-gated-by-auto-provision-1418",
+        ),
+    ],
+)
+def test_derive_memberships_required(
+    spec: SimpleNamespace, auto_provision: bool, expected: bool
+) -> None:
     """#1393 Phase A: declaring `tenant_host:` implies membership-gated login."""
-
-    def test_tenant_host_implies_required_without_auto_provision(self) -> None:
-        spec = _appspec(None, SimpleNamespace(domain="acme.example"))  # one entity has tenant_host
-        assert derive_memberships_required(spec, auto_provision=False) is True
-
-    def test_auto_provision_still_implies_required(self) -> None:
-        spec = _appspec(None, None)  # no tenant_host
-        assert derive_memberships_required(spec, auto_provision=True) is True
-
-    def test_neither_is_not_required(self) -> None:
-        spec = _appspec(None, None)
-        assert derive_memberships_required(spec, auto_provision=False) is False
-
-    def test_no_entities_is_not_required(self) -> None:
-        assert derive_memberships_required(_appspec(), auto_provision=False) is False
-
-    def test_missing_domain_is_safe(self) -> None:
-        assert derive_memberships_required(SimpleNamespace(), auto_provision=False) is False
-
-    def test_membership_gated_false_does_not_gate(self) -> None:
-        # #1418: a tenant_host that opts out doesn't imply membership gating.
-        spec = _appspec(SimpleNamespace(domain="acme.example", membership_gated=False))
-        assert derive_memberships_required(spec, auto_provision=False) is False
-
-    def test_mixed_gated_and_ungated_still_gates(self) -> None:
-        # #1418: any gated tenant_host (default True) keeps the gate on.
-        spec = _appspec(
-            SimpleNamespace(domain="a.example", membership_gated=False),
-            SimpleNamespace(domain="b.example", membership_gated=True),
-        )
-        assert derive_memberships_required(spec, auto_provision=False) is True
-
-    def test_ungated_host_still_gated_by_auto_provision(self) -> None:
-        # #1418: auto_provision overrides — membership model is on regardless.
-        spec = _appspec(SimpleNamespace(domain="a.example", membership_gated=False))
-        assert derive_memberships_required(spec, auto_provision=True) is True
+    assert derive_memberships_required(spec, auto_provision=auto_provision) is expected
 
 
 def _m(mid: str, tid: str, status: str = "active") -> MembershipRecord:
     return MembershipRecord(id=mid, tenant_id=tid, identity_id="u-1", status=status)
 
 
-class TestResolveActivation:
-    def test_zero_memberships_is_no_orgs(self) -> None:
-        assert isinstance(resolve_activation(memberships=[], host_tenant_id=None), NoOrgs)
+# Shared instances: MembershipRecord equality includes its timestamps.
+_TWO_ACTIVE = (_m("m-1", "t-1"), _m("m-2", "t-2"))
 
-    def test_single_active_membership_auto_activates(self) -> None:
-        out = resolve_activation(memberships=[_m("m-1", "t-1")], host_tenant_id=None)
-        assert isinstance(out, Activated)
-        assert out.membership_id == "m-1"
 
-    def test_multiple_active_memberships_need_picker(self) -> None:
-        out = resolve_activation(
-            memberships=[_m("m-1", "t-1"), _m("m-2", "t-2")], host_tenant_id=None
-        )
-        assert isinstance(out, NeedsPicker)
-        assert {m.id for m in out.memberships} == {"m-1", "m-2"}
-
-    def test_non_active_memberships_are_ignored(self) -> None:
-        out = resolve_activation(
-            memberships=[_m("m-1", "t-1", status="suspended"), _m("m-2", "t-2")],
-            host_tenant_id=None,
-        )
-        assert isinstance(out, Activated)
-        assert out.membership_id == "m-2"
-
-    def test_host_pin_matches_membership(self) -> None:
-        out = resolve_activation(
-            memberships=[_m("m-1", "t-1"), _m("m-2", "t-2")], host_tenant_id="t-2"
-        )
-        assert isinstance(out, Activated)
-        assert out.membership_id == "m-2"
-
-    def test_host_pin_no_matching_membership_is_forbidden(self) -> None:
-        out = resolve_activation(memberships=[_m("m-1", "t-1")], host_tenant_id="t-OTHER")
-        assert isinstance(out, HostForbidden)
-
-    def test_host_pin_matches_only_active_membership(self) -> None:
-        out = resolve_activation(
-            memberships=[_m("m-1", "t-1", status="suspended")], host_tenant_id="t-1"
-        )
-        assert isinstance(out, HostForbidden)
+@pytest.mark.parametrize(
+    ("memberships", "host_tenant_id", "host_ancestor_ids", "expected"),
+    [
+        pytest.param([], None, (), NoOrgs(), id="zero-memberships-no-orgs"),
+        pytest.param([_m("m-1", "t-1")], None, (), Activated("m-1"), id="single-active-activates"),
+        pytest.param(
+            list(_TWO_ACTIVE),
+            None,
+            (),
+            NeedsPicker(_TWO_ACTIVE),
+            id="multiple-active-need-picker",
+        ),
+        pytest.param(
+            [_m("m-1", "t-1", status="suspended"), _m("m-2", "t-2")],
+            None,
+            (),
+            Activated("m-2"),
+            id="non-active-ignored",
+        ),
+        pytest.param(
+            [_m("m-1", "t-1"), _m("m-2", "t-2")],
+            "t-2",
+            (),
+            Activated("m-2"),
+            id="host-pin-matches-membership",
+        ),
+        pytest.param(
+            [_m("m-1", "t-1")], "t-OTHER", (), HostForbidden(), id="host-pin-no-match-forbidden"
+        ),
+        pytest.param(
+            [_m("m-1", "t-1", status="suspended")],
+            "t-1",
+            (),
+            HostForbidden(),
+            id="host-pin-matches-only-active",
+        ),
+        # ADR-0037 Phase 5 — a root membership reaches descendant hosts via the
+        # resolved host's ancestor chain (ResolvedTenant.ancestor_ids). The ROOT
+        # membership binds (-> RLS fence = trust).
+        pytest.param(
+            [_m("m-root", "trust")],
+            "school",
+            ("trust",),
+            Activated("m-root"),
+            id="root-member-reaches-descendant-host",
+        ),
+        pytest.param(
+            [_m("m-leaf", "school")],
+            "school",
+            ("trust",),
+            Activated("m-leaf"),
+            id="leaf-member-matches-host-directly",
+        ),
+        # Member of an UNRELATED trust -> not host, not any ancestor -> 403.
+        pytest.param(
+            [_m("m-other", "trust-B")],
+            "school-A",
+            ("trust-A",),
+            HostForbidden(),
+            id="non-member-of-chain-forbidden",
+        ),
+        # Empty ancestor chain keeps Layer-1 exact match: no widening.
+        pytest.param(
+            [_m("m-root", "trust")],
+            "school",
+            (),
+            HostForbidden(),
+            id="no-ancestors-exact-match-only",
+        ),
+        pytest.param(
+            [_m("m-region", "region")],
+            "school",
+            ("trust", "region"),
+            Activated("m-region"),
+            id="three-level-root-reaches-deepest-host",
+        ),
+    ],
+)
+def test_resolve_activation(
+    memberships: list[MembershipRecord],
+    host_tenant_id: str | None,
+    host_ancestor_ids: tuple[str, ...],
+    expected: ActivationOutcome,
+) -> None:
+    out = resolve_activation(
+        memberships=memberships,
+        host_tenant_id=host_tenant_id,
+        host_ancestor_ids=host_ancestor_ids,
+    )
+    assert out == expected
 
 
 class _FakeStore:
@@ -144,45 +209,40 @@ class TestRequestGlue:
         assert isinstance(out2, NeedsPicker)
 
 
-class TestLoginRedirectMapper:
-    def test_activated_keeps_next_target(self) -> None:
-        mid, target = _login_redirect_for_outcome(Activated("m-9"), "/app")
-        assert mid == "m-9"
-        assert target == "/app"
-
-    def test_needs_picker_redirects_to_select_org(self) -> None:
-        mid, target = _login_redirect_for_outcome(NeedsPicker(()), "/app")
-        assert mid is None
-        assert target == "/auth/select-org"
-
-    def test_no_orgs_proceeds_by_default_legacy_transition(self) -> None:
-        # Pre-1c: no app has memberships, so zero-membership login proceeds.
-        mid, target = _login_redirect_for_outcome(NoOrgs(), "/app")
-        assert mid is None
-        assert target == "/app"
-
-    def test_no_orgs_redirects_when_memberships_required(self) -> None:
-        mid, target = _login_redirect_for_outcome(NoOrgs(), "/app", memberships_required=True)
-        assert mid is None
-        assert target == "/auth/no-orgs"
-
-    def test_host_forbidden_sentinel_when_membership_gated(self) -> None:
-        # #1418: HostForbidden → 403 only when the app gates login on membership.
-        mid, target = _login_redirect_for_outcome(
-            HostForbidden(), "/app", memberships_required=True
-        )
-        assert mid is None
-        assert target == FORBIDDEN_SENTINEL
-
-    def test_host_forbidden_proceeds_when_ungated(self) -> None:
-        # #1418: a `tenant_host: membership_gated: false` app (memberships_required off)
-        # uses the host purely for resolution + the current_tenant lens — a host-pin with
-        # no membership proceeds (self-authorizes) instead of 403.
-        mid, target = _login_redirect_for_outcome(
-            HostForbidden(), "/app", memberships_required=False
-        )
-        assert mid is None
-        assert target == "/app"
+@pytest.mark.parametrize(
+    ("outcome", "kwargs", "expected"),
+    [
+        pytest.param(Activated("m-9"), {}, ("m-9", "/app"), id="activated-keeps-next"),
+        pytest.param(NeedsPicker(()), {}, (None, "/auth/select-org"), id="needs-picker-select-org"),
+        # Pre-1c legacy transition: zero-membership login proceeds by default.
+        pytest.param(NoOrgs(), {}, (None, "/app"), id="no-orgs-proceeds-by-default"),
+        pytest.param(
+            NoOrgs(),
+            {"memberships_required": True},
+            (None, "/auth/no-orgs"),
+            id="no-orgs-redirects-when-required",
+        ),
+        # #1418: HostForbidden -> 403 sentinel only when login is membership-gated;
+        # a `membership_gated: false` app uses the host purely for resolution +
+        # the current_tenant lens, so a host-pin with no membership proceeds.
+        pytest.param(
+            HostForbidden(),
+            {"memberships_required": True},
+            (None, FORBIDDEN_SENTINEL),
+            id="host-forbidden-sentinel-when-gated-1418",
+        ),
+        pytest.param(
+            HostForbidden(),
+            {"memberships_required": False},
+            (None, "/app"),
+            id="host-forbidden-proceeds-when-ungated-1418",
+        ),
+    ],
+)
+def test_login_redirect_for_outcome(
+    outcome: ActivationOutcome, kwargs: dict, expected: tuple[str | None, str]
+) -> None:
+    assert _login_redirect_for_outcome(outcome, "/app", **kwargs) == expected
 
 
 class _ProvisioningStore:
@@ -240,59 +300,6 @@ class TestLazyProvisioning:
         )
         assert store.provisioned == []  # host-pin guard: no provision
         assert isinstance(out, HostForbidden)
-
-
-class TestHostPinAncestorReachability:
-    """ADR-0037 Phase 5 — a membership at the root reaches descendant hosts via
-    the resolved host's ancestor chain (ResolvedTenant.ancestor_ids)."""
-
-    def test_root_member_reaches_descendant_host(self) -> None:
-        # Member of root "trust" (m-root); host resolves to descendant "school"
-        # whose ancestor chain is ("trust",). The ROOT membership activates.
-        out = resolve_activation(
-            memberships=[_m("m-root", "trust")],
-            host_tenant_id="school",
-            host_ancestor_ids=("trust",),
-        )
-        assert isinstance(out, Activated)
-        assert out.membership_id == "m-root"  # binds the root (→ RLS fence = trust)
-
-    def test_leaf_member_still_matches_host_directly(self) -> None:
-        out = resolve_activation(
-            memberships=[_m("m-leaf", "school")],
-            host_tenant_id="school",
-            host_ancestor_ids=("trust",),
-        )
-        assert isinstance(out, Activated)
-        assert out.membership_id == "m-leaf"
-
-    def test_non_member_of_whole_chain_is_forbidden(self) -> None:
-        # Member of an UNRELATED trust → not host, not any ancestor → 403.
-        out = resolve_activation(
-            memberships=[_m("m-other", "trust-B")],
-            host_tenant_id="school-A",
-            host_ancestor_ids=("trust-A",),
-        )
-        assert isinstance(out, HostForbidden)
-
-    def test_no_ancestors_is_exact_match_only(self) -> None:
-        # Empty ancestor chain preserves Layer-1 exact-match: root member on a
-        # leaf host with no chain is forbidden (no widening).
-        out = resolve_activation(
-            memberships=[_m("m-root", "trust")],
-            host_tenant_id="school",
-            host_ancestor_ids=(),
-        )
-        assert isinstance(out, HostForbidden)
-
-    def test_three_level_root_member_reaches_deepest_host(self) -> None:
-        out = resolve_activation(
-            memberships=[_m("m-region", "region")],
-            host_tenant_id="school",
-            host_ancestor_ids=("trust", "region"),
-        )
-        assert isinstance(out, Activated)
-        assert out.membership_id == "m-region"
 
 
 class TestJsonApiHostForbiddenGate:

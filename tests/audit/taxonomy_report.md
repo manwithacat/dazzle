@@ -1,4 +1,4 @@
-# Test Suite Taxonomy — Pass 1 (14,269 test functions)
+# Test Suite Taxonomy — Pass 1 (13,935 test functions)
 
 Static classification per `docs/proposals/Suite Distillation Strategy.md`. No execution; AST + import-shape heuristics only. Confidence < 0.8 means the classifier could be wrong; see rationale field.
 
@@ -6,10 +6,10 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 
 | Archetype | Count | % | High-confidence count |
 |---|---:|---:|---:|
-| contract | 11,547 | 80.9% | 0 |
-| smoke | 1,604 | 11.2% | 716 |
-| parametric_cluster | 643 | 4.5% | 643 |
-| regression_pin | 409 | 2.9% | 409 |
+| contract | 11,214 | 80.5% | 0 |
+| smoke | 1,545 | 11.1% | 714 |
+| parametric_cluster | 713 | 5.1% | 713 |
+| regression_pin | 397 | 2.8% | 397 |
 | property_based | 44 | 0.3% | 44 |
 | implementation_mirror | 11 | 0.1% | 0 |
 | snapshot | 9 | 0.1% | 9 |
@@ -17,10 +17,10 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 
 ## Action thresholds
 
-- **Definitely keep**: 12,652 (contract + regression_pin + parametric + snapshot + property_based)
+- **Definitely keep**: 12,377 (contract + regression_pin + parametric + snapshot + property_based)
 - **Property-based (fuzzable; the target archetype)**: 44
 - **Review for collapse/rewrite**: 13 (implementation_mirror + belt_and_braces)
-- **Smoke tests** (canary; keep but never as sole coverage): 1,604
+- **Smoke tests** (canary; keep but never as sole coverage): 1,545
 
 ## Top 10 implementation-mirror files
 
@@ -36,15 +36,15 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 ## Top 10 smoke-test files
 
 - `tests/unit/test_csrf_disposition_phase3.py` — 21 smoke tests
-- `tests/unit/test_expression_lang.py` — 18 smoke tests
 - `tests/unit/test_invariant_evaluator.py` — 18 smoke tests
-- `tests/unit/test_csrf_origin_gate_phase2.py` — 17 smoke tests
 - `tests/unit/test_aggregate_expression_l3.py` — 15 smoke tests
+- `tests/unit/test_expression_lang.py` — 15 smoke tests
 - `tests/unit/test_llm_driver.py` — 15 smoke tests
 - `tests/unit/test_tenant_config.py` — 14 smoke tests
 - `tests/unit/test_workspace_live_refresh_1391.py` — 14 smoke tests
 - `tests/unit/test_grant_store.py` — 13 smoke tests
 - `tests/unit/test_tenant_guard.py` — 13 smoke tests
+- `tests/unit/test_audit_log.py` — 11 smoke tests
 
 ## Notes on the classifier
 

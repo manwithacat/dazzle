@@ -85,32 +85,24 @@ def _make_story(
     )
 
 
-class TestMatchStoriesToSurfaces:
-    """Tests for _match_stories_to_surfaces."""
-
-    def test_match_by_scope(self) -> None:
-        surface = _make_surface(entity_ref="Task")
-        story = _make_story(scope=["Task", "User"])
-        result = _match_stories_to_surfaces(surface, [story])
-        assert len(result) == 1
-
-    def test_no_match_different_scope(self) -> None:
-        surface = _make_surface(entity_ref="Task")
-        story = _make_story(scope=["Order"], title="User places order")
-        result = _match_stories_to_surfaces(surface, [story])
-        assert len(result) == 0
-
-    def test_match_by_title_fallback(self) -> None:
-        surface = _make_surface(entity_ref="Task")
-        story = _make_story(scope=[], title="User completes Task")
-        result = _match_stories_to_surfaces(surface, [story])
-        assert len(result) == 1
-
-    def test_no_entity_ref_returns_empty(self) -> None:
-        surface = _make_surface(entity_ref=None)
-        story = _make_story()
-        result = _match_stories_to_surfaces(surface, [story])
-        assert len(result) == 0
+@pytest.mark.parametrize(
+    ("entity_ref", "scope", "title", "matched"),
+    [
+        pytest.param("Task", ["Task", "User"], "User completes task", True, id="match-by-scope"),
+        pytest.param("Task", ["Order"], "User places order", False, id="different-scope-no-match"),
+        # _make_story turns an empty scope into ["Task"], so an off-entity scope
+        # is what forces the title fallback branch.
+        pytest.param("Task", ["Project"], "User completes Task", True, id="title-fallback-match"),
+        pytest.param(None, None, "User completes task", False, id="no-entity-ref-empty"),
+    ],
+)
+def test_match_stories_to_surfaces(
+    entity_ref: str | None, scope: list[str] | None, title: str, matched: bool
+) -> None:
+    """_match_stories_to_surfaces matches by story scope, falling back to the title."""
+    surface = _make_surface(entity_ref=entity_ref)
+    story = _make_story(scope=scope, title=title)
+    assert _match_stories_to_surfaces(surface, [story]) == ([story] if matched else [])
 
 
 class TestScopeAlignment:
@@ -136,62 +128,51 @@ class TestScopeAlignment:
         assert len(scope_gaps) == 0
 
 
-class TestGivenConditionFields:
-    """Tests for given-condition field presence."""
+@pytest.mark.parametrize(
+    ("surface_kwargs", "condition", "expected_target"),
+    [
+        pytest.param(
+            {"field_names": ["title"]},
+            StoryCondition(expression="Task.status is 'open'", field_path="Task.status"),
+            "status",
+            id="missing-given-field-is-gap",
+        ),
+        pytest.param(
+            {"field_names": ["title", "status"]},
+            StoryCondition(expression="Task.status is 'open'", field_path="Task.status"),
+            None,
+            id="given-field-present",
+        ),
+        # Given-condition on a different entity does not flag the surface (#481).
+        pytest.param(
+            {"name": "checklist_list", "entity_ref": "Checklist", "field_names": ["title"]},
+            StoryCondition(expression="Contact.phone populated", field_path="Contact.phone"),
+            None,
+            id="cross-entity-skipped-481",
+        ),
+        pytest.param(
+            {"field_names": ["title"]},
+            StoryCondition(expression="User is logged in", field_path=None),
+            None,
+            id="no-field-path-skipped",
+        ),
+    ],
+)
+def test_given_condition_field_presence(
+    surface_kwargs: dict, condition: StoryCondition, expected_target: str | None
+) -> None:
+    """A given-condition field absent from the surface is a precondition gap."""
+    surface = _make_surface(**surface_kwargs)
+    story = _make_story(given=[condition])
+    root = parse_html("<div><button>Go</button></div>")
 
-    def test_missing_given_field(self) -> None:
-        surface = _make_surface(field_names=["title"])
-        story = _make_story(
-            given=[StoryCondition(expression="Task.status is 'open'", field_path="Task.status")]
-        )
-        root = parse_html("<div><button>Go</button></div>")
-
-        gaps = _check_story_embodiment(surface, None, root, None, [story])
-        precond_gaps = [
-            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
-        ]
+    gaps = _check_story_embodiment(surface, None, root, None, [story])
+    precond_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING]
+    if expected_target is None:
+        assert precond_gaps == []
+    else:
         assert len(precond_gaps) == 1
-        assert "status" in precond_gaps[0].target
-
-    def test_given_field_present(self) -> None:
-        surface = _make_surface(field_names=["title", "status"])
-        story = _make_story(
-            given=[StoryCondition(expression="Task.status is 'open'", field_path="Task.status")]
-        )
-        root = parse_html("<div><button>Go</button></div>")
-
-        gaps = _check_story_embodiment(surface, None, root, None, [story])
-        precond_gaps = [
-            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
-        ]
-        assert len(precond_gaps) == 0
-
-    def test_given_cross_entity_skipped(self) -> None:
-        """Given-condition on a different entity should not flag the surface (#481)."""
-        surface = _make_surface(
-            name="checklist_list", entity_ref="Checklist", field_names=["title"]
-        )
-        story = _make_story(
-            given=[StoryCondition(expression="Contact.phone populated", field_path="Contact.phone")]
-        )
-        root = parse_html("<div><button>Go</button></div>")
-
-        gaps = _check_story_embodiment(surface, None, root, None, [story])
-        precond_gaps = [
-            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
-        ]
-        assert len(precond_gaps) == 0
-
-    def test_given_without_field_path_skipped(self) -> None:
-        surface = _make_surface(field_names=["title"])
-        story = _make_story(given=[StoryCondition(expression="User is logged in", field_path=None)])
-        root = parse_html("<div><button>Go</button></div>")
-
-        gaps = _check_story_embodiment(surface, None, root, None, [story])
-        precond_gaps = [
-            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
-        ]
-        assert len(precond_gaps) == 0
+        assert expected_target in precond_gaps[0].target
 
 
 class TestWhenTriggerMatching:
@@ -216,76 +197,62 @@ class TestWhenTriggerMatching:
         assert len(trigger_gaps) == 0
 
 
-class TestThenOutcomeVerification:
-    """Tests for then-outcome field visibility."""
+_COMPLETED_AT = StoryCondition(
+    expression="Task.completed_at is recorded", field_path="Task.completed_at"
+)
 
-    def test_missing_outcome_field(self) -> None:
-        surface = _make_surface(field_names=["title"])
-        story = _make_story(
-            then=[
-                StoryCondition(
-                    expression="Task.completed_at is recorded",
-                    field_path="Task.completed_at",
-                )
-            ]
-        )
-        root = parse_html("<div><button>Go</button></div>")
 
-        gaps = _check_story_embodiment(surface, None, root, None, [story])
-        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
+@pytest.mark.parametrize(
+    ("surface_kwargs", "condition", "html", "expected_target"),
+    [
+        pytest.param(
+            {"field_names": ["title"]},
+            _COMPLETED_AT,
+            "<div><button>Go</button></div>",
+            "completed_at",
+            id="missing-outcome-field-is-gap",
+        ),
+        pytest.param(
+            {"field_names": ["title", "completed_at"]},
+            _COMPLETED_AT,
+            "<div><button>Go</button></div>",
+            None,
+            id="outcome-field-in-surface",
+        ),
+        pytest.param(
+            {"field_names": ["title"]},
+            _COMPLETED_AT,
+            "<div>completed_at: 2024-01-01</div>",
+            None,
+            id="outcome-field-in-rendered-text",
+        ),
+        # Outcome on a different entity does not flag the surface (#481).
+        pytest.param(
+            {"name": "checklist_create", "entity_ref": "Checklist", "field_names": ["title"]},
+            StoryCondition(
+                expression="Contact.phone populated from form", field_path="Contact.phone"
+            ),
+            "<div><button>Save</button></div>",
+            None,
+            id="cross-entity-skipped-481",
+        ),
+    ],
+)
+def test_then_outcome_field_visibility(
+    surface_kwargs: dict, condition: StoryCondition, html: str, expected_target: str | None
+) -> None:
+    """A then-outcome field neither on the surface nor in rendered text is a gap."""
+    surface = _make_surface(**surface_kwargs)
+    story = _make_story(then=[condition])
+    root = parse_html(html)
+
+    gaps = _check_story_embodiment(surface, None, root, None, [story])
+    outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
+    if expected_target is None:
+        assert outcome_gaps == []
+    else:
         assert len(outcome_gaps) == 1
-        assert "completed_at" in outcome_gaps[0].target
-
-    def test_outcome_field_in_surface(self) -> None:
-        surface = _make_surface(field_names=["title", "completed_at"])
-        story = _make_story(
-            then=[
-                StoryCondition(
-                    expression="Task.completed_at is recorded",
-                    field_path="Task.completed_at",
-                )
-            ]
-        )
-        root = parse_html("<div><button>Go</button></div>")
-
-        gaps = _check_story_embodiment(surface, None, root, None, [story])
-        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
-        assert len(outcome_gaps) == 0
-
-    def test_outcome_field_in_rendered_text(self) -> None:
-        surface = _make_surface(field_names=["title"])
-        story = _make_story(
-            then=[
-                StoryCondition(
-                    expression="Task.completed_at is recorded",
-                    field_path="Task.completed_at",
-                )
-            ]
-        )
-        root = parse_html("<div>completed_at: 2024-01-01</div>")
-
-        gaps = _check_story_embodiment(surface, None, root, None, [story])
-        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
-        assert len(outcome_gaps) == 0
-
-    def test_outcome_cross_entity_skipped(self) -> None:
-        """Outcome on a different entity should not flag the surface (#481)."""
-        surface = _make_surface(
-            name="checklist_create", entity_ref="Checklist", field_names=["title"]
-        )
-        story = _make_story(
-            then=[
-                StoryCondition(
-                    expression="Contact.phone populated from form",
-                    field_path="Contact.phone",
-                )
-            ]
-        )
-        root = parse_html("<div><button>Save</button></div>")
-
-        gaps = _check_story_embodiment(surface, None, root, None, [story])
-        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
-        assert len(outcome_gaps) == 0
+        assert expected_target in outcome_gaps[0].target
 
 
 class TestUnlessBranchCoverage:
@@ -324,30 +291,12 @@ class TestUnlessBranchCoverage:
         assert len(unless_gaps) == 0
 
 
-class TestLoadStoriesForScoring:
-    """Tests for _load_stories_for_scoring fallback."""
-
-    def test_uses_appspec_stories_when_present(self) -> None:
-        appspec = MagicMock()
-        story = _make_story()
-        appspec.stories = [story]
-
-        result = _load_stories_for_scoring(appspec)
-        assert len(result) == 1
-
-    def test_empty_stories_returns_empty(self) -> None:
-        appspec = MagicMock()
-        appspec.stories = []
-
-        result = _load_stories_for_scoring(appspec)
-        assert len(result) == 0
-
-    def test_no_fallback_without_project_root(self) -> None:
-        appspec = MagicMock()
-        appspec.stories = []
-
-        result = _load_stories_for_scoring(appspec)
-        assert len(result) == 0
+@pytest.mark.parametrize("has_story", [True, False], ids=["appspec-stories", "empty-stories"])
+def test_load_stories_for_scoring(has_story: bool) -> None:
+    """_load_stories_for_scoring returns the appspec's stories, with no fallback."""
+    appspec = MagicMock()
+    appspec.stories = [_make_story()] if has_story else []
+    assert _load_stories_for_scoring(appspec) == appspec.stories
 
 
 class TestNoStoriesNoEntity:
@@ -377,34 +326,39 @@ def _make_entity(fields: list[FieldSpec]) -> MagicMock:
 class TestMoneyFieldExpansion:
     """Tests for money field expansion to _minor/_currency in fidelity checks."""
 
-    def test_expand_field_names_helper(self) -> None:
-        """Direct test of _expand_field_names: money fields expand, others don't."""
-        entity = _make_entity(
-            [
-                FieldSpec(
-                    name="price", type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP")
-                ),
-                FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
-            ]
-        )
-        result = _expand_field_names(["title", "price"], entity)
-        assert result == ["title", "price_minor", "price_currency"]
-
-    def test_no_expansion_without_entity(self) -> None:
-        """entity=None: money field name not in inputs → gap reported."""
-        result = _expand_field_names(["price", "title"], None)
-        assert result == ["price", "title"]
-
-    def test_non_money_fields_unchanged(self) -> None:
-        """str/int fields pass through without expansion."""
-        entity = _make_entity(
-            [
-                FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
-                FieldSpec(name="count", type=FieldType(kind=FieldTypeKind.INT)),
-            ]
-        )
-        result = _expand_field_names(["title", "count"], entity)
-        assert result == ["title", "count"]
+    @pytest.mark.parametrize(
+        ("entity_fields", "names", "expected"),
+        [
+            pytest.param(
+                [
+                    FieldSpec(
+                        name="price",
+                        type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP"),
+                    ),
+                    FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
+                ],
+                ["title", "price"],
+                ["title", "price_minor", "price_currency"],
+                id="money-expands-others-dont",
+            ),
+            # entity=None: money field name not expanded -> gap reported downstream.
+            pytest.param(None, ["price", "title"], ["price", "title"], id="no-entity-no-expansion"),
+            pytest.param(
+                [
+                    FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
+                    FieldSpec(name="count", type=FieldType(kind=FieldTypeKind.INT)),
+                ],
+                ["title", "count"],
+                ["title", "count"],
+                id="non-money-unchanged",
+            ),
+        ],
+    )
+    def test_expand_field_names(
+        self, entity_fields: list[FieldSpec] | None, names: list[str], expected: list[str]
+    ) -> None:
+        entity = _make_entity(entity_fields) if entity_fields is not None else None
+        assert _expand_field_names(names, entity) == expected
 
     @pytest.mark.parametrize(
         "surface_name,field_names,entity_fields,html",

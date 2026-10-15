@@ -1,118 +1,138 @@
 """Phase 2: Sec-Fetch-Site + Origin admission gate (spec §4.2)."""
 
 import asyncio
+from typing import Any
+
+import pytest
 
 from dazzle.http.runtime.csrf import CSRFConfig, CSRFMiddleware, origin_disposition
 
 
-def _h(**kw) -> list[tuple[bytes, bytes]]:
+def _h(**kw: str) -> list[tuple[bytes, bytes]]:
     """Build raw ASGI headers from kwargs (underscores -> dashes)."""
-    out = []
-    for k, v in kw.items():
-        out.append((k.replace("_", "-").encode("latin-1"), v.encode("latin-1")))
-    return out
+    return [(k.replace("_", "-").encode("latin-1"), v.encode("latin-1")) for k, v in kw.items()]
 
 
 CFG = CSRFConfig(enabled=True)
 CFG_TRUSTED = CSRFConfig(enabled=True, trusted_origins=["https://embed.partner.com"])
+APP = "app.example.com"
 
 
-class TestSecFetchSite:
-    def test_same_origin_admits(self) -> None:
-        assert origin_disposition(_h(sec_fetch_site="same-origin"), "app.example.com", CFG) is True
-
-    def test_none_admits(self) -> None:
-        assert origin_disposition(_h(sec_fetch_site="none"), "app.example.com", CFG) is True
-
-    def test_cross_site_rejects(self) -> None:
-        assert origin_disposition(_h(sec_fetch_site="cross-site"), "app.example.com", CFG) is False
-
-    def test_same_site_rejects_by_default(self) -> None:
-        assert origin_disposition(_h(sec_fetch_site="same-site"), "app.example.com", CFG) is False
-
-
-class TestOriginVsHost:
-    def test_origin_matches_host_admits(self) -> None:
-        hdrs = _h(origin="https://app.example.com", host="app.example.com")
-        assert origin_disposition(hdrs, "app.example.com", CFG) is True
-
-    def test_origin_matches_host_with_port_admits(self) -> None:
-        hdrs = _h(origin="http://localhost:8000", host="localhost:8000")
-        assert origin_disposition(hdrs, "localhost:8000", CFG) is True
-
-    def test_origin_differs_from_host_rejects(self) -> None:
-        hdrs = _h(origin="https://evil.com", host="app.example.com")
-        assert origin_disposition(hdrs, "app.example.com", CFG) is False
-
-    def test_cross_tenant_subdomain_rejects(self) -> None:
-        hdrs = _h(origin="https://tenant-b.example.com", host="tenant-a.example.com")
-        assert origin_disposition(hdrs, "tenant-a.example.com", CFG) is False
-
-    def test_origin_null_rejects(self) -> None:
-        hdrs = _h(origin="null", host="app.example.com")
-        assert origin_disposition(hdrs, "app.example.com", CFG) is False
-
-
-class TestTrustedOrigins:
-    def test_trusted_origin_admits_despite_host_mismatch(self) -> None:
-        hdrs = _h(origin="https://embed.partner.com", host="app.example.com")
-        assert origin_disposition(hdrs, "app.example.com", CFG_TRUSTED) is True
-
-    def test_untrusted_origin_still_rejects(self) -> None:
-        hdrs = _h(origin="https://other.partner.com", host="app.example.com")
-        assert origin_disposition(hdrs, "app.example.com", CFG_TRUSTED) is False
-
-    def test_same_site_in_trusted_admits(self) -> None:
-        hdrs = _h(sec_fetch_site="same-site", origin="https://embed.partner.com")
-        assert origin_disposition(hdrs, "app.example.com", CFG_TRUSTED) is True
-
-
-class TestNoSignalFallsBack:
-    def test_no_origin_no_fetch_metadata_returns_none(self) -> None:
-        assert origin_disposition(_h(host="app.example.com"), "app.example.com", CFG) is None
-
-
-class TestFailClosedAndPrecedence:
-    def test_unknown_sec_fetch_site_rejects(self) -> None:
+@pytest.mark.parametrize(
+    ("headers", "host", "config", "expected"),
+    [
+        # ── Sec-Fetch-Site alone ──
+        pytest.param(
+            {"sec_fetch_site": "same-origin"}, APP, CFG, True, id="sfs-same-origin-admits"
+        ),
+        pytest.param({"sec_fetch_site": "none"}, APP, CFG, True, id="sfs-none-admits"),
+        pytest.param(
+            {"sec_fetch_site": "cross-site"}, APP, CFG, False, id="sfs-cross-site-rejects"
+        ),
+        pytest.param(
+            {"sec_fetch_site": "same-site"}, APP, CFG, False, id="sfs-same-site-rejects-by-default"
+        ),
         # A garbage/unknown Sec-Fetch-Site value must fail CLOSED (reject), not open.
-        assert origin_disposition(_h(sec_fetch_site="bogus"), "app.example.com", CFG) is False
+        pytest.param({"sec_fetch_site": "bogus"}, APP, CFG, False, id="sfs-unknown-fails-closed"),
+        # ── Origin vs Host ──
+        pytest.param(
+            {"origin": "https://app.example.com", "host": APP},
+            APP,
+            CFG,
+            True,
+            id="origin-matches-host-admits",
+        ),
+        pytest.param(
+            {"origin": "http://localhost:8000", "host": "localhost:8000"},
+            "localhost:8000",
+            CFG,
+            True,
+            id="origin-matches-host-with-port-admits",
+        ),
+        pytest.param(
+            {"origin": "https://evil.com", "host": APP},
+            APP,
+            CFG,
+            False,
+            id="origin-differs-from-host-rejects",
+        ),
+        pytest.param(
+            {"origin": "https://tenant-b.example.com", "host": "tenant-a.example.com"},
+            "tenant-a.example.com",
+            CFG,
+            False,
+            id="cross-tenant-subdomain-rejects",
+        ),
+        pytest.param({"origin": "null", "host": APP}, APP, CFG, False, id="origin-null-rejects"),
+        # Browsers omit default ports; an explicit :443 is a distinct authority
+        # and rejected — documents the no-normalization behaviour.
+        pytest.param(
+            {"origin": "https://app.example.com:443", "host": APP},
+            APP,
+            CFG,
+            False,
+            id="explicit-default-port-does-not-match-bare-host",
+        ),
+        # ── trusted origins ──
+        pytest.param(
+            {"origin": "https://embed.partner.com", "host": APP},
+            APP,
+            CFG_TRUSTED,
+            True,
+            id="trusted-origin-admits-despite-host-mismatch",
+        ),
+        pytest.param(
+            {"origin": "https://other.partner.com", "host": APP},
+            APP,
+            CFG_TRUSTED,
+            False,
+            id="untrusted-origin-still-rejects",
+        ),
+        pytest.param(
+            {"sec_fetch_site": "same-site", "origin": "https://embed.partner.com"},
+            APP,
+            CFG_TRUSTED,
+            True,
+            id="same-site-in-trusted-admits",
+        ),
+        # ── precedence: the unforgeable Sec-Fetch-Site wins over Origin ──
+        pytest.param(
+            {"sec_fetch_site": "same-origin", "origin": "https://evil.com", "host": APP},
+            APP,
+            CFG,
+            True,
+            id="sfs-same-origin-wins-over-mismatched-origin",
+        ),
+        pytest.param(
+            {"sec_fetch_site": "cross-site", "origin": "https://app.example.com", "host": APP},
+            APP,
+            CFG,
+            False,
+            id="sfs-cross-site-wins-over-matching-origin",
+        ),
+        # ── no signal: defer to the token check ──
+        pytest.param({"host": APP}, APP, CFG, None, id="no-origin-no-fetch-metadata-is-none"),
+    ],
+)
+def test_origin_disposition(
+    headers: dict[str, str], host: str, config: CSRFConfig, expected: bool | None
+) -> None:
+    assert origin_disposition(_h(**headers), host, config) is expected
 
-    def test_sec_fetch_site_same_origin_wins_over_mismatched_origin(self) -> None:
-        # Both headers present (the real-browser case): the unforgeable
-        # Sec-Fetch-Site=same-origin admits even if an Origin header is present
-        # and mismatched — Sec-Fetch-Site takes precedence.
-        hdrs = _h(sec_fetch_site="same-origin", origin="https://evil.com", host="app.example.com")
-        assert origin_disposition(hdrs, "app.example.com", CFG) is True
 
-    def test_sec_fetch_site_cross_site_wins_over_matching_origin(self) -> None:
-        # Inverse precedence: Sec-Fetch-Site=cross-site rejects even if the Origin
-        # header happens to match the Host (the strong signal wins).
-        hdrs = _h(
-            sec_fetch_site="cross-site", origin="https://app.example.com", host="app.example.com"
-        )
-        assert origin_disposition(hdrs, "app.example.com", CFG) is False
-
-    def test_explicit_default_port_origin_does_not_match_bare_host(self) -> None:
-        # Browsers omit default ports, so Origin "https://app.example.com" (no :443)
-        # matches Host "app.example.com". An explicit :443 is treated as a distinct
-        # authority and rejected — documenting the no-normalization behavior.
-        hdrs = _h(origin="https://app.example.com:443", host="app.example.com")
-        assert origin_disposition(hdrs, "app.example.com", CFG) is False
-
-
-async def _drive(config, *, method, path, headers_extra):
+async def _drive(config: CSRFConfig, *, method: str, path: str, headers_extra: Any) -> int:
     headers = list(headers_extra)
     scope = {"type": "http", "method": method, "path": path, "headers": headers}
     status = {"code": 0}
 
-    async def inner(scope, receive, send):
+    async def inner(scope: Any, receive: Any, send: Any) -> None:
         await send({"type": "http.response.start", "status": 200, "headers": []})
         await send({"type": "http.response.body", "body": b"ok"})
 
-    async def receive():
+    async def receive() -> dict[str, Any]:
         return {"type": "http.request", "body": b"", "more_body": False}
 
-    async def send(message):
+    async def send(message: dict[str, Any]) -> None:
         if message["type"] == "http.response.start":
             status["code"] = message["status"]
 
@@ -120,80 +140,54 @@ async def _drive(config, *, method, path, headers_extra):
     return status["code"]
 
 
-class TestMiddlewareOriginGate:
-    def test_same_origin_post_admits_without_token(self) -> None:
-        status = asyncio.run(
-            _drive(
-                CSRFConfig(enabled=True),
-                method="POST",
-                path="/academicyears",
-                headers_extra=_h(sec_fetch_site="same-origin", host="app.example.com"),
-            )
-        )
-        assert status == 200
-
-    def test_cross_site_post_rejected_even_with_valid_token(self) -> None:
-        status = asyncio.run(
-            _drive(
-                CSRFConfig(enabled=True),
-                method="POST",
-                path="/academicyears",
-                headers_extra=_h(
-                    sec_fetch_site="cross-site",
-                    cookie="dazzle_csrf=abc",
-                    x_csrf_token="abc",
-                    host="app.example.com",
-                ),
-            )
-        )
-        assert status == 403
-
-    def test_no_origin_signal_falls_back_to_token_pass(self) -> None:
-        status = asyncio.run(
-            _drive(
-                CSRFConfig(enabled=True),
-                method="POST",
-                path="/academicyears",
-                headers_extra=_h(
-                    cookie="dazzle_csrf=abc", x_csrf_token="abc", host="app.example.com"
-                ),
-            )
-        )
-        assert status == 200
-
-    def test_no_origin_signal_falls_back_to_token_reject(self) -> None:
-        status = asyncio.run(
-            _drive(
-                CSRFConfig(enabled=True),
-                method="POST",
-                path="/academicyears",
-                headers_extra=_h(host="app.example.com"),
-            )
-        )
-        assert status == 403
-
-    def test_exempt_path_still_exempt_regardless_of_origin(self) -> None:
-        status = asyncio.run(
-            _drive(
-                CSRFConfig(enabled=True),
-                method="POST",
-                path="/webhooks/stripe",
-                headers_extra=_h(sec_fetch_site="cross-site", host="app.example.com"),
-            )
-        )
-        assert status == 200
-
-    def test_bearer_still_exempt_regardless_of_origin(self) -> None:
-        status = asyncio.run(
-            _drive(
-                CSRFConfig(enabled=True),
-                method="POST",
-                path="/api/x",
-                headers_extra=_h(
-                    authorization="Bearer tok",
-                    sec_fetch_site="cross-site",
-                    host="app.example.com",
-                ),
-            )
-        )
-        assert status == 200
+@pytest.mark.parametrize(
+    ("path", "headers", "expected_status"),
+    [
+        pytest.param(
+            "/academicyears",
+            {"sec_fetch_site": "same-origin", "host": APP},
+            200,
+            id="same-origin-post-admits-without-token",
+        ),
+        pytest.param(
+            "/academicyears",
+            {
+                "sec_fetch_site": "cross-site",
+                "cookie": "dazzle_csrf=abc",
+                "x_csrf_token": "abc",
+                "host": APP,
+            },
+            403,
+            id="cross-site-post-rejected-even-with-valid-token",
+        ),
+        pytest.param(
+            "/academicyears",
+            {"cookie": "dazzle_csrf=abc", "x_csrf_token": "abc", "host": APP},
+            200,
+            id="no-origin-signal-falls-back-to-token-pass",
+        ),
+        pytest.param(
+            "/academicyears",
+            {"host": APP},
+            403,
+            id="no-origin-signal-falls-back-to-token-reject",
+        ),
+        pytest.param(
+            "/webhooks/stripe",
+            {"sec_fetch_site": "cross-site", "host": APP},
+            200,
+            id="exempt-path-still-exempt-regardless-of-origin",
+        ),
+        pytest.param(
+            "/api/x",
+            {"authorization": "Bearer tok", "sec_fetch_site": "cross-site", "host": APP},
+            200,
+            id="bearer-still-exempt-regardless-of-origin",
+        ),
+    ],
+)
+def test_middleware_origin_gate(path: str, headers: dict[str, str], expected_status: int) -> None:
+    status = asyncio.run(
+        _drive(CSRFConfig(enabled=True), method="POST", path=path, headers_extra=_h(**headers))
+    )
+    assert status == expected_status

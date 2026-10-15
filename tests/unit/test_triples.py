@@ -159,18 +159,32 @@ class TestResolveWidgetIdSuffix:
 
 
 class TestResolveWidgetHasSource:
-    def test_has_source_overrides_str_to_search_select(self) -> None:
-        field = _make_field("owner", FieldTypeKind.STR)
-        assert resolve_widget(field, has_source=True) == WidgetKind.SEARCH_SELECT
-
-    def test_has_source_overrides_uuid_id_to_search_select(self) -> None:
-        """Even 'id' gets SEARCH_SELECT when has_source=True."""
-        field = _make_field("id", FieldTypeKind.UUID, modifiers=[FieldModifier.PK])
-        assert resolve_widget(field, has_source=True) == WidgetKind.SEARCH_SELECT
-
-    def test_has_source_false_leaves_default(self) -> None:
-        field = _make_field("notes", FieldTypeKind.TEXT)
-        assert resolve_widget(field, has_source=False) == WidgetKind.TEXTAREA
+    @pytest.mark.parametrize(
+        ("field", "has_source", "expected"),
+        [
+            pytest.param(
+                _make_field("owner", FieldTypeKind.STR),
+                True,
+                WidgetKind.SEARCH_SELECT,
+                id="overrides-str",
+            ),
+            # Even 'id' gets SEARCH_SELECT when has_source=True.
+            pytest.param(
+                _make_field("id", FieldTypeKind.UUID, modifiers=[FieldModifier.PK]),
+                True,
+                WidgetKind.SEARCH_SELECT,
+                id="overrides-uuid-pk-id",
+            ),
+            pytest.param(
+                _make_field("notes", FieldTypeKind.TEXT),
+                False,
+                WidgetKind.TEXTAREA,
+                id="false-leaves-default",
+            ),
+        ],
+    )
+    def test_has_source(self, field: FieldSpec, has_source: bool, expected: WidgetKind) -> None:
+        assert resolve_widget(field, has_source=has_source) == expected
 
 
 # ---------------------------------------------------------------------------
@@ -296,6 +310,17 @@ def _make_personas(*ids: str) -> list[PersonaSpec]:
     return [PersonaSpec(id=pid, label=pid.capitalize()) for pid in ids]
 
 
+def _one_transition_sm(
+    from_state: str, to_state: str, trigger: TransitionTrigger
+) -> StateMachineSpec:
+    """Two-state machine with a single transition."""
+    return StateMachineSpec(
+        status_field="status",
+        states=[from_state, to_state],
+        transitions=[StateTransition(from_state=from_state, to_state=to_state, trigger=trigger)],
+    )
+
+
 # ---------------------------------------------------------------------------
 # TestGetPermittedPersonas
 # ---------------------------------------------------------------------------
@@ -371,63 +396,72 @@ class TestGetPermittedPersonas:
         result = get_permitted_personas([entity], personas, query_entity, query_op)
         assert set(result) == expected
 
-    def test_deny_all_rule_permits_nobody(self) -> None:
-        """#1520: the #1281 short-form `permit: create: false` must not fall
-        through to the open-rule branch and permit every persona."""
-        entity = _make_entity("Task")
-        entity = entity.model_copy(
-            update={
-                "access": AccessSpec(
-                    permissions=[
-                        PermissionRule(
-                            operation=PermissionKind.CREATE,
-                            personas=[],
-                            deny_all=True,
-                            effect=PolicyEffect.PERMIT,
-                        )
-                    ]
-                )
-            }
-        )
-        personas = _make_personas("admin", "teacher")
-        assert get_permitted_personas([entity], personas, "Task", PermissionKind.CREATE) == []
-
-    def test_forbid_rule_overrides_permit(self) -> None:
-        """#1520: Cedar forbid > permit — a persona matched by a FORBID rule is
-        excluded even when an open PERMIT rule also matches it."""
-        entity = _make_entity("Task")
-        entity = entity.model_copy(
-            update={
-                "access": AccessSpec(
-                    permissions=[
-                        PermissionRule(
-                            operation=PermissionKind.READ,
-                            personas=[],
-                            effect=PolicyEffect.PERMIT,
-                        ),
-                        PermissionRule(
-                            operation=PermissionKind.READ,
-                            personas=["viewer"],
-                            effect=PolicyEffect.FORBID,
-                        ),
-                    ]
-                )
-            }
-        )
-        personas = _make_personas("admin", "viewer")
-        result = get_permitted_personas([entity], personas, "Task", PermissionKind.READ)
-        assert set(result) == {"admin"}
-
-    def test_rules_match_effective_role_not_persona_id(self) -> None:
-        """#1520/#1147: a persona whose `role:` differs from its id must match
-        rules naming the role, and the returned list carries the persona id."""
-        entity = _make_entity("Task", permissions=[(PermissionKind.UPDATE, ["staff"])])
-        personas = [
-            PersonaSpec(id="alice", label="Alice", role="staff"),
-            PersonaSpec(id="bob", label="Bob", role="customer"),
-        ]
-        result = get_permitted_personas([entity], personas, "Task", PermissionKind.UPDATE)
-        assert result == ["alice"]
+    @pytest.mark.parametrize(
+        ("rules", "personas", "op", "expected"),
+        [
+            # The #1281 short-form `permit: create: false` must not fall
+            # through to the open-rule branch and permit every persona.
+            pytest.param(
+                [
+                    PermissionRule(
+                        operation=PermissionKind.CREATE,
+                        personas=[],
+                        deny_all=True,
+                        effect=PolicyEffect.PERMIT,
+                    )
+                ],
+                _make_personas("admin", "teacher"),
+                PermissionKind.CREATE,
+                [],
+                id="deny-all-permits-nobody-1520",
+            ),
+            # Cedar forbid > permit: a persona matched by a FORBID rule is
+            # excluded even when an open PERMIT rule also matches it.
+            pytest.param(
+                [
+                    PermissionRule(
+                        operation=PermissionKind.READ, personas=[], effect=PolicyEffect.PERMIT
+                    ),
+                    PermissionRule(
+                        operation=PermissionKind.READ,
+                        personas=["viewer"],
+                        effect=PolicyEffect.FORBID,
+                    ),
+                ],
+                _make_personas("admin", "viewer"),
+                PermissionKind.READ,
+                ["admin"],
+                id="forbid-overrides-permit-1520",
+            ),
+            # A persona whose `role:` differs from its id matches rules naming
+            # the role, and the returned list carries the persona id.
+            pytest.param(
+                [
+                    PermissionRule(
+                        operation=PermissionKind.UPDATE,
+                        personas=["staff"],
+                        effect=PolicyEffect.PERMIT,
+                    )
+                ],
+                [
+                    PersonaSpec(id="alice", label="Alice", role="staff"),
+                    PersonaSpec(id="bob", label="Bob", role="customer"),
+                ],
+                PermissionKind.UPDATE,
+                ["alice"],
+                id="matches-effective-role-not-persona-id-1520-1147",
+            ),
+        ],
+    )
+    def test_rule_semantics(
+        self,
+        rules: list[PermissionRule],
+        personas: list[PersonaSpec],
+        op: PermissionKind,
+        expected: list[str],
+    ) -> None:
+        entity = _make_entity("Task").model_copy(update={"access": AccessSpec(permissions=rules)})
+        assert get_permitted_personas([entity], personas, "Task", op) == expected
 
 
 # ---------------------------------------------------------------------------
@@ -436,149 +470,103 @@ class TestGetPermittedPersonas:
 
 
 class TestResolveSurfaceActions:
-    def test_list_mode_basic_actions(self) -> None:
-        """List mode always has list and detail_link actions."""
-        entity = _make_entity("Task", permissions=[(PermissionKind.READ, [])])
-        surface = _make_surface("task_list", "Task", SurfaceMode.LIST)
-        personas = _make_personas("admin")
-        result = resolve_surface_actions(entity, surface, [surface], personas, [entity])
-        action_names = [t.action for t in result]
-        assert "list" in action_names
-        assert "detail_link" in action_names
-
-    def test_list_mode_create_link_when_create_permitted(self) -> None:
-        """List mode includes create_link when CREATE is permitted to any persona."""
-        entity = _make_entity(
-            "Task",
-            permissions=[
-                (PermissionKind.READ, []),
-                (PermissionKind.CREATE, ["admin"]),
-            ],
+    @pytest.mark.parametrize(
+        ("permissions", "state_machine", "mode", "with_edit_surface", "persona_ids", "expected"),
+        [
+            # List mode always has list and detail_link actions.
+            pytest.param(
+                [(PermissionKind.READ, [])],
+                None,
+                SurfaceMode.LIST,
+                False,
+                ("admin",),
+                ["list", "detail_link"],
+                id="list-basic-no-create-link-without-create-rule",
+            ),
+            pytest.param(
+                [(PermissionKind.READ, []), (PermissionKind.CREATE, ["admin"])],
+                None,
+                SurfaceMode.LIST,
+                False,
+                ("admin", "viewer"),
+                ["list", "detail_link", "create_link"],
+                id="list-create-link-when-create-permitted",
+            ),
+            pytest.param(
+                [(PermissionKind.READ, []), (PermissionKind.UPDATE, ["admin"])],
+                None,
+                SurfaceMode.VIEW,
+                False,
+                ("admin",),
+                [],
+                id="view-no-edit-link-without-edit-surface",
+            ),
+            pytest.param(
+                [(PermissionKind.READ, []), (PermissionKind.UPDATE, ["admin"])],
+                None,
+                SurfaceMode.VIEW,
+                True,
+                ("admin",),
+                ["edit_link"],
+                id="view-edit-link-with-edit-surface",
+            ),
+            pytest.param(
+                [(PermissionKind.READ, []), (PermissionKind.DELETE, ["admin"])],
+                None,
+                SurfaceMode.VIEW,
+                False,
+                ("admin",),
+                ["delete_button"],
+                id="view-delete-button-when-delete-permitted",
+            ),
+            pytest.param(
+                [(PermissionKind.READ, [])],
+                None,
+                SurfaceMode.VIEW,
+                False,
+                ("admin",),
+                [],
+                id="view-no-delete-button-without-delete-rule",
+            ),
+            pytest.param(
+                [(PermissionKind.READ, [])],
+                _one_transition_sm("open", "closed", TransitionTrigger.MANUAL),
+                SurfaceMode.VIEW,
+                False,
+                ("admin",),
+                ["transition:open->closed"],
+                id="view-manual-transition-action",
+            ),
+            # Auto transitions are NOT surfaced as user-facing actions.
+            pytest.param(
+                [(PermissionKind.READ, [])],
+                _one_transition_sm("pending", "done", TransitionTrigger.AUTO),
+                SurfaceMode.VIEW,
+                False,
+                ("admin",),
+                [],
+                id="view-auto-transition-excluded",
+            ),
+        ],
+    )
+    def test_action_names(
+        self,
+        permissions: list[tuple[PermissionKind, list[str]]],
+        state_machine: StateMachineSpec | None,
+        mode: SurfaceMode,
+        with_edit_surface: bool,
+        persona_ids: tuple[str, ...],
+        expected: list[str],
+    ) -> None:
+        entity = _make_entity("Task", permissions=permissions, state_machine=state_machine)
+        surface = _make_surface("task_surface", "Task", mode)
+        all_surfaces = [surface]
+        if with_edit_surface:
+            all_surfaces.append(_make_surface("task_edit", "Task", SurfaceMode.EDIT))
+        result = resolve_surface_actions(
+            entity, surface, all_surfaces, _make_personas(*persona_ids), [entity]
         )
-        surface = _make_surface("task_list", "Task", SurfaceMode.LIST)
-        personas = _make_personas("admin", "viewer")
-        result = resolve_surface_actions(entity, surface, [surface], personas, [entity])
-        action_names = [t.action for t in result]
-        assert "create_link" in action_names
-
-    def test_list_mode_no_create_link_when_create_not_permitted(self) -> None:
-        """List mode omits create_link when there is no CREATE rule."""
-        entity = _make_entity(
-            "Task",
-            permissions=[(PermissionKind.READ, [])],
-        )
-        surface = _make_surface("task_list", "Task", SurfaceMode.LIST)
-        personas = _make_personas("admin")
-        result = resolve_surface_actions(entity, surface, [surface], personas, [entity])
-        action_names = [t.action for t in result]
-        assert "create_link" not in action_names
-
-    def test_view_mode_no_edit_surface(self) -> None:
-        """View mode without a sibling edit surface has no edit_link action."""
-        entity = _make_entity(
-            "Task",
-            permissions=[
-                (PermissionKind.READ, []),
-                (PermissionKind.UPDATE, ["admin"]),
-            ],
-        )
-        view_surface = _make_surface("task_view", "Task", SurfaceMode.VIEW)
-        personas = _make_personas("admin")
-        result = resolve_surface_actions(entity, view_surface, [view_surface], personas, [entity])
-        action_names = [t.action for t in result]
-        assert "edit_link" not in action_names
-
-    def test_view_mode_with_edit_surface(self) -> None:
-        """View mode includes edit_link when an edit surface for the entity exists."""
-        entity = _make_entity(
-            "Task",
-            permissions=[
-                (PermissionKind.READ, []),
-                (PermissionKind.UPDATE, ["admin"]),
-            ],
-        )
-        view_surface = _make_surface("task_view", "Task", SurfaceMode.VIEW)
-        edit_surface = _make_surface("task_edit", "Task", SurfaceMode.EDIT)
-        personas = _make_personas("admin")
-        all_surfaces = [view_surface, edit_surface]
-        result = resolve_surface_actions(entity, view_surface, all_surfaces, personas, [entity])
-        action_names = [t.action for t in result]
-        assert "edit_link" in action_names
-
-    def test_view_mode_with_delete_permission(self) -> None:
-        """View mode includes delete_button when DELETE is permitted."""
-        entity = _make_entity(
-            "Task",
-            permissions=[
-                (PermissionKind.READ, []),
-                (PermissionKind.DELETE, ["admin"]),
-            ],
-        )
-        view_surface = _make_surface("task_view", "Task", SurfaceMode.VIEW)
-        personas = _make_personas("admin")
-        result = resolve_surface_actions(entity, view_surface, [view_surface], personas, [entity])
-        action_names = [t.action for t in result]
-        assert "delete_button" in action_names
-
-    def test_view_mode_no_delete_when_not_permitted(self) -> None:
-        """View mode omits delete_button when there is no DELETE rule."""
-        entity = _make_entity(
-            "Task",
-            permissions=[(PermissionKind.READ, [])],
-        )
-        view_surface = _make_surface("task_view", "Task", SurfaceMode.VIEW)
-        personas = _make_personas("admin")
-        result = resolve_surface_actions(entity, view_surface, [view_surface], personas, [entity])
-        action_names = [t.action for t in result]
-        assert "delete_button" not in action_names
-
-    def test_view_mode_with_transitions(self) -> None:
-        """View mode emits transition:{name} actions for manual state transitions."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["open", "closed"],
-            transitions=[
-                StateTransition(
-                    from_state="open",
-                    to_state="closed",
-                    trigger=TransitionTrigger.MANUAL,
-                ),
-            ],
-        )
-        entity = _make_entity(
-            "Task",
-            permissions=[(PermissionKind.READ, [])],
-            state_machine=sm,
-        )
-        view_surface = _make_surface("task_view", "Task", SurfaceMode.VIEW)
-        personas = _make_personas("admin")
-        result = resolve_surface_actions(entity, view_surface, [view_surface], personas, [entity])
-        action_names = [t.action for t in result]
-        assert "transition:open->closed" in action_names
-
-    def test_view_mode_auto_transitions_excluded(self) -> None:
-        """Auto transitions are NOT surfaced as user-facing actions."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["pending", "done"],
-            transitions=[
-                StateTransition(
-                    from_state="pending",
-                    to_state="done",
-                    trigger=TransitionTrigger.AUTO,
-                ),
-            ],
-        )
-        entity = _make_entity(
-            "Task",
-            permissions=[(PermissionKind.READ, [])],
-            state_machine=sm,
-        )
-        view_surface = _make_surface("task_view", "Task", SurfaceMode.VIEW)
-        personas = _make_personas("admin")
-        result = resolve_surface_actions(entity, view_surface, [view_surface], personas, [entity])
-        action_names = [t.action for t in result]
-        assert "transition:pending->done" not in action_names
+        assert [t.action for t in result] == expected
 
     def test_create_mode_gives_create_submit(self) -> None:
         """Create mode gives only create_submit action."""
