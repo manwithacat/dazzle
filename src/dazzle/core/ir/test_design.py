@@ -157,7 +157,6 @@ class TestGapCategory(StrEnum):
     UNTESTED_STATE_TRANSITION = "untested_state_transition"
     UNTESTED_SURFACE = "untested_surface"
     UNTESTED_SCENARIO = "untested_scenario"
-    LOW_COVERAGE_ENTITY = "low_coverage_entity"
 
 
 class TestGap(BaseModel):

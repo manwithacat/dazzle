@@ -9,7 +9,6 @@ class FidelityGapCategory(StrEnum):
     """Categories of fidelity gaps between spec and rendered output."""
 
     MISSING_FIELD = "missing_field"
-    MISSING_NAVIGATION = "missing_navigation"
     INCORRECT_INPUT_TYPE = "incorrect_input_type"
     MISSING_VALIDATION_ATTRIBUTE = "missing_validation_attribute"
     MISSING_HTMX_ATTRIBUTE = "missing_htmx_attribute"

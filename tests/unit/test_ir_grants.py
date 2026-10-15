@@ -10,7 +10,6 @@ from dazzle.core.ir.grants import (
     GrantRelationSpec,
     GrantSchemaSpec,
 )
-from dazzle.core.ir.location import SourceLocation
 
 # ---------------------------------------------------------------------------
 # Enum values
@@ -54,11 +53,9 @@ def test_grant_relation_spec_minimal() -> None:
     assert rel.approval == GrantApprovalMode.REQUIRED
     assert rel.expiry == GrantExpiryMode.REQUIRED
     assert rel.max_duration is None
-    assert rel.source_location is None
 
 
 def test_grant_relation_spec_full() -> None:
-    loc = SourceLocation(file="test.dsl", line=10, column=4)
     approved_by = _role_condition("hod")
     rel = GrantRelationSpec(
         name="acting_hod",
@@ -72,7 +69,6 @@ def test_grant_relation_spec_full() -> None:
         approval=GrantApprovalMode.REQUIRED,
         expiry=GrantExpiryMode.REQUIRED,
         max_duration="90d",
-        source_location=loc,
     )
     assert rel.description == "Temporarily delegates HoD responsibilities"
     assert rel.principal_label == "Covering HoD"
@@ -84,7 +80,6 @@ def test_grant_relation_spec_full() -> None:
     assert rel.approval == GrantApprovalMode.REQUIRED
     assert rel.expiry == GrantExpiryMode.REQUIRED
     assert rel.max_duration == "90d"
-    assert rel.source_location == loc
 
 
 def test_grant_relation_spec_immediate_approval() -> None:
@@ -149,7 +144,6 @@ def test_grant_schema_spec_single_relation() -> None:
     assert schema.scope == "Department"
     assert len(schema.relations) == 1
     assert schema.relations[0].name == "acting_hod"
-    assert schema.source_location is None
 
 
 def test_grant_schema_spec_multiple_relations() -> None:
@@ -203,25 +197,6 @@ def test_grant_schema_spec_is_frozen() -> None:
     )
     with pytest.raises(ValidationError):
         schema.name = "changed"  # type: ignore[misc]
-
-
-# ---------------------------------------------------------------------------
-# GrantSchemaSpec — with source location
-# ---------------------------------------------------------------------------
-
-
-def test_grant_schema_spec_with_source_location() -> None:
-    loc = SourceLocation(file="test.dsl", line=1, column=0)
-    schema = GrantSchemaSpec(
-        name="department_delegation",
-        label="Department Delegation",
-        scope="Department",
-        relations=[],
-        source_location=loc,
-    )
-    assert schema.source_location is not None
-    assert schema.source_location.line == 1
-    assert schema.source_location.column == 0
 
 
 # ---------------------------------------------------------------------------

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..errors import make_parse_error
+from ..ir.domain import AUTH_IDENTITY_SOURCES
 from ..lexer import TokenType
 from .dispatch import KeywordParser, parse_block_with_dispatch
 from .fitness import parse_fitness_block
@@ -203,13 +204,7 @@ class EntityParserMixin:
                 )
         return tuple(ops)
 
-    _AUTH_IDENTITY_SOURCES: tuple[str, ...] = (
-        "id",
-        "email",
-        "email_localpart",
-        "username",
-        "role",
-    )
+    _AUTH_IDENTITY_SOURCES: tuple[str, ...] = AUTH_IDENTITY_SOURCES
 
     def _parse_entity_auth_identity(self) -> ir.AuthIdentitySpec:
         """Parse the entity-level ``auth_identity:`` block (ADR-0039, #778/#1398).

@@ -959,7 +959,6 @@ ir_class: GrantRelationSpec
     - max_duration: Any = None
     - principal_label: str | None = None
     - revoke_verb: str | None = None
-    - source_location: SourceLocation | None = None
 
 ir_class: GrantSchemaSpec
   required:
@@ -969,7 +968,6 @@ ir_class: GrantSchemaSpec
     - scope: str
   optional:
     - description: str | None = None
-    - source_location: SourceLocation | None = None
 
 ir_class: GraphEdgeSpec
   required:
@@ -2848,7 +2846,6 @@ enum: FidelityGapCategory
     - MISSING_FIELD = 'missing_field'
     - MISSING_HTMX_ATTRIBUTE = 'missing_htmx_attribute'
     - MISSING_LOADING_INDICATOR = 'missing_loading_indicator'
-    - MISSING_NAVIGATION = 'missing_navigation'
     - MISSING_SOURCE_WIDGET = 'missing_source_widget'
     - MISSING_VALIDATION_ATTRIBUTE = 'missing_validation_attribute'
     - STORY_OUTCOME_MISSING = 'story_outcome_missing'
@@ -3181,8 +3178,6 @@ enum: ProcessTriggerKind
     - ENTITY_STATUS_TRANSITION = 'entity_status_transition'
     - MANUAL = 'manual'
     - PROCESS_COMPLETED = 'process_completed'
-    - SCHEDULE_CRON = 'schedule_cron'
-    - SCHEDULE_INTERVAL = 'schedule_interval'
     - SIGNAL = 'signal'
 
 enum: RelatedDisplayMode
@@ -3378,7 +3373,6 @@ enum: TestDesignTrigger
 
 enum: TestGapCategory
   members:
-    - LOW_COVERAGE_ENTITY = 'low_coverage_entity'
     - UNTESTED_ENTITY = 'untested_entity'
     - UNTESTED_PERSONA_GOAL = 'untested_persona_goal'
     - UNTESTED_SCENARIO = 'untested_scenario'

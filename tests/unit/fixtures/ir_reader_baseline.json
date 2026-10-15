@@ -8,8 +8,6 @@
   "fk_graph.PathStep.from_entity",
   "fk_graph.PathStep.terminal_field",
   "governance.ErasureSpec.policy",
-  "grants.GrantRelationSpec.source_location",
-  "grants.GrantSchemaSpec.source_location",
   "integrations.MatchRule.entity_field",
   "integrations.MatchRule.foreign_field",
   "money.Money.amount_minor",

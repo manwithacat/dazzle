@@ -26,8 +26,6 @@ class ProcessTriggerKind(StrEnum):
 
     ENTITY_EVENT = "entity_event"  # entity created/updated/deleted
     ENTITY_STATUS_TRANSITION = "entity_status_transition"  # status A -> B
-    SCHEDULE_CRON = "schedule_cron"  # cron expression
-    SCHEDULE_INTERVAL = "schedule_interval"  # every N minutes
     MANUAL = "manual"  # API call
     SIGNAL = "signal"  # external signal
     PROCESS_COMPLETED = "process_completed"  # when another process completes

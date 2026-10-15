@@ -20,7 +20,6 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from .conditions import ConditionExpr
-from .location import SourceLocation
 
 
 class GrantApprovalMode(StrEnum):
@@ -47,7 +46,6 @@ class GrantRelationSpec(BaseModel):
     approval: GrantApprovalMode = GrantApprovalMode.REQUIRED
     expiry: GrantExpiryMode = GrantExpiryMode.REQUIRED
     max_duration: Any = None  # str | ParamRef | None
-    source_location: SourceLocation | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -58,6 +56,5 @@ class GrantSchemaSpec(BaseModel):
     description: str | None = None
     scope: str
     relations: list[GrantRelationSpec]
-    source_location: SourceLocation | None = None
 
     model_config = ConfigDict(frozen=True)

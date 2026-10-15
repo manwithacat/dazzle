@@ -39,7 +39,6 @@ class GrantParserMixin:
         expect_identifier_or_keyword: Any
         current_token: Any
         file: Any
-        _source_location: Any
         parse_condition_expr: Any
 
     def parse_grant_schema(self) -> GrantSchemaSpec:
@@ -53,7 +52,6 @@ class GrantParserMixin:
               (relation NAME STRING COLON NEWLINE INDENT ... DEDENT)+
             DEDENT
         """
-        loc = self._source_location()
         name = self.expect_identifier_or_keyword().value
         label = self.expect(TokenType.STRING).value
         self.expect(TokenType.COLON)
@@ -117,7 +115,6 @@ class GrantParserMixin:
             description=description,
             scope=scope,
             relations=relations,
-            source_location=loc,
         )
 
     def _parse_grant_relation(self) -> GrantRelationSpec:
@@ -129,7 +126,6 @@ class GrantParserMixin:
         ``_build_grant_relation`` builder enforcing the required
         ``granted_by`` field.
         """
-        loc = self._source_location()
         name = self.expect_identifier_or_keyword().value
         label = self.expect(TokenType.STRING).value
         self.expect(TokenType.COLON)
@@ -145,7 +141,7 @@ class GrantParserMixin:
             on_unknown=_skip_unknown_grant_relation_field,
         )
         self.expect(TokenType.DEDENT)
-        return _build_grant_relation(self, name, label, loc, state)
+        return _build_grant_relation(self, name, label, state)
 
     def _parse_approval_mode(self, value: str) -> GrantApprovalMode:
         mode_map = {
@@ -328,7 +324,6 @@ def _build_grant_relation(
     parser: Any,
     name: str,
     label: str,
-    loc: Any,
     state: _GrantRelationState,
 ) -> GrantRelationSpec:
     """Enforce required ``granted_by`` field; assemble the IR."""
@@ -353,5 +348,4 @@ def _build_grant_relation(
         approval=state.approval,
         expiry=state.expiry,
         max_duration=state.max_duration,
-        source_location=loc,
     )
