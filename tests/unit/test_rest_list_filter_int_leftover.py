@@ -16,7 +16,7 @@ from types import SimpleNamespace
 import pytest
 
 from dazzle.http.runtime.page_routes import (
-    entity_int_filter_fields,
+    entity_filter_fields,
     leftover_honest_filter_decimal,
     leftover_honest_filter_int,
     leftover_honest_list_filters,
@@ -109,14 +109,12 @@ def test_leftover_honest_list_filter_int_values_do_not_invent(
     )
 
 
-def test_entity_int_filter_fields_reads_spec() -> None:
-    assert entity_int_filter_fields(_SPEC) == {
-        "amount": "int",
-        "unit_price": "decimal",
-    }
-    assert entity_int_filter_fields(None) == {}
-    assert entity_int_filter_fields(SimpleNamespace()) == {}
-    assert entity_int_filter_fields(SimpleNamespace(fields=[SimpleNamespace(name="title")])) == {}
+def test_entity_filter_fields_reads_int_spec() -> None:
+    assert entity_filter_fields(_SPEC, "int") == frozenset({"amount"})
+    assert entity_filter_fields(_SPEC, "decimal") == frozenset({"unit_price"})
+    for spec in (None, SimpleNamespace(), SimpleNamespace(fields=[SimpleNamespace(name="title")])):
+        assert entity_filter_fields(spec, "int") == frozenset()
+        assert entity_filter_fields(spec, "decimal") == frozenset()
 
 
 @pytest.mark.parametrize(
@@ -192,8 +190,8 @@ def test_leftover_honest_filter_decimal_does_not_invent(raw: object, expected: s
 def test_helper_source_pins_list_filter_int_leftover() -> None:
     src = _PAGE_ROUTES.read_text(encoding="utf-8")
     assert "def leftover_honest_list_filters" in src
-    assert "def entity_int_filter_fields" in src
-    assert "_parse_list_filter_int_values" in src
+    assert "def entity_filter_fields" in src
+    assert "_parse_list_filter_kind_values" in src
     assert "filter[amount]=zzz" in src
     assert "leftover_honest_filter_int" in src
 

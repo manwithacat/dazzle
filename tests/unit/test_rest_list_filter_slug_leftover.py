@@ -17,7 +17,7 @@ from types import SimpleNamespace
 import pytest
 
 from dazzle.http.runtime.page_routes import (
-    entity_slug_filter_fields,
+    entity_filter_fields,
     leftover_honest_filter_slug,
     leftover_honest_list_filters,
 )
@@ -111,13 +111,13 @@ def test_leftover_honest_list_filter_slug_values_do_not_invent(
     )
 
 
-def test_entity_slug_filter_fields_reads_spec() -> None:
-    assert entity_slug_filter_fields(_SPEC) == frozenset({"slug", "handle"})
-    assert entity_slug_filter_fields(None) == frozenset()
-    assert entity_slug_filter_fields(SimpleNamespace()) == frozenset()
-    assert entity_slug_filter_fields(SimpleNamespace(fields=[SimpleNamespace(name="title")])) == (
-        frozenset()
-    )
+def test_entity_filter_fields_reads_slug_spec() -> None:
+    assert entity_filter_fields(_SPEC, "slug") == frozenset({"slug", "handle"})
+    assert entity_filter_fields(None, "slug") == frozenset()
+    assert entity_filter_fields(SimpleNamespace(), "slug") == frozenset()
+    assert entity_filter_fields(
+        SimpleNamespace(fields=[SimpleNamespace(name="title")]), "slug"
+    ) == (frozenset())
 
 
 @pytest.mark.parametrize(
@@ -162,7 +162,7 @@ def test_leftover_honest_filter_slug_does_not_invent(raw: object, expected: str)
 def test_helper_source_pins_list_filter_slug_leftover() -> None:
     src = _PAGE_ROUTES.read_text(encoding="utf-8")
     assert "def leftover_honest_list_filters" in src
-    assert "def entity_slug_filter_fields" in src
+    assert "def entity_filter_fields" in src
     assert "filter[slug]=ab" in src
     assert "leftover_honest_filter_slug" in src
     assert "validate_slug" in src

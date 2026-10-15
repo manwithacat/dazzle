@@ -15,7 +15,7 @@ from types import SimpleNamespace
 import pytest
 
 from dazzle.http.runtime.page_routes import (
-    entity_json_filter_fields,
+    entity_filter_fields,
     leftover_honest_filter_json,
     leftover_honest_list_filters,
 )
@@ -113,13 +113,13 @@ def test_leftover_honest_list_filter_json_values_do_not_invent(
     )
 
 
-def test_entity_json_filter_fields_reads_spec() -> None:
-    assert entity_json_filter_fields(_SPEC) == frozenset({"preferences", "settings"})
-    assert entity_json_filter_fields(None) == frozenset()
-    assert entity_json_filter_fields(SimpleNamespace()) == frozenset()
-    assert entity_json_filter_fields(SimpleNamespace(fields=[SimpleNamespace(name="title")])) == (
-        frozenset()
-    )
+def test_entity_filter_fields_reads_json_spec() -> None:
+    assert entity_filter_fields(_SPEC, "json") == frozenset({"preferences", "settings"})
+    assert entity_filter_fields(None, "json") == frozenset()
+    assert entity_filter_fields(SimpleNamespace(), "json") == frozenset()
+    assert entity_filter_fields(
+        SimpleNamespace(fields=[SimpleNamespace(name="title")]), "json"
+    ) == (frozenset())
 
 
 @pytest.mark.parametrize(
@@ -166,7 +166,7 @@ def test_leftover_honest_filter_json_does_not_invent(raw: object, expected: str)
 def test_helper_source_pins_list_filter_json_leftover() -> None:
     src = _PAGE_ROUTES.read_text(encoding="utf-8")
     assert "def leftover_honest_list_filters" in src
-    assert "def entity_json_filter_fields" in src
+    assert "def entity_filter_fields" in src
     assert "filter[preferences]=zzz" in src
     assert "leftover_honest_filter_json" in src
 

@@ -19,7 +19,7 @@ import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, NamedTuple
 from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Request
@@ -410,21 +410,7 @@ def leftover_honest_list_filters(
                     out[name] = str(value)
     options = enum_options if enum_options is not None else entity_enum_filter_options(entity_spec)
     out = _parse_list_filter_enum_values(out, options)
-    out = _parse_list_filter_entity_id_values(out, entity_id_filter_fields(entity_spec))
-    out = _parse_list_filter_date_values(out, entity_date_filter_fields(entity_spec))
-    out = _parse_list_filter_bool_values(out, entity_bool_filter_fields(entity_spec))
-    out = _parse_list_filter_int_values(out, entity_int_filter_fields(entity_spec))
-    out = _parse_list_filter_email_values(out, entity_email_filter_fields(entity_spec))
-    out = _parse_list_filter_url_values(out, entity_url_filter_fields(entity_spec))
-    out = _omit_leftover_filter_values(
-        out, entity_slug_filter_fields(entity_spec), leftover_honest_filter_slug
-    )
-    out = _omit_leftover_filter_values(
-        out, entity_file_filter_fields(entity_spec), leftover_honest_filter_file
-    )
-    return _omit_leftover_filter_values(
-        out, entity_json_filter_fields(entity_spec), leftover_honest_filter_json
-    )
+    return _parse_list_filter_kind_values(out, entity_spec)
 
 
 def entity_enum_filter_options(entity_spec: Any) -> dict[str, tuple[str, ...]]:
@@ -473,35 +459,6 @@ def _parse_list_filter_enum_values(
     return out
 
 
-_ENTITY_ID_FILTER_KINDS = frozenset({"uuid", "ref", "belongs_to"})
-
-
-def _entity_filter_fields_of_kinds(
-    entity_spec: Any,
-    kinds: frozenset[str],
-    *,
-    always: frozenset[str] = frozenset(),
-) -> frozenset[str]:
-    """Field names whose type kind is in ``kinds`` (plus ``always``)."""
-    keys: set[str] = set(always)
-    for spec_field in getattr(entity_spec, "fields", None) or ():
-        name = str(getattr(spec_field, "name", "") or "")
-        if not name:
-            continue
-        kind = getattr(getattr(spec_field, "type", None), "kind", None)
-        kind_s = str(getattr(kind, "value", kind) or "").lower()
-        if kind_s in kinds:
-            keys.add(name)
-    return frozenset(keys)
-
-
-def entity_id_filter_fields(entity_spec: Any) -> frozenset[str]:
-    """Entity-id / UUID / REF filter keys (``id`` always)."""
-    return _entity_filter_fields_of_kinds(
-        entity_spec, _ENTITY_ID_FILTER_KINDS, always=frozenset({"id"})
-    )
-
-
 def _omit_leftover_filter_values(
     filters: dict[str, str],
     fields: frozenset[str],
@@ -517,37 +474,6 @@ def _omit_leftover_filter_values(
         if kept:
             out[key] = kept
     return out
-
-
-def _parse_list_filter_entity_id_values(
-    filters: dict[str, str],
-    id_fields: frozenset[str],
-) -> dict[str, str]:
-    """Leftover-honest entity-id filter VALUES (cycle 2195).
-
-    Valid UUIDs ride. Leftover junk (``zzz``, ``ghost``, ``not-a-uuid``)
-    must not invent empty via fail-closed UUID match. Empty rest is
-    unfiltered (omit). Distinct from leftover filter-enum VALUE
-    (oral #75). leftover_honest_entity_id already exists (oral #71).
-    """
-    return _omit_leftover_filter_values(filters, id_fields, leftover_honest_entity_id)
-
-
-_DATE_FILTER_KINDS = frozenset({"date", "datetime"})
-
-
-def entity_date_filter_fields(entity_spec: Any) -> dict[str, str]:
-    """Date / datetime filter keys mapped to ``date`` or ``datetime``."""
-    keys: dict[str, str] = {}
-    for spec_field in getattr(entity_spec, "fields", None) or ():
-        name = str(getattr(spec_field, "name", "") or "")
-        if not name:
-            continue
-        kind = getattr(getattr(spec_field, "type", None), "kind", None)
-        kind_s = str(getattr(kind, "value", kind) or "").lower()
-        if kind_s in _DATE_FILTER_KINDS:
-            keys[name] = kind_s
-    return keys
 
 
 def leftover_honest_filter_datetime(raw: Any) -> str:
@@ -573,42 +499,8 @@ def leftover_honest_filter_datetime(raw: Any) -> str:
     return text
 
 
-def _parse_list_filter_date_values(
-    filters: dict[str, str],
-    date_fields: dict[str, str],
-) -> dict[str, str]:
-    """Leftover-honest date / datetime filter VALUES (cycle 2196).
-
-    Valid ISO dates ride. Leftover junk (``zzz``, ``ghost``,
-    ``not-a-date``) must not invent empty via fail-closed date
-    match. Empty rest is unfiltered (omit). Distinct from leftover
-    filter[id] VALUE (oral #76). leftover_honest_iso_date already
-    exists (oral #70).
-    """
-    out: dict[str, str] = {}
-    for key, val in filters.items():
-        kind = date_fields.get(key)
-        if not kind:
-            out[key] = val
-            continue
-        honest = (
-            leftover_honest_iso_date(val)
-            if kind == "date"
-            else leftover_honest_filter_datetime(val)
-        )
-        if honest:
-            out[key] = honest
-    return out
-
-
-_BOOL_FILTER_KINDS = frozenset({"bool", "boolean"})
 _BOOL_FILTER_TRUE = frozenset({"true", "1", "yes", "on"})
 _BOOL_FILTER_FALSE = frozenset({"false", "0", "no", "off"})
-
-
-def entity_bool_filter_fields(entity_spec: Any) -> frozenset[str]:
-    """Bool filter keys (``is_active`` / switch fields)."""
-    return _entity_filter_fields_of_kinds(entity_spec, _BOOL_FILTER_KINDS)
 
 
 def leftover_honest_filter_bool(raw: Any) -> str:
@@ -630,41 +522,8 @@ def leftover_honest_filter_bool(raw: Any) -> str:
     return ""
 
 
-def _parse_list_filter_bool_values(
-    filters: dict[str, str],
-    bool_fields: frozenset[str],
-) -> dict[str, str]:
-    """Leftover-honest bool filter VALUES (cycle 2197).
-
-    Valid true/false tokens ride. Leftover junk (``zzz``, ``ghost``,
-    ``maybe``) must not invent empty via fail-closed bool match or
-    the inactive-only slice via coerce-to-False. Empty rest is
-    unfiltered (omit). Distinct from leftover date VALUE
-    (oral #77). leftover include_closed already exists (cycle 2168).
-    """
-    return _omit_leftover_filter_values(filters, bool_fields, leftover_honest_filter_bool)
-
-
-_INT_FILTER_KINDS = frozenset({"int", "integer"})
-_DECIMAL_FILTER_KINDS = frozenset({"decimal", "float", "number", "money"})
 _INT_FILTER_RE = re.compile(r"^-?[0-9]+$")
 _DECIMAL_FILTER_RE = re.compile(r"^-?[0-9]+(?:\.[0-9]+)?$")
-
-
-def entity_int_filter_fields(entity_spec: Any) -> dict[str, str]:
-    """Int / decimal filter keys mapped to ``int`` or ``decimal``."""
-    keys: dict[str, str] = {}
-    for spec_field in getattr(entity_spec, "fields", None) or ():
-        name = str(getattr(spec_field, "name", "") or "")
-        if not name:
-            continue
-        kind = getattr(getattr(spec_field, "type", None), "kind", None)
-        kind_s = str(getattr(kind, "value", kind) or "").lower()
-        if kind_s in _INT_FILTER_KINDS:
-            keys[name] = "int"
-        elif kind_s in _DECIMAL_FILTER_KINDS:
-            keys[name] = "decimal"
-    return keys
 
 
 def leftover_honest_filter_int(raw: Any) -> str:
@@ -707,33 +566,6 @@ def leftover_honest_filter_decimal(raw: Any) -> str:
     return text
 
 
-def _parse_list_filter_int_values(
-    filters: dict[str, str],
-    numeric_fields: dict[str, str],
-) -> dict[str, str]:
-    """Leftover-honest int / decimal filter VALUES (cycle 2198).
-
-    Valid integer / decimal tokens ride. Leftover junk (``zzz``,
-    ``ghost``, ``1e3``) must not invent empty via fail-closed
-    numeric match or the zero-amount slice via coerce-to-0.
-    Empty rest is unfiltered (omit). Distinct from leftover
-    bool VALUE (oral #78). Reuses ``_omit_leftover_filter_values``
-    (not a clone of ``_parse_list_filter_date_values``).
-    """
-    int_keys = frozenset(name for name, kind in numeric_fields.items() if kind == "int")
-    dec_keys = frozenset(name for name, kind in numeric_fields.items() if kind != "int")
-    out = _omit_leftover_filter_values(filters, int_keys, leftover_honest_filter_int)
-    return _omit_leftover_filter_values(out, dec_keys, leftover_honest_filter_decimal)
-
-
-_EMAIL_FILTER_KINDS = frozenset({"email"})
-
-
-def entity_email_filter_fields(entity_spec: Any) -> frozenset[str]:
-    """Email filter keys (``email`` / contact fields)."""
-    return _entity_filter_fields_of_kinds(entity_spec, _EMAIL_FILTER_KINDS)
-
-
 def leftover_honest_filter_email(raw: Any) -> str:
     """Valid emails ride. Leftover junk restores "".
 
@@ -745,30 +577,6 @@ def leftover_honest_filter_email(raw: Any) -> str:
     if not text or not is_mailbox_shape(text):
         return ""
     return text
-
-
-def _parse_list_filter_email_values(
-    filters: dict[str, str],
-    email_fields: frozenset[str],
-) -> dict[str, str]:
-    """Leftover-honest email filter VALUES (cycle 2199).
-
-    Valid emails ride. Leftover junk (``zzz``, ``ghost``,
-    ``not-an-email``) must not invent empty via fail-closed
-    email match. Empty rest is unfiltered (omit). Distinct
-    from leftover int VALUE (oral #79). Reuses
-    ``_omit_leftover_filter_values`` (not a clone of
-    ``_parse_list_filter_int_values``).
-    """
-    return _omit_leftover_filter_values(filters, email_fields, leftover_honest_filter_email)
-
-
-_URL_FILTER_KINDS = frozenset({"url", "uri"})
-
-
-def entity_url_filter_fields(entity_spec: Any) -> frozenset[str]:
-    """URL filter keys (``preview_url`` / media fields)."""
-    return _entity_filter_fields_of_kinds(entity_spec, _URL_FILTER_KINDS)
 
 
 def leftover_honest_filter_url(raw: Any) -> str:
@@ -793,30 +601,6 @@ def leftover_honest_filter_url(raw: Any) -> str:
     return text
 
 
-def _parse_list_filter_url_values(
-    filters: dict[str, str],
-    url_fields: frozenset[str],
-) -> dict[str, str]:
-    """Leftover-honest url filter VALUES (cycle 2200).
-
-    Valid http(s) URLs ride. Leftover junk (``zzz``, ``ghost``,
-    ``not-a-url``) must not invent empty via fail-closed url
-    match. Empty rest is unfiltered (omit). Distinct from leftover
-    email VALUE (oral #80). Reuses
-    ``_omit_leftover_filter_values`` (not a clone of
-    ``_parse_list_filter_email_values``).
-    """
-    return _omit_leftover_filter_values(filters, url_fields, leftover_honest_filter_url)
-
-
-_SLUG_FILTER_KINDS = frozenset({"slug"})
-
-
-def entity_slug_filter_fields(entity_spec: Any) -> frozenset[str]:
-    """Slug filter keys (``slug`` / tenant-host fields)."""
-    return _entity_filter_fields_of_kinds(entity_spec, _SLUG_FILTER_KINDS)
-
-
 def leftover_honest_filter_slug(raw: Any) -> str:
     """Valid slugs ride. Leftover junk restores "".
 
@@ -838,14 +622,8 @@ def leftover_honest_filter_slug(raw: Any) -> str:
         return ""
 
 
-_FILE_FILTER_KINDS = frozenset({"file"})
 _FILE_NAME_RE = re.compile(r"^[\w.\-]{1,100}\.[A-Za-z0-9]{1,10}$")
 _FILE_PATH_RE = re.compile(r"^(?:[\w.\-]+/){1,16}[\w.\-]+$")
-
-
-def entity_file_filter_fields(entity_spec: Any) -> frozenset[str]:
-    """File filter keys (``file`` / upload fields)."""
-    return _entity_filter_fields_of_kinds(entity_spec, _FILE_FILTER_KINDS)
 
 
 def leftover_honest_filter_file(raw: Any) -> str:
@@ -874,14 +652,6 @@ def leftover_honest_filter_file(raw: Any) -> str:
     return ""
 
 
-_JSON_FILTER_KINDS = frozenset({"json", "jsonb"})
-
-
-def entity_json_filter_fields(entity_spec: Any) -> frozenset[str]:
-    """JSON filter keys (``preferences`` / bag fields)."""
-    return _entity_filter_fields_of_kinds(entity_spec, _JSON_FILTER_KINDS)
-
-
 def leftover_honest_filter_json(raw: Any) -> str:
     """Valid JSON rides. Leftover junk restores "".
 
@@ -900,6 +670,82 @@ def leftover_honest_filter_json(raw: Any) -> str:
     except (ValueError, TypeError):
         return ""
     return text
+
+
+class _FilterValueKind(NamedTuple):
+    """One list-filter value kind: which field types it covers and its normaliser."""
+
+    type_kinds: frozenset[str]
+    honest: Callable[[Any], str]
+    always: frozenset[str] = frozenset()
+
+
+# Kind-keyed filter VALUE registry (flense ship AP). Order is the pass order
+# of ``_parse_list_filter_kind_values``: each pass drops leftover VALUES on
+# its own keys and lets every other key ride (cycles 2195-2203).
+_LIST_FILTER_VALUE_KINDS: dict[str, _FilterValueKind] = {
+    "entity_id": _FilterValueKind(
+        frozenset({"uuid", "ref", "belongs_to"}),
+        leftover_honest_entity_id,
+        always=frozenset({"id"}),
+    ),
+    "date": _FilterValueKind(frozenset({"date"}), leftover_honest_iso_date),
+    "datetime": _FilterValueKind(frozenset({"datetime"}), leftover_honest_filter_datetime),
+    "bool": _FilterValueKind(frozenset({"bool", "boolean"}), leftover_honest_filter_bool),
+    "int": _FilterValueKind(frozenset({"int", "integer"}), leftover_honest_filter_int),
+    "decimal": _FilterValueKind(
+        frozenset({"decimal", "float", "number", "money"}), leftover_honest_filter_decimal
+    ),
+    "email": _FilterValueKind(frozenset({"email"}), leftover_honest_filter_email),
+    "url": _FilterValueKind(frozenset({"url", "uri"}), leftover_honest_filter_url),
+    "slug": _FilterValueKind(frozenset({"slug"}), leftover_honest_filter_slug),
+    "file": _FilterValueKind(frozenset({"file"}), leftover_honest_filter_file),
+    "json": _FilterValueKind(frozenset({"json", "jsonb"}), leftover_honest_filter_json),
+}
+
+_DATE_FILTER_VALUE_KINDS = frozenset({"date", "datetime"})
+
+
+def _entity_filter_fields_by_kind(entity_spec: Any) -> dict[str, frozenset[str]]:
+    """Entity field names keyed by registry kind (``id`` always an entity id)."""
+    by_kind: dict[str, set[str]] = {
+        kind: set(spec.always) for kind, spec in _LIST_FILTER_VALUE_KINDS.items()
+    }
+    for spec_field in getattr(entity_spec, "fields", None) or ():
+        name = str(getattr(spec_field, "name", "") or "")
+        if not name:
+            continue
+        type_kind = getattr(getattr(spec_field, "type", None), "kind", None)
+        type_kind_s = str(getattr(type_kind, "value", type_kind) or "").lower()
+        for kind, spec in _LIST_FILTER_VALUE_KINDS.items():
+            if type_kind_s in spec.type_kinds:
+                by_kind[kind].add(name)
+    return {kind: frozenset(names) for kind, names in by_kind.items()}
+
+
+def entity_filter_fields(entity_spec: Any, kind: str) -> frozenset[str]:
+    """Filter keys of one registry ``kind`` (``entity_id``, ``date``, ``bool`` ...)."""
+    return _entity_filter_fields_by_kind(entity_spec)[kind]
+
+
+def _parse_list_filter_kind_values(
+    filters: dict[str, str],
+    entity_spec: Any,
+    *,
+    skip: frozenset[str] = frozenset(),
+) -> dict[str, str]:
+    """Leftover-honest filter VALUES for every registry kind, in registry order.
+
+    Valid tokens ride. Leftover junk (``zzz``, ``ghost``) on a known key
+    of that kind must not invent empty via a fail-closed match; empty
+    rest is unfiltered (omit). Keys of no registered kind ride as-is.
+    """
+    fields_by_kind = _entity_filter_fields_by_kind(entity_spec)
+    out = filters
+    for kind, spec in _LIST_FILTER_VALUE_KINDS.items():
+        if kind not in skip:
+            out = _omit_leftover_filter_values(out, fields_by_kind[kind], spec.honest)
+    return out
 
 
 def _collect_request_params(request: Any) -> dict[str, str]:
@@ -1200,6 +1046,19 @@ def _suppress_inaccessible_cta(step: Any, prc: "_PageRequestContext", appspec: A
     return step.model_copy(update={"cta_target": None, "cta_label": None})
 
 
+def _first_persona_role(user_roles: list[str] | None, *overrides: Any) -> str | None:
+    """First normalised role (``role_`` prefix stripped) keyed in any override map.
+
+    The shared persona-override walk: the user's primary persona (first in
+    ``user_roles``) wins, and later roles never clobber it.
+    """
+    for role in user_roles or ():
+        normalised = normalize_role(role)
+        if any(normalised in override for override in overrides):
+            return normalised
+    return None
+
+
 def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
     """Apply per-persona PersonaVariant overrides to a per-request table copy.
 
@@ -1229,77 +1088,58 @@ def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
     empty user_roles — it's a no-op in both cases. Designed to be
     idempotent and testable in isolation.
     """
-    if not user_roles:
-        return
-
     persona_empty = getattr(req_table, "persona_empty_messages", None) or {}
     persona_hide = getattr(req_table, "persona_hide", None) or {}
     persona_read_only = getattr(req_table, "persona_read_only", None) or set()
     persona_create_urls = getattr(req_table, "persona_create_urls", None) or {}
     persona_create_labels = getattr(req_table, "persona_create_labels", None) or {}
 
-    if (
-        not persona_empty
-        and not persona_hide
-        and not persona_read_only
-        and not persona_create_urls
-        and not persona_create_labels
-    ):
+    normalised = _first_persona_role(
+        user_roles,
+        persona_empty,
+        persona_hide,
+        persona_create_urls,
+        persona_create_labels,
+        persona_read_only,
+    )
+    if normalised is None:
         return
 
-    for role in user_roles:
-        normalised = normalize_role(role)
+    # Empty-message override (cycle 240)
+    if normalised in persona_empty:
+        req_table.empty_message = persona_empty[normalised]
 
-        matched = False
+    # Column hide override (cycle 243). Hide every column whose key
+    # is in the persona's hide list. Stacks on top of cycle 240's
+    # condition-eval column hiding — both set ``hidden=True`` on
+    # the per-request copy, and the DataTable template already
+    # honours it.
+    if normalised in persona_hide:
+        hide_set = set(persona_hide[normalised])
+        for col in req_table.columns:
+            if col.key in hide_set:
+                col.hidden = True
 
-        # Empty-message override (cycle 240)
-        if normalised in persona_empty:
-            req_table.empty_message = persona_empty[normalised]
-            matched = True
+    # action_primary → list-header CREATE CTA (route + optional label).
+    # Compiled only for CREATE-mode targets; EDIT/VIEW stay unapplied.
+    # Applied *before* read_only so a read_only persona still ends with
+    # create suppressed (read_only wins).
+    if normalised in persona_create_urls:
+        req_table.create_url = persona_create_urls[normalised]
+    if normalised in persona_create_labels:
+        req_table.create_label = persona_create_labels[normalised]
 
-        # Column hide override (cycle 243). Hide every column whose key
-        # is in the persona's hide list. Stacks on top of cycle 240's
-        # condition-eval column hiding — both set ``hidden=True`` on
-        # the per-request copy, and the DataTable template already
-        # honours it.
-        if normalised in persona_hide:
-            hide_set = set(persona_hide[normalised])
-            if hide_set:
-                for col in req_table.columns:
-                    if col.key in hide_set:
-                        col.hidden = True
-            matched = True
-
-        # action_primary → list-header CREATE CTA (route + optional label).
-        # Compiled only for CREATE-mode targets; EDIT/VIEW stay unapplied.
-        # Applied *before* read_only so a read_only persona still ends with
-        # create suppressed (read_only wins).
-        if normalised in persona_create_urls:
-            req_table.create_url = persona_create_urls[normalised]
-            matched = True
-        if normalised in persona_create_labels:
-            req_table.create_label = persona_create_labels[normalised]
-            matched = True
-
-        # Read-only persona declaration (cycle 244). Suppresses every
-        # mutation affordance on the table: Create button, bulk-action
-        # bar, and inline-edit. Distinct from ``_should_suppress_mutations``
-        # which gates on ``permit:`` rules — this is an explicit DSL
-        # persona-variant declaration and takes precedence over action_primary.
-        if normalised in persona_read_only:
-            req_table.create_url = None
-            req_table.bulk_actions = False
-            req_table.bulk_action_names = []
-            req_table.bulk_include_delete = False
-            req_table.inline_editable = []
-            matched = True
-
-        # First matching persona wins for all override fields. Stops
-        # the loop early so later roles can't silently clobber earlier
-        # ones — the user's primary persona (typically first in the
-        # user_roles list) takes precedence.
-        if matched:
-            return
+    # Read-only persona declaration (cycle 244). Suppresses every
+    # mutation affordance on the table: Create button, bulk-action
+    # bar, and inline-edit. Distinct from ``_should_suppress_mutations``
+    # which gates on ``permit:`` rules — this is an explicit DSL
+    # persona-variant declaration and takes precedence over action_primary.
+    if normalised in persona_read_only:
+        req_table.create_url = None
+        req_table.bulk_actions = False
+        req_table.bulk_action_names = []
+        req_table.bulk_include_delete = False
+        req_table.inline_editable = []
 
 
 def _apply_persona_detail_primary(
@@ -1320,26 +1160,20 @@ def _apply_persona_detail_primary(
     - ``kind=edit``: only apply when ``can_update`` is True so RBAC that
       cleared ``edit_url`` is not re-opened by a persona edit primary.
     """
-    if not user_roles:
-        return
     urls = getattr(req_detail, "persona_primary_urls", None) or {}
     labels = getattr(req_detail, "persona_primary_labels", None) or {}
     kinds = getattr(req_detail, "persona_primary_kinds", None) or {}
-    if not urls and not labels:
+    normalised = _first_persona_role(user_roles, urls, labels)
+    if normalised is None:
         return
-    for role in user_roles:
-        normalised = normalize_role(role)
-        if normalised not in urls and normalised not in labels:
-            continue
-        kind = kinds.get(normalised, "edit")
-        if kind == "edit" and not can_update:
-            return
-        if normalised in urls:
-            req_detail.edit_url = urls[normalised]
-        if normalised in labels:
-            req_detail.edit_label = labels[normalised]
-        req_detail.primary_action_kind = kind
+    kind = kinds.get(normalised, "edit")
+    if kind == "edit" and not can_update:
         return
+    if normalised in urls:
+        req_detail.edit_url = urls[normalised]
+    if normalised in labels:
+        req_detail.edit_label = labels[normalised]
+    req_detail.primary_action_kind = kind
 
 
 def _apply_persona_form_overrides(
@@ -1385,56 +1219,44 @@ def _apply_persona_form_overrides(
     field visibility) for the list-to-form half. The list-column half
     was closed in cycle 243.
     """
-    if not user_roles:
-        return False
-
     persona_hide = getattr(req_form, "persona_hide", None) or {}
     persona_read_only = getattr(req_form, "persona_read_only", None) or set()
     persona_defaults = getattr(req_form, "persona_defaults", None) or {}
 
-    if not persona_hide and not persona_read_only and not persona_defaults:
+    normalised = _first_persona_role(user_roles, persona_read_only, persona_hide, persona_defaults)
+    if normalised is None:
         return False
 
-    for role in user_roles:
-        normalised = normalize_role(role)
+    # Read-only persona declaration. Signal caller to abort.
+    if normalised in persona_read_only:
+        return True
 
-        matched = False
+    # Field hide override. Remove matching fields from the flat
+    # list, every section's field list, and initial_values.
+    if normalised in persona_hide:
+        hide_set = set(persona_hide[normalised])
+        if hide_set:
+            req_form.fields = [f for f in req_form.fields if f.name not in hide_set]
+            for section in req_form.sections or []:
+                section.fields = [f for f in section.fields if f.name not in hide_set]
+            if req_form.initial_values:
+                for key in list(req_form.initial_values.keys()):
+                    if key in hide_set:
+                        del req_form.initial_values[key]
 
-        # Read-only persona declaration. Signal caller to abort.
-        if normalised in persona_read_only:
-            return True
-
-        # Field hide override. Remove matching fields from the flat
-        # list, every section's field list, and initial_values.
-        if normalised in persona_hide:
-            hide_set = set(persona_hide[normalised])
-            if hide_set:
-                req_form.fields = [f for f in req_form.fields if f.name not in hide_set]
-                for section in req_form.sections or []:
-                    section.fields = [f for f in section.fields if f.name not in hide_set]
-                if req_form.initial_values:
-                    for key in list(req_form.initial_values.keys()):
-                        if key in hide_set:
-                            del req_form.initial_values[key]
-            matched = True
-
-        # Defaults prefill (only empty keys).
-        if normalised in persona_defaults:
-            iv = dict(req_form.initial_values or {})
-            for key, raw in persona_defaults[normalised].items():
-                existing = iv.get(key, None)
-                if existing not in (None, ""):
-                    continue
-                if raw == "current_user":
-                    if user_id:
-                        iv[key] = user_id
-                else:
-                    iv[key] = raw
-            req_form.initial_values = iv
-            matched = True
-
-        if matched:
-            return False
+    # Defaults prefill (only empty keys).
+    if normalised in persona_defaults:
+        iv = dict(req_form.initial_values or {})
+        for key, raw in persona_defaults[normalised].items():
+            existing = iv.get(key, None)
+            if existing not in (None, ""):
+                continue
+            if raw == "current_user":
+                if user_id:
+                    iv[key] = user_id
+            else:
+                iv[key] = raw
+        req_form.initial_values = iv
 
     return False
 
@@ -2410,38 +2232,14 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     )
     _list_search = _parse_list_search(_qparams.get("search"), _qparams.get("q"))
     _svc = prc.deps.entity_services.get(req_table.entity_name)
-    _list_filters = _omit_leftover_filter_values(
-        _parse_list_filter_url_values(
-            _parse_list_filter_email_values(
-                _parse_list_filter_int_values(
-                    _parse_list_filter_bool_values(
-                        _parse_list_filter_entity_id_values(
-                            _parse_list_filter_enum_values(
-                                _parse_list_filters(_qparams, allowed=_allowed),
-                                _list_filter_enum_options(req_table),
-                            ),
-                            entity_id_filter_fields(getattr(_svc, "entity_spec", None)),
-                        ),
-                        entity_bool_filter_fields(getattr(_svc, "entity_spec", None)),
-                    ),
-                    entity_int_filter_fields(getattr(_svc, "entity_spec", None)),
-                ),
-                entity_email_filter_fields(getattr(_svc, "entity_spec", None)),
-            ),
-            entity_url_filter_fields(getattr(_svc, "entity_spec", None)),
+    # The page list never date-normalised filter VALUES (the REST list does).
+    _list_filters = _parse_list_filter_kind_values(
+        _parse_list_filter_enum_values(
+            _parse_list_filters(_qparams, allowed=_allowed),
+            _list_filter_enum_options(req_table),
         ),
-        entity_slug_filter_fields(getattr(_svc, "entity_spec", None)),
-        leftover_honest_filter_slug,
-    )
-    _list_filters = _omit_leftover_filter_values(
-        _list_filters,
-        entity_file_filter_fields(getattr(_svc, "entity_spec", None)),
-        leftover_honest_filter_file,
-    )
-    _list_filters = _omit_leftover_filter_values(
-        _list_filters,
-        entity_json_filter_fields(getattr(_svc, "entity_spec", None)),
-        leftover_honest_filter_json,
+        getattr(_svc, "entity_spec", None),
+        skip=_DATE_FILTER_VALUE_KINDS,
     )
     _temporal = getattr(getattr(_svc, "entity_spec", None), "temporal", None)
     _as_of_param = getattr(_temporal, "as_of_param", None) or "as_of"

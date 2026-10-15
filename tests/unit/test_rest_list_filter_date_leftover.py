@@ -16,7 +16,7 @@ from types import SimpleNamespace
 import pytest
 
 from dazzle.http.runtime.page_routes import (
-    entity_date_filter_fields,
+    entity_filter_fields,
     leftover_honest_filter_datetime,
     leftover_honest_list_filters,
 )
@@ -106,14 +106,12 @@ def test_leftover_honest_list_filter_date_values_do_not_invent(
     )
 
 
-def test_entity_date_filter_fields_reads_spec() -> None:
-    assert entity_date_filter_fields(_SPEC) == {
-        "created_at": "datetime",
-        "due_date": "date",
-    }
-    assert entity_date_filter_fields(None) == {}
-    assert entity_date_filter_fields(SimpleNamespace()) == {}
-    assert entity_date_filter_fields(SimpleNamespace(fields=[SimpleNamespace(name="title")])) == {}
+def test_entity_filter_fields_reads_date_spec() -> None:
+    assert entity_filter_fields(_SPEC, "datetime") == frozenset({"created_at"})
+    assert entity_filter_fields(_SPEC, "date") == frozenset({"due_date"})
+    for spec in (None, SimpleNamespace(), SimpleNamespace(fields=[SimpleNamespace(name="title")])):
+        assert entity_filter_fields(spec, "date") == frozenset()
+        assert entity_filter_fields(spec, "datetime") == frozenset()
 
 
 @pytest.mark.parametrize(
@@ -136,8 +134,8 @@ def test_leftover_honest_filter_datetime_does_not_invent(raw: object, expected: 
 def test_helper_source_pins_list_filter_date_leftover() -> None:
     src = _PAGE_ROUTES.read_text(encoding="utf-8")
     assert "def leftover_honest_list_filters" in src
-    assert "def entity_date_filter_fields" in src
-    assert "_parse_list_filter_date_values" in src
+    assert "def entity_filter_fields" in src
+    assert "_parse_list_filter_kind_values" in src
     assert "filter[created_at]=zzz" in src
     assert "leftover_honest_iso_date" in src
 

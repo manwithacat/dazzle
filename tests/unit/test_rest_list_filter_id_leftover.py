@@ -16,7 +16,7 @@ from types import SimpleNamespace
 import pytest
 
 from dazzle.http.runtime.page_routes import (
-    entity_id_filter_fields,
+    entity_filter_fields,
     leftover_honest_list_filters,
 )
 
@@ -100,20 +100,20 @@ def test_leftover_honest_list_filter_id_values_do_not_invent(
     )
 
 
-def test_entity_id_filter_fields_reads_spec() -> None:
-    assert entity_id_filter_fields(_SPEC) == frozenset({"id", "assigned_to"})
-    assert entity_id_filter_fields(None) == frozenset({"id"})
-    assert entity_id_filter_fields(SimpleNamespace()) == frozenset({"id"})
-    assert entity_id_filter_fields(
-        SimpleNamespace(fields=[SimpleNamespace(name="title")])
+def test_entity_filter_fields_reads_id_spec() -> None:
+    assert entity_filter_fields(_SPEC, "entity_id") == frozenset({"id", "assigned_to"})
+    assert entity_filter_fields(None, "entity_id") == frozenset({"id"})
+    assert entity_filter_fields(SimpleNamespace(), "entity_id") == frozenset({"id"})
+    assert entity_filter_fields(
+        SimpleNamespace(fields=[SimpleNamespace(name="title")]), "entity_id"
     ) == frozenset({"id"})
 
 
 def test_helper_source_pins_list_filter_id_leftover() -> None:
     src = _PAGE_ROUTES.read_text(encoding="utf-8")
     assert "def leftover_honest_list_filters" in src
-    assert "def entity_id_filter_fields" in src
-    assert "_parse_list_filter_entity_id_values" in src
+    assert "def entity_filter_fields" in src
+    assert "_parse_list_filter_kind_values" in src
     assert "filter[id]=zzz" in src
     assert "leftover_honest_entity_id" in src
 

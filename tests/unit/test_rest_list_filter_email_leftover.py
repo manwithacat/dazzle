@@ -15,7 +15,7 @@ from types import SimpleNamespace
 import pytest
 
 from dazzle.http.runtime.page_routes import (
-    entity_email_filter_fields,
+    entity_filter_fields,
     leftover_honest_filter_email,
     leftover_honest_list_filters,
 )
@@ -103,13 +103,13 @@ def test_leftover_honest_list_filter_email_values_do_not_invent(
     )
 
 
-def test_entity_email_filter_fields_reads_spec() -> None:
-    assert entity_email_filter_fields(_SPEC) == frozenset({"email", "contact_email"})
-    assert entity_email_filter_fields(None) == frozenset()
-    assert entity_email_filter_fields(SimpleNamespace()) == frozenset()
-    assert entity_email_filter_fields(SimpleNamespace(fields=[SimpleNamespace(name="title")])) == (
-        frozenset()
-    )
+def test_entity_filter_fields_reads_email_spec() -> None:
+    assert entity_filter_fields(_SPEC, "email") == frozenset({"email", "contact_email"})
+    assert entity_filter_fields(None, "email") == frozenset()
+    assert entity_filter_fields(SimpleNamespace(), "email") == frozenset()
+    assert entity_filter_fields(
+        SimpleNamespace(fields=[SimpleNamespace(name="title")]), "email"
+    ) == (frozenset())
 
 
 @pytest.mark.parametrize(
@@ -148,8 +148,8 @@ def test_leftover_honest_filter_email_does_not_invent(raw: object, expected: str
 def test_helper_source_pins_list_filter_email_leftover() -> None:
     src = _PAGE_ROUTES.read_text(encoding="utf-8")
     assert "def leftover_honest_list_filters" in src
-    assert "def entity_email_filter_fields" in src
-    assert "_parse_list_filter_email_values" in src
+    assert "def entity_filter_fields" in src
+    assert "_parse_list_filter_kind_values" in src
     assert "filter[email]=zzz" in src
     assert "leftover_honest_filter_email" in src
     assert "is_mailbox_shape" in src

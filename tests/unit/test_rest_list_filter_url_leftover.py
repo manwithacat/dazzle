@@ -15,7 +15,7 @@ from types import SimpleNamespace
 import pytest
 
 from dazzle.http.runtime.page_routes import (
-    entity_url_filter_fields,
+    entity_filter_fields,
     leftover_honest_filter_url,
     leftover_honest_list_filters,
 )
@@ -112,11 +112,11 @@ def test_leftover_honest_list_filter_url_values_do_not_invent(
     )
 
 
-def test_entity_url_filter_fields_reads_spec() -> None:
-    assert entity_url_filter_fields(_SPEC) == frozenset({"preview_url", "logo_url"})
-    assert entity_url_filter_fields(None) == frozenset()
-    assert entity_url_filter_fields(SimpleNamespace()) == frozenset()
-    assert entity_url_filter_fields(SimpleNamespace(fields=[SimpleNamespace(name="title")])) == (
+def test_entity_filter_fields_reads_url_spec() -> None:
+    assert entity_filter_fields(_SPEC, "url") == frozenset({"preview_url", "logo_url"})
+    assert entity_filter_fields(None, "url") == frozenset()
+    assert entity_filter_fields(SimpleNamespace(), "url") == frozenset()
+    assert entity_filter_fields(SimpleNamespace(fields=[SimpleNamespace(name="title")]), "url") == (
         frozenset()
     )
 
@@ -159,8 +159,8 @@ def test_leftover_honest_filter_url_does_not_invent(raw: object, expected: str) 
 def test_helper_source_pins_list_filter_url_leftover() -> None:
     src = _PAGE_ROUTES.read_text(encoding="utf-8")
     assert "def leftover_honest_list_filters" in src
-    assert "def entity_url_filter_fields" in src
-    assert "_parse_list_filter_url_values" in src
+    assert "def entity_filter_fields" in src
+    assert "_parse_list_filter_kind_values" in src
     assert "filter[preview_url]=zzz" in src
     assert "leftover_honest_filter_url" in src
 
