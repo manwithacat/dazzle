@@ -101,6 +101,17 @@ gated on the consumer inventory — but prove it here rather than trust it:
      DD-014; such a user would sign in with password alone). `dazzle init`, the `saml` extra,
      `dazzle auth connection` and `dazzle capability` no longer exist; `/_ops/sse/events` now requires
      the app's auth posture (`live: on` workspaces keep working for signed-in users).
+   - **Phase 7 (2026-10-16, on `main` after v0.118.0; the next release tag carries it).**
+     `dazzle db upgrade head` now reaches `0025_flense_park_event_transport`, which drops the
+     never-used `_dazzle_outbox` table (the event inbox and outbox stay). Without `REDIS_URL`
+     the event framework now runs a null bus (publishes dropped, handlers never fire) instead
+     of silently selecting a Postgres bus — set `REDIS_URL` wherever you expect
+     `auth.user.registered`-style handlers or process events to run. The `/_dazzle/events/*`
+     explorer is gone (it was unauthenticated in every environment). A workspace `live:` clause
+     still parses but warns `W_DECLARED_NOT_READ` (SSE live push is parked in DD-006). The CLI
+     groups `dazzle rhythm`, `dazzle vocab` and `dazzle prove` are gone: use `dazzle agent
+     prove` / `dazzle agent wall`; the MCP `rhythm` tool (`list`/`get`/`coverage`/`gaps`) and
+     `dazzle analytics audit` stay.
    - **Removed, none used by a consumer:** the `dazzle i18n` CLI and string translation (DD-012),
      `dazzle serve --watch-source`, `dazzle test list|feedback|dsl-generate|dsl-coverage|run-all`,
      six `dazzle e2e` wrappers, the `mobile`, `push`, `sendgrid` and `i18n` extras, the

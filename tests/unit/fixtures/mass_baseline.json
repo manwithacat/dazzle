@@ -1,7 +1,7 @@
 {
   "src_lines": 318122,
   "test_lines": 308818,
-  "docs_lines": 47831,
+  "docs_lines": 47851,
   "construct_count": 31,
   "written": "2026-10-16",
   "exceptions": [
@@ -196,6 +196,13 @@
         "docs_lines"
       ],
       "reason": "Phase 7 \u00a710.7 result section (+50 docs lines)"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "docs_lines"
+      ],
+      "reason": "Phase 7 close-out: \u00a710.7 final result and FLENSE Phase 7 consumer bullet (+docs)"
     }
   ]
 }

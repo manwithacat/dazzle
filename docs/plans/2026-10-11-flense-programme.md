@@ -459,8 +459,8 @@ run on evidence alone with the §9.6 mechanics.
 |---|---|---|---:|
 | **AP** | `page_routes.py`: the nine-kind filter family becomes one kind-keyed table; the three persona-override walkers share one walker; `http/runtime/response_helpers.py` (zero importers) and the `site_routes.py` vulture residue go | Consolidate | −1.2k / 0 |
 | **AQ** | The ten zero-importer modules and the `testing/` modules with no importer outside `tests/`; each verified by `rg` across src (absolute and relative imports), tests, the three checkouts, skills, hooks, Makefile, CI, and `python -m` entry points; tests that only exercised them go | Delete | −5k / −4k |
-| **AR** (D) | Event transport residue: `postgres_bus.py`, `dev_memory.py` (its fake moves into `tests/`), `inbox.py` with `_dazzle_event_inbox`, `event_explorer.py` and its dev route, `sse_stream.py` + `sse_wiring.py` + `/_ops/sse/events` + the workspace `live:` flag, `channels/outbox.py` `OutboxRepository` + `email_outbox`; the Redis bus, `null`, `framework`, `publisher`, `consumer`, `outbox` (`_dazzle_event_outbox`), `EventBusProcessAdapter` and the in-process `EntityEventBus` stay | **Park** into DD-006 (extended from the DSL to the transport); revision 0025 drops `_dazzle_event_inbox` and `email_outbox` | −3k / −3k |
-| **AS** (D) | CLI groups `analytics`, `representation`, `rhythm` (command only), `vocab`, `walk`, `activity`, `prove` with `scripts/example_agent_prove.sh` (stems skill re-pointed to MCP `knowledge counter_prior`), `claims` unless `docs claims` reads it | Delete | −1.7k / −1.5k |
+| **AR** (D) | Event transport residue: `postgres_bus.py`, `dev_memory.py` (its fake moves into `tests/`), `inbox.py` with `_dazzle_event_inbox`, `event_explorer.py` and its dev route, `sse_stream.py` + `sse_wiring.py` + `/_ops/sse/events` + the workspace `live:` flag, `channels/outbox.py` `OutboxRepository` + `email_outbox`; the Redis bus, `null`, `framework`, `publisher`, `consumer`, `outbox` (`_dazzle_event_outbox`), `EventBusProcessAdapter` and the in-process `EntityEventBus` stay | **Park** into DD-006 (extended from the DSL to the transport); revision 0025 drops `_dazzle_event_inbox` and `email_outbox` — **approved 2026-10-16, landed 06d1be1bb; inbox kept (cyfuture production path)** | −3k / −3k |
+| **AS** (D) | CLI groups `analytics`, `representation`, `rhythm` (command only), `vocab`, `walk`, `activity`, `prove` with `scripts/example_agent_prove.sh` (stems skill re-pointed to MCP `knowledge counter_prior`), `claims` unless `docs claims` reads it | Delete — **approved 2026-10-16, landed adb829f75; `analytics` and `representation` kept on evidence** | −1.7k / −1.5k |
 | **AT** | MCP `spec_analyze` and `project`, with `spec_questions`, `spec_lifecycles`, `domain` and the `domain_brief` residue if nothing else reads them; `bootstrap` re-pointed; `core/grammar_gen.py` if no registered command reaches it | Delete — **result: all three kept, see §10.7** | 0 / 0 |
 | **AU** | Unread IR attributes (vulture residue in `core/ir/*`), each verified against the parser's writes and every reader including the consumers' `dazzle.core.ir` imports (AegisMark 9, cyfuture 5); `testing/step_executor.py` residue; `ir-types` baseline regenerated with a CHANGELOG entry | Delete | −1k / −0.5k |
 | **AV** | Distillation: the twenty deepest cluster files | Distil | 0 / −5k |
@@ -504,25 +504,27 @@ Same loop as §9.6. AP, AQ, AT and AU run on evidence from dispatch; AV–AX fol
 code ships land (so they distil tests of surviving code); AR and AS wait for §10.4. The
 phase closes with a `minor` bump and §10.7 recording the measured numbers.
 
-### 10.7 Result so far (2026-10-16, the evidence-only ships, 660b0bcf4 → 8441e051e)
+### 10.7 Result (2026-10-16, nine ships, 660b0bcf4 → 06d1be1bb)
 
-AT, AQ, AP, AU, AV, AW and AX landed on `main` within a day of v0.118.0, each gated with
-`make ci-fast`, pushed under the push gate, CI green on every pushed tip (one red on
-22f2034ea was an npm registry `ECONNRESET` while the ESLint test fetched eslint; the test now
-skips on registry failure and the re-run was green). Net −13,000 lines across 155 files.
-AR and AS wait for §10.4.
+AT, AQ, AP, AU, AV, AW and AX landed on `main` within a day of v0.118.0; the operator
+approved AR and AS on 2026-10-16 ("go ahead with the recommendations") and both landed the
+same morning. Each ship was gated with `make ci-fast`, pushed under the push gate, CI green on
+every pushed tip (one red on 22f2034ea was an npm registry `ECONNRESET` while the ESLint test
+fetched eslint; the test now skips on registry failure and the re-run was green). Net −19,780
+lines across 257 files (+10,574 / −30,354).
 
-| Measure | After v0.118.0 | Phase 7 target | After AX |
+| Measure | After v0.118.0 | Phase 7 target | After AR |
 |---|---:|---:|---:|
-| Framework src lines | 323,851 | ≤ 308,000 | **322,538** (−1,313; AR/AS would add ≈ −4.7k) |
-| Test lines | 319,714 | ≤ 290,000 | **310,741** (−8,973) |
-| Docs lines in tree | 47,904 | ≤ 48,500 | 47,992 |
+| Framework src lines | 323,851 | ≤ 308,000 | **318,122** (−5,729; target missed by 10k — evidence-only cutting is exhausted, see below) |
+| Test lines | 319,714 | ≤ 290,000 | **308,818** (−10,896; target not met) |
+| Docs lines in tree | 47,904 | ≤ 48,500 | 47,831 |
 | Top-level constructs | 31 | 31 | 31 |
-| Test functions | 14,307 | — | 13,520 |
+| Test functions | 14,307 | — | 13,447 |
 | Zero-importer modules | 10 | 0 | 0 (3 deleted, 7 kept with a named reach) |
-| Redundancy clusters ≥3 | 745 | ≤ 650 | **627** (2,339 tests inside) |
+| Redundancy clusters ≥3 | 745 | ≤ 650 | **626** |
 | Cross-file clusters / mirrors | 2 / 11 | — | 4 / 9 |
 | Tests importing nothing from `dazzle` | 171 files / 24,907 lines | — | 105 / 17,501 |
+| Framework tables in scope | 23 | — | 22 (revision 0025 drops `_dazzle_outbox`) |
 
 What the evidence said, ship by ship: **AT** kept all three candidates (`spec_analyze` is the
 `bootstrap` entry point and DD-003 names it; `project` is the only writer of the dev-mode
@@ -537,9 +539,21 @@ in `core/ir` is `model_config`, enum vocabulary the parser builds from strings,
 decorator-registered validators and wire formats consumers write. **AV–AX** did the test mass:
 −852, −2,022 and −5,343 lines, one gate per invariant for the harness tests.
 
+**AS** removed `dazzle rhythm`, `vocab` and `prove` (with the MCP evaluate/propose/fidelity/
+lifecycle implementations only the rhythm command reached) and kept `analytics` (every
+consumer's `make assure` pack in `FLENSE_*.md` runs `dazzle analytics audit`) and
+`representation` (PARKED DD-001 names it). **AR** parked the Postgres bus, the in-memory dev
+bus, the event explorer, SSE live push and the channel `OutboxRepository` into DD-006 and
+dropped `_dazzle_outbox` (revision 0025); it kept the event inbox, against §10.2's evidence
+line, because `EventFramework` wraps every handler in an `IdempotentConsumer` and cyfuture's
+`auth.user.registered → cyfuture-provision` handler runs through it in production. Without
+`REDIS_URL` the framework now runs the `NullBus` instead of silently selecting Postgres. The
+explorer was a security hole: `/_dazzle/events/*` was mounted in every environment with no
+auth dependency, exposing event payloads (emails, usernames, roles) and a DLQ replay POST.
+
 Where the src number stands: evidence-only cutting inside the kept subsystems is exhausted at
-≈ 322.5k. The ≤ 308k target needs AR (≈ −3k), AS (≈ −1.7k) and nothing else on the evidence
-side; the rest is §10.4 item 4.
+≈ 318k. The §7 end state (≤ 250k / ≤ 200k) and the Phase 7 target (≤ 308k) are not reachable
+without retiring features consumers use; that is §10.4 item 4, still open with item 3.
 
 Findings for the operator, from the commit bodies: cyfuture's `themespec.yaml` attention-map
 rules are silently dropped by `themespec_loader.py:104-110` (shape mismatch, nothing renders
@@ -551,7 +565,13 @@ keys match nothing and `MANIFEST.in:16` still includes the removed `lsp/grammars
 `fidelity_scorer.py:789` counts a page whose buttons do not match the trigger as satisfying it;
 `workspace_region_computes.py:1316` swallows every attention-condition exception;
 `tests/integration/test_runtime_e2e.py:346,364` create a Task without the required `task_type`
-(8 pre-existing e2e failures); the HTML page list never date-normalises filter values while the
+(8 pre-existing e2e failures); the other `/_dazzle` debug routes (`debug_routes.py:335`) share
+the explorer's unauthenticated-everywhere posture; databases that booted without Redis may hold
+orphaned `_dazzle_events`/`_dazzle_consumer_offsets`/`_dazzle_dlq` tables (unsigned, not
+dropped); `live: on` was always inert in the browser because `htmx-ext-sse.js` was never
+vendored; scene evaluations under `.dazzle/evaluations/` are now never written but still read
+by the pipeline's `rhythm(gaps)` step; the complexity baseline is behind HEAD (a
+`--write-baseline` would loosen 196 ceilings); the HTML page list never date-normalises filter values while the
 REST list does (`page_routes.py` ~2245); cyfuture monkeypatches `testing.walk.actions_api`
 (`api_ensure_status`, `playwright_click_api_fallback`), so those names are API; the complexity
 baseline has never covered ≈ 40 files; DD-010 cites a `ProcessContext.checkpoints` field that
