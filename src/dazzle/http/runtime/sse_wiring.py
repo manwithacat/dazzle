@@ -2,9 +2,10 @@
 
 Registers entity-lifecycle callbacks on every CRUDService that publish a
 *nudge* (entity name + id + tenant, no row data) to the framework EventBus on
-the canonical ``entity.{created,updated,deleted}`` topics. The already-built
-SSEStreamManager subscribes to those topics and forwards them to connected
-browsers, whose cards re-fetch via their existing scope-gated endpoints.
+the canonical ``entity.{created,updated,deleted}`` topics. The SSEStreamManager
+subscribes to those topics and forwards them to connected browsers of the same
+tenant as a bare "something changed" frame (no entity name, no id — flense
+ship AO); the cards re-fetch via their existing scope-gated endpoints.
 
 Mirrors the audit/notification/job wiring pattern (``audit_wiring.py``).
 """
@@ -14,6 +15,11 @@ from collections.abc import Callable
 from typing import Any
 
 from dazzle.http.events.envelope import EventEnvelope
+from dazzle.http.runtime.tenant_isolation import (
+    get_current_host_tenant_id,
+    get_current_tenant_id,
+    get_current_tenant_schema,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +79,23 @@ class LazyFrameworkBus:
         return getattr(bus, name)
 
 
+def live_tenant_key(entity_data: dict[str, Any] | None = None) -> str | None:
+    """The tenant a live-push nudge belongs to, from server-side state only.
+
+    Shared by the nudge publisher and ``/_ops/sse/events`` (flense ship AO):
+    the row's ``tenant_id`` partition key, else the membership-bound RLS
+    tenant, else the host tenant, else the tenant schema. ``None`` = untenanted.
+    """
+    row_tenant = (entity_data or {}).get("tenant_id")
+    if row_tenant:
+        return str(row_tenant)
+    tenant = get_current_tenant_id() or get_current_host_tenant_id()
+    if tenant:
+        return str(tenant)
+    schema = get_current_tenant_schema()
+    return f"schema:{schema}" if schema else None
+
+
 def _default_is_target(service: Any) -> bool:
     from dazzle.http.runtime.service_generator import CRUDService
 
@@ -88,8 +111,8 @@ def _make_nudge_callback(bus: Any, action: str) -> Callable[..., Any]:
         entity_data: dict[str, Any],
         old_data: dict[str, Any] | None,
     ) -> None:
-        tenant_id = (entity_data or {}).get("tenant_id")
-        headers = {"tenant_id": str(tenant_id)} if tenant_id else {}
+        tenant_id = live_tenant_key(entity_data)
+        headers = {"tenant_id": tenant_id} if tenant_id else {}
         envelope = EventEnvelope.create(
             event_type=topic,
             key=str(entity_id),

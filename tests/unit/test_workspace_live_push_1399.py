@@ -118,6 +118,27 @@ class TestSseWiring:
         # No tenant header when the row carries no tenant_id.
         assert bus.published[0][1].headers == {}
 
+    def test_untenanted_row_tagged_from_request_tenant(self) -> None:
+        # Flense ship AO: a row without a tenant_id column (schema-per-tenant,
+        # host-only) is tagged from the same server-side contextvars the stream
+        # subscribes with, so its nudge never reaches another tenant.
+        import asyncio
+        import contextvars
+
+        from dazzle.http.runtime.sse_wiring import register_sse_callbacks
+        from dazzle.http.runtime.tenant_isolation import set_current_host_tenant_id
+
+        bus = _RecordingBus()
+        svc = _FakeCRUDService("Job")
+        register_sse_callbacks({"Job": svc}, bus, _is_target=lambda s: True)
+
+        def _run() -> None:
+            set_current_host_tenant_id("host-t")
+            asyncio.run(svc._created[0]("Job", "id9", {"id": "id9"}, None))
+
+        contextvars.copy_context().run(_run)
+        assert bus.published[0][1].headers == {"tenant_id": "host-t"}
+
     def test_no_bus_wires_nothing(self) -> None:
         from dazzle.http.runtime.sse_wiring import register_sse_callbacks
 
@@ -221,7 +242,8 @@ class TestSseDeliveryIntegration:
 
         msg = manager._queues[sub_id].get_nowait()
         assert msg.event == "entity.created"  # matches the client `sse:entity.created` trigger
-        assert msg.data.get("entity") == "Job"
+        # Flense ship AO: the wire frame is a bare nudge — no entity name or id.
+        assert msg.data == {}
 
     async def test_nudge_isolated_across_tenants(self) -> None:
         from dazzle.http.runtime.sse_stream import SSEStreamManager, StreamType
@@ -233,3 +255,66 @@ class TestSseDeliveryIntegration:
         await manager._handle_envelope(envelope)
 
         assert manager._queues[other].empty()  # t2 must not receive t1's nudge
+
+    async def test_untenanted_subscriber_gets_no_tenanted_nudge(self) -> None:
+        # Flense ship AO: "no tenant" used to mean "no filter" — every tenant's
+        # nudges. An untenanted subscriber now sees only untenanted nudges.
+        from dazzle.http.runtime.sse_stream import SSEStreamManager, StreamType
+
+        manager = SSEStreamManager(event_bus=_RecordingBus())
+        untenanted = manager.create_subscription(stream_type=StreamType.EVENTS)
+
+        await manager._handle_envelope(await self._nudge_envelope("t1"))
+        assert manager._queues[untenanted].empty()
+
+        await manager._handle_envelope(await self._nudge_envelope(None))
+        assert manager._queues[untenanted].get_nowait().data == {}
+
+
+# ─────────────────────── /_ops/sse/events auth (ship AO) ───────────────────────
+
+
+def _sse_app(*, authenticated: bool) -> tuple[object, object]:
+    from fastapi import FastAPI
+
+    from dazzle.http.runtime.sse_stream import SSEStreamManager, create_sse_routes
+    from dazzle.http.runtime.tenant_isolation import set_current_tenant_id
+
+    async def _auth_dep() -> object:
+        # Mirrors the real optional-auth dependency: an authenticated caller's
+        # membership tenant is bound to the RLS tenant contextvar.
+        if authenticated:
+            set_current_tenant_id("t-own")
+        return SimpleNamespace(is_authenticated=authenticated)
+
+    class _FiniteManager(SSEStreamManager):
+        # Close after the `connected` frame so the TestClient request returns;
+        # keep the subscription for inspection.
+        async def stream(self, subscription_id: str):  # type: ignore[override]
+            yield "event: connected\n\n"
+
+    manager = _FiniteManager(event_bus=_RecordingBus())
+    app = FastAPI()
+    app.include_router(create_sse_routes(manager, optional_auth_dep=_auth_dep, require_auth=True))
+    return app, manager
+
+
+class TestSseEventsRouteAuth:
+    def test_anonymous_request_is_refused(self) -> None:
+        from fastapi.testclient import TestClient
+
+        app, manager = _sse_app(authenticated=False)
+        resp = TestClient(app).get("/_ops/sse/events?tenant_id=t1&entity=Job")
+        assert resp.status_code == 401
+        assert manager._subscriptions == {}
+
+    def test_client_supplied_tenant_is_ignored(self) -> None:
+        # The subscription binds to the server-resolved tenant (the RLS tenant
+        # contextvar the auth dependency binds), never to ?tenant_id=.
+        from fastapi.testclient import TestClient
+
+        app, manager = _sse_app(authenticated=True)
+        resp = TestClient(app).get("/_ops/sse/events?tenant_id=t-victim&entity=Job")
+        assert resp.status_code == 200
+        (sub,) = manager._subscriptions.values()
+        assert sub.tenant_id == "t-own"

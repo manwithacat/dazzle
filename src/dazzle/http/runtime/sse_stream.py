@@ -6,9 +6,9 @@ on the EventBus and streams them to the workspace dashboard
 (``hx-ext="sse" sse-connect``). Mounted only when a workspace declares
 ``live: on`` (see ``DazzleBackendApp._wire_sse_live_push``).
 
-- Per-client subscriptions with entity and tenant filters
-- Reconnection support via Last-Event-ID
-- Tenant taken from the request-resolved tenant before the query param
+Flense ship AO: anonymous callers get 401 wherever ``/api`` reads would; each
+subscription is bound to the server-resolved tenant (``live_tenant_key``, never
+a query parameter); frames are a bare nudge with no entity name or record id.
 """
 
 import asyncio
@@ -21,10 +21,11 @@ from enum import StrEnum
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Header, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 
 from dazzle.core.clock import utcnow
+from dazzle.http.runtime.sse_wiring import live_tenant_key
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +70,7 @@ class StreamSubscription:
 
     subscription_id: str
     stream_type: StreamType
-    tenant_id: str | None = None  # For tenant-scoped streams
-    entity_filter: str | None = None  # Filter by entity name
+    tenant_id: str | None = None  # Server-resolved tenant key (None = untenanted)
     last_event_id: str | None = None  # For reconnection
     created_at: datetime = field(default_factory=utcnow)
 
@@ -174,27 +174,16 @@ class SSEStreamManager:
                 if subscription.stream_type != stream_type:
                     continue
 
-                # Apply tenant filter. Compare as strings — the header is a str
-                # (#1399) but subscription.tenant_id may arrive as a UUID from
-                # request.state, so a raw `!=` would blackout every event.
-                if subscription.tenant_id:
-                    event_tenant = envelope.headers.get("tenant_id")
-                    if str(event_tenant) != str(subscription.tenant_id):
-                        continue
+                # Exact tenant-key match: an untenanted subscriber gets only
+                # untenanted nudges, never every tenant's (flense ship AO).
+                if ((envelope.headers or {}).get("tenant_id") or None) != subscription.tenant_id:
+                    continue
 
-                # Apply entity filter. Prefer payload["entity"] (#1399 nudges use
-                # a 2-part `entity.created` event_type, so envelope.entity_name —
-                # which reads event_type.split(".")[1] — would yield the action,
-                # not the entity); fall back to entity_name for 3-part app events.
-                if subscription.entity_filter:
-                    entity_name = (envelope.payload or {}).get("entity") or envelope.entity_name
-                    if entity_name != subscription.entity_filter:
-                        continue
-
-                # Create SSE message
+                # Bare nudge (the client re-fetches every card on any
+                # `sse:entity.*` trigger): no entity name or record id.
                 message = SSEMessage(
                     event=event_type,
-                    data=envelope.payload,
+                    data={},
                     id=str(envelope.event_id),
                 )
 
@@ -215,7 +204,6 @@ class SSEStreamManager:
         self,
         stream_type: StreamType,
         tenant_id: str | None = None,
-        entity_filter: str | None = None,
         last_event_id: str | None = None,
     ) -> str:
         """
@@ -223,8 +211,7 @@ class SSEStreamManager:
 
         Args:
             stream_type: Type of stream to subscribe to
-            tenant_id: Optional tenant ID for scoped streams
-            entity_filter: Optional entity name filter
+            tenant_id: Server-resolved tenant key (never client-supplied)
             last_event_id: Last event ID for reconnection
 
         Returns:
@@ -235,7 +222,6 @@ class SSEStreamManager:
             subscription_id=sub_id,
             stream_type=stream_type,
             tenant_id=tenant_id,
-            entity_filter=entity_filter,
             last_event_id=last_event_id,
         )
         self._subscriptions[sub_id] = subscription
@@ -299,40 +285,46 @@ class SSEStreamManager:
 # =============================================================================
 
 
-def create_sse_routes(stream_manager: SSEStreamManager) -> Any:
+async def _no_auth() -> Any:
+    """Stand-in dependency when the server wires no auth (auth-less apps)."""
+    return None
+
+
+def create_sse_routes(
+    stream_manager: SSEStreamManager,
+    *,
+    optional_auth_dep: Any = None,
+    require_auth: bool = False,
+) -> Any:
     """
     Create the ``/_ops/sse/events`` live-push route.
 
     Args:
         stream_manager: SSEStreamManager instance
+        optional_auth_dep: The app's optional-auth dependency; resolves the
+            caller and binds its tenant contextvars before the handler runs
+        require_auth: The app's auth posture (auth enabled, not test mode);
+            when set, anonymous callers get 401 like the app's ``/api`` reads
 
     Returns:
         FastAPI APIRouter with the live-push endpoint
     """
     router = APIRouter(prefix="/_ops/sse", tags=["SSE Streaming"])
+    auth_dep = optional_auth_dep if optional_auth_dep is not None else _no_auth
 
     @router.get("/events")
     async def stream_events(
-        request: Request,
-        entity: str | None = Query(None, description="Filter by entity name"),
-        tenant_id: str | None = Query(None, description="Filter by tenant ID"),
+        auth_context: Any = Depends(auth_dep),
         last_event_id: str | None = Header(None, alias="Last-Event-ID"),
     ) -> StreamingResponse:
-        """
-        Stream entity lifecycle events via SSE.
-
-        Streams create, update, delete events for entities.
-        Can filter by entity name and/or tenant ID.
-
-        #1399 — prefer the request-resolved tenant (set by
-        TenantResolutionMiddleware) over the client-supplied query param so a
-        live-push client can't subscribe to another tenant's change signals.
-        """
-        resolved_tenant = getattr(request.state, "tenant_id", None) or tenant_id
+        """Stream bare entity-change nudges for the caller's server-resolved tenant."""
+        if require_auth and not (
+            auth_context is not None and getattr(auth_context, "is_authenticated", False)
+        ):
+            raise HTTPException(status_code=401, detail="Authentication required")
         sub_id = stream_manager.create_subscription(
             stream_type=StreamType.EVENTS,
-            tenant_id=resolved_tenant,
-            entity_filter=entity,
+            tenant_id=live_tenant_key(),
             last_event_id=last_event_id,
         )
 

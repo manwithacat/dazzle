@@ -1,6 +1,6 @@
 {
-  "src_lines": 338400,
-  "test_lines": 349507,
+  "src_lines": 338421,
+  "test_lines": 349592,
   "docs_lines": 47885,
   "construct_count": 31,
   "written": "2026-10-15",
@@ -160,6 +160,14 @@
         "docs_lines"
       ],
       "reason": "Phase 6 plan \u00a79, HM exemption in AGENTS.md, cyfuture brief line (+docs)"
+    },
+    {
+      "date": "2026-10-15",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "ship AO: /_ops/sse/events auth posture + server-bound tenant (+21 src/+85 tests), security"
     }
   ]
 }

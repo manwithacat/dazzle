@@ -1332,7 +1332,7 @@ class DazzleBackendApp:
 
                     self._upload_callbacks.append(_upload_hook)
 
-    def _wire_sse_live_push(self) -> None:
+    def _wire_sse_live_push(self, optional_auth_dep: Any = None) -> None:
         """#1399 slice 1 — wire SSE live push when a workspace declares `live: on`.
 
         Must run AFTER ``_run_subsystems()`` (which sets ``self._event_framework``).
@@ -1367,7 +1367,13 @@ class DazzleBackendApp:
         register_sse_callbacks(self._services, lazy_bus)
 
         sse_manager = SSEStreamManager(event_bus=lazy_bus)
-        self._app.include_router(create_sse_routes(sse_manager))
+        self._app.include_router(
+            create_sse_routes(
+                sse_manager,
+                optional_auth_dep=optional_auth_dep,
+                require_auth=self._enable_auth and not self._enable_test_mode,
+            )
+        )
 
         async def _start_sse() -> None:
             await sse_manager.start()
@@ -2514,7 +2520,7 @@ class DazzleBackendApp:
         self._run_subsystems()
         # #1399 slice 1 — SSE live push. After subsystems so self._event_framework
         # is set; before route validation so the SSE route is counted.
-        self._wire_sse_live_push()
+        self._wire_sse_live_push(optional_auth_dep)
         # Sync integration_mgr and workspace_builder back from subsystem context
         if self._subsystem_ctx.integration_mgr is not None:
             self._integration_mgr = self._subsystem_ctx.integration_mgr
