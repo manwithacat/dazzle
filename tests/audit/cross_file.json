@@ -612,52 +612,12 @@
   ],
   "twin_pairs": [
     {
-      "file_a": "tests/unit/test_parser.py",
-      "file_b": "tests/unit/test_rbac_verifier.py",
-      "tests_a": 130,
-      "tests_b": 43,
-      "shared_shape_count": 36,
-      "overlap_ratio": 0.84
-    },
-    {
-      "file_a": "tests/unit/test_fidelity_scorer.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 39,
-      "tests_b": 130,
-      "shared_shape_count": 34,
-      "overlap_ratio": 0.87
-    },
-    {
       "file_a": "tests/unit/test_fidelity_scorer.py",
       "file_b": "tests/unit/test_rbac_verifier.py",
       "tests_a": 39,
       "tests_b": 43,
       "shared_shape_count": 29,
       "overlap_ratio": 0.74
-    },
-    {
-      "file_a": "tests/unit/test_parser.py",
-      "file_b": "tests/unit/test_workspace_layout_prefs.py",
-      "tests_a": 130,
-      "tests_b": 31,
-      "shared_shape_count": 29,
-      "overlap_ratio": 0.94
-    },
-    {
-      "file_a": "tests/unit/test_parser.py",
-      "file_b": "tests/unit/test_structured_content.py",
-      "tests_a": 130,
-      "tests_b": 32,
-      "shared_shape_count": 27,
-      "overlap_ratio": 0.84
-    },
-    {
-      "file_a": "tests/unit/test_events.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 36,
-      "tests_b": 130,
-      "shared_shape_count": 26,
-      "overlap_ratio": 0.72
     },
     {
       "file_a": "tests/unit/test_expression_lang.py",
@@ -682,30 +642,6 @@
       "tests_b": 36,
       "shared_shape_count": 26,
       "overlap_ratio": 0.72
-    },
-    {
-      "file_a": "tests/unit/test_parser.py",
-      "file_b": "tests/unit/test_rbac_ui_fixes.py",
-      "tests_a": 130,
-      "tests_b": 30,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.83
-    },
-    {
-      "file_a": "tests/unit/test_parser.py",
-      "file_b": "tests/unit/test_ses_adapter.py",
-      "tests_a": 130,
-      "tests_b": 31,
-      "shared_shape_count": 24,
-      "overlap_ratio": 0.77
-    },
-    {
-      "file_a": "tests/unit/test_parser.py",
-      "file_b": "tests/unit/test_sla_manager.py",
-      "tests_a": 130,
-      "tests_b": 32,
-      "shared_shape_count": 24,
-      "overlap_ratio": 0.75
     },
     {
       "file_a": "tests/unit/test_expression_lang.py",
@@ -756,22 +692,6 @@
       "overlap_ratio": 0.88
     },
     {
-      "file_a": "tests/unit/test_parser.py",
-      "file_b": "tests/unit/test_session_manager.py",
-      "tests_a": 130,
-      "tests_b": 26,
-      "shared_shape_count": 22,
-      "overlap_ratio": 0.85
-    },
-    {
-      "file_a": "tests/unit/test_parser.py",
-      "file_b": "tests/unit/test_vendor_mock_generator.py",
-      "tests_a": 130,
-      "tests_b": 27,
-      "shared_shape_count": 22,
-      "overlap_ratio": 0.81
-    },
-    {
       "file_a": "tests/unit/test_demo_data_loader.py",
       "file_b": "tests/unit/test_persona_journey.py",
       "tests_a": 27,
@@ -796,14 +716,6 @@
       "overlap_ratio": 0.78
     },
     {
-      "file_a": "tests/unit/test_otp_store.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 28,
-      "tests_b": 130,
-      "shared_shape_count": 21,
-      "overlap_ratio": 0.75
-    },
-    {
       "file_a": "tests/unit/test_auth_views_login_magic_link.py",
       "file_b": "tests/unit/test_two_factor_views.py",
       "tests_a": 22,
@@ -816,14 +728,6 @@
       "file_b": "tests/unit/test_expression_lang.py",
       "tests_a": 21,
       "tests_b": 82,
-      "shared_shape_count": 20,
-      "overlap_ratio": 0.95
-    },
-    {
-      "file_a": "tests/unit/test_css_clip_check.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 21,
-      "tests_b": 130,
       "shared_shape_count": 20,
       "overlap_ratio": 0.95
     },
@@ -860,14 +764,6 @@
       "overlap_ratio": 0.71
     },
     {
-      "file_a": "tests/unit/test_lint_anti_patterns.py",
-      "file_b": "tests/unit/test_validator.py",
-      "tests_a": 20,
-      "tests_b": 57,
-      "shared_shape_count": 20,
-      "overlap_ratio": 1.0
-    },
-    {
       "file_a": "tests/unit/test_list_chrome_parity_phase1.py",
       "file_b": "tests/unit/test_site_section_hero_builder.py",
       "tests_a": 33,
@@ -876,18 +772,18 @@
       "overlap_ratio": 0.87
     },
     {
-      "file_a": "tests/unit/test_llm_driver.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 28,
-      "tests_b": 130,
+      "file_a": "tests/unit/test_parser.py",
+      "file_b": "tests/unit/test_workspace_layout_prefs.py",
+      "tests_a": 25,
+      "tests_b": 31,
       "shared_shape_count": 20,
-      "overlap_ratio": 0.71
+      "overlap_ratio": 0.8
     },
     {
       "file_a": "tests/unit/test_parser.py",
-      "file_b": "tests/unit/test_python_audit_agent.py",
-      "tests_a": 130,
-      "tests_b": 25,
+      "file_b": "tests/unit/test_workspace_rendering.py",
+      "tests_a": 25,
+      "tests_b": 46,
       "shared_shape_count": 20,
       "overlap_ratio": 0.8
     },
@@ -981,11 +877,11 @@
     },
     {
       "file_a": "tests/unit/test_parser.py",
-      "file_b": "tests/unit/test_task_inbox_data_resolution.py",
-      "tests_a": 130,
-      "tests_b": 20,
+      "file_b": "tests/unit/test_persona_journey.py",
+      "tests_a": 25,
+      "tests_b": 55,
       "shared_shape_count": 19,
-      "overlap_ratio": 0.95
+      "overlap_ratio": 0.76
     },
     {
       "file_a": "tests/unit/test_persona_journey.py",
@@ -1010,6 +906,110 @@
       "tests_b": 22,
       "shared_shape_count": 19,
       "overlap_ratio": 0.86
+    },
+    {
+      "file_a": "tests/unit/test_session_manager.py",
+      "file_b": "tests/unit/test_workspace_rendering.py",
+      "tests_a": 26,
+      "tests_b": 46,
+      "shared_shape_count": 19,
+      "overlap_ratio": 0.73
+    },
+    {
+      "file_a": "tests/unit/test_site_section_simple_builders.py",
+      "file_b": "tests/unit/test_two_factor_views.py",
+      "tests_a": 27,
+      "tests_b": 35,
+      "shared_shape_count": 19,
+      "overlap_ratio": 0.7
+    },
+    {
+      "file_a": "tests/unit/test_app_error_views.py",
+      "file_b": "tests/unit/test_pdf_viewer_component.py",
+      "tests_a": 22,
+      "tests_b": 52,
+      "shared_shape_count": 18,
+      "overlap_ratio": 0.82
+    },
+    {
+      "file_a": "tests/unit/test_app_error_views.py",
+      "file_b": "tests/unit/test_site_section_medium_builders.py",
+      "tests_a": 22,
+      "tests_b": 30,
+      "shared_shape_count": 18,
+      "overlap_ratio": 0.82
+    },
+    {
+      "file_a": "tests/unit/test_app_error_views.py",
+      "file_b": "tests/unit/test_two_factor_views.py",
+      "tests_a": 22,
+      "tests_b": 35,
+      "shared_shape_count": 18,
+      "overlap_ratio": 0.82
+    },
+    {
+      "file_a": "tests/unit/test_aws_config.py",
+      "file_b": "tests/unit/test_peek_when_empty_1494.py",
+      "tests_a": 24,
+      "tests_b": 50,
+      "shared_shape_count": 18,
+      "overlap_ratio": 0.75
+    },
+    {
+      "file_a": "tests/unit/test_bar_chart_bucketed_aggregate.py",
+      "file_b": "tests/unit/test_python_audit_agent.py",
+      "tests_a": 40,
+      "tests_b": 25,
+      "shared_shape_count": 18,
+      "overlap_ratio": 0.72
+    },
+    {
+      "file_a": "tests/unit/test_css_clip_check.py",
+      "file_b": "tests/unit/test_parser.py",
+      "tests_a": 21,
+      "tests_b": 25,
+      "shared_shape_count": 18,
+      "overlap_ratio": 0.86
+    },
+    {
+      "file_a": "tests/unit/test_day_timeline_primitive.py",
+      "file_b": "tests/unit/test_peek_when_empty_1494.py",
+      "tests_a": 22,
+      "tests_b": 50,
+      "shared_shape_count": 18,
+      "overlap_ratio": 0.82
+    },
+    {
+      "file_a": "tests/unit/test_entity_card_data_resolution.py",
+      "file_b": "tests/unit/test_workspace_live_refresh_1391.py",
+      "tests_a": 45,
+      "tests_b": 20,
+      "shared_shape_count": 18,
+      "overlap_ratio": 0.9
+    },
+    {
+      "file_a": "tests/unit/test_expression_lang.py",
+      "file_b": "tests/unit/test_money_expansion.py",
+      "tests_a": 82,
+      "tests_b": 24,
+      "shared_shape_count": 18,
+      "overlap_ratio": 0.75
+    },
+    {
+      "file_a": "tests/unit/test_expression_lang.py",
+      "file_b": "tests/unit/test_parser.py",
+      "tests_a": 82,
+      "tests_b": 25,
+      "shared_shape_count": 18,
+      "overlap_ratio": 0.72
+    },
+    {
+      "file_a": "tests/unit/test_grant_store.py",
+      "file_b": "tests/unit/test_otp_store.py",
+      "tests_a": 23,
+      "tests_b": 28,
+      "shared_shape_count": 18,
+      "overlap_ratio": 0.78
     }
   ]
 }

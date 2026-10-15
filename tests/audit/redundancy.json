@@ -1129,6 +1129,23 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
+    "file": "tests/unit/test_parser.py",
+    "class": "(module)",
+    "assertion_shape": "('eq',)",
+    "size": 6,
+    "members": [
+      "test_module_and_app_header",
+      "test_transition_requires_guard_without_colon",
+      "test_source_location_str",
+      "test_surface_priority",
+      "test_workspace_stage",
+      "test_process_step"
+    ],
+    "recommendation": "parametrise",
+    "recommended_form": "fuzz",
+    "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
+  },
+  {
     "file": "tests/unit/test_persona_journey.py",
     "class": "TestExperienceReachability",
     "assertion_shape": "('eq',)",
@@ -1208,23 +1225,6 @@
       "test_drop_index",
       "test_add_unique",
       "test_drop_unique"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_signing/test_template_renderer.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_substitutes_row_fields",
-      "test_substitutes_entity_fields",
-      "test_unknown_placeholder_renders_empty",
-      "test_tolerates_extra_whitespace_in_braces",
-      "test_multiple_placeholders_in_one_template",
-      "test_find_signing_template_hit"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -1416,23 +1416,6 @@
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_validator.py",
-    "class": "TestValidateNavCuration",
-    "assertion_shape": "('call_any',)",
-    "size": 6,
-    "members": [
-      "test_dead_curated_item_warns",
-      "test_nav_item_matching_nothing_warns",
-      "test_author_workspace_nav_groups_warns",
-      "test_group_when_undeclared_tenant_config_warns",
-      "test_item_when_undeclared_tenant_config_warns",
-      "test_no_tenancy_declared_tenant_config_ref_warns"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "property",
-    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
   },
   {
     "file": "tests/unit/test_widget_rules.py",
@@ -2378,22 +2361,6 @@
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_validator.py",
-    "class": "TestValidateNavCuration",
-    "assertion_shape": "('not',)",
-    "size": 5,
-    "members": [
-      "test_persona_with_nav_no_auto_discovery_warning",
-      "test_listable_curated_item_no_dead_warning",
-      "test_framework_workspace_nav_groups_no_warning",
-      "test_declared_tenant_config_key_no_warning",
-      "test_no_when_no_tenant_config_warning"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "property",
-    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
   },
   {
     "file": "tests/unit/test_workspace_live_refresh_1391.py",
@@ -4169,29 +4136,14 @@
   },
   {
     "file": "tests/unit/test_parser.py",
-    "class": "TestNavGroupParsing",
-    "assertion_shape": "('eq',)",
+    "class": "(module)",
+    "assertion_shape": "('eq', 'eq', 'eq')",
     "size": 4,
     "members": [
-      "test_nav_group_item_with_icon",
-      "test_workspace_without_nav_groups",
-      "test_nav_definition_composition_with_workspace_groups",
-      "test_nav_definition_accepts_nav_group_keyword"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "fuzz",
-    "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
-  },
-  {
-    "file": "tests/unit/test_parser.py",
-    "class": "TestSurfaceParsing",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_parse_surface_no_related_blocks",
-      "test_surface_layout_single_page",
-      "test_surface_layout_defaults_to_wizard",
-      "test_surface_section_note"
+      "test_nav_definition_top_level",
+      "test_nav_group_when_on_header_and_item",
+      "test_sla_minimal_optional_blocks_are_none",
+      "test_process_schedule_and_stories_in_one_module"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "fuzz",
@@ -4678,21 +4630,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_signing/test_cert.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_ca_subject_uses_project_name",
-      "test_country_attribute_default_gb",
-      "test_country_attribute_overridable",
-      "test_signing_cert_issued_by_ca"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_simple_task_guide_concordance.py",
     "class": "(module)",
     "assertion_shape": "('call_any',)",
@@ -4792,21 +4729,6 @@
       "test_comment_declares_customer_tone",
       "test_comment_declares_ball_in_court",
       "test_comment_declares_case_priority"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_template_compiler.py",
-    "class": "TestRelatedGroupValidation",
-    "assertion_shape": "('call_any',)",
-    "size": 4,
-    "members": [
-      "test_related_group_unknown_entity",
-      "test_related_group_no_fk_to_parent",
-      "test_related_group_duplicate_entity",
-      "test_related_group_on_non_view_surface"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -9033,76 +8955,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_parser.py",
-    "class": "TestWorkspaceDisplayModes",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_kanban_display_mode",
-      "test_bar_chart_display_mode",
-      "test_activity_feed_display_mode"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "fuzz",
-    "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
-  },
-  {
-    "file": "tests/unit/test_parser.py",
-    "class": "TestProcessParsing",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 3,
-    "members": [
-      "test_process_with_wait_step",
-      "test_process_with_subprocess",
-      "test_process_with_signal_trigger"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "fuzz",
-    "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
-  },
-  {
-    "file": "tests/unit/test_parser.py",
-    "class": "TestProcessParsing",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_process_with_manual_trigger",
-      "test_process_with_timeout",
-      "test_process_with_step_compensate"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "fuzz",
-    "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
-  },
-  {
-    "file": "tests/unit/test_parser.py",
-    "class": "TestBusinessPriority",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_experience_priority_critical",
-      "test_experience_priority_defaults_to_medium",
-      "test_all_priority_levels_valid"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "fuzz",
-    "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
-  },
-  {
-    "file": "tests/unit/test_parser.py",
-    "class": "TestSurfaceParsing",
-    "assertion_shape": "('eq', 'eq', 'isnot')",
-    "size": 3,
-    "members": [
-      "test_widget_after_visible_on_field",
-      "test_widget_before_visible_on_field",
-      "test_widget_after_compound_visible"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "fuzz",
-    "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
-  },
-  {
     "file": "tests/unit/test_partition_root_1463.py",
     "class": "(module)",
     "assertion_shape": "('eq',)",
@@ -10797,104 +10649,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_signing/test_branding_manifest.py",
-    "class": "TestSigningConfigParsing",
-    "assertion_shape": "('eq', 'eq', 'eq', 'eq')",
-    "size": 3,
-    "members": [
-      "test_signing_block_full",
-      "test_signing_recovery_keys_parsed",
-      "test_signing_block_partial"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_signing/test_branding_manifest.py",
-    "class": "TestBrandingResolver",
-    "assertion_shape": "('is',)",
-    "size": 3,
-    "members": [
-      "test_no_project_root_returns_none",
-      "test_no_manifest_returns_none",
-      "test_unnamed_project_returns_none"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_signing/test_routes.py",
-    "class": "TestRenderSigningPage",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_invalid_token_returns_403",
-      "test_token_record_mismatch_returns_403",
-      "test_unknown_record_returns_404"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_signing/test_routes.py",
-    "class": "TestSubmitSignature",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_invalid_token_returns_403",
-      "test_terminal_status_returns_409",
-      "test_unknown_entity_returns_404"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_signing/test_routes.py",
-    "class": "TestActiveSigningStates",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_default_lifecycle_collapses_to_sent_viewed",
-      "test_custom_lifecycle_pending_is_active",
-      "test_no_status_field_falls_back_to_default"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_signing/test_routes.py",
-    "class": "TestSignedCopyRetrieval1571",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_wrong_credential_is_rejected",
-      "test_token_for_another_record_is_rejected",
-      "test_unsigned_record_is_409"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_signing/test_tokens.py",
-    "class": "(module)",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 3,
-    "members": [
-      "test_mint_verify_roundtrip",
-      "test_token_hash_is_deterministic",
-      "test_allow_expired_accepts_expired_but_valid"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "property",
-    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
-  },
-  {
     "file": "tests/unit/test_site_root_redirect.py",
     "class": "TestRootRedirectAuthenticated",
     "assertion_shape": "('eq', 'eq')",
@@ -11427,34 +11181,6 @@
     "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
   },
   {
-    "file": "tests/unit/test_template_compiler.py",
-    "class": "TestRouteCollisionPrefersSectioned",
-    "assertion_shape": "('eq', 'eq', 'in', 'isnot')",
-    "size": 3,
-    "members": [
-      "test_sectioned_surface_wins_over_sectionless",
-      "test_sectioned_surface_wins_regardless_of_order",
-      "test_no_collision_with_single_surface"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_template_compiler.py",
-    "class": "TestRouteCollisionPrefersRender",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_render_surface_wins_when_declared_second",
-      "test_render_surface_wins_when_declared_first",
-      "test_no_render_collision_unchanged"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_tenant_analytics_resolver.py",
     "class": "TestAppWideResolver",
     "assertion_shape": "('eq', 'eq')",
@@ -11733,76 +11459,6 @@
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_validator.py",
-    "class": "TestValidateSurfaces",
-    "assertion_shape": "('call_any',)",
-    "size": 3,
-    "members": [
-      "test_surface_references_nonexistent_field",
-      "test_surface_no_sections_warning",
-      "test_create_mode_without_entity_ref_warning"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "property",
-    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
-  },
-  {
-    "file": "tests/unit/test_validator.py",
-    "class": "TestExtendedLint",
-    "assertion_shape": "('call_any',)",
-    "size": 3,
-    "members": [
-      "test_entity_naming_convention",
-      "test_unused_entities_warning",
-      "test_missing_title_warning"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "property",
-    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
-  },
-  {
-    "file": "tests/unit/test_validator.py",
-    "class": "TestDeadConstructDetection",
-    "assertion_shape": "('not', 'not')",
-    "size": 3,
-    "members": [
-      "test_surface_reachable_via_nav_def_is_not_dead",
-      "test_child_entity_via_related_block_is_not_dead",
-      "test_managed_by_entity_and_surfaces_not_dead"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "property",
-    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
-  },
-  {
-    "file": "tests/unit/test_validator.py",
-    "class": "TestWorkspaceFilterFKTraversal",
-    "assertion_shape": "('call_any',)",
-    "size": 3,
-    "members": [
-      "test_fk_traversal_invalid_first_segment",
-      "test_fk_traversal_non_ref_field",
-      "test_direct_field_still_validated"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "property",
-    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
-  },
-  {
-    "file": "tests/unit/test_validator.py",
-    "class": "TestValidateWorkspacePrimaryActions",
-    "assertion_shape": "('call_any',)",
-    "size": 3,
-    "members": [
-      "test_unknown_surface_target_is_error",
-      "test_unknown_workspace_target_is_error",
-      "test_wired_into_lint_appspec"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "property",
-    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
   },
   {
     "file": "tests/unit/test_vendor_mock_generator.py",

@@ -1,10 +1,13 @@
-"""Unit tests for dazzle.signing.cert — ECDSA P-256 cert chain (#1283)."""
+"""ECDSA P-256 signing certificate chain (#1283)."""
 
 from __future__ import annotations
 
 import base64
 import datetime
+from collections.abc import Callable
+from typing import Any
 
+import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives.serialization import pkcs12
 
@@ -15,108 +18,91 @@ from dazzle.signing.cert import (
     generate_cert_chain_b64,
 )
 
-
-def _load(pfx_bytes: bytes, password: str):
-    return pkcs12.load_key_and_certificates(pfx_bytes, password.encode())
+OID = x509.NameOID
 
 
-def test_generate_returns_loadable_pkcs12():
-    pfx_bytes, password = generate_cert_chain("Acme Ltd")
-    key, cert, chain = _load(pfx_bytes, password)
-    assert key is not None
-    assert cert is not None
-    assert len(chain) == 1
+def _load(pfx: bytes, password: str) -> Any:
+    return pkcs12.load_key_and_certificates(pfx, password.encode())
 
 
-def test_cert_subject_uses_project_name():
-    pfx_bytes, password = generate_cert_chain("Acme Ltd")
-    _, cert, _ = _load(pfx_bytes, password)
-    org = cert.subject.get_attributes_for_oid(x509.NameOID.ORGANIZATION_NAME)
-    assert org[0].value == "Acme Ltd"
-    cn = cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)
-    assert cn[0].value == "Acme Ltd Document Signing"
+@pytest.fixture(scope="module")
+def acme() -> tuple[Any, Any, Any, str]:
+    pfx, password = generate_cert_chain("Acme Ltd")
+    key, cert, chain = _load(pfx, password)
+    return key, cert, chain, password
 
 
-def test_ca_subject_uses_project_name():
-    pfx_bytes, password = generate_cert_chain("Acme Ltd")
-    _, _, chain = _load(pfx_bytes, password)
-    ca = chain[0]
-    cn = ca.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)
-    assert cn[0].value == "Acme Ltd Signing CA"
+def _attr(cert: x509.Certificate, oid: x509.ObjectIdentifier) -> str:
+    return cert.subject.get_attributes_for_oid(oid)[0].value  # type: ignore[return-value]
 
 
-def test_country_attribute_default_gb():
-    pfx_bytes, password = generate_cert_chain("Acme Ltd")
-    _, cert, _ = _load(pfx_bytes, password)
-    country = cert.subject.get_attributes_for_oid(x509.NameOID.COUNTRY_NAME)
-    assert country[0].value == "GB"
-
-
-def test_country_attribute_overridable():
-    pfx_bytes, password = generate_cert_chain("Acme Ltd", country="US")
-    _, cert, _ = _load(pfx_bytes, password)
-    country = cert.subject.get_attributes_for_oid(x509.NameOID.COUNTRY_NAME)
-    assert country[0].value == "US"
-
-
-def test_signing_cert_validity_window():
-    pfx_bytes, password = generate_cert_chain("Acme Ltd")
-    _, cert, _ = _load(pfx_bytes, password)
-    span = cert.not_valid_after_utc - cert.not_valid_before_utc
-    # Allow a 1-day fudge for leap-second / wall-clock drift around boundaries
-    assert (
-        datetime.timedelta(days=SIGNING_CERT_VALIDITY_DAYS - 1)
-        <= span
-        <= datetime.timedelta(days=SIGNING_CERT_VALIDITY_DAYS + 1)
+def _days(cert: x509.Certificate) -> int:
+    return round(
+        (cert.not_valid_after_utc - cert.not_valid_before_utc) / datetime.timedelta(days=1)
     )
 
 
-def test_ca_validity_window():
-    pfx_bytes, password = generate_cert_chain("Acme Ltd")
-    _, _, chain = _load(pfx_bytes, password)
-    span = chain[0].not_valid_after_utc - chain[0].not_valid_before_utc
-    assert (
-        datetime.timedelta(days=CA_VALIDITY_DAYS - 1)
-        <= span
-        <= datetime.timedelta(days=CA_VALIDITY_DAYS + 1)
-    )
+CHAIN_CASES = [
+    # (extract from (key, signing cert, CA chain, password), expected)
+    pytest.param(
+        lambda k, c, ch, p: (k is not None, len(ch)), (True, 1), id="pkcs12-loads-with-one-ca"
+    ),
+    pytest.param(
+        lambda k, c, ch, p: _attr(c, OID.ORGANIZATION_NAME), "Acme Ltd", id="signing-cert-org"
+    ),
+    pytest.param(
+        lambda k, c, ch, p: _attr(c, OID.COMMON_NAME),
+        "Acme Ltd Document Signing",
+        id="signing-cert-cn",
+    ),
+    pytest.param(
+        lambda k, c, ch, p: _attr(ch[0], OID.COMMON_NAME), "Acme Ltd Signing CA", id="ca-cn"
+    ),
+    pytest.param(lambda k, c, ch, p: _attr(c, OID.COUNTRY_NAME), "GB", id="country-defaults-to-GB"),
+    pytest.param(
+        lambda k, c, ch, p: c.issuer == ch[0].subject, True, id="signing-cert-issued-by-ca"
+    ),
+    pytest.param(
+        lambda k, c, ch, p: (
+            ch[0].extensions.get_extension_for_class(x509.BasicConstraints).value.ca
+        ),
+        True,
+        id="ca-basic-constraints-ca-true",
+    ),
+    pytest.param(
+        lambda k, c, ch, p: c.extensions.get_extension_for_class(x509.BasicConstraints).value.ca,
+        False,
+        id="signing-cert-basic-constraints-ca-false",
+    ),
+    pytest.param(
+        lambda k, c, ch, p: _days(c), SIGNING_CERT_VALIDITY_DAYS, id="signing-cert-validity"
+    ),
+    pytest.param(lambda k, c, ch, p: _days(ch[0]), CA_VALIDITY_DAYS, id="ca-validity"),
+    # token_urlsafe(32) yields ~43 chars
+    pytest.param(lambda k, c, ch, p: len(p) >= 32, True, id="generated-password-is-strong"),
+]
 
 
-def test_signing_cert_issued_by_ca():
-    pfx_bytes, password = generate_cert_chain("Acme Ltd")
-    _, cert, chain = _load(pfx_bytes, password)
-    assert cert.issuer == chain[0].subject
+@pytest.mark.parametrize(("extract", "expected"), CHAIN_CASES)
+def test_generated_chain(
+    acme: tuple[Any, Any, Any, str], extract: Callable[..., Any], expected: Any
+) -> None:
+    assert extract(*acme) == expected
 
 
-def test_explicit_password_round_trips():
-    pfx_bytes, password = generate_cert_chain("Acme Ltd", password=b"hunter2-secret")
+def test_country_is_overridable() -> None:
+    _, cert, _ = _load(*generate_cert_chain("Acme Ltd", country="US"))
+    assert _attr(cert, OID.COUNTRY_NAME) == "US"
+
+
+def test_explicit_password_round_trips() -> None:
+    pfx, password = generate_cert_chain("Acme Ltd", password=b"hunter2-secret")
     assert password == "hunter2-secret"
-    key, _, _ = _load(pfx_bytes, password)
-    assert key is not None
+    assert _load(pfx, password)[0] is not None
 
 
-def test_generated_password_is_strong():
-    _, password = generate_cert_chain("Acme Ltd")
-    assert len(password) >= 32  # token_urlsafe(32) yields ~43 chars
-
-
-def test_b64_wrapper_decodes_to_same_pkcs12():
+def test_b64_wrapper_decodes_to_loadable_pkcs12() -> None:
     b64, password = generate_cert_chain_b64("Acme Ltd")
-    pfx_bytes = base64.b64decode(b64)
-    key, cert, chain = _load(pfx_bytes, password)
+    key, cert, _ = _load(base64.b64decode(b64), password)
+    assert _attr(cert, OID.ORGANIZATION_NAME) == "Acme Ltd"
     assert key is not None
-    assert cert is not None
-
-
-def test_ca_has_basic_constraints_ca_true():
-    pfx_bytes, password = generate_cert_chain("Acme Ltd")
-    _, _, chain = _load(pfx_bytes, password)
-    bc = chain[0].extensions.get_extension_for_class(x509.BasicConstraints)
-    assert bc.value.ca is True
-
-
-def test_signing_cert_has_basic_constraints_ca_false():
-    pfx_bytes, password = generate_cert_chain("Acme Ltd")
-    _, cert, _ = _load(pfx_bytes, password)
-    bc = cert.extensions.get_extension_for_class(x509.BasicConstraints)
-    assert bc.value.ca is False

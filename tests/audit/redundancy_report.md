@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 827
-- **Tests inside those clusters**: 3,114
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,287 tests** (≈ 16.0% of the suite)
+- **Clusters of ≥3**: 803
+- **Tests inside those clusters**: 3,034
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,231 tests** (≈ 15.6% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -16,8 +16,8 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 |---|---:|
 | 20+ | 0 |
 | 10-19 | 3 |
-| 5-9 | 138 |
-| 3-4 | 686 |
+| 5-9 | 136 |
+| 3-4 | 664 |
 
 ## Top 30 largest clusters
 
@@ -64,29 +64,28 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_hm_contract_dom_conformance.py` | 24 |
 | `tests/unit/test_entity_card_data_resolution.py` | 20 |
 | `tests/unit/test_rbac_verifier.py` | 20 |
-| `tests/unit/test_validator.py` | 19 |
 | `tests/unit/test_csrf_disposition_phase3.py` | 18 |
 | `tests/unit/test_org_activation.py` | 18 |
 | `tests/unit/test_csrf_origin_gate_phase2.py` | 17 |
+| `tests/unit/test_htmx_details.py` | 15 |
 
 ## Fuzz-target worklist (property/fuzz-candidate clusters)
 
 Clusters whose subject is an input-boundary surface (parser/validator/crypto/…). Each is a candidate to collapse into ONE property test (input space → invariant) — which then becomes a fuzz target — rather than a fixed `@pytest.mark.parametrize` list. Path-based hint; confirm by reading the cluster. (#1342)
 
-- **Property/fuzz-candidate clusters**: 95
+- **Property/fuzz-candidate clusters**: 82
 
 | File | Class | Size | Form | Why |
 |---|---|---:|---|---|
 | `tests/unit/test_scope_create_eval.py` | `(module)` | 9 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_tenant_host_validator.py` | `(module)` | 8 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_scope_create_eval.py` | `(module)` | 7 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
+| `tests/unit/test_parser.py` | `(module)` | 6 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_predicate_policy_mode.py` | `TestInlineLiteral` | 6 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
-| `tests/unit/test_validator.py` | `TestValidateNavCuration` | 6 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_comparison_validation.py` | `(module)` | 5 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_descendants_of_parser.py` | `TestDescendantsOfValidator` | 5 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_format_validation.py` | `(module)` | 5 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_scope_default_deny_returns.py` | `(module)` | 5 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
-| `tests/unit/test_validator.py` | `TestValidateNavCuration` | 5 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_agent_parser.py` | `TestParseActionTier2` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_auth_identity_validation.py` | `TestAuthIdentityValidation` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_auth_token_leftover.py` | `(module)` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
@@ -102,11 +101,12 @@ Clusters whose subject is an input-boundary surface (parser/validator/crypto/…
 | `tests/unit/test_format_validation.py` | `(module)` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_jwt_security.py` | `TestAlgorithmSecurity` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_latest_one_parser.py` | `TestLatestOneValidator` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
-| `tests/unit/test_parser.py` | `TestNavGroupParsing` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
-| `tests/unit/test_parser.py` | `TestSurfaceParsing` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
+| `tests/unit/test_parser.py` | `(module)` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_predicate_builder.py` | `(module)` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_predicate_policy_mode.py` | `TestCollectUserAttrRefs` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_rhythm_parser.py` | `(module)` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
+| `tests/unit/test_scope_rules.py` | `TestPermitFieldConditionRejection` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
+| `tests/unit/test_validate_app_links.py` | `(module)` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 
 ## How to act on this
 

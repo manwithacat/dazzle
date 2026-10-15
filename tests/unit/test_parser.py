@@ -1,3730 +1,1473 @@
-#!/usr/bin/env python3
-"""Test parser implementation."""
+"""Parser contract: DSL text → IR fragment, one table (or test) per construct.
 
+Where to add a test for a new DSL construct (AGENTS.md › Adding DSL Constructs):
+find the section for the construct below and add a row to its table; add a new
+section only for a new top-level construct. Each row parses a small DSL snippet
+and pins the IR attributes the construct must produce, addressed by a dotted
+path (``type.kind.value``, ``steps[0].service``, ``len:fields``). Rejections go
+in ``PARSE_ERROR_CASES`` with the message the author sees.
+
+The parser-conformance corpus (``fixtures/pra/dsl/*.dsl``) pins only that the
+kitchen-sink files parse (``tests/unit/test_dazzle_validate_drift.py``); it does
+not assert IR values, so the rows here are not duplicates of it.
+"""
+
+import re
 from pathlib import Path
+from typing import Any
 
 import pytest
 
+from dazzle.core import ir, linker_impl
 from dazzle.core.dsl_parser_impl import parse_dsl
-
-# Test entity parsing
-test_dsl = """
-module test.core
-
-app test_app "Test Application"
-
-entity User "User":
-  id: uuid pk
-  email: email unique required
-  name: str(120) required
-  age: int optional
-  created_at: datetime auto_add
-
-  index email
-  unique email
-
-entity Post "Post":
-  id: uuid pk
-  author: ref User required
-  title: str(200) required
-  content: text
-  status: enum[draft,published,archived]=draft
-  views: int=0
-  metadata: json
-
-  index author
-"""
-
-
-def main():
-    print("Testing lexer and parser...")
-    print("=" * 60)
-
-    module_name, app_name, app_title, _, uses, fragment = parse_dsl(test_dsl, Path("test.dsl"))
-
-    print(f"Module: {module_name}")
-    print(f"App: {app_name} - {app_title}")
-    print(f"Uses: {uses}")
-    print()
-
-    print(f"Entities parsed: {len(fragment.entities)}")
-    for entity in fragment.entities:
-        print(f"\n  Entity: {entity.name} ({entity.title})")
-        print(f"    Fields: {len(entity.fields)}")
-        for field in entity.fields:
-            print(
-                f"      - {field.name}: {field.type.kind.value} "
-                + f"(modifiers: {[m.value for m in field.modifiers]}, "
-                + f"default: {field.default})"
-            )
-        print(f"    Constraints: {len(entity.constraints)}")
-        for constraint in entity.constraints:
-            print(f"      - {constraint.kind.value}: {constraint.fields}")
-
-    print("\n" + "=" * 60)
-    print("✅ Parser test passed!")
-
-
-class TestFieldTypes:
-    """Tests for field type parsing (v0.9.5)."""
-
-    def test_money_field_default_currency(self):
-        """Test money field with default GBP currency."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Invoice "Invoice":
-  id: uuid pk
-  total: money required
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        invoice = fragment.entities[0]
-        total_field = next(f for f in invoice.fields if f.name == "total")
-
-        assert total_field.type.kind.value == "money"
-        assert total_field.type.currency_code == "GBP"
-
-    def test_money_field_custom_currency(self):
-        """Test money field with custom currency."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Invoice "Invoice":
-  id: uuid pk
-  total: money(USD) required
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        invoice = fragment.entities[0]
-        total_field = next(f for f in invoice.fields if f.name == "total")
-
-        assert total_field.type.kind.value == "money"
-        assert total_field.type.currency_code == "USD"
-
-    def test_file_field(self):
-        """Test file field type."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Document "Document":
-  id: uuid pk
-  attachment: file
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        doc = fragment.entities[0]
-        attachment_field = next(f for f in doc.fields if f.name == "attachment")
-
-        assert attachment_field.type.kind.value == "file"
-
-    def test_url_field(self):
-        """Test url field type."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Link "Link":
-  id: uuid pk
-  target: url required
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        link = fragment.entities[0]
-        target_field = next(f for f in link.fields if f.name == "target")
-
-        assert target_field.type.kind.value == "url"
-
-    def test_has_many_via_junction(self):
-        """Test many-to-many relationship via junction table."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Client "Client":
-  id: uuid pk
-  name: str(200) required
-  contacts: has_many Contact via ClientContact
-
-entity Contact "Contact":
-  id: uuid pk
-  email: email required
-
-entity ClientContact "Client Contact":
-  id: uuid pk
-  client: ref Client
-  contact: ref Contact
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        client = fragment.entities[0]
-        contacts_field = next(f for f in client.fields if f.name == "contacts")
-
-        assert contacts_field.type.kind.value == "has_many"
-        assert contacts_field.type.ref_entity == "Contact"
-        assert contacts_field.type.via_entity == "ClientContact"
-
-    def test_sensitive_modifier(self):
-        """Test sensitive modifier for PII fields."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Employee "Employee":
-  id: uuid pk
-  name: str(200) required
-  bank_account: str(8) sensitive
-  ni_number: str(9) required sensitive
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        employee = fragment.entities[0]
-
-        name_field = next(f for f in employee.fields if f.name == "name")
-        bank_field = next(f for f in employee.fields if f.name == "bank_account")
-        ni_field = next(f for f in employee.fields if f.name == "ni_number")
-
-        assert not name_field.is_sensitive
-        assert bank_field.is_sensitive
-        assert not bank_field.is_required
-        assert ni_field.is_sensitive
-        assert ni_field.is_required
-
-    def test_indexed_modifier(self):
-        """Test indexed modifier on fields including ref fields (#578)."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity School "School":
-  id: uuid pk
-  name: str(200) required
-
-entity Student "Student":
-  id: uuid pk
-  school: ref School indexed
-  email: str(200) indexed
-  name: str(200) required
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        student = fragment.entities[1]
-
-        school_field = next(f for f in student.fields if f.name == "school")
-        email_field = next(f for f in student.fields if f.name == "email")
-        name_field = next(f for f in student.fields if f.name == "name")
-
-        assert school_field.is_indexed
-        assert email_field.is_indexed
-        assert not name_field.is_indexed
-
-
-class TestV025KeywordsAsIdentifiers:
-    """Tests that v0.25.0 keywords can be used as enum values and identifiers."""
-
-    def test_webhook_as_enum_value(self):
-        """v0.25.0 keywords (webhook, approval, sla) usable as enum values."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Event "Event":
-  id: uuid pk
-  actor_type: enum[system, user, webhook] = system
-  source: enum[manual, approval, sla] = manual
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        event = fragment.entities[0]
-        actor_field = next(f for f in event.fields if f.name == "actor_type")
-        assert "webhook" in actor_field.type.enum_values
-
-        source_field = next(f for f in event.fields if f.name == "source")
-        assert "approval" in source_field.type.enum_values
-        assert "sla" in source_field.type.enum_values
-
-    def test_enum_keyword_in_module_name(self):
-        """The 'enum' keyword can appear in module names."""
-        dsl = """
-module test.enum.types
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-"""
-        module_name, _, _, _, _, _ = parse_dsl(dsl, Path("test.dsl"))
-        assert module_name == "test.enum.types"
-
-
-class TestWorkspaceDisplayModes:
-    """Tests for workspace display mode parsing (v0.9.5)."""
-
-    def test_kanban_display_mode(self):
-        """Test kanban display mode."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-  status: enum[todo, in_progress, done]
-
-workspace task_board "Task Board":
-  tasks:
-    source: Task
-    display: kanban
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        workspace = fragment.workspaces[0]
-        region = workspace.regions[0]
-
-        assert region.display.value == "kanban"
-
-    def test_bar_chart_display_mode(self):
-        """Test bar_chart display mode."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Sale "Sale":
-  id: uuid pk
-  amount: decimal(10,2)
-
-workspace sales_dashboard "Sales Dashboard":
-  chart:
-    source: Sale
-    display: bar_chart
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        workspace = fragment.workspaces[0]
-        region = workspace.regions[0]
-
-        assert region.display.value == "bar_chart"
-
-    def test_activity_feed_display_mode(self):
-        """Test activity_feed display mode."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity AuditEntry "Audit Entry":
-  id: uuid pk
-  description: str(500)
-
-workspace activity "Activity":
-  feed:
-    source: AuditEntry
-    display: activity_feed
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        workspace = fragment.workspaces[0]
-        region = workspace.regions[0]
-
-        assert region.display.value == "activity_feed"
-
-
-class TestGroupByBucket:
-    """Tests for group_by: bucket(field, unit) parsing (v0.60.0, cycle 28)."""
-
-    def _base_dsl(self, region_body: str) -> str:
-        return f"""
-module test.core
-app MyApp "My App"
-
-entity Alert "Alert":
-  id: uuid pk
-  created_at: datetime
-  severity: enum[high, low]
-
-workspace dash "Dashboard":
-  chart:
-{region_body}
-"""
-
-    def test_single_dim_bucket(self):
-        """group_by: bucket(created_at, day) → BucketRef on .group_by."""
-        from dazzle.core.ir import BucketRef
-        from dazzle.core.parser import parse_dsl
-
-        dsl = self._base_dsl(
-            "    source: Alert\n"
-            "    display: line_chart\n"
-            "    group_by: bucket(created_at, day)\n"
-            "    aggregate:\n"
-            "      count: count(Alert)\n"
-        )
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        region = fragment.workspaces[0].regions[0]
-
-        assert isinstance(region.group_by, BucketRef)
-        assert region.group_by.field == "created_at"
-        assert region.group_by.unit == "day"
-
-    def test_multi_dim_bucket_plus_scalar(self):
-        """group_by: [bucket(created_at, week), severity] → [BucketRef, str]."""
-        from dazzle.core.ir import BucketRef
-        from dazzle.core.parser import parse_dsl
-
-        dsl = self._base_dsl(
-            "    source: Alert\n"
-            "    display: pivot_table\n"
-            "    group_by: [bucket(created_at, week), severity]\n"
-            "    aggregate:\n"
-            "      count: count(Alert)\n"
-        )
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        region = fragment.workspaces[0].regions[0]
-
-        assert region.group_by_dims is not None
-        assert len(region.group_by_dims) == 2
-        assert isinstance(region.group_by_dims[0], BucketRef)
-        assert region.group_by_dims[0].field == "created_at"
-        assert region.group_by_dims[0].unit == "week"
-        assert region.group_by_dims[1] == "severity"
-
-    def test_all_five_units_parse(self):
-        """day / week / month / quarter / year all accepted."""
-        from dazzle.core.parser import parse_dsl
-
-        for unit in ("day", "week", "month", "quarter", "year"):
-            dsl = self._base_dsl(
-                "    source: Alert\n"
-                "    display: line_chart\n"
-                f"    group_by: bucket(created_at, {unit})\n"
-                "    aggregate:\n"
-                "      count: count(Alert)\n"
-            )
-            _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-            region = fragment.workspaces[0].regions[0]
-            assert region.group_by.unit == unit  # type: ignore[union-attr]
-
-    def test_invalid_unit_raises_parse_error(self):
-        """bucket(created_at, millennia) → parse error."""
-        import pytest
-
-        from dazzle.core.parser import parse_dsl
-
-        dsl = self._base_dsl(
-            "    source: Alert\n"
-            "    display: line_chart\n"
-            "    group_by: bucket(created_at, millennia)\n"
-            "    aggregate:\n"
-            "      count: count(Alert)\n"
-        )
-        with pytest.raises(Exception, match="Invalid bucket unit"):
-            parse_dsl(dsl, Path("test.dsl"))
-
-    def test_bare_field_still_works(self):
-        """Non-bucket group_by values parse unchanged (regression guard)."""
-        from dazzle.core.parser import parse_dsl
-
-        dsl = self._base_dsl(
-            "    source: Alert\n"
-            "    display: bar_chart\n"
-            "    group_by: severity\n"
-            "    aggregate:\n"
-            "      count: count(Alert)\n"
-        )
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        region = fragment.workspaces[0].regions[0]
-        assert region.group_by == "severity"
-
-
-class TestAppConfig:
-    """Tests for app config block parsing (v0.9.5)."""
-
-    def test_app_config_basic(self):
-        """Test basic app config with all options."""
-        dsl = """
-module test.core
-
-app MyApp "My Application":
-  description: "A test application"
-  multi_tenant: true
-  audit_trail: true
-
-entity User "User":
-  id: uuid pk
-  name: str(100) required
-"""
-        module_name, app_name, app_title, app_config, uses, fragment = parse_dsl(
-            dsl, Path("test.dsl")
-        )
-
-        assert app_name == "MyApp"
-        assert app_title == "My Application"
-        assert app_config is not None
-        assert app_config.description == "A test application"
-        assert app_config.multi_tenant is True
-        assert app_config.audit_trail is True
-        assert len(fragment.entities) == 1
-
-    def test_app_config_partial(self):
-        """Test app config with only some options."""
-        dsl = """
-module test.core
-
-app MyApp "My Application":
-  description: "Just a description"
-
-entity User "User":
-  id: uuid pk
-"""
-        _, _, _, app_config, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        assert app_config is not None
-        assert app_config.description == "Just a description"
-        assert app_config.multi_tenant is False  # Default
-        assert app_config.audit_trail is False  # Default
-        assert len(fragment.entities) == 1
-
-    def test_app_config_features(self):
-        """Test app config with custom features."""
-        dsl = """
-module test.core
-
-app MyApp "My Application":
-  multi_tenant: true
-  custom_feature: "enabled"
-  another_flag: true
-
-entity User "User":
-  id: uuid pk
-"""
-        _, _, _, app_config, _, _ = parse_dsl(dsl, Path("test.dsl"))
-
-        assert app_config is not None
-        assert app_config.multi_tenant is True
-        assert app_config.features.get("custom_feature") == "enabled"
-        assert app_config.features.get("another_flag") is True
-
-    def test_app_without_config(self):
-        """Test app declaration without config body."""
-        dsl = """
-module test.core
-
-app MyApp "My Application"
-
-entity User "User":
-  id: uuid pk
-"""
-        _, app_name, app_title, app_config, _, _ = parse_dsl(dsl, Path("test.dsl"))
-
-        assert app_name == "MyApp"
-        assert app_title == "My Application"
-        assert app_config is None
-
-
-class TestStoryParsing:
-    """Tests for story DSL parsing (v0.22.0)."""
-
-    def test_basic_story(self):
-        """Test basic story parsing with actor and trigger."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Invoice "Invoice":
-  id: uuid pk
-  status: enum[draft,sent,paid]
-
-story ST-001 "Staff sends invoice to client":
-  persona: StaffUser
-  trigger: status_changed
-  entities: [Invoice]
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        assert len(fragment.stories) == 1
-        story = fragment.stories[0]
-        assert story.story_id == "ST-001"
-        assert story.title == "Staff sends invoice to client"
-        assert story.persona == "StaffUser"
-        assert story.trigger.value == "status_changed"
-        assert story.entities == ["Invoice"]
-
-    def test_story_with_given_when_then(self):
-        """Test story with Gherkin-style conditions."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Invoice "Invoice":
-  id: uuid pk
-  status: enum[draft,sent]
-
-story ST-002 "Invoice status changes":
-  persona: Admin
-  trigger: form_submitted
-  entities: [Invoice]
-
-  given:
-    - "Invoice.status is draft"
-
-  when:
-    - "User submits form"
-
-  then:
-    - "Invoice.status changes to sent"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        assert len(fragment.stories) == 1
-        story = fragment.stories[0]
-        assert len(story.given) == 1
-        assert story.given[0].expression == "Invoice.status is draft"
-        assert len(story.when) == 1
-        assert story.when[0].expression == "User submits form"
-        assert len(story.then) == 1
-        assert story.then[0].expression == "Invoice.status changes to sent"
-
-    def test_story_with_unless(self):
-        """Test story with unless exception branch."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Invoice "Invoice":
-  id: uuid pk
-
-entity FollowupTask "Followup":
-  id: uuid pk
-
-story ST-003 "Send invoice with fallback":
-  persona: Staff
-  trigger: user_click
-  entities: [Invoice, FollowupTask]
-
-  then:
-    - "Invoice is sent"
-
-  unless:
-    - "Client.email is missing":
-        then: "FollowupTask is created"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        assert len(fragment.stories) == 1
-        story = fragment.stories[0]
-        assert len(story.unless) == 1
-        assert story.unless[0].condition == "Client.email is missing"
-        assert len(story.unless[0].then_outcomes) == 1
-        assert story.unless[0].then_outcomes[0] == "FollowupTask is created"
-
-    def test_story_all_triggers(self):
-        """Test all supported story triggers."""
-        triggers = [
-            "form_submitted",
-            "status_changed",
-            "timer_elapsed",
-            "external_event",
-            "user_click",
-            "cron_daily",
-            "cron_hourly",
-        ]
-        for trigger in triggers:
-            dsl = f"""
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-
-story ST-TRIG "Test trigger":
-  persona: User
-  trigger: {trigger}
-"""
-            _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-            assert len(fragment.stories) == 1
-            assert fragment.stories[0].trigger.value == trigger
-
-    def test_multiple_stories(self):
-        """Test parsing multiple stories in one module."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-
-story ST-001 "First story":
-  persona: Admin
-  trigger: form_submitted
-
-story ST-002 "Second story":
-  persona: User
-  trigger: user_click
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        assert len(fragment.stories) == 2
-        assert fragment.stories[0].story_id == "ST-001"
-        assert fragment.stories[1].story_id == "ST-002"
-
-
-class TestProcessParsing:
-    """Tests for process DSL parsing (v0.23.0)."""
-
-    def test_basic_process(self):
-        """Test basic process parsing with trigger and step."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-  status: enum[pending,confirmed,shipped]=pending
-
-process OrderFulfillment "Order Fulfillment":
-  trigger: entity Order status -> confirmed
-  implements: [ST-001]
-  steps:
-    - step CheckInventory:
-        service: InventoryService
-        timeout: 30s
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        assert len(fragment.processes) == 1
-        process = fragment.processes[0]
-        assert process.name == "OrderFulfillment"
-        assert process.title == "Order Fulfillment"
-        assert "ST-001" in process.implements
-
-        # Check trigger
-        assert process.trigger is not None
-        assert process.trigger.kind.value == "entity_status_transition"
-        assert process.trigger.entity_name == "Order"
-        assert process.trigger.from_status is None
-        assert process.trigger.to_status == "confirmed"
-
-        # Check step
-        assert len(process.steps) == 1
-        step = process.steps[0]
-        assert step.name == "CheckInventory"
-        assert step.kind.value == "service"
-        assert step.service == "InventoryService"
-        assert step.timeout_seconds == 30
-
-    def test_process_with_entity_event_trigger(self):
-        """Test process with entity event trigger."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-process OrderCreated "Handle Order Created":
-  trigger: entity Order created
-  implements: [ST-002]
-  steps:
-    - step NotifyAdmin:
-        channel: email
-        message: new_order_notification
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        process = fragment.processes[0]
-        assert process.trigger.kind.value == "entity_event"
-        assert process.trigger.entity_name == "Order"
-        assert process.trigger.event_type == "created"
-
-        step = process.steps[0]
-        assert step.kind.value == "send"
-        assert step.channel == "email"
-        assert step.message == "new_order_notification"
-
-    def test_process_with_wait_step(self):
-        """Test process with WAIT step."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-process OrderWithWait "Order With Wait":
-  trigger: entity Order created
-  steps:
-    - step WaitForPayment:
-        wait: 24h
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        step = fragment.processes[0].steps[0]
-        assert step.kind.value == "wait"
-        assert step.wait_duration_seconds == 86400  # 24 hours in seconds
-
-    def test_process_wait_rejects_non_duration(self):
-        """``wait:`` takes a duration only — a bare name is a parse error."""
-        from dazzle.core.errors import ParseError
-
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-process OrderWithSignalWait "Order With Signal Wait":
-  trigger: entity Order created
-  steps:
-    - step WaitForPayment:
-        wait: PaymentReceived
-"""
-        with pytest.raises(ParseError, match="wait: expects a duration"):
-            parse_dsl(dsl, Path("test.dsl"))
-
-    def test_process_with_human_task(self):
-        """Test process with HUMAN_TASK step."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-process OrderApproval "Order Approval":
-  trigger: entity Order created
-  steps:
-    - step ApproveOrder:
-        human_task:
-          assignee: manager
-          surface: ApprovalForm
-          timeout: 2d
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        step = fragment.processes[0].steps[0]
-        assert step.kind.value == "human_task"
-        assert step.human_task is not None
-        assert step.human_task.assignee_expression == "manager"
-        assert step.human_task.surface == "ApprovalForm"
-        assert step.human_task.timeout_seconds == 172800  # 2 days
-
-    def test_process_with_subprocess(self):
-        """Test process with SUBPROCESS step."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-process MainProcess "Main Process":
-  trigger: entity Order created
-  steps:
-    - step RunSubProcess:
-        subprocess: PaymentProcess
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        step = fragment.processes[0].steps[0]
-        assert step.kind.value == "subprocess"
-        assert step.subprocess == "PaymentProcess"
-
-    def test_process_with_condition_step(self):
-        """Test process with CONDITION step."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-process ConditionalProcess "Conditional Process":
-  trigger: entity Order created
-  steps:
-    - step CheckAmount:
-        condition: "Order.total > 1000"
-        on_true: HighValueApproval
-        on_false: AutoApprove
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        step = fragment.processes[0].steps[0]
-        assert step.kind.value == "condition"
-        assert step.condition == "Order.total > 1000"
-        assert step.on_true == "HighValueApproval"
-        assert step.on_false == "AutoApprove"
-
-    def test_process_with_parallel_steps(self):
-        """Test process with PARALLEL step containing multiple branches."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-process ParallelProcess "Parallel Process":
-  trigger: entity Order created
-  steps:
-    - parallel ParallelNotifications:
-        - step NotifyCustomer:
-            channel: email
-            message: customer_notification
-        - step NotifyWarehouse:
-            channel: email
-            message: warehouse_notification
-        - step UpdateAnalytics:
-            service: AnalyticsService
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        step = fragment.processes[0].steps[0]
-        assert step.kind.value == "parallel"
-        assert len(step.parallel_steps) == 3
-        # Parallel steps are ProcessStepSpec objects with names
-        step_names = [s.name for s in step.parallel_steps]
-        assert "NotifyCustomer" in step_names
-        assert "NotifyWarehouse" in step_names
-        assert "UpdateAnalytics" in step_names
-
-    def test_process_with_multiple_steps(self):
-        """Test process with multiple sequential steps."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-process MultiStepProcess "Multi Step Process":
-  trigger: entity Order created
-  implements: [ST-001, ST-002]
-  steps:
-    - step Step1:
-        service: Service1
-        timeout: 30s
-    - step Step2:
-        service: Service2
-        timeout: 1m
-    - step Step3:
-        channel: email
-        message: completion_notification
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        process = fragment.processes[0]
-        assert len(process.steps) == 3
-        assert process.steps[0].name == "Step1"
-        assert process.steps[1].name == "Step2"
-        assert process.steps[2].name == "Step3"
-        assert process.steps[1].timeout_seconds == 60  # 1 minute
-
-    def test_process_with_inputs(self):
-        """Test process with input parameters."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-process ProcessWithInputs "Process With Inputs":
-  trigger: entity Order created
-  input:
-    order_id: uuid
-    priority: str
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        process = fragment.processes[0]
-        assert len(process.inputs) == 2
-        assert process.inputs[0].name == "order_id"
-        assert process.inputs[0].type == "uuid"
-        assert process.inputs[1].name == "priority"
-        assert process.inputs[1].type == "str"
-
-    def test_process_with_manual_trigger(self):
-        """Test process with manual trigger."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-process ManualProcess "Manual Process":
-  trigger: manual
-  steps:
-    - step DoWork:
-        service: WorkService
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        process = fragment.processes[0]
-        assert process.trigger.kind.value == "manual"
-
-    def test_process_with_signal_trigger(self):
-        """Test process with signal trigger."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-process SignalProcess "Signal Process":
-  trigger: signal PaymentComplete
-  steps:
-    - step ProcessPayment:
-        service: PaymentService
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        process = fragment.processes[0]
-        assert process.trigger.kind.value == "signal"
-        assert process.trigger.process_name == "PaymentComplete"
-
-    def test_process_with_timeout(self):
-        """Test process with overall timeout."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-process TimedProcess "Timed Process":
-  trigger: entity Order created
-  timeout: 1h
-  steps:
-    - step DoWork:
-        service: WorkService
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        process = fragment.processes[0]
-        assert process.timeout_seconds == 3600  # 1 hour
-
-    def test_process_with_step_compensate(self):
-        """Test process step with compensation handler."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-process SagaProcess "Saga Process":
-  trigger: entity Order created
-  steps:
-    - step ReserveInventory:
-        service: InventoryService
-        compensate: ReleaseInventory
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        step = fragment.processes[0].steps[0]
-        assert step.compensate_with == "ReleaseInventory"
-
-
-class TestScheduleParsing:
-    """Tests for schedule DSL parsing (v0.23.0)."""
-
-    def test_basic_cron_schedule(self):
-        """Test basic schedule with cron expression."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Report "Report":
-  id: uuid pk
-
-schedule DailyReport "Daily Report Generation":
-  cron: "0 6 * * *"
-  implements: [ST-010]
-  steps:
-    - step GenerateReport:
-        service: ReportService
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        assert len(fragment.schedules) == 1
-        schedule = fragment.schedules[0]
-        assert schedule.name == "DailyReport"
-        assert schedule.title == "Daily Report Generation"
-        assert schedule.cron == "0 6 * * *"
-        assert "ST-010" in schedule.implements
-
-    def test_interval_schedule(self):
-        """Test schedule with interval."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-schedule HealthCheck "Health Check":
-  interval: 5m
-  steps:
-    - step Check:
-        service: HealthService
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        schedule = fragment.schedules[0]
-        assert schedule.interval_seconds == 300  # 5 minutes
-        assert schedule.cron is None
-
-    def test_schedule_with_timezone(self):
-        """Test schedule with timezone specification."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-schedule TimezoneJob "Timezone Job":
-  cron: "0 9 * * 1-5"
-  timezone: "Europe/London"
-  steps:
-    - step Work:
-        service: WorkService
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        schedule = fragment.schedules[0]
-        assert schedule.timezone == "Europe/London"
-
-    def test_schedule_with_catch_up(self):
-        """Test schedule with catch_up enabled."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-schedule CatchUpJob "Catch Up Job":
-  cron: "0 0 * * *"
-  catch_up: true
-  steps:
-    - step Work:
-        service: WorkService
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        schedule = fragment.schedules[0]
-        assert schedule.catch_up is True
-
-    def test_multiple_schedules(self):
-        """Test parsing multiple schedules."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-schedule Schedule1 "First Schedule":
-  cron: "0 0 * * *"
-  steps:
-    - step Work1:
-        service: Service1
-
-schedule Schedule2 "Second Schedule":
-  interval: 1h
-  steps:
-    - step Work2:
-        service: Service2
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        assert len(fragment.schedules) == 2
-        assert fragment.schedules[0].name == "Schedule1"
-        assert fragment.schedules[1].name == "Schedule2"
-        assert fragment.schedules[0].cron == "0 0 * * *"
-        assert fragment.schedules[1].interval_seconds == 3600
-
-
-class TestProcessAndScheduleIntegration:
-    """Tests for process and schedule integration with other DSL constructs."""
-
-    def test_process_and_schedule_together(self):
-        """Test process and schedule in same module."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-
-process TaskProcess "Task Process":
-  trigger: entity Task created
-  steps:
-    - step ProcessTask:
-        service: TaskService
-        timeout: 30s
-
-schedule TaskCleanup "Task Cleanup":
-  cron: "0 0 * * *"
-  steps:
-    - step Cleanup:
-        service: CleanupService
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        assert len(fragment.processes) == 1
-        assert len(fragment.schedules) == 1
-        assert fragment.processes[0].name == "TaskProcess"
-        assert fragment.schedules[0].name == "TaskCleanup"
-
-    def test_process_with_story_link(self):
-        """Test process implements multiple stories."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-
-story ST-001 "Create order":
-  persona: Customer
-  trigger: form_submitted
-  entities: [Order]
-
-story ST-002 "Fulfill order":
-  persona: System
-  trigger: status_changed
-  entities: [Order]
-
-process OrderWorkflow "Order Workflow":
-  trigger: entity Order created
-  implements: [ST-001, ST-002]
-  steps:
-    - step ProcessOrder:
-        service: OrderService
-        timeout: 30s
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        assert len(fragment.stories) == 2
-        assert len(fragment.processes) == 1
-        process = fragment.processes[0]
-        assert "ST-001" in process.implements
-        assert "ST-002" in process.implements
-
-
-class TestSurfaceFieldSourceOption:
-    """Tests for source= option on surface fields."""
-
-    def test_field_with_source_option(self):
-        """Test parser handles field with source=pack.operation."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Client "Client":
-  id: uuid pk
-  company_name: str(200) required
-
-surface client_create "Create Client":
-  uses entity Client
-  mode: create
-  section main "Details":
-    field company_name "Company" source=companies_house_lookup.search_companies
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        surface = fragment.surfaces[0]
-        assert surface.name == "client_create"
-        element = surface.sections[0].elements[0]
-        assert element.field_name == "company_name"
-        assert element.label == "Company"
-        assert element.options.get("source") == "companies_house_lookup.search_companies"
-
-    def test_field_without_source_option(self):
-        """Test parser still works for fields without options."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_create "Create Task":
-  uses entity Task
-  mode: create
-  section main "Details":
-    field title "Title"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        surface = fragment.surfaces[0]
-        element = surface.sections[0].elements[0]
-        assert element.field_name == "title"
-        assert element.label == "Title"
-        assert element.options == {}
-
-
-class TestBusinessPriority:
-    """Tests for priority: modifier on surfaces and experiences."""
-
-    @pytest.mark.parametrize(
-        ("priority_line", "expected"),
-        [
-            ("  priority: critical\n", "critical"),
-            ("  priority: low\n", "low"),
-            ("", "medium"),
-        ],
-        ids=[
-            "test_surface_priority_critical",
-            "test_surface_priority_low",
-            "test_surface_priority_defaults_to_medium",
-        ],
+from dazzle.core.errors import ParseError
+from dazzle.core.ir import BucketRef, BusinessPriority, OutcomeKind, SourceLocation
+from dazzle.core.ir.fields import FieldModifier
+
+# Leading newline keeps the first construct after the header on line 5,
+# which the source-location rows rely on.
+HEADER = '\nmodule test.core\napp MyApp "My App"\n\n'
+
+PRESENT = object()  # expected value meaning "is not None"
+
+
+def _parse(body: str, *, header: str = HEADER) -> tuple[Any, ...]:
+    return parse_dsl(header + body, Path("test.dsl"))
+
+
+def _fragment(body: str) -> Any:
+    return _parse(body)[-1]
+
+
+def _resolve(obj: Any, path: str) -> Any:
+    """Walk a dotted path: ``a.b[0].c``; ``len:a.b`` returns ``len(a.b)``."""
+    want_len = path.startswith("len:")
+    for part in re.findall(r"\[\d+\]|[^.\[\]]+", path.removeprefix("len:")):
+        if part.startswith("["):
+            obj = obj[int(part[1:-1])]
+        elif isinstance(obj, dict):
+            obj = obj[part]
+        else:
+            obj = getattr(obj, part)
+    return len(obj) if want_len else obj
+
+
+def _assert_attrs(obj: Any, expected: dict[str, Any]) -> None:
+    for path, want in expected.items():
+        got = _resolve(obj, path)
+        if want is PRESENT:
+            assert got is not None, path
+        else:
+            assert got == want, f"{path}: {got!r} != {want!r}"
+
+
+def _field(fragment: Any, entity: str, field: str) -> Any:
+    ent = next(e for e in fragment.entities if e.name == entity)
+    return next(f for f in ent.fields if f.name == field)
+
+
+# ---------------------------------------------------------------------------
+# module / app header
+# ---------------------------------------------------------------------------
+
+HEADER_CASES = [
+    pytest.param(
+        'module test.core\n\napp MyApp "My Application":\n  description: "A test application"\n'
+        "  multi_tenant: true\n  audit_trail: true\n",
+        {
+            "app_name": "MyApp",
+            "app_title": "My Application",
+            "config.description": "A test application",
+            "config.multi_tenant": True,
+            "config.audit_trail": True,
+        },
+        id="app-config-all-options",
+    ),
+    pytest.param(
+        'module test.core\n\napp MyApp "My Application":\n  description: "Just a description"\n',
+        {
+            "config.description": "Just a description",
+            "config.multi_tenant": False,
+            "config.audit_trail": False,
+        },
+        id="app-config-partial-defaults-flags-false",
+    ),
+    pytest.param(
+        'module test.core\n\napp MyApp "My Application":\n  multi_tenant: true\n'
+        '  custom_feature: "enabled"\n  another_flag: true\n',
+        {
+            "config.multi_tenant": True,
+            "config.features.custom_feature": "enabled",
+            "config.features.another_flag": True,
+        },
+        id="app-config-unknown-keys-become-features",
+    ),
+    pytest.param(
+        'module test.core\n\napp MyApp "My Application"\n',
+        {"app_name": "MyApp", "app_title": "My Application", "config": None},
+        id="app-without-config-body",
+    ),
+    pytest.param(
+        'module test.enum.types\napp MyApp "My App"\n',
+        {"module": "test.enum.types"},
+        id="enum-keyword-inside-module-name-v0.25",
+    ),
+]
+
+
+@pytest.mark.parametrize(("header", "expected"), HEADER_CASES)
+def test_module_and_app_header(header: str, expected: dict[str, Any]) -> None:
+    module, app_name, app_title, config, _, fragment = parse_dsl(
+        header + '\nentity User "User":\n  id: uuid pk\n', Path("test.dsl")
     )
-    def test_surface_priority(self, priority_line: str, expected: str):
-        """Surface priority parses to the expected value (defaults to medium)."""
-        dsl = f"""
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_list "Tasks":
-  uses entity Task
-  mode: list
-{priority_line}  section main:
-    field title "Title"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        assert surface.priority.value == expected
-
-    def test_experience_priority_critical(self):
-        """Experience with priority: critical."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_create "Create":
-  uses entity Task
-  mode: create
-  section main:
-    field title "Title"
-
-surface task_done "Done":
-  uses entity Task
-  mode: view
-  section main:
-    field title "Title"
-
-experience task_wizard "Task Wizard":
-  priority: critical
-  start at step intake
-  step intake:
-    kind: surface
-    surface task_create
-    on success -> step finished
-  step finished:
-    kind: surface
-    surface task_done
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        exp = fragment.experiences[0]
-        assert exp.priority.value == "critical"
-
-    def test_experience_priority_defaults_to_medium(self):
-        """Experience without priority defaults to medium."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_create "Create":
-  uses entity Task
-  mode: create
-  section main:
-    field title "Title"
-
-experience task_wizard "Task Wizard":
-  start at step intake
-  step intake:
-    kind: surface
-    surface task_create
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        exp = fragment.experiences[0]
-        assert exp.priority.value == "medium"
-
-    def test_experience_priority_with_access(self):
-        """Experience with both access and priority."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_create "Create":
-  uses entity Task
-  mode: create
-  section main:
-    field title "Title"
-
-experience task_wizard "Task Wizard":
-  access: authenticated
-  priority: high
-  start at step intake
-  step intake:
-    kind: surface
-    surface task_create
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        exp = fragment.experiences[0]
-        assert exp.priority.value == "high"
-        assert exp.access is not None
-        assert exp.access.require_auth is True
-
-    def test_all_priority_levels_valid(self):
-        """All four priority levels parse correctly."""
-        from dazzle.core.ir import BusinessPriority
-
-        for level in ("critical", "high", "medium", "low"):
-            dsl = f"""
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_list "Tasks":
-  uses entity Task
-  mode: list
-  priority: {level}
-  section main:
-    field title "Title"
-"""
-            _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-            surface = fragment.surfaces[0]
-            assert surface.priority == BusinessPriority(level)
-
-
-class TestViewParsing:
-    """Tests for view DSL parsing (v0.25.0)."""
-
-    def test_basic_view(self):
-        """Test basic view with source, group_by, and aggregate fields."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-  amount: decimal(10,2) required
-
-view OrderSummary "Order Summary":
-  source: Order
-  group_by: [status]
-  fields:
-    total_amount: sum(amount)
-    order_count: count()
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        assert len(fragment.views) == 1
-        v = fragment.views[0]
-        assert v.name == "OrderSummary"
-        assert v.title == "Order Summary"
-        assert v.source_entity == "Order"
-        assert v.group_by == ["status"]
-        assert len(v.fields) == 2
-        assert v.fields[0].name == "total_amount"
-        assert v.fields[0].expression is not None
-        assert v.fields[1].name == "order_count"
-
-    def test_view_with_function_group_by(self):
-        """Test view with function call in group_by: month(created_at)."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-  created_at: datetime auto_add
-  amount: decimal(10,2) required
-
-view MonthlySales "Monthly Sales":
-  source: Order
-  group_by: [customer, month(created_at)]
-  fields:
-    total: sum(amount)
-    count: count()
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        v = fragment.views[0]
-        assert v.group_by == ["customer", "month(created_at)"]
-
-    def test_view_with_typed_fields(self):
-        """Test view fields that have explicit types instead of aggregates."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-  amount: decimal(10,2) required
-
-view OrderReport "Order Report":
-  source: Order
-  fields:
-    label: str(200)
-    total: sum(amount)
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        v = fragment.views[0]
-        assert len(v.fields) == 2
-        # str type field
-        assert v.fields[0].name == "label"
-        assert v.fields[0].field_type is not None
-        assert v.fields[0].expression is None
-        # aggregate field
-        assert v.fields[1].name == "total"
-        assert v.fields[1].expression is not None
-        assert v.fields[1].field_type is None
-
-    def test_view_without_title(self):
-        """Test view without display title."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-  amount: decimal(10,2) required
-
-view QuickReport:
-  source: Order
-  fields:
-    total: sum(amount)
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        v = fragment.views[0]
-        assert v.name == "QuickReport"
-        assert v.title is None
-
-
-class TestSLAParsing:
-    """Tests for SLA DSL parsing (v0.25.0)."""
-
-    def test_full_sla(self):
-        """Test full SLA with all sub-blocks."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity SupportTicket "Support Ticket":
-  id: uuid pk
-  status: enum[open,on_hold,resolved]=open
-  escalated: bool=false
-
-sla TicketResponse "Ticket Response SLA":
-  entity: SupportTicket
-  starts_when: status -> open
-  pauses_when: status = on_hold
-  completes_when: status -> resolved
-  tiers:
-    warning: 4 hours
-    breach: 8 hours
-    critical: 24 hours
-  business_hours:
-    schedule: "Mon-Fri 09:00-17:00"
-    timezone: "Europe/London"
-  on_breach:
-    notify: support_lead
-    set: escalated = true
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        assert len(fragment.slas) == 1
-        sla = fragment.slas[0]
-        assert sla.name == "TicketResponse"
-        assert sla.title == "Ticket Response SLA"
-        assert sla.entity == "SupportTicket"
-
-        # Conditions
-        assert sla.starts_when is not None
-        assert sla.starts_when.field == "status"
-        assert sla.starts_when.operator == "->"
-        assert sla.starts_when.value == "open"
-
-        assert sla.pauses_when is not None
-        assert sla.pauses_when.operator == "="
-        assert sla.pauses_when.value == "on_hold"
-
-        assert sla.completes_when is not None
-        assert sla.completes_when.operator == "->"
-        assert sla.completes_when.value == "resolved"
-
-        # Tiers
-        assert len(sla.tiers) == 3
-        assert sla.tiers[0].name == "warning"
-        assert sla.tiers[0].duration_value == 4
-        assert sla.tiers[0].duration_unit == "hours"
-        assert sla.tiers[1].name == "breach"
-        assert sla.tiers[1].duration_value == 8
-        assert sla.tiers[2].name == "critical"
-        assert sla.tiers[2].duration_value == 24
-
-        # Business hours
-        assert sla.business_hours is not None
-        assert sla.business_hours.schedule == "Mon-Fri 09:00-17:00"
-        assert sla.business_hours.timezone == "Europe/London"
-
-        # Breach action
-        assert sla.on_breach is not None
-        assert sla.on_breach.notify_role == "support_lead"
-        assert len(sla.on_breach.field_assignments) == 1
-        assert sla.on_breach.field_assignments[0].field_path == "escalated"
-        assert sla.on_breach.field_assignments[0].value == "true"
-
-    def test_sla_minimal(self):
-        """Test SLA with only basic fields."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-  status: enum[open,done]=open
-
-sla TaskCompletion:
-  entity: Task
-  starts_when: status -> open
-  completes_when: status -> done
-  tiers:
-    warning: 2 hours
-    breach: 4 hours
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        sla = fragment.slas[0]
-        assert sla.name == "TaskCompletion"
-        assert sla.title is None
-        assert sla.pauses_when is None
-        assert sla.business_hours is None
-        assert sla.on_breach is None
-        assert len(sla.tiers) == 2
-
-    def test_sla_tiers_with_different_units(self):
-        """Test SLA tiers with various time units."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Alert "Alert":
-  id: uuid pk
-  status: enum[open,ack,resolved]=open
-
-sla AlertResponse "Alert Response":
-  entity: Alert
-  starts_when: status -> open
-  completes_when: status -> ack
-  tiers:
-    immediate: 15 minutes
-    warning: 1 hours
-    breach: 2 days
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        sla = fragment.slas[0]
-        assert sla.tiers[0].duration_value == 15
-        assert sla.tiers[0].duration_unit == "minutes"
-        assert sla.tiers[1].duration_unit == "hours"
-        assert sla.tiers[2].duration_value == 2
-        assert sla.tiers[2].duration_unit == "days"
-
-
-class TestV025EntityKeywordInBlocks:
-    """Regression tests for #222: entity keyword inside construct blocks."""
-
-    def test_sla_entity_property_parses(self):
-        """entity: inside SLA block must not be captured by top-level entity dispatch."""
-        dsl = """
-module test.sla
-app test_app "Test"
-
-entity CustomerDueDiligence "CDD":
-  id: uuid pk
-  cdd_status: enum[complete, pending, requires_refresh]
-
-sla CDDReview "CDD Periodic Review":
-  entity: CustomerDueDiligence
-  starts_when: cdd_status -> complete
-  completes_when: cdd_status -> complete
-  tiers:
-    warning: 30 days
-    breach: 7 days
-    critical: 1 days
-  business_hours:
-    schedule: "Mon-Fri 09:00-17:00"
-    timezone: "Europe/London"
-  on_breach:
-    notify: manager
-    set: cdd_status = requires_refresh
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        assert len(fragment.slas) == 1
-        sla = fragment.slas[0]
-        assert sla.name == "CDDReview"
-        assert sla.entity == "CustomerDueDiligence"
-        assert len(sla.tiers) == 3
-        assert sla.business_hours is not None
-        assert sla.business_hours.timezone == "Europe/London"
-        assert sla.on_breach is not None
-        assert sla.on_breach.notify_role == "manager"
-
-
-class TestV025FieldPreservationAcrossDispatchers:
-    """Regression tests for #222 root cause: pre-v0.25.0 dispatchers dropping new fields."""
-
-    def test_sla_survives_scenario_dispatch(self):
-        """SLA parsed before scenario must be preserved in final fragment."""
-        dsl = """
-module test_preserve
-app test_app "Test":
-  version: "1.0"
-
-entity Foo "Foo":
-  id: uuid pk
-  status: enum[a, b] = a
-  transitions:
-    a -> b
-
-sla FooSLA "Foo SLA":
-  entity: Foo
-  starts_when: status -> b
-  completes_when: status -> a
-  tiers:
-    warning: 1 hours
-
-persona admin "Admin":
-  description: "Admin user"
-
-scenario test_scenario "Test":
-  description: "Test scenario"
-  as persona admin:
-    start_route: "/"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        assert len(fragment.slas) == 1, f"SLA dropped: got {len(fragment.slas)} SLAs"
-        assert fragment.slas[0].name == "FooSLA"
-        assert len(fragment.scenarios) == 1
-
-    def test_all_v025_survive_mixed_dispatch(self):
-        """All v0.25.0 constructs survive interleaved with pre-v0.25.0 constructs."""
-        dsl = """
-module test_mixed
-app test_app "Test":
-  version: "1.0"
-
-entity Task "Task":
-  id: uuid pk
-  status: enum[open, done] = open
-  transitions:
-    open -> done
-
-view TaskSummary "Summary":
-  source: Task
-  fields:
-    count: count()
-
-sla TaskSLA "SLA":
-  entity: Task
-  starts_when: status -> open
-  completes_when: status -> done
-  tiers:
-    warning: 4 hours
-
-surface task_list "Tasks":
-  uses entity Task
-  mode: list
-  section main:
-    field status "Status"
-
-persona admin "Admin":
-  description: "Admin user"
-
-scenario smoke_test "Demo":
-  description: "Demo"
-  as persona admin:
-    start_route: "/"
-
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        assert len(fragment.views) == 1, f"Views dropped: {len(fragment.views)}"
-        assert len(fragment.slas) == 1, f"SLAs dropped: {len(fragment.slas)}"
-        assert len(fragment.entities) == 1
-        assert len(fragment.surfaces) == 1
-        assert len(fragment.personas) == 1
-        assert len(fragment.scenarios) == 1
-
-    def test_v025_fields_survive_process_dispatch(self):
-        """v0.25.0 fields survive process dispatch."""
-        dsl = """
-module test_process
-app test_app "Test":
-  version: "1.0"
-
-entity Ticket "Ticket":
-  id: uuid pk
-  status: enum[open, closed] = open
-  transitions:
-    open -> closed
-
-sla TicketSLA "Ticket SLA":
-  entity: Ticket
-  starts_when: status -> open
-  completes_when: status -> closed
-  tiers:
-    breach: 8 hours
-
-process TicketFlow "Ticket Flow":
-  entity: Ticket
-  trigger: entity Ticket created
-  steps:
-    step open_ticket "Open":
-      set: status = open
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        assert len(fragment.slas) == 1, f"SLA dropped after process: {len(fragment.slas)}"
-        assert len(fragment.processes) == 1
-
-
-class TestSourceLocations:
-    """Tests for source location tracking on IR nodes (v0.31.0)."""
-
-    def test_entity_has_source_location(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        task = fragment.entities[0]
-        assert task.source is not None
-        assert task.source.file == "test.dsl"
-        assert task.source.line == 5
-        assert task.source.column == 1
-
-    def test_surface_has_source_location(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_list "Tasks":
-  uses entity Task
-  mode: list
-  section main:
-    field title
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        assert surface.source is not None
-        assert surface.source.file == "test.dsl"
-        assert surface.source.line == 9
-
-    def test_workspace_has_source_location(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-
-workspace dashboard "Dashboard":
-  purpose: "Overview"
-  tasks:
-    source: Task
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        workspace = fragment.workspaces[0]
-        assert workspace.source is not None
-        assert workspace.source.file == "test.dsl"
-        assert workspace.source.line == 8
-
-    def test_process_has_source_location(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-  status: enum[draft,confirmed]=draft
-  transitions:
-    draft -> confirmed
-
-process order_flow "Order Flow":
-  trigger:
-    when: entity Order status -> confirmed
-  steps:
-    - name: validate
-      kind: service
-      service: OrderService.validate
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        process = fragment.processes[0]
-        assert process.source is not None
-        assert process.source.file == "test.dsl"
-
-    def test_source_location_str(self):
-        """Test __str__ representation."""
-        from dazzle.core.ir import SourceLocation
-
-        loc = SourceLocation(file="dsl/app.dsl", line=42, column=5)
-        assert str(loc) == "dsl/app.dsl:42:5"
-
-    def test_multiple_constructs_have_distinct_locations(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-
-entity User "User":
-  id: uuid pk
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        task = fragment.entities[0]
-        user = fragment.entities[1]
-        assert task.source is not None
-        assert user.source is not None
-        assert task.source.line != user.source.line
-
-
-class TestNavGroupParsing:
-    """Test nav_group parsing within workspaces (v0.38.0, #418)."""
-
-    def test_nav_group_basic(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-
-entity User "User":
-  id: uuid pk
-
-workspace dashboard "Dashboard":
-  nav_group "Management" icon=settings:
-    Task
-    User
-  tasks:
-    source: Task
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        ws = fragment.workspaces[0]
-        assert len(ws.nav_groups) == 1
-        group = ws.nav_groups[0]
-        assert group.label == "Management"
-        assert group.icon == "settings"
-        assert group.collapsed is False
-        assert len(group.items) == 2
-        assert group.items[0].entity == "Task"
-        assert group.items[1].entity == "User"
-
-    def test_nav_group_collapsed(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-
-workspace dashboard "Dashboard":
-  nav_group "Hidden" collapsed:
-    Task
-  tasks:
-    source: Task
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        group = fragment.workspaces[0].nav_groups[0]
-        assert group.collapsed is True
-        assert group.icon is None
-
-    def test_nav_group_item_with_icon(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-
-workspace dashboard "Dashboard":
-  nav_group "Work":
-    Task icon=check-circle
-  tasks:
-    source: Task
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        group = fragment.workspaces[0].nav_groups[0]
-        assert group.items[0].icon == "check-circle"
-
-    def test_nav_group_multiple_groups(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-
-entity User "User":
-  id: uuid pk
-
-workspace dashboard "Dashboard":
-  nav_group "Tasks" icon=clipboard:
-    Task
-  nav_group "Admin" icon=shield:
-    User
-  tasks:
-    source: Task
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        ws = fragment.workspaces[0]
-        assert len(ws.nav_groups) == 2
-        assert ws.nav_groups[0].label == "Tasks"
-        assert ws.nav_groups[1].label == "Admin"
-
-    def test_workspace_without_nav_groups(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-
-workspace dashboard "Dashboard":
-  tasks:
-    source: Task
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        ws = fragment.workspaces[0]
-        assert ws.nav_groups == []
-
-    def test_nav_definition_top_level(self):
-        """Issue #926: top-level `nav <name>:` declares a reusable nav
-        block referenced from workspaces via `uses nav <name>`."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Class "Class":
-  id: uuid pk
-
-entity Manuscript "Manuscript":
-  id: uuid pk
-
-nav teacher_nav:
-  group "My Classes" icon=users:
-    Class
-  group "Work":
-    Manuscript
-
-workspace dashboard "Dashboard":
-  uses nav teacher_nav
-  classes:
-    source: Class
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        # The nav definition itself is captured at module level:
-        assert len(fragment.navs) == 1
-        nav = fragment.navs[0]
-        assert nav.name == "teacher_nav"
-        assert len(nav.groups) == 2
-        assert nav.groups[0].label == "My Classes"
-        assert nav.groups[0].icon == "users"
-        assert nav.groups[0].items[0].entity == "Class"
-        assert nav.groups[1].label == "Work"
-        # The workspace records the reference but linker materialises it:
-        ws = fragment.workspaces[0]
-        assert ws.nav_ref == "teacher_nav"
-        # At parse time the workspace's own nav_groups stay empty —
-        # the linker is what prepends the inherited groups.
-        assert ws.nav_groups == []
-
-    def test_nav_group_when_on_header_and_item(self):
-        """#1324 FR-4 slice A: an optional ``when: <cond>`` on a nav group
-        header and on a nav item parses into ``NavGroupSpec.when`` /
-        ``NavItemIR.when`` as a ConditionExpr. Same idiom as
-        ``RowActionSpec.visible_when`` (``visible_when: <expr>``).
-        Render-time VISIBILITY only — inert until slice B."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Class "Class":
-  id: uuid pk
-
-entity Manuscript "Manuscript":
-  id: uuid pk
-
-nav teacher_nav:
-  group "Integrations" icon=plug when: tenant_config.mis_connected:
-    Class
-    Manuscript when: tenant_config.beta_features
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        nav = fragment.navs[0]
-        group = nav.groups[0]
-        assert group.label == "Integrations"
-        assert group.icon == "plug"
-        # Group-level `when:` parsed as a ConditionExpr.
-        assert group.when is not None
-        assert group.when.comparison is not None
-        assert group.when.comparison.field == "tenant_config.mis_connected"
-        # First item carries no `when:` — stays None.
-        assert group.items[0].entity == "Class"
-        assert group.items[0].when is None
-        # Second item carries an item-level `when:`.
-        assert group.items[1].entity == "Manuscript"
-        assert group.items[1].when is not None
-        assert group.items[1].when.comparison is not None
-        assert group.items[1].when.comparison.field == "tenant_config.beta_features"
-
-    def test_nav_group_without_when_defaults_none(self):
-        """No `when:` → both group and item `when` default to None."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-
-workspace dashboard "Dashboard":
-  nav_group "Work":
-    Task
-  tasks:
-    source: Task
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        group = fragment.workspaces[0].nav_groups[0]
-        assert group.when is None
-        assert group.items[0].when is None
-
-    def test_nav_definition_composition_with_workspace_groups(self):
-        """Workspace's own `group/nav_group` blocks compose with the
-        inherited definition; linker prepends inherited then appends own."""
-        from dazzle.core import ir, linker_impl
-
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Class "Class":
-  id: uuid pk
-
-entity Session "Session":
-  id: uuid pk
-
-nav teacher_nav:
-  group "Classes" icon=users:
-    Class
-
-workspace proctor "Proctor":
-  uses nav teacher_nav
-  group "Sessions" icon=calendar:
-    Session
-  s:
-    source: Session
-"""
-        _, app_name, app_title, app_config, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-        mod = ir.ModuleIR(
-            name="test.core",
-            file=Path("test.dsl"),
-            app_name=app_name,
-            app_title=app_title,
-            app_config=app_config,
-            uses=uses,
-            fragment=fragment,
-        )
-        symbols = linker_impl.build_symbol_table([mod])
-        merged = linker_impl.merge_fragments([mod], symbols)
-        ws = merged.workspaces[0]
-        assert [g.label for g in ws.nav_groups] == ["Classes", "Sessions"]
-
-    def test_nav_definition_unresolved_ref_does_not_crash(self):
-        """An unresolved `uses nav <name>` reference leaves the
-        workspace's own nav_groups in place rather than crashing —
-        validation surfaces the error, parsing/linking shouldn't fail."""
-        from dazzle.core import ir, linker_impl
-
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Class "Class":
-  id: uuid pk
-
-workspace orphan "Orphan":
-  uses nav nonexistent_nav
-  group "Local" icon=users:
-    Class
-  c:
-    source: Class
-"""
-        _, app_name, app_title, app_config, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-        mod = ir.ModuleIR(
-            name="test.core",
-            file=Path("test.dsl"),
-            app_name=app_name,
-            app_title=app_title,
-            app_config=app_config,
-            uses=uses,
-            fragment=fragment,
-        )
-        symbols = linker_impl.build_symbol_table([mod])
-        merged = linker_impl.merge_fragments([mod], symbols)
-        ws = merged.workspaces[0]
-        # Unresolved reference: workspace's own group survives untouched.
-        assert ws.nav_ref == "nonexistent_nav"
-        assert [g.label for g in ws.nav_groups] == ["Local"]
-
-    def test_nav_definition_accepts_nav_group_keyword(self):
-        """Inside `nav <name>:` blocks both `group` and `nav_group`
-        parse identically — keeps the lighter keyword optional."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Class "Class":
-  id: uuid pk
-
-nav teacher_nav:
-  nav_group "Classes" icon=users:
-    Class
-
-workspace ws "WS":
-  uses nav teacher_nav
-  c:
-    source: Class
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        assert fragment.navs[0].groups[0].label == "Classes"
-
-    def test_nav_group_icon_with_keyword_substring(self):
-        """Issue #922: hyphenated icon names that contain a reserved keyword
-        as a sub-token must still parse. `help-circle`, `circle-help`,
-        `file-question`, `sticky-note` are common Lucide icon names."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Question "Question":
-  id: uuid pk
-
-entity Note "Note":
-  id: uuid pk
-
-entity Topic "Topic":
-  id: uuid pk
-
-entity Doc "Doc":
-  id: uuid pk
-
-workspace dashboard "Dashboard":
-  nav_group "Questions" icon=help-circle:
-    Question icon=circle-help
-  nav_group "Reverse" icon=circle-help:
-    Topic icon=file-question
-  nav_group "Notes" icon=sticky-note:
-    Note icon=note-pencil
-  questions:
-    source: Question
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        ws = fragment.workspaces[0]
-        assert len(ws.nav_groups) == 3
-        assert ws.nav_groups[0].icon == "help-circle"
-        assert ws.nav_groups[0].items[0].icon == "circle-help"
-        assert ws.nav_groups[1].icon == "circle-help"
-        assert ws.nav_groups[1].items[0].icon == "file-question"
-        assert ws.nav_groups[2].icon == "sticky-note"
-        assert ws.nav_groups[2].items[0].icon == "note-pencil"
-
-
-class TestWorkspacePrimaryActionsParsing:
-    """Test `primary_actions:` heading-CTA block parsing (#1324 FR-5)."""
-
-    def test_primary_actions_surface_and_workspace(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Invoice "Invoice":
-  id: uuid pk
-
-surface create_invoice "New Invoice":
-  uses entity Invoice
-  mode: create
-
-workspace reports "Reports":
-  primary_actions:
-    action "New Invoice" -> surface create_invoice
-    action "Dashboard" -> workspace ops_dashboard
-  metrics:
-    source: Invoice
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        ws = next(w for w in fragment.workspaces if w.name == "reports")
-        assert len(ws.primary_actions) == 2
-        a0 = ws.primary_actions[0]
-        assert a0.label == "New Invoice"
-        assert a0.target_kind == "surface"
-        assert a0.target == "create_invoice"
-        a1 = ws.primary_actions[1]
-        assert a1.label == "Dashboard"
-        assert a1.target_kind == "workspace"
-        assert a1.target == "ops_dashboard"
-
-    def test_no_primary_actions_block_yields_empty_list(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Invoice "Invoice":
-  id: uuid pk
-
-workspace reports "Reports":
-  metrics:
-    source: Invoice
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        ws = fragment.workspaces[0]
-        assert ws.primary_actions == []
-
-
-class TestContextSelectorParsing:
-    """Test context_selector parsing within workspaces (#432)."""
-
-    def test_context_selector_basic(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity School "School":
-  id: uuid pk
-  name: str(100) required
-
-entity Student "Student":
-  id: uuid pk
-
-workspace school_dashboard "School Dashboard":
-  context_selector:
-    entity: School
-    display_field: name
-
-  students:
-    source: Student
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        ws = fragment.workspaces[0]
-        assert ws.context_selector is not None
-        assert ws.context_selector.entity == "School"
-        assert ws.context_selector.display_field == "name"
-        assert ws.context_selector.scope_field is None
-        assert ws.context_selector.filter is None
-
-    def test_context_selector_with_filter(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity User "User":
-  id: uuid pk
-  name: str(100) required
-  role: enum[customer,agent]=customer
-
-entity Ticket "Ticket":
-  id: uuid pk
-
-workspace agent_console "Agent Console":
-  context_selector:
-    entity: User
-    display_field: name
-    filter: department != External
-
-  tickets:
-    source: Ticket
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        ws = fragment.workspaces[0]
-        assert ws.context_selector is not None
-        assert ws.context_selector.filter is not None
-        # `role = agent` is reserved as role(); staff grain is department.
-        comp = ws.context_selector.filter.comparison
-        assert comp is not None
-        assert comp.field == "department"
-        assert comp.operator.value == "!="
-        assert comp.value.literal == "External"
-
-    def test_context_selector_with_scope_field(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Trust "Trust":
-  id: uuid pk
-
-entity School "School":
-  id: uuid pk
-  name: str(100) required
-  trust: ref Trust
-
-entity Student "Student":
-  id: uuid pk
-
-workspace school_dashboard "School Dashboard":
-  context_selector:
-    entity: School
-    display_field: name
-    scope_field: trust
-
-  students:
-    source: Student
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        ws = fragment.workspaces[0]
-        assert ws.context_selector is not None
-        assert ws.context_selector.entity == "School"
-        assert ws.context_selector.display_field == "name"
-        assert ws.context_selector.scope_field == "trust"
-
-    def test_context_selector_defaults_display_field(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity School "School":
-  id: uuid pk
-  name: str(100) required
-
-entity Student "Student":
-  id: uuid pk
-
-workspace school_dashboard "School Dashboard":
-  context_selector:
-    entity: School
-
-  students:
-    source: Student
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        ws = fragment.workspaces[0]
-        assert ws.context_selector is not None
-        assert ws.context_selector.entity == "School"
-        assert ws.context_selector.display_field == "name"  # default
-
-    def test_workspace_without_context_selector(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-
-workspace dashboard "Dashboard":
-  tasks:
-    source: Task
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        ws = fragment.workspaces[0]
-        assert ws.context_selector is None
-
-
-class TestOnTransitionParsing:
-    """Test on_transition: block parsing (#435)."""
-
-    def test_create_effect_on_transition(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-entity VATReturn "VAT Return":
-  id: uuid pk
-  status: enum[draft,prepared,submitted]=draft
-  due_date: date required
-
-  transitions:
-    draft -> prepared
-    prepared -> submitted
-
-  on_transition:
-    draft -> prepared:
-      create Task:
-        task_type: "vat_preparation"
-        title: "Prepare VAT return"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        entity = fragment.entities[1]  # VATReturn
-        assert entity.state_machine is not None
-        t = entity.state_machine.get_transition("draft", "prepared")
-        assert t is not None
-        assert len(t.effects) == 1
-        assert t.effects[0].action.value == "create"
-        assert t.effects[0].entity_name == "Task"
-        assert len(t.effects[0].assignments) == 2
-
-    def test_update_effect_with_where(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Deadline "Deadline":
-  id: uuid pk
-  linked_return_id: uuid
-  status: str(50)
-
-entity VATReturn "VAT Return":
-  id: uuid pk
-  status: enum[draft,missed]=draft
-
-  transitions:
-    draft -> missed
-
-  on_transition:
-    draft -> missed:
-      update Deadline:
-        where: linked_return_id = self.id
-        status: "missed"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        entity = fragment.entities[1]
-        t = entity.state_machine.get_transition("draft", "missed")
-        assert t is not None
-        assert len(t.effects) == 1
-        effect = t.effects[0]
-        assert effect.action.value == "update"
-        assert effect.entity_name == "Deadline"
-        assert effect.where == "linked_return_id = self.id"
-        assert len(effect.assignments) == 1
-        assert effect.assignments[0].value == '"missed"'
-
-    def test_wildcard_source_state(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Alert "Alert":
-  id: uuid pk
-  message: str(200)
-
-entity Order "Order":
-  id: uuid pk
-  status: enum[active,cancelled]=active
-
-  transitions:
-    * -> cancelled
-
-  on_transition:
-    * -> cancelled:
-      create Alert:
-        message: "Order cancelled"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        entity = fragment.entities[1]
-        t = entity.state_machine.get_transition("*", "cancelled")
-        assert t is not None
-        assert len(t.effects) == 1
-        assert t.effects[0].action.value == "create"
-        assert t.effects[0].entity_name == "Alert"
-
-    def test_multiple_effects_per_transition(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-entity Log "Log":
-  id: uuid pk
-  message: str(200)
-
-entity Order "Order":
-  id: uuid pk
-  status: enum[draft,submitted]=draft
-
-  transitions:
-    draft -> submitted
-
-  on_transition:
-    draft -> submitted:
-      create Task:
-        title: "Review order"
-      create Log:
-        message: "Order submitted"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        entity = fragment.entities[2]
-        t = entity.state_machine.get_transition("draft", "submitted")
-        assert t is not None
-        assert len(t.effects) == 2
-        assert t.effects[0].entity_name == "Task"
-        assert t.effects[1].entity_name == "Log"
-
-    def test_unmatched_transition_reference_raises(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Order "Order":
-  id: uuid pk
-  status: enum[draft,submitted]=draft
-
-  transitions:
-    draft -> submitted
-
-  on_transition:
-    submitted -> draft:
-      create Task:
-        title: "test"
-"""
-        import pytest
-
-        with pytest.raises(Exception, match="undefined transition"):
-            parse_dsl(dsl, Path("test.dsl"))
-
-
-class TestFileMaxSizeParsing:
-    """Test file(SIZE) max_size parsing (#436)."""
-
-    def test_file_with_mb_size(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Document "Document":
-  id: uuid pk
-  raw_file: file(200MB)
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        entity = fragment.entities[0]
-        field = entity.fields[1]  # raw_file
-        assert field.type.kind.value == "file"
-        assert field.type.max_size == 200 * 1024 * 1024
-
-    def test_file_with_gb_size(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Archive "Archive":
-  id: uuid pk
-  backup: file(1GB)
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        field = fragment.entities[0].fields[1]
-        assert field.type.max_size == 1 * 1024 * 1024 * 1024
-
-    def test_file_with_kb_size(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Config "Config":
-  id: uuid pk
-  logo: file(500KB)
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        field = fragment.entities[0].fields[1]
-        assert field.type.max_size == 500 * 1024
-
-    def test_file_without_size(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Doc "Doc":
-  id: uuid pk
-  attachment: file
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        field = fragment.entities[0].fields[1]
-        assert field.type.kind.value == "file"
-        assert field.type.max_size is None
-
-
-class TestFileUiMode:
-    """#1213 Phase B: `file(ui: drag_drop)` modifier parsing."""
-
-    def test_file_ui_drag_drop_only(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Doc "Doc":
-  id: uuid pk
-  attachment: file(ui: drag_drop)
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        field = fragment.entities[0].fields[1]
-        assert field.type.kind.value == "file"
-        assert field.type.ui_mode == "drag_drop"
-        assert field.type.max_size is None
-
-    def test_file_size_and_ui_drag_drop(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Doc "Doc":
-  id: uuid pk
-  attachment: file(200MB, ui: drag_drop)
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        field = fragment.entities[0].fields[1]
-        assert field.type.max_size == 200 * 1024 * 1024
-        assert field.type.ui_mode == "drag_drop"
-
-    def test_file_bare_has_no_ui_mode(self):
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Doc "Doc":
-  id: uuid pk
-  attachment: file
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        field = fragment.entities[0].fields[1]
-        assert field.type.ui_mode is None
-
-    def test_file_ui_managed_upload(self):
-        """Phase C: managed_upload is now accepted."""
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Doc "Doc":
-  id: uuid pk
-  attachment: file(ui: managed_upload)
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        field = fragment.entities[0].fields[1]
-        assert field.type.ui_mode == "managed_upload"
-
-    def test_file_unknown_ui_mode_rejected(self):
-        import pytest
-
-        dsl = """
-module test.core
-app MyApp "My App"
-
-entity Doc "Doc":
-  id: uuid pk
-  attachment: file(ui: bogus_mode)
-"""
-        with pytest.raises(Exception, match="Unknown file ui mode"):
-            parse_dsl(dsl, Path("test.dsl"))
-
-
-class TestExternalActionLinks:
-    """Tests for external URL action links on surfaces (#542)."""
-
-    def test_external_action_outcome(self):
-        """Parse action with external URL outcome."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Work "Work":
-  id: uuid pk
-  title: str(200) required
-
-surface work_detail "Work Detail":
-  uses entity Work
-  mode: view
-  section main:
-    field title "Title"
-  action graph_explorer "Graph Explorer":
-    on click -> "http://localhost:7474/explorer/{id}" external
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        assert len(surface.actions) == 1
-        action = surface.actions[0]
-        assert action.name == "graph_explorer"
-        assert action.label == "Graph Explorer"
-        assert action.outcome.kind.value == "external"
-        assert action.outcome.url == "http://localhost:7474/explorer/{id}"
-        assert action.outcome.new_tab is True
-
-    def test_external_action_target_is_empty(self):
-        """External outcome has empty target (no symbol to resolve)."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Item "Item":
-  id: uuid pk
-  name: str(100) required
-
-surface item_detail "Item Detail":
-  uses entity Item
-  mode: view
-  section main:
-    field name "Name"
-  action docs "Documentation":
-    on click -> "https://docs.example.com/items/{id}" external
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        action = fragment.surfaces[0].actions[0]
-        assert action.outcome.target == ""
-
-    def test_external_action_new_tab_default(self):
-        """External outcomes default new_tab to True."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_detail "Task Detail":
-  uses entity Task
-  mode: view
-  section main:
-    field title "Title"
-  action external_link "Open External":
-    on click -> "https://example.com/{id}" external
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        action = fragment.surfaces[0].actions[0]
-        assert action.outcome.new_tab is True
-
-    def test_external_action_outcome_kind(self):
-        """OutcomeKind.EXTERNAL is set correctly."""
-        from dazzle.core.ir import OutcomeKind
-
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Record "Record":
-  id: uuid pk
-  ref: str(50) required
-
-surface record_view "Record View":
-  uses entity Record
-  mode: view
-  section main:
-    field ref "Reference"
-  action view_in_portal "View in Portal":
-    on click -> "https://portal.example.com/records/{id}" external
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        action = fragment.surfaces[0].actions[0]
-        assert action.outcome.kind == OutcomeKind.EXTERNAL
-        assert action.outcome.kind is OutcomeKind.EXTERNAL
+    parsed = {
+        "module": module,
+        "app_name": app_name,
+        "app_title": app_title,
+        "config": config,
+    }
+    _assert_attrs(parsed, expected)
+    assert [e.name for e in fragment.entities] == ["User"]
+
+
+# ---------------------------------------------------------------------------
+# entity fields: types and modifiers
+# ---------------------------------------------------------------------------
+
+_EMPLOYEE = (
+    'entity Employee "Employee":\n  id: uuid pk\n  name: str(200) required\n'
+    "  bank_account: str(8) sensitive\n  ni_number: str(9) required sensitive\n"
+)
+_STUDENT = (
+    'entity School "School":\n  id: uuid pk\n\n'
+    'entity Student "Student":\n  id: uuid pk\n  school: ref School indexed\n'
+    "  email: str(200) indexed\n  name: str(200) required\n"
+)
+_MB = 1024 * 1024
+
+FIELD_CASES = [
+    # (entity body, (entity, field), expected attributes on the FieldSpec)
+    pytest.param(
+        'entity Invoice "Invoice":\n  id: uuid pk\n  total: money required\n',
+        ("Invoice", "total"),
+        {"type.kind.value": "money", "type.currency_code": "GBP"},
+        id="money-defaults-to-GBP",
+    ),
+    pytest.param(
+        'entity Invoice "Invoice":\n  id: uuid pk\n  total: money(USD) required\n',
+        ("Invoice", "total"),
+        {"type.kind.value": "money", "type.currency_code": "USD"},
+        id="money-explicit-currency",
+    ),
+    pytest.param(
+        'entity Link "Link":\n  id: uuid pk\n  target: url required\n',
+        ("Link", "target"),
+        {"type.kind.value": "url", "is_required": True},
+        id="url",
+    ),
+    pytest.param(
+        'entity Client "Client":\n  id: uuid pk\n  contacts: has_many Contact via ClientContact\n\n'
+        'entity Contact "Contact":\n  id: uuid pk\n\n'
+        'entity ClientContact "CC":\n  id: uuid pk\n  client: ref Client\n  contact: ref Contact\n',
+        ("Client", "contacts"),
+        {
+            "type.kind.value": "has_many",
+            "type.ref_entity": "Contact",
+            "type.via_entity": "ClientContact",
+        },
+        id="has-many-via-junction",
+    ),
+    pytest.param(
+        _EMPLOYEE,
+        ("Employee", "bank_account"),
+        {"is_sensitive": True, "is_required": False},
+        id="sensitive-optional",
+    ),
+    pytest.param(
+        _EMPLOYEE,
+        ("Employee", "ni_number"),
+        {"is_sensitive": True, "is_required": True},
+        id="sensitive-combined-with-required",
+    ),
+    pytest.param(
+        _EMPLOYEE, ("Employee", "name"), {"is_sensitive": False}, id="not-sensitive-by-default"
+    ),
+    pytest.param(
+        _STUDENT, ("Student", "school"), {"is_indexed": True}, id="indexed-on-ref-field-#578"
+    ),
+    pytest.param(_STUDENT, ("Student", "email"), {"is_indexed": True}, id="indexed-on-scalar"),
+    pytest.param(_STUDENT, ("Student", "name"), {"is_indexed": False}, id="not-indexed-by-default"),
+    pytest.param(
+        'entity Event "Event":\n  id: uuid pk\n  source: enum[manual, approval, sla, webhook] = manual\n',
+        ("Event", "source"),
+        {"type.enum_values": ["manual", "approval", "sla", "webhook"], "default": "manual"},
+        id="v0.25-keywords-usable-as-enum-values",
+    ),
+    # file(SIZE) and file(ui: …): #436, #1213
+    pytest.param(
+        'entity Doc "Doc":\n  id: uuid pk\n  attachment: file\n',
+        ("Doc", "attachment"),
+        {"type.kind.value": "file", "type.max_size": None, "type.ui_mode": None},
+        id="file-bare-no-size-no-ui-mode",
+    ),
+    pytest.param(
+        'entity Doc "Doc":\n  id: uuid pk\n  raw: file(200MB)\n',
+        ("Doc", "raw"),
+        {"type.max_size": 200 * _MB},
+        id="file-size-MB-#436",
+    ),
+    pytest.param(
+        'entity Doc "Doc":\n  id: uuid pk\n  raw: file(1GB)\n',
+        ("Doc", "raw"),
+        {"type.max_size": 1024 * _MB},
+        id="file-size-GB-#436",
+    ),
+    pytest.param(
+        'entity Doc "Doc":\n  id: uuid pk\n  raw: file(500KB)\n',
+        ("Doc", "raw"),
+        {"type.max_size": 500 * 1024},
+        id="file-size-KB-#436",
+    ),
+    pytest.param(
+        'entity Doc "Doc":\n  id: uuid pk\n  raw: file(ui: drag_drop)\n',
+        ("Doc", "raw"),
+        {"type.ui_mode": "drag_drop", "type.max_size": None},
+        id="file-ui-drag-drop-#1213",
+    ),
+    pytest.param(
+        'entity Doc "Doc":\n  id: uuid pk\n  raw: file(200MB, ui: drag_drop)\n',
+        ("Doc", "raw"),
+        {"type.ui_mode": "drag_drop", "type.max_size": 200 * _MB},
+        id="file-size-and-ui-mode-#1213",
+    ),
+    pytest.param(
+        'entity Doc "Doc":\n  id: uuid pk\n  raw: file(ui: managed_upload)\n',
+        ("Doc", "raw"),
+        {"type.ui_mode": "managed_upload"},
+        id="file-ui-managed-upload-#1213",
+    ),
+    # `was:` rename hints (#1431): additive to the modifiers, absent → None
+    pytest.param(
+        'entity Task "Task":\n  id: uuid pk\n  title: str(200) required was: name\n',
+        ("Task", "title"),
+        {"renamed_from": "name", "is_required": True},
+        id="was-after-modifiers-#1431",
+    ),
+    pytest.param(
+        'entity Task "Task":\n  id: uuid pk\n  body: text was: description\n',
+        ("Task", "body"),
+        {"renamed_from": "description"},
+        id="was-directly-after-type-#1431",
+    ),
+    pytest.param(
+        'entity Task "Task":\n  id: uuid pk\n  body: text was: description\n',
+        ("Task", "id"),
+        {"renamed_from": None},
+        id="no-was-is-none-#1431",
+    ),
+]
+
+
+@pytest.mark.parametrize(("body", "target", "expected"), FIELD_CASES)
+def test_entity_field(body: str, target: tuple[str, str], expected: dict[str, Any]) -> None:
+    _assert_attrs(_field(_fragment(body), *target), expected)
+
+
+def test_was_hint_keeps_required_modifier() -> None:
+    field = _field(
+        _fragment('entity Task "Task":\n  id: uuid pk\n  title: str(200) required was: name\n'),
+        "Task",
+        "title",
+    )
+    assert FieldModifier.REQUIRED in field.modifiers
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        pytest.param(
+            'entity Task "Task":\n  was: TodoItem\n  id: uuid pk\n',
+            "TodoItem",
+            id="entity-was-#1431",
+        ),
+        pytest.param('entity Task "Task":\n  id: uuid pk\n', None, id="entity-no-was-is-none"),
+    ],
+)
+def test_entity_rename_hint(body: str, expected: str | None) -> None:
+    task = _fragment(body).entities[0]
+    assert (task.name, task.renamed_from) == ("Task", expected)
+
+
+# ---------------------------------------------------------------------------
+# state machines: transitions, guards, on_transition effects
+# ---------------------------------------------------------------------------
 
 
 def test_transition_requires_guard_without_colon() -> None:
     """Colon-free `requires` guard syntax on transitions (#543)."""
-    dsl = """
-module test_mod
-app test "Test"
-
-entity Doc "Doc":
-  id: uuid pk
-  title: str(200) required
-  summary: text
-  status: enum[draft,published,canonical]=draft
-
-  transitions:
-    draft -> published
-    published -> canonical requires summary
-"""
-    _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-    assert len(fragment.entities) == 1
-    entity = fragment.entities[0]
-    transitions = entity.state_machine.transitions
-    assert len(transitions) == 2
-
-    # First transition has no guards
-    t_draft = next(t for t in transitions if t.from_state == "draft")
-    assert t_draft.to_state == "published"
-    assert t_draft.guards == []
-
-    # Second transition has a requires guard for "summary"
-    t_pub = next(t for t in transitions if t.from_state == "published")
-    assert t_pub.to_state == "canonical"
-    assert len(t_pub.guards) == 1
-    assert t_pub.guards[0].requires_field == "summary"
+    fragment = _fragment(
+        'entity Doc "Doc":\n  id: uuid pk\n  summary: text\n'
+        "  status: enum[draft,published,canonical]=draft\n\n"
+        "  transitions:\n    draft -> published\n    published -> canonical requires summary\n"
+    )
+    transitions = fragment.entities[0].state_machine.transitions
+    shape = [(t.from_state, t.to_state, [g.requires_field for g in t.guards]) for t in transitions]
+    assert shape == [("draft", "published", []), ("published", "canonical", ["summary"])]
 
 
-class TestParserErrorMessages:
-    """Tests for parser error messages (#544)."""
-
-    def test_missing_field_type_gives_clear_error(self):
-        """Field with colon but no type should give helpful error, not 'Unknown type: \\n'."""
-        import pytest
-
-        from dazzle.core.errors import ParseError
-
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Thing "Thing":
-  id: uuid pk
-  name:
-  status: bool
-"""
-        with pytest.raises(ParseError, match="Missing field type after ':'"):
-            parse_dsl(dsl, Path("test.dsl"))
-
-    def test_missing_field_type_trailing_space(self):
-        """Field with colon and trailing space should give helpful error."""
-        import pytest
-
-        from dazzle.core.errors import ParseError
-
-        dsl = 'module t\napp t "T"\n\nentity E "E":\n  id: uuid pk\n  name: \n'
-        with pytest.raises(ParseError, match="Missing field type after ':'"):
-            parse_dsl(dsl, Path("test.dsl"))
-
-    def test_unknown_type_shows_repr(self):
-        """Unknown type name should use repr in error for clarity."""
-        import pytest
-
-        from dazzle.core.errors import ParseError
-
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Thing "Thing":
-  id: uuid pk
-  category: foobar
-"""
-        with pytest.raises(ParseError, match=r"Unknown type: 'foobar'"):
-            parse_dsl(dsl, Path("test.dsl"))
-
-    def test_invalid_foreign_constraint_kind_raises_parse_error(self):
-        """An unknown foreign_model `constraint <kind>` must raise ParseError, not a raw
-        ValueError from the enum constructor (fuzz-found, service.py)."""
-        import pytest
-
-        from dazzle.core.errors import ParseError
-
-        dsl = """\
-module test.core
-app test_app "Test"
-
-foreign_model Thing from stripe "Thing":
-  key: thing_id
-  constraint not_a_real_kind
-"""
-        with pytest.raises(ParseError, match=r"Invalid foreign constraint kind"):
-            parse_dsl(dsl, Path("test.dsl"))
+ON_TRANSITION_CASES = [
+    # (target entity + transition, on_transition block, expected effects as
+    #  (action, entity, where, assignment values)) — #435
+    pytest.param(
+        "draft -> prepared",
+        "    draft -> prepared:\n      create Task:\n"
+        '        task_type: "vat_preparation"\n        title: "Prepare VAT return"\n',
+        [("create", "Task", None, ['"vat_preparation"', '"Prepare VAT return"'])],
+        id="create-effect-with-assignments",
+    ),
+    pytest.param(
+        "draft -> prepared",
+        "    draft -> prepared:\n      update Deadline:\n"
+        '        where: linked_return_id = self.id\n        status: "missed"\n',
+        [("update", "Deadline", "linked_return_id = self.id", ['"missed"'])],
+        id="update-effect-with-where",
+    ),
+    pytest.param(
+        "* -> prepared",
+        '    * -> prepared:\n      create Alert:\n        message: "Cancelled"\n',
+        [("create", "Alert", None, ['"Cancelled"'])],
+        id="wildcard-source-state",
+    ),
+    pytest.param(
+        "draft -> prepared",
+        '    draft -> prepared:\n      create Task:\n        title: "Review"\n'
+        '      create Log:\n        message: "Submitted"\n',
+        [("create", "Task", None, ['"Review"']), ("create", "Log", None, ['"Submitted"'])],
+        id="multiple-effects-keep-order",
+    ),
+]
 
 
-class TestSurfaceSectionInfiniteLoop:
-    """Regression tests for #731 — parser must not hang on unsupported syntax."""
-
-    def test_unsupported_token_in_section_raises_error(self):
-        """Field with `: required` modifier should error, not loop."""
-        import pytest
-
-        from dazzle.core.errors import ParseError
-
-        dsl = """\
-module test.core
-app test_app "Test"
-
-entity Campaign "Campaign":
-  id: uuid pk
-  name: str(200) required
-
-surface campaign_create "Create Campaign":
-  uses entity Campaign
-  mode: create
-  section details "Details":
-    field name "Name": required
-    field description "Brief"
-"""
-        with pytest.raises(ParseError, match="Unexpected"):
-            parse_dsl(dsl, Path("test.dsl"))
+@pytest.mark.parametrize(("transition", "block", "expected"), ON_TRANSITION_CASES)
+def test_on_transition_effects(
+    transition: str, block: str, expected: list[tuple[str, str, str | None, list[str]]]
+) -> None:
+    fragment = _fragment(
+        'entity VATReturn "VAT Return":\n  id: uuid pk\n'
+        "  status: enum[draft,prepared]=draft\n\n"
+        f"  transitions:\n    {transition}\n\n  on_transition:\n{block}"
+    )
+    source, target = (s.strip() for s in transition.split("->"))
+    t = fragment.entities[0].state_machine.get_transition(source, target)
+    assert t is not None
+    got = [
+        (e.action.value, e.entity_name, e.where, [a.value for a in e.assignments])
+        for e in t.effects
+    ]
+    assert got == expected
 
 
-class TestOwnerKeywordGuidance:
-    """Tests for #729 — bare 'owner' in permit: gives helpful guidance."""
+# ---------------------------------------------------------------------------
+# parse errors: what the author sees
+# ---------------------------------------------------------------------------
 
-    def test_owner_in_permit_gives_scope_guidance(self):
-        """'owner' in permit: should error with scope: block guidance."""
-        import pytest
+PARSE_ERROR_CASES = [
+    pytest.param(
+        'entity Thing "Thing":\n  id: uuid pk\n  name:\n  status: bool\n',
+        r"Missing field type after ':'",
+        id="missing-field-type-#544",
+    ),
+    pytest.param(
+        'entity E "E":\n  id: uuid pk\n  name: \n',
+        r"Missing field type after ':'",
+        id="missing-field-type-trailing-space-#544",
+    ),
+    pytest.param(
+        'entity Thing "Thing":\n  id: uuid pk\n  category: foobar\n',
+        r"Unknown type: 'foobar'",
+        id="unknown-type-shown-with-repr-#544",
+    ),
+    pytest.param(
+        'entity Doc "Doc":\n  id: uuid pk\n  raw: file(ui: bogus_mode)\n',
+        r"Unknown file ui mode: 'bogus_mode'",
+        id="file-unknown-ui-mode-#1213",
+    ),
+    pytest.param(
+        'entity Task "Task":\n  id: uuid pk\n  title: str(200) was:\n',
+        r"`was:` rename hint expects an identifier",
+        id="field-was-without-identifier-#1431",
+    ),
+    pytest.param(
+        'entity Task "Task":\n  was:\n  id: uuid pk\n',
+        r"`was:` rename hint expects an identifier",
+        id="entity-was-without-identifier-#1431",
+    ),
+    pytest.param(
+        'entity Progress "Progress":\n  id: uuid pk\n  user_id: ref User required\n\n'
+        "  permit:\n    read: owner\n    update: owner\n",
+        r"belongs in a scope: block",
+        id="bare-owner-in-permit-guides-to-scope-#729",
+    ),
+    pytest.param(
+        'entity Progress "Progress":\n  id: uuid pk\n  user_id: ref User required\n\n'
+        "  permit:\n    read: owner or role(admin)\n",
+        r"belongs in a scope: block",
+        id="owner-or-role-in-permit-guides-to-scope-#729",
+    ),
+    pytest.param(
+        'entity Order "Order":\n  id: uuid pk\n  status: enum[draft,submitted]=draft\n\n'
+        "  transitions:\n    draft -> submitted\n\n"
+        '  on_transition:\n    submitted -> draft:\n      create Task:\n        title: "t"\n',
+        r"on_transition references undefined transition: submitted -> draft",
+        id="on-transition-unknown-transition-#435",
+    ),
+    pytest.param(
+        'entity Campaign "Campaign":\n  id: uuid pk\n  name: str(200) required\n\n'
+        'surface campaign_create "Create":\n  uses entity Campaign\n  mode: create\n'
+        '  section details "Details":\n    field name "Name": required\n'
+        '    field description "Brief"\n',
+        r"Unexpected",
+        id="unsupported-token-in-section-errors-not-hangs-#731",
+    ),
+    pytest.param(
+        'entity Alert "Alert":\n  id: uuid pk\n  created_at: datetime\n\n'
+        'workspace dash "D":\n  chart:\n    source: Alert\n    display: line_chart\n'
+        "    group_by: bucket(created_at, millennia)\n",
+        r"Invalid bucket unit 'millennia'",
+        id="group-by-bucket-unknown-unit",
+    ),
+    pytest.param(
+        'entity Order "Order":\n  id: uuid pk\n\n'
+        'process P "P":\n  trigger: entity Order created\n  steps:\n'
+        "    - step WaitForPayment:\n        wait: PaymentReceived\n",
+        r"wait: expects a duration",
+        id="process-wait-takes-duration-only",
+    ),
+    pytest.param(
+        'foreign_model Thing from stripe "Thing":\n  key: thing_id\n  constraint not_a_real_kind\n',
+        r"Invalid foreign constraint kind",
+        id="foreign-constraint-kind-is-parse-error-not-ValueError",
+    ),
+    pytest.param(
+        'workspace ops "Ops":\n  engine_hint: "command_center"\n  purpose: "internal desk"\n',
+        r"engine_hint.*use 'stage:'",
+        # The token stays in the lexer so the old spelling gets "rename this",
+        # not "unknown keyword" (ADR-0003).
+        id="engine-hint-removed-names-stage-#1720",
+    ),
+]
 
-        from dazzle.core.errors import ParseError
 
-        dsl = """\
-module test.core
-app test_app "Test"
-
-entity Progress "Progress":
-  id: uuid pk
-  user_id: ref User required
-  chapter: int = 1
-
-  permit:
-    read: owner
-    update: owner
-"""
-        with pytest.raises(ParseError, match="scope"):
-            parse_dsl(dsl, Path("test.dsl"))
-
-    def test_owner_or_role_in_permit_gives_scope_guidance(self):
-        """'owner or role(admin)' in permit: should also guide to scope:."""
-        import pytest
-
-        from dazzle.core.errors import ParseError
-
-        dsl = """\
-module test.core
-app test_app "Test"
-
-entity Progress "Progress":
-  id: uuid pk
-  user_id: ref User required
-
-  permit:
-    read: owner or role(admin)
-"""
-        with pytest.raises(ParseError, match="scope"):
-            parse_dsl(dsl, Path("test.dsl"))
+@pytest.mark.parametrize(("body", "message"), PARSE_ERROR_CASES)
+def test_parse_error(body: str, message: str) -> None:
+    with pytest.raises(ParseError, match=message):
+        _parse(body)
 
 
-class TestSurfaceParsing:
-    def test_related_group_ir_types(self):
-        """RelatedDisplayMode and RelatedGroup IR types exist."""
-        from dazzle.core.ir import RelatedDisplayMode, RelatedGroup
+# ---------------------------------------------------------------------------
+# source locations (v0.31.0)
+# ---------------------------------------------------------------------------
 
-        group = RelatedGroup(
-            name="compliance",
-            title="Compliance",
-            display=RelatedDisplayMode.STATUS_CARDS,
-            show=["SelfAssessmentReturn", "VATReturn"],
+_TASK = 'entity Task "Task":\n  id: uuid pk\n  title: str(200) required\n'
+
+
+@pytest.mark.parametrize(
+    ("body", "node", "line"),
+    [
+        pytest.param(_TASK, "entities[0]", 5, id="entity"),
+        pytest.param(
+            _TASK + '\nentity User "User":\n  id: uuid pk\n', "entities[1]", 9, id="second-entity"
+        ),
+        pytest.param(
+            _TASK + '\nsurface task_list "Tasks":\n  uses entity Task\n  mode: list\n'
+            "  section main:\n    field title\n",
+            "surfaces[0]",
+            9,
+            id="surface",
+        ),
+        pytest.param(
+            _TASK + '\nworkspace dashboard "Dashboard":\n  tasks:\n    source: Task\n',
+            "workspaces[0]",
+            9,
+            id="workspace",
+        ),
+        pytest.param(
+            _TASK + '\nprocess order_flow "Flow":\n  trigger: entity Task created\n'
+            "  steps:\n    - step S:\n        service: Svc\n",
+            "processes[0]",
+            9,
+            id="process",
+        ),
+    ],
+)
+def test_source_location(body: str, node: str, line: int) -> None:
+    source = _resolve(_fragment(body), node).source
+    assert (source.file, source.line, source.column) == ("test.dsl", line, 1)
+
+
+def test_source_location_str() -> None:
+    assert str(SourceLocation(file="dsl/app.dsl", line=42, column=5)) == "dsl/app.dsl:42:5"
+
+
+# ---------------------------------------------------------------------------
+# surfaces: field elements, layout, priority, actions, related groups, companions
+# ---------------------------------------------------------------------------
+
+_ADMIN = 'persona admin "Admin":\n  role: admin\npersona manager "Manager":\n  role: manager\n\n'
+
+
+def _create_surface(field_line: str, *, extra: str = "") -> str:
+    return (
+        'entity Task "Task":\n  id: uuid pk\n  title: str(200) required\n  dob: date\n\n'
+        'surface task_create "Create Task":\n  uses entity Task\n  mode: create\n'
+        f"{extra}  section main:\n{field_line}"
+    )
+
+
+SURFACE_CASES = [
+    # (DSL body, expected attributes on surfaces[0])
+    pytest.param(
+        _create_surface('    field title "Title"\n'),
+        {
+            "sections[0].elements[0].field_name": "title",
+            "sections[0].elements[0].label": "Title",
+            "sections[0].elements[0].options": {},
+            "layout": "wizard",
+            "related_groups": [],
+            "companions": [],
+            "actions": [],
+        },
+        id="plain-field-no-options-defaults",
+    ),
+    pytest.param(
+        _create_surface(
+            '    field title "Company" source=companies_house_lookup.search_companies\n'
+        ),
+        {
+            "sections[0].elements[0].label": "Company",
+            "sections[0].elements[0].options.source": "companies_house_lookup.search_companies",
+        },
+        id="field-source-option",
+    ),
+    pytest.param(
+        _ADMIN + _create_surface('    field dob "DOB" visible: role(admin) widget=picker\n'),
+        {
+            "sections[0].elements[0].options.widget": "picker",
+            "sections[0].elements[0].visible": PRESENT,
+        },
+        id="widget-after-visible-#754",
+    ),
+    pytest.param(
+        _ADMIN + _create_surface('    field dob "DOB" widget=picker visible: role(admin)\n'),
+        {
+            "sections[0].elements[0].options.widget": "picker",
+            "sections[0].elements[0].visible": PRESENT,
+        },
+        id="widget-before-visible",
+    ),
+    pytest.param(
+        _ADMIN
+        + _create_surface(
+            '    field dob "DOB" visible: role(admin) or role(manager) widget=picker\n'
+        ),
+        {
+            "sections[0].elements[0].options.widget": "picker",
+            "sections[0].elements[0].visible": PRESENT,
+        },
+        id="widget-after-compound-visible-#754",
+    ),
+    pytest.param(
+        _create_surface('    field title "Title"\n', extra="  layout: single_page\n"),
+        {"layout": "single_page"},
+        id="layout-single-page-#918",
+    ),
+    pytest.param(
+        _create_surface('    note: "Fill in the basics"\n    field title "Title"\n'),
+        {"sections[0].note": "Fill in the basics"},
+        id="section-note-#918",
+    ),
+    pytest.param(
+        _create_surface('    field title "Title" help: "A short summary"\n'),
+        {"sections[0].elements[0].help": "A short summary"},
+        id="field-help-#918",
+    ),
+    pytest.param(
+        _TASK + '\nsurface task_detail "Detail":\n  uses entity Task\n  mode: view\n'
+        '  section main:\n    field title "Title"\n  action portal "View in Portal":\n'
+        '    on click -> "https://portal.example.com/records/{id}" external\n',
+        {
+            "actions[0].name": "portal",
+            "actions[0].label": "View in Portal",
+            "actions[0].outcome.kind": OutcomeKind.EXTERNAL,
+            "actions[0].outcome.url": "https://portal.example.com/records/{id}",
+            "actions[0].outcome.new_tab": True,  # default for external links
+            "actions[0].outcome.target": "",  # no symbol to resolve
+        },
+        id="external-action-link-#542",
+    ),
+]
+
+
+@pytest.mark.parametrize(("body", "expected"), SURFACE_CASES)
+def test_surface(body: str, expected: dict[str, Any]) -> None:
+    _assert_attrs(_fragment(body).surfaces[0], expected)
+
+
+@pytest.mark.parametrize(
+    ("priority_line", "expected"),
+    [
+        pytest.param(f"  priority: {level}\n", BusinessPriority(level), id=f"surface-{level}")
+        for level in ("critical", "high", "medium", "low")
+    ]
+    + [pytest.param("", BusinessPriority.MEDIUM, id="surface-defaults-to-medium")],
+)
+def test_surface_priority(priority_line: str, expected: BusinessPriority) -> None:
+    fragment = _fragment(
+        _TASK + '\nsurface task_list "Tasks":\n  uses entity Task\n  mode: list\n'
+        f'{priority_line}  section main:\n    field title "Title"\n'
+    )
+    assert fragment.surfaces[0].priority == expected
+
+
+@pytest.mark.parametrize(
+    ("header_lines", "priority", "require_auth"),
+    [
+        pytest.param("  priority: critical\n", "critical", None, id="experience-critical"),
+        pytest.param("", "medium", None, id="experience-defaults-to-medium"),
+        pytest.param(
+            "  access: authenticated\n  priority: high\n", "high", True, id="experience-with-access"
+        ),
+    ],
+)
+def test_experience_priority(header_lines: str, priority: str, require_auth: bool | None) -> None:
+    fragment = _fragment(
+        _create_surface('    field title "Title"\n')
+        + f'\nexperience task_wizard "Wizard":\n{header_lines}  start at step intake\n'
+        "  step intake:\n    kind: surface\n    surface task_create\n"
+    )
+    exp = fragment.experiences[0]
+    assert exp.priority.value == priority
+    assert (exp.access.require_auth if exp.access else None) == require_auth
+
+
+def _view_surface(related: str) -> str:
+    return (
+        'entity Contact "Contact":\n  id: uuid pk\n  name: str(100) required\n\n'
+        'entity TaxReturn "Tax Return":\n  id: uuid pk\n  contact: ref Contact\n'
+        "  status: str(50)\n  period: str(20)\n\n"
+        'entity Document "Document":\n  id: uuid pk\n  contact: ref Contact\n\n'
+        'surface contact_detail "Contact Detail":\n  uses entity Contact\n  mode: view\n'
+        f'  section main:\n    field name "Name"\n{related}'
+    )
+
+
+@pytest.mark.parametrize(
+    ("related", "expected"),
+    [
+        pytest.param("", [], id="none"),
+        pytest.param(
+            '  related compliance "Compliance":\n    display: status_cards\n    show: TaxReturn\n',
+            [("compliance", "Compliance", "status_cards", ["TaxReturn"], [])],
+            id="status-cards",
+        ),
+        pytest.param(
+            '  related tasks "Tasks":\n    display: queue\n    show: TaxReturn\n'
+            "    columns: status, period\n",
+            [("tasks", "Tasks", "queue", ["TaxReturn"], ["status", "period"])],
+            id="queue-display-cycle-1494",
+        ),
+        pytest.param(
+            '  related discussion "Discussion":\n    display: conversation\n    show: Document\n'
+            "    columns: content, author, created_at\n",
+            [
+                (
+                    "discussion",
+                    "Discussion",
+                    "conversation",
+                    ["Document"],
+                    ["content", "author", "created_at"],
+                )
+            ],
+            id="conversation-display-cycle-1893",
+        ),
+        pytest.param(
+            '  related compliance "Compliance":\n    display: table\n    show: TaxReturn\n'
+            "    columns: status, period\n",
+            [("compliance", "Compliance", "table", ["TaxReturn"], ["status", "period"])],
+            id="table-columns-projection-#1600",
+        ),
+        pytest.param(
+            '  related compliance "Compliance":\n    display: status_cards\n'
+            "    show: TaxReturn, Document\n"
+            '  related documents "Documents":\n    display: file_list\n    show: Document\n',
+            [
+                ("compliance", "Compliance", "status_cards", ["TaxReturn", "Document"], []),
+                ("documents", "Documents", "file_list", ["Document"], []),
+            ],
+            id="multiple-blocks-multi-entity-show",
+        ),
+    ],
+)
+def test_surface_related_groups(related: str, expected: list[tuple[Any, ...]]) -> None:
+    groups = _fragment(_view_surface(related)).surfaces[0].related_groups
+    got = [(g.name, g.title, g.display.value, g.show, g.columns or []) for g in groups]
+    assert got == expected
+
+
+def _companion_surface(companions: str) -> str:
+    return (
+        'entity Pupil "Pupil":\n  id: uuid pk\n\n'
+        'entity Doc "Doc":\n  id: uuid pk\n  pages: int\n  auto_run: bool\n\n'
+        'surface doc_create "Upload":\n  uses entity Doc\n  mode: create\n\n'
+        f'{companions}\n  section automation "Automation":\n    field auto_run "Run"\n'
+    )
+
+
+COMPANION_CASES = [
+    # Companion regions on create/edit surfaces (#923, Part D of #918)
+    pytest.param(
+        '  companion summary "Batch summary" position=top:\n    eyebrow: "Live"\n'
+        "    display: summary_row\n    aggregate:\n      pages: max(pages)\n",
+        {
+            "companions[0].name": "summary",
+            "companions[0].title": "Batch summary",
+            "companions[0].eyebrow": "Live",
+            "companions[0].position.value": "top",
+            "companions[0].section_anchor": None,
+            "companions[0].display": "summary_row",
+            "companions[0].aggregate.pages": PRESENT,
+        },
+        id="position-top-with-aggregate",
+    ),
+    pytest.param(
+        '  companion job_plan "Triggers" position=below_section[automation]:\n'
+        "    display: status_list\n    entries:\n"
+        '      - title: "Classify the batch"\n        caption: "Match paper"\n'
+        '      - title: "Separate the PDF"\n',
+        {
+            "companions[0].position.value": "below_section",
+            "companions[0].section_anchor": "automation",
+            "len:companions[0].entries": 2,
+            "companions[0].entries[0].title": "Classify the batch",
+            "companions[0].entries[0].caption": "Match paper",
+            "companions[0].entries[1].title": "Separate the PDF",
+        },
+        id="position-below-section-anchor-with-entries",
+    ),
+    pytest.param(
+        '  companion plain "Footer note":\n    display: status_list\n',
+        {"companions[0].position.value": "bottom", "companions[0].section_anchor": None},
+        id="position-defaults-to-bottom",
+    ),
+    pytest.param(
+        '  companion plan "Pipeline" position=bottom:\n    display: pipeline_steps\n'
+        '    stages:\n      - label: "Classify"\n        caption: "Sort by paper"\n'
+        '      - label: "Score"\n',
+        {
+            "companions[0].display": "pipeline_steps",
+            "len:companions[0].stages": 2,
+            "companions[0].stages[0].label": "Classify",
+            "companions[0].stages[0].caption": "Sort by paper",
+            "companions[0].stages[1].label": "Score",
+            "companions[0].stages[1].caption": None,
+        },
+        id="pipeline-stages",
+    ),
+    pytest.param(
+        '  companion roster "Cohort roster" position=top:\n    source: Pupil\n'
+        "    display: list\n    limit: 5\n",
+        {
+            "companions[0].source": "Pupil",
+            "companions[0].display": "list",
+            "companions[0].limit": 5,
+        },
+        id="source-bound",
+    ),
+    pytest.param(
+        '  companion a "Top A" position=top:\n    display: status_list\n\n'
+        '  companion b "Bottom B" position=bottom:\n    display: status_list\n\n'
+        '  companion c "Top C" position=top:\n    display: status_list\n',
+        {
+            "len:companions": 3,
+            "companions[0].name": "a",
+            "companions[1].name": "b",
+            "companions[2].name": "c",
+        },
+        # The renderer relies on declaration order for stable layout.
+        id="declaration-order-preserved",
+    ),
+]
+
+
+@pytest.mark.parametrize(("companions", "expected"), COMPANION_CASES)
+def test_surface_companion(companions: str, expected: dict[str, Any]) -> None:
+    _assert_attrs(_fragment(_companion_surface(companions)).surfaces[0], expected)
+
+
+# ---------------------------------------------------------------------------
+# workspaces: regions, nav groups, nav definitions, primary actions, context selector
+# ---------------------------------------------------------------------------
+
+_ALERT = (
+    'entity Alert "Alert":\n  id: uuid pk\n  created_at: datetime\n  severity: enum[high, low]\n\n'
+)
+
+
+def _region(region: str) -> str:
+    return _ALERT + f'workspace dash "Dashboard":\n  chart:\n    source: Alert\n{region}'
+
+
+# group_by: bucket(field, unit) — v0.60.0, cycle 28.
+_COUNT = "    aggregate:\n      count: count(Alert)\n"
+
+REGION_CASES = (
+    [
+        pytest.param(
+            _region(f"    display: {mode}\n"), {"display.value": mode}, id=f"display-{mode}"
         )
-        assert group.name == "compliance"
-        assert group.display == RelatedDisplayMode.STATUS_CARDS
-        assert group.show == ["SelfAssessmentReturn", "VATReturn"]
-        # Cycle 1494/1496: QUEUE is a first-class related display mode.
-        assert RelatedDisplayMode.QUEUE.value == "queue"
-        # Cycle 1893: CONVERSATION is a first-class related display mode.
-        assert RelatedDisplayMode.CONVERSATION.value == "conversation"
-
-    def test_parse_surface_related_block(self):
-        """Surface with a related block parses correctly."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Contact "Contact":
-  id: uuid pk
-  first_name: str(100) required
-
-entity TaxReturn "Tax Return":
-  id: uuid pk
-  contact: ref Contact
-  status: str(50)
-
-surface contact_detail "Contact Detail":
-  uses entity Contact
-  mode: view
-  section main:
-    field first_name "First Name"
-  related compliance "Compliance":
-    display: status_cards
-    show: TaxReturn
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        assert len(surface.related_groups) == 1
-        group = surface.related_groups[0]
-        assert group.name == "compliance"
-        assert group.title == "Compliance"
-        assert group.display.value == "status_cards"
-        assert group.show == ["TaxReturn"]
-
-    def test_parse_surface_related_queue(self):
-        """related display: queue parses to RelatedDisplayMode.QUEUE (cycle 1494)."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Project "Project":
-  id: uuid pk
-  name: str(100) required
-
-entity Task "Task":
-  id: uuid pk
-  project: ref Project
-  title: str(200) required
-
-surface project_detail "Project Detail":
-  uses entity Project
-  mode: view
-  section main:
-    field name "Name"
-  related tasks "Tasks":
-    display: queue
-    show: Task
-    columns: title, status
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        assert len(surface.related_groups) == 1
-        group = surface.related_groups[0]
-        assert group.display.value == "queue"
-        assert group.show == ["Task"]
-        assert group.columns == ["title", "status"]
-
-    def test_parse_surface_related_conversation(self):
-        """related display: conversation parses to CONVERSATION (cycle 1893)."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Ticket "Ticket":
-  id: uuid pk
-  title: str(200) required
-
-entity Comment "Comment":
-  id: uuid pk
-  ticket: ref Ticket
-  content: text required
-  author: str(100)
-  is_internal: bool = false
-
-surface ticket_detail "Ticket Detail":
-  uses entity Ticket
-  mode: view
-  section main:
-    field title "Title"
-  related discussion "Discussion":
-    display: conversation
-    show: Comment
-    columns: content, author, created_at, is_internal
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        assert len(surface.related_groups) == 1
-        group = surface.related_groups[0]
-        assert group.display.value == "conversation"
-        assert group.show == ["Comment"]
-        assert group.columns == ["content", "author", "created_at", "is_internal"]
-
-    def test_parse_surface_related_block_with_columns(self):
-        """Related block may project columns for scannable tabs (#1600 P1)."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Contact "Contact":
-  id: uuid pk
-  first_name: str(100) required
-
-entity TaxReturn "Tax Return":
-  id: uuid pk
-  contact: ref Contact
-  status: str(50)
-  period: str(20)
-
-surface contact_detail "Contact Detail":
-  uses entity Contact
-  mode: view
-  section main:
-    field first_name "First Name"
-  related compliance "Compliance":
-    display: table
-    show: TaxReturn
-    columns: status, period
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        group = surface.related_groups[0]
-        assert group.columns == ["status", "period"]
-        assert group.show == ["TaxReturn"]
-
-    def test_parse_surface_multiple_related_blocks(self):
-        """Surface with multiple related blocks and multi-entity show."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Contact "Contact":
-  id: uuid pk
-  name: str(100) required
-
-entity TaxReturn "Tax Return":
-  id: uuid pk
-  contact: ref Contact
-
-entity Deadline "Deadline":
-  id: uuid pk
-  contact: ref Contact
-
-entity Document "Document":
-  id: uuid pk
-  contact: ref Contact
-
-surface contact_detail "Contact Detail":
-  uses entity Contact
-  mode: view
-  section main:
-    field name "Name"
-  related compliance "Compliance":
-    display: status_cards
-    show: TaxReturn, Deadline
-  related documents "Documents":
-    display: file_list
-    show: Document
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        assert len(surface.related_groups) == 2
-        assert surface.related_groups[0].name == "compliance"
-        assert surface.related_groups[0].show == ["TaxReturn", "Deadline"]
-        assert surface.related_groups[1].name == "documents"
-        assert surface.related_groups[1].display.value == "file_list"
-        assert surface.related_groups[1].show == ["Document"]
-
-    def test_parse_surface_no_related_blocks(self):
-        """Surface without related blocks has empty related_groups."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_detail "Task Detail":
-  uses entity Task
-  mode: view
-  section main:
-    field title "Title"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        assert surface.related_groups == []
-
-    def test_widget_after_visible_on_field(self):
-        """widget= after visible: should parse correctly (#754)."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-persona admin "Admin":
-  role: admin
-
-entity Task "Task":
-  id: uuid pk
-  date_of_birth: date
-
-  permit:
-    create: role(admin)
-
-surface task_create "Create Task":
-  uses entity Task
-  mode: create
-  section main:
-    field date_of_birth "Date of Birth" visible: role(admin) widget=picker
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        elem = surface.sections[0].elements[0]
-        assert elem.field_name == "date_of_birth"
-        assert elem.options.get("widget") == "picker"
-        assert elem.visible is not None
-
-    def test_widget_before_visible_on_field(self):
-        """widget= before visible: should still work."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-persona admin "Admin":
-  role: admin
-
-entity Task "Task":
-  id: uuid pk
-  date_of_birth: date
-
-  permit:
-    create: role(admin)
-
-surface task_create "Create Task":
-  uses entity Task
-  mode: create
-  section main:
-    field date_of_birth "Date of Birth" widget=picker visible: role(admin)
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        elem = surface.sections[0].elements[0]
-        assert elem.field_name == "date_of_birth"
-        assert elem.options.get("widget") == "picker"
-        assert elem.visible is not None
-
-    def test_widget_after_compound_visible(self):
-        """widget= after compound visible: condition (#754)."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-persona admin "Admin":
-  role: admin
-persona manager "Manager":
-  role: manager
-
-entity Task "Task":
-  id: uuid pk
-  date_of_birth: date
-
-  permit:
-    create: role(admin) or role(manager)
-
-surface task_create "Create Task":
-  uses entity Task
-  mode: create
-  section main:
-    field date_of_birth "Date of Birth" visible: role(admin) or role(manager) widget=picker
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        elem = surface.sections[0].elements[0]
-        assert elem.field_name == "date_of_birth"
-        assert elem.options.get("widget") == "picker"
-        assert elem.visible is not None
-
-    def test_surface_layout_single_page(self):
-        """surface layout: single_page parses and is stored on SurfaceSpec (#918)."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_create "Create Task":
-  uses entity Task
-  mode: create
-  layout: single_page
-  section main:
-    field title "Title"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        assert surface.layout == "single_page"
-
-    def test_surface_layout_defaults_to_wizard(self):
-        """surface without layout: defaults to wizard (#918)."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_create "Create Task":
-  uses entity Task
-  mode: create
-  section main:
-    field title "Title"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        assert surface.layout == "wizard"
-
-    def test_surface_section_note(self):
-        """section note: sets descriptive subtitle (#918)."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_create "Create Task":
-  uses entity Task
-  mode: create
-  section main:
-    note: "Fill in the basics"
-    field title "Title"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        section = surface.sections[0]
-        assert section.note == "Fill in the basics"
-
-    def test_surface_field_help(self):
-        """field help: adds muted helper text below the field label (#918)."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-
-surface task_create "Create Task":
-  uses entity Task
-  mode: create
-  section main:
-    field title "Title" help: "A short summary of the task"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        elem = surface.sections[0].elements[0]
-        assert elem.field_name == "title"
-        assert elem.help == "A short summary of the task"
-
-
-class TestSurfaceCompanions:
-    """Companion regions on create/edit surfaces (#923, Part D of #918)."""
-
-    def test_companion_position_top(self):
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Doc "Doc":
-  id: uuid pk
-  pages: int
-
-surface doc_create "Upload":
-  uses entity Doc
-  mode: create
-
-  companion summary "Batch summary" position=top:
-    eyebrow: "Live"
-    display: summary_row
-    aggregate:
-      pages: max(pages)
-
-  section main:
-    field pages "Page count"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        assert len(surface.companions) == 1
-        c = surface.companions[0]
-        assert c.name == "summary"
-        assert c.title == "Batch summary"
-        assert c.eyebrow == "Live"
-        assert c.position.value == "top"
-        assert c.section_anchor is None
-        assert c.display == "summary_row"
-        assert "pages" in c.aggregate
-
-    def test_companion_position_below_section(self):
-        """`position=below_section[<name>]` pins the companion to a
-        named section anchor."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Doc "Doc":
-  id: uuid pk
-
-surface doc_create "Upload":
-  uses entity Doc
-  mode: create
-
-  section automation "Automation":
-    field auto_run "Run automatically"
-
-  companion job_plan "What this triggers" position=below_section[automation]:
-    display: status_list
-    entries:
-      - title: "Classify the batch"
-        caption: "Match paper, subject, year group"
-      - title: "Separate the PDF"
-        caption: "Pages become manuscripts"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        surface = fragment.surfaces[0]
-        c = surface.companions[0]
-        assert c.position.value == "below_section"
-        assert c.section_anchor == "automation"
-        assert len(c.entries) == 2
-        assert c.entries[0].title == "Classify the batch"
-        assert c.entries[0].caption == "Match paper, subject, year group"
-        assert c.entries[1].title == "Separate the PDF"
-
-    def test_companion_position_defaults_to_bottom(self):
-        """When no `position=` is supplied the companion defaults to
-        bottom — least-disruptive placement."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Doc "Doc":
-  id: uuid pk
-
-surface doc_create "Upload":
-  uses entity Doc
-  mode: create
-
-  companion plain "Footer note":
-    display: status_list
-
-  section main:
-    field id "id"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        c = fragment.surfaces[0].companions[0]
-        assert c.position.value == "bottom"
-        assert c.section_anchor is None
-
-    def test_companion_pipeline_stages(self):
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Doc "Doc":
-  id: uuid pk
-
-surface doc_create "Upload":
-  uses entity Doc
-  mode: create
-
-  companion plan "Pipeline" position=bottom:
-    display: pipeline_steps
-    stages:
-      - label: "Classify"
-        caption: "Sort by paper"
-      - label: "Score"
-
-  section main:
-    field id "id"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        c = fragment.surfaces[0].companions[0]
-        assert c.display == "pipeline_steps"
-        assert len(c.stages) == 2
-        assert c.stages[0].label == "Classify"
-        assert c.stages[0].caption == "Sort by paper"
-        assert c.stages[1].label == "Score"
-        assert c.stages[1].caption is None
-
-    def test_companion_source_bound(self):
-        """`source: Entity` + `filter:` + `limit:` parse for source-driven
-        companions (rendering still placeholder in v1)."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Pupil "Pupil":
-  id: uuid pk
-  group: str(200)
-
-entity Doc "Doc":
-  id: uuid pk
-
-surface doc_create "Upload":
-  uses entity Doc
-  mode: create
-
-  companion roster "Cohort roster" position=top:
-    source: Pupil
-    display: list
-    limit: 5
-
-  section main:
-    field id "id"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        c = fragment.surfaces[0].companions[0]
-        assert c.source == "Pupil"
-        assert c.display == "list"
-        assert c.limit == 5
-
-    def test_multiple_companions_preserved_in_order(self):
-        """The IR list preserves the source declaration order — the
-        renderer relies on that for stable layout."""
-        dsl = """
-module test.core
-app test_app "Test App"
-
-entity Doc "Doc":
-  id: uuid pk
-
-surface doc_create "Upload":
-  uses entity Doc
-  mode: create
-
-  companion a "Top A" position=top:
-    display: status_list
-
-  companion b "Bottom B" position=bottom:
-    display: status_list
-
-  companion c "Top C" position=top:
-    display: status_list
-
-  section main:
-    field id "id"
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        names = [c.name for c in fragment.surfaces[0].companions]
-        assert names == ["a", "b", "c"]
-
-
-class TestWasRenameHint:
-    """`was:` rename-hint grammar (#1431 migration engine, Task 4.2).
-
-    A field- and entity-level `was: OldName` clause populates
-    ``FieldSpec.renamed_from`` / ``EntitySpec.renamed_from`` so the migration
-    planner can emit a RENAME instead of a drop+add. The hint is transient —
-    it never reaches the persisted schema.
-    """
-
-    def test_field_was_populates_renamed_from(self):
-        """`field new_name <type> ... was: old_name` → FieldSpec.renamed_from."""
-        dsl = """
-module test_was_field
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required was: name
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        task = fragment.entities[0]
-        title_field = next(f for f in task.fields if f.name == "title")
-        assert title_field.renamed_from == "name"
-        # Modifiers parsed normally — the hint is additive, not a replacement.
-        from dazzle.core.ir.fields import FieldModifier
-
-        assert FieldModifier.REQUIRED in title_field.modifiers
-        # Fields without `was:` stay None.
-        id_field = next(f for f in task.fields if f.name == "id")
-        assert id_field.renamed_from is None
-
-    def test_field_was_without_modifiers(self):
-        """`was:` works directly after the type (no intervening modifiers)."""
-        dsl = """
-module test_was_field_bare
-
-entity Task "Task":
-  id: uuid pk
-  body: text was: description
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        body_field = next(f for f in fragment.entities[0].fields if f.name == "body")
-        assert body_field.renamed_from == "description"
-
-    def test_entity_was_populates_renamed_from(self):
-        """`was: OldName` inside the entity body → EntitySpec.renamed_from."""
-        dsl = """
-module test_was_entity
-
-entity Task "Task":
-  was: TodoItem
-  id: uuid pk
-  title: str(200) required
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        task = fragment.entities[0]
-        assert task.name == "Task"
-        assert task.renamed_from == "TodoItem"
-
-    def test_entity_without_was_is_none(self):
-        """Absent `was:` leaves EntitySpec.renamed_from as None."""
-        dsl = """
-module test_no_was
-
-entity Task "Task":
-  id: uuid pk
-"""
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        assert fragment.entities[0].renamed_from is None
-
-    def test_field_was_missing_identifier_errors(self):
-        """`was:` with no following identifier is a clear parse error."""
-        from dazzle.core.errors import ParseError
-
-        dsl = """
-module test_was_field_err
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) was:
-"""
-        with pytest.raises(ParseError):
-            parse_dsl(dsl, Path("test.dsl"))
-
-    def test_entity_was_missing_identifier_errors(self):
-        """Entity-level `was:` with no following identifier is a parse error."""
-        from dazzle.core.errors import ParseError
-
-        dsl = """
-module test_was_entity_err
-
-entity Task "Task":
-  was:
-  id: uuid pk
-"""
-        with pytest.raises(ParseError):
-            parse_dsl(dsl, Path("test.dsl"))
-
-    def test_engine_hint_is_a_hard_error_naming_stage(self):
-        """#1720 (ADR-0003). `engine_hint:` was the v0.3.1 spelling of `stage:`.
-        It kept parsing silently, so old DSL worked and the deprecation was
-        invisible — and three prose pages advertised it as a feature. Removing
-        it means failing loudly with the replacement in the message.
-
-        The token stays in the lexer for exactly this reason: without it the
-        old spelling would lex as a plain identifier and the author would get
-        "unknown keyword" instead of "rename this".
-        """
-        from dazzle.core.errors import ParseError
-
-        dsl = """
-module test_engine_hint_removed
-
-workspace ops "Ops":
-  engine_hint: "command_center"
-  purpose: "internal desk"
-"""
-        with pytest.raises(ParseError, match="engine_hint.*use 'stage:'"):
-            parse_dsl(dsl, Path("test.dsl"))
-
-    def test_stage_is_the_canonical_spelling(self):
-        """The replacement the error names must actually work."""
-        dsl = """
-module test_stage_canonical
-
-workspace ops "Ops":
-  stage: "command_center"
-  purpose: "internal desk"
-"""
-        fragment = parse_dsl(dsl, Path("test.dsl"))[-1]
-        assert [w.stage for w in fragment.workspaces] == ["command_center"]
-
-
-if __name__ == "__main__":
-    main()
+        for mode in ("kanban", "bar_chart", "activity_feed")
+    ]
+    + [
+        pytest.param(
+            _region(
+                f"    display: line_chart\n    group_by: bucket(created_at, {unit})\n" + _COUNT
+            ),
+            {"group_by": BucketRef(field="created_at", unit=unit)},
+            id=f"group-by-bucket-{unit}",
+        )
+        for unit in ("day", "week", "month", "quarter", "year")
+    ]
+    + [
+        pytest.param(
+            _region(
+                "    display: pivot_table\n    group_by: [bucket(created_at, week), severity]\n"
+                + _COUNT
+            ),
+            {"group_by_dims": [BucketRef(field="created_at", unit="week"), "severity"]},
+            id="group-by-multi-dim-bucket-plus-scalar",
+        ),
+        pytest.param(
+            _region("    display: bar_chart\n    group_by: severity\n" + _COUNT),
+            {"group_by": "severity"},
+            id="group-by-bare-field",
+        ),
+    ]
+)
+
+
+@pytest.mark.parametrize(("body", "expected"), REGION_CASES)
+def test_workspace_region(body: str, expected: dict[str, Any]) -> None:
+    _assert_attrs(_fragment(body).workspaces[0].regions[0], expected)
+
+
+_NAV_ENTITIES = "".join(
+    f'entity {name} "{name}":\n  id: uuid pk\n\n'
+    for name in ("Task", "User", "Question", "Topic", "Note")
+)
+
+NAV_GROUP_CASES = [
+    # Workspace nav_group parsing (v0.38.0, #418).
+    # (workspace nav_group lines, [(label, icon, collapsed, [(entity, icon)])])
+    pytest.param("", [], id="none"),
+    pytest.param(
+        '  nav_group "Management" icon=settings:\n    Task\n    User\n',
+        [("Management", "settings", False, [("Task", None), ("User", None)])],
+        id="basic-with-icon",
+    ),
+    pytest.param(
+        '  nav_group "Hidden" collapsed:\n    Task\n',
+        [("Hidden", None, True, [("Task", None)])],
+        id="collapsed-no-icon",
+    ),
+    pytest.param(
+        '  nav_group "Work":\n    Task icon=check-circle\n',
+        [("Work", None, False, [("Task", "check-circle")])],
+        id="item-icon",
+    ),
+    pytest.param(
+        '  nav_group "Tasks" icon=clipboard:\n    Task\n  nav_group "Admin" icon=shield:\n    User\n',
+        [
+            ("Tasks", "clipboard", False, [("Task", None)]),
+            ("Admin", "shield", False, [("User", None)]),
+        ],
+        id="multiple-groups-in-order",
+    ),
+    pytest.param(
+        '  nav_group "Questions" icon=help-circle:\n    Question icon=circle-help\n'
+        '  nav_group "Reverse" icon=circle-help:\n    Topic icon=file-question\n'
+        '  nav_group "Notes" icon=sticky-note:\n    Note icon=note-pencil\n',
+        [
+            ("Questions", "help-circle", False, [("Question", "circle-help")]),
+            ("Reverse", "circle-help", False, [("Topic", "file-question")]),
+            ("Notes", "sticky-note", False, [("Note", "note-pencil")]),
+        ],
+        id="hyphenated-icons-containing-keywords-#922",
+    ),
+]
+
+
+@pytest.mark.parametrize(("groups", "expected"), NAV_GROUP_CASES)
+def test_workspace_nav_groups(groups: str, expected: list[tuple[Any, ...]]) -> None:
+    ws = _fragment(
+        _NAV_ENTITIES + f'workspace dashboard "Dashboard":\n{groups}  tasks:\n    source: Task\n'
+    ).workspaces[0]
+    got = [
+        (g.label, g.icon, g.collapsed, [(i.entity, i.icon) for i in g.items]) for g in ws.nav_groups
+    ]
+    assert got == expected
+    # No `when:` declared → group and item visibility conditions stay None (#1324).
+    assert all(g.when is None and all(i.when is None for i in g.items) for g in ws.nav_groups)
+
+
+def test_nav_definition_top_level() -> None:
+    """#926: top-level `nav <name>:` declares a reusable block; workspaces
+    reference it with `uses nav <name>`. Inside the block `group` and
+    `nav_group` are synonyms. The parser records the reference only — the
+    linker materialises the groups, so the workspace's own list stays empty."""
+    fragment = _fragment(
+        _NAV_ENTITIES + "nav teacher_nav:\n"
+        '  group "My Classes" icon=users:\n    Task\n'
+        '  nav_group "Work":\n    User\n\n'
+        'workspace dashboard "Dashboard":\n  uses nav teacher_nav\n  c:\n    source: Task\n'
+    )
+    nav = fragment.navs[0]
+    assert nav.name == "teacher_nav"
+    assert [(g.label, g.icon, [i.entity for i in g.items]) for g in nav.groups] == [
+        ("My Classes", "users", ["Task"]),
+        ("Work", None, ["User"]),
+    ]
+    ws = fragment.workspaces[0]
+    assert (ws.nav_ref, ws.nav_groups) == ("teacher_nav", [])
+
+
+def test_nav_group_when_on_header_and_item() -> None:
+    """#1324 FR-4 slice A: optional ``when: <cond>`` on a group header and
+    on an item parse to ConditionExprs (render-time visibility)."""
+    nav = _fragment(
+        _NAV_ENTITIES + "nav teacher_nav:\n"
+        '  group "Integrations" icon=plug when: tenant_config.mis_connected:\n'
+        "    Task\n    User when: tenant_config.beta_features\n"
+    ).navs[0]
+    group = nav.groups[0]
+    assert (group.label, group.icon) == ("Integrations", "plug")
+    assert group.when.comparison.field == "tenant_config.mis_connected"
+    assert [(i.entity, i.when and i.when.comparison.field) for i in group.items] == [
+        ("Task", None),
+        ("User", "tenant_config.beta_features"),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("nav_ref", "expected_ref", "expected_labels"),
+    [
+        # Linker prepends the inherited groups, then the workspace's own.
+        pytest.param("teacher_nav", "teacher_nav", ["Classes", "Local"], id="resolved-composes"),
+        # Unresolved: own groups survive; validation reports the error later.
+        pytest.param("nonexistent_nav", "nonexistent_nav", ["Local"], id="unresolved-no-crash"),
+    ],
+)
+def test_nav_definition_linked_into_workspace(
+    nav_ref: str, expected_ref: str, expected_labels: list[str]
+) -> None:
+    _, app_name, app_title, app_config, uses, fragment = _parse(
+        _NAV_ENTITIES + 'nav teacher_nav:\n  group "Classes" icon=users:\n    Task\n\n'
+        f'workspace proctor "Proctor":\n  uses nav {nav_ref}\n'
+        '  group "Local" icon=calendar:\n    User\n  s:\n    source: User\n'
+    )
+    mod = ir.ModuleIR(
+        name="test.core",
+        file=Path("test.dsl"),
+        app_name=app_name,
+        app_title=app_title,
+        app_config=app_config,
+        uses=uses,
+        fragment=fragment,
+    )
+    merged = linker_impl.merge_fragments([mod], linker_impl.build_symbol_table([mod]))
+    ws = merged.workspaces[0]
+    assert ws.nav_ref == expected_ref
+    assert [g.label for g in ws.nav_groups] == expected_labels
+
+
+@pytest.mark.parametrize(
+    ("block", "expected"),
+    [
+        pytest.param(
+            '  primary_actions:\n    action "New Invoice" -> surface create_invoice\n'
+            '    action "Dashboard" -> workspace ops_dashboard\n',
+            [
+                ("New Invoice", "surface", "create_invoice"),
+                ("Dashboard", "workspace", "ops_dashboard"),
+            ],
+            id="surface-and-workspace-targets-#1324",
+        ),
+        pytest.param("", [], id="absent-is-empty-list"),
+    ],
+)
+def test_workspace_primary_actions(block: str, expected: list[tuple[str, str, str]]) -> None:
+    ws = _fragment(
+        'entity Invoice "Invoice":\n  id: uuid pk\n\n'
+        'workspace reports "Reports":\n' + block + "  metrics:\n    source: Invoice\n"
+    ).workspaces[0]
+    assert [(a.label, a.target_kind, a.target) for a in ws.primary_actions] == expected
+
+
+_SELECTOR_ENTITIES = (
+    'entity Trust "Trust":\n  id: uuid pk\n\n'
+    'entity School "School":\n  id: uuid pk\n  name: str(100) required\n  trust: ref Trust\n\n'
+    'entity Student "Student":\n  id: uuid pk\n\n'
+)
+
+
+@pytest.mark.parametrize(
+    ("selector", "expected"),
+    [
+        pytest.param("", {"context_selector": None}, id="absent-is-none"),
+        pytest.param(
+            "  context_selector:\n    entity: School\n    display_field: name\n",
+            {
+                "context_selector.entity": "School",
+                "context_selector.display_field": "name",
+                "context_selector.scope_field": None,
+                "context_selector.filter": None,
+            },
+            id="basic-#432",
+        ),
+        pytest.param(
+            "  context_selector:\n    entity: School\n",
+            {"context_selector.display_field": "name"},
+            id="display-field-defaults-to-name",
+        ),
+        pytest.param(
+            "  context_selector:\n    entity: School\n    display_field: name\n"
+            "    scope_field: trust\n",
+            {"context_selector.scope_field": "trust"},
+            id="scope-field",
+        ),
+        pytest.param(
+            "  context_selector:\n    entity: School\n    filter: department != External\n",
+            {
+                "context_selector.filter.comparison.field": "department",
+                "context_selector.filter.comparison.operator.value": "!=",
+                "context_selector.filter.comparison.value.literal": "External",
+            },
+            id="filter-condition",
+        ),
+    ],
+)
+def test_workspace_context_selector(selector: str, expected: dict[str, Any]) -> None:
+    ws = _fragment(
+        _SELECTOR_ENTITIES + f'workspace school_dashboard "School Dashboard":\n{selector}\n'
+        "  students:\n    source: Student\n"
+    ).workspaces[0]
+    _assert_attrs(ws, expected)
+
+
+def test_workspace_stage() -> None:
+    """`stage:` is the spelling the #1720 `engine_hint:` error points to."""
+    fragment = _fragment('workspace ops "Ops":\n  stage: "command_center"\n  purpose: "desk"\n')
+    assert [w.stage for w in fragment.workspaces] == ["command_center"]
+
+
+# ---------------------------------------------------------------------------
+# story (v0.22.0)
+# ---------------------------------------------------------------------------
+
+
+def test_story_with_all_clauses() -> None:
+    story = _fragment(
+        'entity Invoice "Invoice":\n  id: uuid pk\n\n'
+        'story ST-001 "Staff sends invoice":\n  persona: StaffUser\n'
+        "  trigger: status_changed\n  entities: [Invoice, FollowupTask]\n\n"
+        '  given:\n    - "Invoice.status is draft"\n\n'
+        '  when:\n    - "User submits form"\n\n'
+        '  then:\n    - "Invoice.status changes to sent"\n\n'
+        '  unless:\n    - "Client.email is missing":\n        then: "FollowupTask is created"\n'
+    ).stories[0]
+    assert (story.story_id, story.title, story.persona) == (
+        "ST-001",
+        "Staff sends invoice",
+        "StaffUser",
+    )
+    assert story.trigger.value == "status_changed"
+    assert story.entities == ["Invoice", "FollowupTask"]
+    assert [c.expression for c in story.given] == ["Invoice.status is draft"]
+    assert [c.expression for c in story.when] == ["User submits form"]
+    assert [c.expression for c in story.then] == ["Invoice.status changes to sent"]
+    assert [(u.condition, u.then_outcomes) for u in story.unless] == [
+        ("Client.email is missing", ["FollowupTask is created"])
+    ]
+
+
+@pytest.mark.parametrize(
+    "trigger",
+    [
+        "form_submitted",
+        "status_changed",
+        "timer_elapsed",
+        "external_event",
+        "user_click",
+        "cron_daily",
+        "cron_hourly",
+    ],
+)
+def test_story_trigger(trigger: str) -> None:
+    fragment = _fragment(f'story ST-TRIG "T":\n  persona: User\n  trigger: {trigger}\n')
+    assert [s.trigger.value for s in fragment.stories] == [trigger]
+
+
+# ---------------------------------------------------------------------------
+# process (v0.23.0)
+# ---------------------------------------------------------------------------
+
+
+def _process(lines: str) -> str:
+    return (
+        'entity Order "Order":\n  id: uuid pk\n  status: enum[pending,confirmed]=pending\n\n'
+        f'process P "P":\n{lines}'
+    )
+
+
+@pytest.mark.parametrize(
+    ("trigger", "expected"),
+    [
+        pytest.param(
+            "entity Order status -> confirmed",
+            {
+                "kind.value": "entity_status_transition",
+                "entity_name": "Order",
+                "from_status": None,
+                "to_status": "confirmed",
+            },
+            id="entity-status-transition",
+        ),
+        pytest.param(
+            "entity Order created",
+            {"kind.value": "entity_event", "entity_name": "Order", "event_type": "created"},
+            id="entity-event",
+        ),
+        pytest.param("manual", {"kind.value": "manual"}, id="manual"),
+        pytest.param(
+            "signal PaymentComplete",
+            {"kind.value": "signal", "process_name": "PaymentComplete"},
+            id="signal",
+        ),
+    ],
+)
+def test_process_trigger(trigger: str, expected: dict[str, Any]) -> None:
+    process = _fragment(
+        _process(f"  trigger: {trigger}\n  steps:\n    - step S:\n        service: Svc\n")
+    ).processes[0]
+    _assert_attrs(process.trigger, expected)
+
+
+PROCESS_STEP_CASES = [
+    pytest.param(
+        "    - step CheckInventory:\n        service: InventoryService\n        timeout: 30s\n",
+        {
+            "name": "CheckInventory",
+            "kind.value": "service",
+            "service": "InventoryService",
+            "timeout_seconds": 30,
+        },
+        id="service-with-timeout",
+    ),
+    pytest.param(
+        "    - step Notify:\n        channel: email\n        message: new_order_notification\n",
+        {"kind.value": "send", "channel": "email", "message": "new_order_notification"},
+        id="send",
+    ),
+    pytest.param(
+        "    - step WaitForPayment:\n        wait: 24h\n",
+        {"kind.value": "wait", "wait_duration_seconds": 86400},
+        id="wait-duration",
+    ),
+    pytest.param(
+        "    - step Approve:\n        human_task:\n          assignee: manager\n"
+        "          surface: ApprovalForm\n          timeout: 2d\n",
+        {
+            "kind.value": "human_task",
+            "human_task.assignee_expression": "manager",
+            "human_task.surface": "ApprovalForm",
+            "human_task.timeout_seconds": 172800,
+        },
+        id="human-task",
+    ),
+    pytest.param(
+        "    - step Run:\n        subprocess: PaymentProcess\n",
+        {"kind.value": "subprocess", "subprocess": "PaymentProcess"},
+        id="subprocess",
+    ),
+    pytest.param(
+        '    - step CheckAmount:\n        condition: "Order.total > 1000"\n'
+        "        on_true: HighValueApproval\n        on_false: AutoApprove\n",
+        {
+            "kind.value": "condition",
+            "condition": "Order.total > 1000",
+            "on_true": "HighValueApproval",
+            "on_false": "AutoApprove",
+        },
+        id="condition",
+    ),
+    pytest.param(
+        "    - parallel Fanout:\n"
+        "        - step NotifyCustomer:\n            channel: email\n            message: m1\n"
+        "        - step NotifyWarehouse:\n            channel: email\n            message: m2\n"
+        "        - step UpdateAnalytics:\n            service: AnalyticsService\n",
+        {
+            "kind.value": "parallel",
+            "len:parallel_steps": 3,
+            "parallel_steps[0].name": "NotifyCustomer",
+            "parallel_steps[1].name": "NotifyWarehouse",
+            "parallel_steps[2].name": "UpdateAnalytics",
+        },
+        id="parallel-branches",
+    ),
+    pytest.param(
+        "    - step Reserve:\n        service: InventoryService\n"
+        "        compensate: ReleaseInventory\n",
+        {"compensate_with": "ReleaseInventory"},
+        id="saga-compensate",
+    ),
+]
+
+
+@pytest.mark.parametrize(("step", "expected"), PROCESS_STEP_CASES)
+def test_process_step(step: str, expected: dict[str, Any]) -> None:
+    process = _fragment(_process(f"  trigger: entity Order created\n  steps:\n{step}")).processes[0]
+    assert len(process.steps) == 1
+    _assert_attrs(process.steps[0], expected)
+
+
+def test_process_header_inputs_timeout_and_step_order() -> None:
+    process = _fragment(
+        _process(
+            "  trigger: entity Order created\n  implements: [ST-001, ST-002]\n  timeout: 1h\n"
+            "  input:\n    order_id: uuid\n    priority: str\n"
+            "  steps:\n"
+            "    - step Step1:\n        service: Service1\n        timeout: 30s\n"
+            "    - step Step2:\n        service: Service2\n        timeout: 1m\n"
+            "    - step Step3:\n        channel: email\n        message: done\n"
+        )
+    ).processes[0]
+    assert (process.name, process.title) == ("P", "P")
+    assert process.implements == ["ST-001", "ST-002"]
+    assert process.timeout_seconds == 3600
+    assert [(i.name, i.type) for i in process.inputs] == [("order_id", "uuid"), ("priority", "str")]
+    assert [(s.name, s.timeout_seconds) for s in process.steps][:2] == [
+        ("Step1", 30),
+        ("Step2", 60),
+    ]
+    assert process.steps[2].name == "Step3"
+
+
+# ---------------------------------------------------------------------------
+# schedule (v0.23.0)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("lines", "expected"),
+    [
+        pytest.param(
+            '  cron: "0 6 * * *"\n  implements: [ST-010]\n',
+            {"cron": "0 6 * * *", "implements": ["ST-010"], "interval_seconds": None},
+            id="cron-with-implements",
+        ),
+        pytest.param("  interval: 5m\n", {"interval_seconds": 300, "cron": None}, id="interval-5m"),
+        pytest.param("  interval: 1h\n", {"interval_seconds": 3600}, id="interval-1h"),
+        pytest.param(
+            '  cron: "0 9 * * 1-5"\n  timezone: "Europe/London"\n',
+            {"timezone": "Europe/London"},
+            id="timezone",
+        ),
+        pytest.param('  cron: "0 0 * * *"\n  catch_up: true\n', {"catch_up": True}, id="catch-up"),
+    ],
+)
+def test_schedule(lines: str, expected: dict[str, Any]) -> None:
+    schedule = _fragment(
+        f'schedule DailyReport "Daily Report":\n{lines}'
+        "  steps:\n    - step Work:\n        service: WorkService\n"
+    ).schedules[0]
+    assert (schedule.name, schedule.title) == ("DailyReport", "Daily Report")
+    _assert_attrs(schedule, expected)
+
+
+# ---------------------------------------------------------------------------
+# view (v0.25.0)
+# ---------------------------------------------------------------------------
+
+_ORDER = (
+    'entity Order "Order":\n  id: uuid pk\n  customer: str(100)\n'
+    "  created_at: datetime auto_add\n  amount: decimal(10,2) required\n\n"
+)
+
+
+@pytest.mark.parametrize(
+    ("view", "expected"),
+    [
+        pytest.param(
+            'view OrderSummary "Order Summary":\n  source: Order\n  group_by: [status]\n'
+            "  fields:\n    total_amount: sum(amount)\n    order_count: count()\n",
+            {
+                "name": "OrderSummary",
+                "title": "Order Summary",
+                "source_entity": "Order",
+                "group_by": ["status"],
+                "len:fields": 2,
+                "fields[0].name": "total_amount",
+                "fields[0].expression": PRESENT,
+                "fields[1].name": "order_count",
+            },
+            id="aggregate-fields-and-group-by",
+        ),
+        pytest.param(
+            'view Monthly "Monthly":\n  source: Order\n  group_by: [customer, month(created_at)]\n'
+            "  fields:\n    total: sum(amount)\n",
+            {"group_by": ["customer", "month(created_at)"]},
+            id="function-call-in-group-by",
+        ),
+        pytest.param(
+            'view Report "Report":\n  source: Order\n  fields:\n    label: str(200)\n'
+            "    total: sum(amount)\n",
+            {
+                "fields[0].field_type": PRESENT,
+                "fields[0].expression": None,
+                "fields[1].expression": PRESENT,
+                "fields[1].field_type": None,
+            },
+            id="typed-field-vs-aggregate-field",
+        ),
+        pytest.param(
+            "view QuickReport:\n  source: Order\n  fields:\n    total: sum(amount)\n",
+            {"name": "QuickReport", "title": None},
+            id="title-optional",
+        ),
+    ],
+)
+def test_view(view: str, expected: dict[str, Any]) -> None:
+    _assert_attrs(_fragment(_ORDER + view).views[0], expected)
+
+
+# ---------------------------------------------------------------------------
+# sla (v0.25.0)
+# ---------------------------------------------------------------------------
+
+
+def test_sla_full() -> None:
+    """All sub-blocks. `entity:` inside the block must not be captured by the
+    top-level entity dispatcher (#222)."""
+    sla = _fragment(
+        'entity SupportTicket "Support Ticket":\n  id: uuid pk\n'
+        "  status: enum[open,on_hold,resolved]=open\n  escalated: bool=false\n\n"
+        'sla TicketResponse "Ticket Response SLA":\n  entity: SupportTicket\n'
+        "  starts_when: status -> open\n  pauses_when: status = on_hold\n"
+        "  completes_when: status -> resolved\n"
+        "  tiers:\n    warning: 15 minutes\n    breach: 8 hours\n    critical: 2 days\n"
+        '  business_hours:\n    schedule: "Mon-Fri 09:00-17:00"\n    timezone: "Europe/London"\n'
+        "  on_breach:\n    notify: support_lead\n    set: escalated = true\n"
+    ).slas[0]
+    assert (sla.name, sla.title, sla.entity) == (
+        "TicketResponse",
+        "Ticket Response SLA",
+        "SupportTicket",
+    )
+    conditions = [sla.starts_when, sla.pauses_when, sla.completes_when]
+    assert [(c.field, c.operator, c.value) for c in conditions] == [
+        ("status", "->", "open"),
+        ("status", "=", "on_hold"),
+        ("status", "->", "resolved"),
+    ]
+    assert [(t.name, t.duration_value, t.duration_unit) for t in sla.tiers] == [
+        ("warning", 15, "minutes"),
+        ("breach", 8, "hours"),
+        ("critical", 2, "days"),
+    ]
+    assert (sla.business_hours.schedule, sla.business_hours.timezone) == (
+        "Mon-Fri 09:00-17:00",
+        "Europe/London",
+    )
+    assert sla.on_breach.notify_role == "support_lead"
+    assert [(a.field_path, a.value) for a in sla.on_breach.field_assignments] == [
+        ("escalated", "true")
+    ]
+
+
+def test_sla_minimal_optional_blocks_are_none() -> None:
+    sla = _fragment(
+        'entity Task "Task":\n  id: uuid pk\n  status: enum[open,done]=open\n\n'
+        "sla TaskCompletion:\n  entity: Task\n  starts_when: status -> open\n"
+        "  completes_when: status -> done\n  tiers:\n    warning: 2 hours\n    breach: 4 hours\n"
+    ).slas[0]
+    assert sla.name == "TaskCompletion"
+    assert (sla.title, sla.pauses_when, sla.business_hours, sla.on_breach) == (
+        None,
+        None,
+        None,
+        None,
+    )
+    assert len(sla.tiers) == 2
+
+
+# ---------------------------------------------------------------------------
+# dispatcher preservation (#222 root cause: older dispatchers dropped newer fields)
+# ---------------------------------------------------------------------------
+
+_STATEFUL = (
+    'entity Task "Task":\n  id: uuid pk\n  status: enum[open, done] = open\n'
+    "  transitions:\n    open -> done\n\n"
+)
+_SLA = (
+    'sla TaskSLA "SLA":\n  entity: Task\n  starts_when: status -> open\n'
+    "  completes_when: status -> done\n  tiers:\n    warning: 4 hours\n\n"
+)
+_SCENARIO = (
+    'persona admin "Admin":\n  description: "Admin user"\n\n'
+    'scenario smoke "Demo":\n  description: "Demo"\n  as persona admin:\n    start_route: "/"\n'
+)
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        pytest.param(
+            _STATEFUL + _SLA + _SCENARIO,
+            {"slas": 1, "scenarios": 1, "personas": 1},
+            id="sla-before-scenario-#222",
+        ),
+        pytest.param(
+            _STATEFUL
+            + 'view TaskSummary "Summary":\n  source: Task\n  fields:\n    count: count()\n\n'
+            + _SLA
+            + 'surface task_list "Tasks":\n  uses entity Task\n  mode: list\n'
+            '  section main:\n    field status "Status"\n\n' + _SCENARIO,
+            {"views": 1, "slas": 1, "entities": 1, "surfaces": 1, "personas": 1, "scenarios": 1},
+            id="all-v0.25-constructs-interleaved-#222",
+        ),
+        pytest.param(
+            _STATEFUL + _SLA + 'process TaskFlow "Flow":\n  trigger: entity Task created\n'
+            "  steps:\n    - step S:\n        service: Svc\n",
+            {"slas": 1, "processes": 1},
+            id="sla-before-process-#222",
+        ),
+    ],
+)
+def test_constructs_survive_mixed_dispatch(body: str, expected: dict[str, int]) -> None:
+    fragment = _fragment(body)
+    assert {name: len(getattr(fragment, name)) for name in expected} == expected
+
+
+def test_process_schedule_and_stories_in_one_module() -> None:
+    fragment = _fragment(
+        _STATEFUL + 'story ST-001 "Create":\n  persona: Customer\n  trigger: form_submitted\n\n'
+        'story ST-002 "Fulfil":\n  persona: System\n  trigger: status_changed\n\n'
+        'process TaskProcess "Task Process":\n  trigger: entity Task created\n'
+        "  implements: [ST-001, ST-002]\n  steps:\n    - step S:\n        service: Svc\n\n"
+        'schedule TaskCleanup "Cleanup":\n  cron: "0 0 * * *"\n'
+        "  steps:\n    - step C:\n        service: CleanupService\n"
+    )
+    assert [s.story_id for s in fragment.stories] == ["ST-001", "ST-002"]
+    assert [(p.name, p.implements) for p in fragment.processes] == [
+        ("TaskProcess", ["ST-001", "ST-002"])
+    ]
+    assert [s.name for s in fragment.schedules] == ["TaskCleanup"]

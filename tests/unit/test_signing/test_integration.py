@@ -1,28 +1,15 @@
-"""DSL → linker → router integration tests for `signable: true` (#1283 phase 5).
+"""DSL → linker → router for `signable: true` (#1283 phase 5).
 
-These tests close the gap between the unit-level tests (which
-hand-build ``EntitySpec`` instances) and a real boot — they parse DSL
-source, run it through ``build_appspec``, and then exercise the
-signing-router factory against the linked AppSpec.
-
-The DB layer is deliberately out of scope here; that's an E2E test
-fixture that needs Postgres provisioning. The flows we cover are the
-ones unit tests can't see:
-
-* The 11 framework-canonical fields are injected by the *real* linker
-  pass, not the unit-level direct call.
-* The ``audit: AuditConfig(enabled=True)`` default fires on a real
-  ``EntitySpec`` that the parser produced.
-* The router factory accepts the linked entities and emits the
-  expected route table.
-* The factory returns ``None`` when no entity in the linked AppSpec
-  is signable.
+Closes the gap between hand-built ``EntitySpec`` unit tests and a real boot:
+the DSL is parsed, linked by ``build_appspec``, and the signing-router factory
+runs against the linked AppSpec. The DB layer is out of scope.
 """
 
 from __future__ import annotations
 
 import pathlib
 import textwrap
+from typing import Any
 
 import pytest
 
@@ -32,173 +19,117 @@ from fastapi import FastAPI  # noqa: E402
 from dazzle.core import ir  # noqa: E402
 from dazzle.core.linker import build_appspec  # noqa: E402
 from dazzle.core.parser import parse_modules  # noqa: E402
+from dazzle.http.runtime.route_validator import iter_http_route_contexts  # noqa: E402
 from dazzle.signing.routes import create_signing_routes  # noqa: E402
 
+_HEADER = 'module test\napp a "A"\n\n'
+_SIGNABLE = (
+    'entity Contract "Contract":\n  id: uuid pk\n  party: str(200) required\n'
+    "  effective_date: date\n  signable: true\n"
+    "  signing_validator: app.signing.validators.verify\n"
+)
+_TASK = 'entity Task "Task":\n  id: uuid pk\n  title: str(200) required\n'
 
-def _parse_appspec(source: str, tmp_path: pathlib.Path) -> ir.AppSpec:
-    dsl_path = tmp_path / "test.dsl"
-    dsl_path.write_text(textwrap.dedent(source).lstrip())
-    return build_appspec(parse_modules([dsl_path]), "test")
-
-
-_SIGNABLE_DSL = """
-module test
-app a "A"
-
-entity Contract "Contract":
-  id: uuid pk
-  party: str(200) required
-  effective_date: date
-  signable: true
-  signing_validator: app.signing.validators.verify
-"""
-
-
-_NON_SIGNABLE_DSL = """
-module test
-app a "A"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-"""
+_INJECTED = {
+    "status",
+    "signing_service",
+    "signing_url",
+    "signed_document",
+    "signing_token_hash",
+    "signer_ip",
+    "signer_user_agent",
+    "sent_at",
+    "viewed_at",
+    "signed_at",
+    "expires_at",
+}
 
 
-# -- IR-level linker assertions ---------------------------------------
+def _appspec(body: str, tmp_path: pathlib.Path) -> ir.AppSpec:
+    dsl = tmp_path / "test.dsl"
+    dsl.write_text(_HEADER + textwrap.dedent(body))
+    return build_appspec(parse_modules([dsl]), "test")
 
 
-class TestLinkerInjection:
-    def test_linker_injects_11_fields_via_build_appspec(self, tmp_path) -> None:
-        appspec = _parse_appspec(_SIGNABLE_DSL, tmp_path)
-        contract = next(e for e in appspec.domain.entities if e.name == "Contract")
-        names = {f.name for f in contract.fields}
-        for expected in (
+def _entity(appspec: ir.AppSpec, name: str) -> ir.EntitySpec:
+    return next(e for e in appspec.domain.entities if e.name == name)
+
+
+def test_linker_injects_signing_fields_and_audit(tmp_path: pathlib.Path) -> None:
+    contract = _entity(_appspec(_SIGNABLE, tmp_path), "Contract")
+    assert _INJECTED <= {f.name for f in contract.fields}
+    assert (contract.signable, contract.signing_validator) == (
+        True,
+        "app.signing.validators.verify",
+    )
+    assert contract.audit is not None and contract.audit.enabled is True  # default when unset
+
+
+def test_non_signable_entity_is_untouched(tmp_path: pathlib.Path) -> None:
+    task = _entity(_appspec(_TASK, tmp_path), "Task")
+    assert {f.name for f in task.fields} == {"id", "title"}
+    assert (task.signable, task.audit) == (False, None)
+
+
+def test_router_mounts_get_and_post_for_linked_signable_entity(tmp_path: pathlib.Path) -> None:
+    router = create_signing_routes(
+        list(_appspec(_SIGNABLE, tmp_path).domain.entities), repositories={}
+    )
+    assert router is not None
+    app = FastAPI()
+    app.include_router(router)
+    routes = {
+        (c.path, tuple(sorted(c.methods))) for c in iter_http_route_contexts(app) if c.methods
+    }
+    assert ("/sign/{entity_name}/{record_id}", ("GET",)) in routes
+    assert ("/api/sign/{entity_name}/{record_id}", ("POST",)) in routes
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param(_TASK, id="no-signable-entity"),
+        pytest.param(
+            _TASK.replace('"Task":\n', '"Task":\n  signable: false\n'), id="signable-false-explicit"
+        ),
+    ],
+)
+def test_router_is_none_without_signable_entity(body: str, tmp_path: pathlib.Path) -> None:
+    assert (
+        create_signing_routes(list(_appspec(body, tmp_path).domain.entities), repositories={})
+        is None
+    )
+
+
+@pytest.mark.parametrize(
+    ("declared", "field", "attr", "expected"),
+    [
+        pytest.param(
+            "status: enum[draft, signed_remote, signed_in_person, archived] required",
             "status",
-            "signing_service",
+            "enum_values",
+            ["draft", "signed_remote", "signed_in_person", "archived"],
+            id="project-status-enum-wins",
+        ),
+        pytest.param(
+            "signing_url: str(2000)",
             "signing_url",
-            "signed_document",
-            "signing_token_hash",
-            "signer_ip",
-            "signer_user_agent",
-            "sent_at",
-            "viewed_at",
-            "signed_at",
-            "expires_at",
-        ):
-            assert expected in names, f"linker did not inject {expected!r}"
-
-    def test_signable_flag_survives_linker(self, tmp_path) -> None:
-        appspec = _parse_appspec(_SIGNABLE_DSL, tmp_path)
-        contract = next(e for e in appspec.domain.entities if e.name == "Contract")
-        assert contract.signable is True
-        assert contract.signing_validator == "app.signing.validators.verify"
-
-    def test_audit_default_enabled_when_unset(self, tmp_path) -> None:
-        appspec = _parse_appspec(_SIGNABLE_DSL, tmp_path)
-        contract = next(e for e in appspec.domain.entities if e.name == "Contract")
-        assert contract.audit is not None
-        assert contract.audit.enabled is True
-
-    def test_non_signable_entity_untouched(self, tmp_path) -> None:
-        appspec = _parse_appspec(_NON_SIGNABLE_DSL, tmp_path)
-        task = next(e for e in appspec.domain.entities if e.name == "Task")
-        names = {f.name for f in task.fields}
-        # No auto-injected signing fields on a non-signable entity.
-        assert names == {"id", "title"}
-        assert task.signable is False
-        assert task.audit is None
-
-
-# -- Router factory against the linked AppSpec ------------------------
-
-
-class TestRouterFromAppSpec:
-    def test_router_mounts_when_signable_entity_present(self, tmp_path) -> None:
-        appspec = _parse_appspec(_SIGNABLE_DSL, tmp_path)
-        router = create_signing_routes(list(appspec.domain.entities), repositories={})
-        assert router is not None
-
-        app = FastAPI()
-        app.include_router(router)
-        from dazzle.http.runtime.route_validator import iter_http_route_contexts
-
-        paths = {
-            (ctx.path, tuple(sorted(ctx.methods or ())))
-            for ctx in iter_http_route_contexts(app)
-            if ctx.methods
-        }
-        assert ("/sign/{entity_name}/{record_id}", ("GET",)) in paths
-        assert ("/api/sign/{entity_name}/{record_id}", ("POST",)) in paths
-
-    def test_router_returns_none_when_no_signable_entity(self, tmp_path) -> None:
-        appspec = _parse_appspec(_NON_SIGNABLE_DSL, tmp_path)
-        router = create_signing_routes(list(appspec.domain.entities), repositories={})
-        assert router is None
-
-    def test_signable_false_explicit_is_not_signable(self, tmp_path) -> None:
-        """A `signable: false` declaration should leave the entity off the
-        signable list — same as omitting the directive entirely."""
-        appspec = _parse_appspec(
-            """
-            module test
-            app a "A"
-
-            entity Doc "Doc":
-              id: uuid pk
-              title: str(200) required
-              signable: false
-            """,
+            "max_length",
+            2000,
+            id="project-widened-signing-url",
+        ),
+    ],
+)
+def test_project_declared_field_beats_auto_inject(
+    declared: str, field: str, attr: str, expected: Any, tmp_path: pathlib.Path
+) -> None:
+    contract = _entity(
+        _appspec(
+            f'entity Contract "C":\n  id: uuid pk\n  party: str(200) required\n'
+            f"  {declared}\n  signable: true\n",
             tmp_path,
-        )
-        router = create_signing_routes(list(appspec.domain.entities), repositories={})
-        assert router is None
-
-
-# -- Project-declared field wins over auto-inject ---------------------
-
-
-class TestProjectOverridesViaDSL:
-    def test_project_status_enum_wins(self, tmp_path) -> None:
-        """If the project declares its own `status` field, the linker
-        must leave it alone — explicit always beats auto-inject."""
-        appspec = _parse_appspec(
-            """
-            module test
-            app a "A"
-
-            entity Contract "C":
-              id: uuid pk
-              party: str(200) required
-              status: enum[draft, signed_remote, signed_in_person, archived] required
-              signable: true
-            """,
-            tmp_path,
-        )
-        contract = next(e for e in appspec.domain.entities if e.name == "Contract")
-        status = next(f for f in contract.fields if f.name == "status")
-        assert status.type.enum_values == [
-            "draft",
-            "signed_remote",
-            "signed_in_person",
-            "archived",
-        ]
-
-    def test_project_signing_url_widened(self, tmp_path) -> None:
-        """A project that needs a longer signing_url cap can declare it
-        explicitly; the linker keeps the wider field."""
-        appspec = _parse_appspec(
-            """
-            module test
-            app a "A"
-
-            entity Contract "C":
-              id: uuid pk
-              party: str(200) required
-              signing_url: str(2000)
-              signable: true
-            """,
-            tmp_path,
-        )
-        contract = next(e for e in appspec.domain.entities if e.name == "Contract")
-        url = next(f for f in contract.fields if f.name == "signing_url")
-        assert url.type.max_length == 2000
+        ),
+        "Contract",
+    )
+    spec = next(f for f in contract.fields if f.name == field)
+    assert getattr(spec.type, attr) == expected

@@ -1,1530 +1,560 @@
-"""Tests for template compiler source= option wiring and route collision."""
+"""Template compiler contract: Surface IR → PageContext.
+
+Everything goes through the public entry points ``compile_surface_to_context``
+and ``compile_appspec_to_templates``: form fields are read from
+``ctx.form.fields``, list columns from ``ctx.table.columns``, entity columns
+from the related-tab columns a detail page builds for a spoke entity.
+"""
+
+from typing import Any
 
 import pytest
 
 from dazzle.core import ir
-from dazzle.core.ir import FieldTypeKind, SurfaceMode
+from dazzle.core.ir import FieldTypeKind as K
+from dazzle.core.ir import SurfaceMode
 from dazzle.core.ir.fields import FieldModifier
+from dazzle.core.ir.triples import derive_triples
+from dazzle.core.linker_impl import SymbolTable, validate_references
 from dazzle.page.converters.template_compiler import (
-    _build_entity_columns,
-    _build_form_fields,
     compile_appspec_to_templates,
     compile_surface_to_context,
 )
 
+# =============================================================================
+# Builders
+# =============================================================================
 
-def _sole_trader_entity() -> ir.EntitySpec:
-    """Entity with 5 non-PK fields (owner is NOT an entity field)."""
-    return ir.EntitySpec(
-        name="SoleTrader",
-        title="Sole Trader",
-        fields=[
-            ir.FieldSpec(
-                name="id",
-                type=ir.FieldType(kind=FieldTypeKind.UUID),
-                modifiers=[FieldModifier.PK],
-            ),
-            ir.FieldSpec(
-                name="trading_name",
-                type=ir.FieldType(kind=FieldTypeKind.STR, max_length=200),
-                is_required=True,
-            ),
-            ir.FieldSpec(
-                name="nino",
-                type=ir.FieldType(kind=FieldTypeKind.STR, max_length=9),
-            ),
-            ir.FieldSpec(
-                name="utr",
-                type=ir.FieldType(kind=FieldTypeKind.STR, max_length=10),
-            ),
-            ir.FieldSpec(
-                name="is_vat_registered",
-                type=ir.FieldType(kind=FieldTypeKind.BOOL),
-            ),
-            ir.FieldSpec(
-                name="vat_number",
-                type=ir.FieldType(kind=FieldTypeKind.STR, max_length=12),
-            ),
-        ],
+
+def _f(name: str, kind: K, **type_kw: Any) -> ir.FieldSpec:
+    return ir.FieldSpec(name=name, type=ir.FieldType(kind=kind, **type_kw))
+
+
+def _str(name: str, n: int = 200) -> ir.FieldSpec:
+    return _f(name, K.STR, max_length=n)
+
+
+def _ref(name: str, entity: str, kind: K = K.REF) -> ir.FieldSpec:
+    return _f(name, kind, ref_entity=entity)
+
+
+def _entity(name: str, *fields: ir.FieldSpec) -> ir.EntitySpec:
+    pk = ir.FieldSpec(name="id", type=ir.FieldType(kind=K.UUID), modifiers=[FieldModifier.PK])
+    return ir.EntitySpec(name=name, title=name, fields=[pk, *fields])
+
+
+def _sole_trader() -> ir.EntitySpec:
+    return _entity(
+        "SoleTrader",
+        _str("trading_name"),
+        _str("nino", 9),
+        _str("utr", 10),
+        _f("is_vat_registered", K.BOOL),
+        _str("vat_number", 12),
     )
 
 
-class TestFormFieldSourceOption:
-    """Tests for source= option producing FieldSourceContext."""
+def _company() -> ir.EntitySpec:
+    return _entity(
+        "Company", _str("name"), _f("status", K.ENUM, enum_values=["active", "inactive"])
+    )
 
-    def _make_surface_with_source(self, source_ref: str) -> ir.SurfaceSpec:
-        """Helper to build a surface with a source option on one field."""
-        return ir.SurfaceSpec(
-            name="test_create",
-            title="Test",
-            entity_ref="Client",
-            mode=SurfaceMode.CREATE,
-            sections=[
-                ir.SurfaceSection(
-                    name="main",
-                    title="Details",
-                    elements=[
-                        ir.SurfaceElement(
-                            field_name="company_name",
-                            label="Company",
-                            options={"source": source_ref},
-                        ),
-                    ],
-                )
+
+def _contact(*extra: ir.FieldSpec) -> ir.EntitySpec:
+    return _entity(
+        "Contact", _str("full_name"), _f("email", K.EMAIL), _ref("company", "Company"), *extra
+    )
+
+
+def _task() -> ir.EntitySpec:
+    return _entity("Task", _str("title"), _f("completed", K.BOOL), _ref("company", "Company"))
+
+
+def _audit_log(type_kind: K = K.ENUM) -> ir.EntitySpec:
+    type_kw = (
+        {"enum_values": ["company", "sole_trader"]} if type_kind is K.ENUM else {"max_length": 100}
+    )
+    return _entity(
+        "AuditLog",
+        _f("entity_type", type_kind, **type_kw),
+        _f("entity_id", K.UUID),
+        _str("action", 100),
+    )
+
+
+def _el(name: str, label: str | None = None, **kw: Any) -> ir.SurfaceElement:
+    return ir.SurfaceElement(field_name=name, label=label or name.replace("_", " ").title(), **kw)
+
+
+def _surface(
+    name: str, entity: str, mode: SurfaceMode, *elements: ir.SurfaceElement, **kw: Any
+) -> ir.SurfaceSpec:
+    sections = (
+        [ir.SurfaceSection(name="main", title="Main", elements=list(elements))] if elements else []
+    )
+    return ir.SurfaceSpec(
+        name=name, title=name, entity_ref=entity, mode=mode, sections=sections, **kw
+    )
+
+
+def _compile_app(entities: list[ir.EntitySpec], surfaces: list[ir.SurfaceSpec]) -> dict[str, Any]:
+    return compile_appspec_to_templates(
+        ir.AppSpec(name="test_app", title="Test App", version="0.1.0",
+                   domain=ir.DomainSpec(entities=entities), surfaces=surfaces)
+    )  # fmt: skip
+
+
+def _attrs(obj: Any, names: dict[str, Any]) -> dict[str, Any]:
+    out = {}
+    for path in names:
+        value = obj
+        for part in path.split("."):
+            value = getattr(value, part)
+        out[path] = value
+    return out
+
+
+# =============================================================================
+# Form fields
+# =============================================================================
+
+_CLIENT = _entity("Client", _str("company_name"), _ref("assigned_to", "User"))
+_SOURCE = {"source": "companies_house_lookup.search_companies"}
+
+FORM_FIELD_CASES = [
+    pytest.param(
+        _el("company_name", options=_SOURCE),
+        {
+            "type": "search_select",
+            # #1599: the endpoint names the pack so HTMX search routes to it
+            "source.endpoint": "/_dazzle/fragments/search?source=companies_house_lookup",
+            "source.display_key": "company_name",
+            "source.value_key": "company_number",
+        },
+        id="source-option-becomes-search-select-#1599",
+    ),
+    pytest.param(
+        _el("company_name"),
+        {"type": "text", "source": None, "ref_entity": "", "ref_api": ""},
+        id="plain-str-no-source-no-ref",
+    ),
+    pytest.param(
+        _el("assigned_to"),
+        {"type": "ref", "ref_entity": "User", "ref_api": "/users"},
+        id="ref-field-auto-wires-entity-select-EX-044",
+    ),
+    pytest.param(
+        _el("assigned_to", options=_SOURCE),
+        {"type": "search_select", "ref_entity": "", "ref_api": ""},
+        # The source-based search-select takes precedence over ref auto-wiring.
+        id="explicit-source-suppresses-ref-auto-wiring",
+    ),
+]
+
+
+@pytest.mark.parametrize(("element", "expected"), FORM_FIELD_CASES)
+def test_form_field(element: ir.SurfaceElement, expected: dict[str, Any]) -> None:
+    ctx = compile_surface_to_context(
+        _surface("client_create", "Client", SurfaceMode.CREATE, element), _CLIENT
+    )
+    [field] = ctx.form.fields
+    assert field.name == element.field_name
+    assert _attrs(field, expected) == expected
+
+
+@pytest.mark.parametrize(
+    ("elements", "expected"),
+    [
+        pytest.param(
+            [_el("owner"), _el("trading_name"), _el("utr", "UTR")],
+            [("owner", "Owner"), ("trading_name", "Trading Name"), ("utr", "UTR")],
+            # `owner` is not an entity field; sections are authoritative.
+            id="sections-define-the-fields",
+        ),
+        pytest.param(
+            [],
+            [
+                ("trading_name", "Trading Name"),
+                ("nino", "Nino"),
+                ("utr", "Utr"),
+                ("is_vat_registered", "Is Vat Registered"),
+                ("vat_number", "Vat Number"),
             ],
-            actions=[],
-        )
-
-    def _make_entity(self) -> ir.EntitySpec:
-        return ir.EntitySpec(
-            name="Client",
-            title="Client",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                ir.FieldSpec(
-                    name="company_name",
-                    type=ir.FieldType(kind=FieldTypeKind.STR, max_length=200),
-                    is_required=True,
-                ),
-            ],
-        )
-
-    def test_source_option_produces_field_source_context(self):
-        """Test that source= option on a field produces a FieldSourceContext."""
-        surface = self._make_surface_with_source("companies_house_lookup.search_companies")
-        entity = self._make_entity()
-
-        fields = _build_form_fields(surface, entity)
-
-        assert len(fields) == 1
-        field = fields[0]
-        assert field.name == "company_name"
-        assert field.type == "search_select"
-        assert field.source is not None
-        # #1599: endpoint must identify the pack for HTMX search routing
-        assert field.source.endpoint == ("/_dazzle/fragments/search?source=companies_house_lookup")
-        assert field.source.display_key == "company_name"
-        assert field.source.value_key == "company_number"
-
-    def test_no_source_option_has_no_source_context(self):
-        """Test that fields without source= have no FieldSourceContext."""
-        surface = ir.SurfaceSpec(
-            name="test_create",
-            title="Test",
-            entity_ref="Client",
-            mode=SurfaceMode.CREATE,
-            sections=[
-                ir.SurfaceSection(
-                    name="main",
-                    title="Details",
-                    elements=[
-                        ir.SurfaceElement(field_name="company_name", label="Company"),
-                    ],
-                )
-            ],
-            actions=[],
-        )
-        entity = self._make_entity()
-
-        fields = _build_form_fields(surface, entity)
-
-        assert len(fields) == 1
-        assert fields[0].source is None
-        assert fields[0].type == "text"
+            id="no-sections-falls-back-to-non-pk-entity-fields",
+        ),
+    ],
+)
+def test_form_fields_sections_over_entity_fallback(
+    elements: list[ir.SurfaceElement], expected: list[tuple[str, str]]
+) -> None:
+    ctx = compile_surface_to_context(
+        _surface("st_create", "SoleTrader", SurfaceMode.CREATE, *elements), _sole_trader()
+    )
+    assert [(f.name, f.label) for f in ctx.form.fields] == expected
 
 
-class TestRefFieldAutoWiring:
-    """Cycle 236 — closes EX-044.
-
-    Plain `ref Entity` fields with no explicit `source:` override must
-    populate ``ref_entity`` + ``ref_api`` on the generated FieldContext so
-    the form_field.html macro can render an entity-backed select instead
-    of falling through to a plain ``<input type="text">``.
-    """
-
-    def _make_entity_with_ref(self):
-        return ir.EntitySpec(
-            name="Task",
-            title="Task",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                ir.FieldSpec(
-                    name="title",
-                    type=ir.FieldType(kind=FieldTypeKind.STR, max_length=200),
-                    is_required=True,
-                ),
-                ir.FieldSpec(
-                    name="assigned_to",
-                    type=ir.FieldType(kind=FieldTypeKind.REF, ref_entity="User"),
-                ),
-            ],
-        )
-
-    def _make_surface(self, field_names):
-        return ir.SurfaceSpec(
-            name="task_create",
-            title="Create Task",
-            entity_ref="Task",
-            mode=SurfaceMode.CREATE,
-            sections=[
-                ir.SurfaceSection(
-                    name="main",
-                    title="New Task",
-                    elements=[
-                        ir.SurfaceElement(field_name=n, label=n.replace("_", " ").title())
-                        for n in field_names
-                    ],
-                )
-            ],
-            actions=[],
-        )
-
-    def test_ref_field_populates_ref_entity_and_api(self):
-        """A plain ref field gets ref_entity + ref_api auto-wired."""
-        entity = self._make_entity_with_ref()
-        surface = self._make_surface(["title", "assigned_to"])
-
-        fields = _build_form_fields(surface, entity)
-
-        ref_fields = [f for f in fields if f.name == "assigned_to"]
-        assert len(ref_fields) == 1
-        field = ref_fields[0]
-        assert field.ref_entity == "User"
-        assert field.ref_api == "/users"
-        # form_type still resolves to "ref" via the canonical widget map
-        assert field.type == "ref"
-
-    def test_non_ref_fields_have_empty_ref_entity(self):
-        """Plain str fields must not accidentally get ref_entity populated."""
-        entity = self._make_entity_with_ref()
-        surface = self._make_surface(["title", "assigned_to"])
-
-        fields = _build_form_fields(surface, entity)
-
-        title_fields = [f for f in fields if f.name == "title"]
-        assert len(title_fields) == 1
-        assert title_fields[0].ref_entity == ""
-        assert title_fields[0].ref_api == ""
-
-    def test_explicit_source_option_suppresses_ref_auto_wiring(self):
-        """If a ref field has an explicit source: override, ref_entity is
-        NOT populated — the source-based search-select branch takes
-        precedence."""
-        entity = self._make_entity_with_ref()
-        surface = ir.SurfaceSpec(
-            name="task_create",
-            title="Create Task",
-            entity_ref="Task",
-            mode=SurfaceMode.CREATE,
-            sections=[
-                ir.SurfaceSection(
-                    name="main",
-                    title="New Task",
-                    elements=[
-                        ir.SurfaceElement(
-                            field_name="assigned_to",
-                            label="Assign To",
-                            options={"source": "companies_house_lookup.search_companies"},
-                        ),
-                    ],
-                )
-            ],
-            actions=[],
-        )
-
-        fields = _build_form_fields(surface, entity)
-
-        assert len(fields) == 1
-        field = fields[0]
-        # When source is set, ref auto-wiring is suppressed to let the
-        # existing `{% elif field.source %}` template branch handle it.
-        assert field.ref_entity == ""
-        assert field.ref_api == ""
+def test_explicit_field_format_reaches_detail_context() -> None:
+    surface = _surface(
+        "invoice_detail",
+        "Invoice",
+        SurfaceMode.VIEW,
+        _el("amount", format=ir.FieldFormatSpec(kind="currency")),
+    )
+    ctx = compile_surface_to_context(surface, _entity("Invoice", _f("amount", K.DECIMAL)))
+    assert [(f.name, f.extra) for f in ctx.detail.fields] == [
+        ("amount", {"format_kind": "currency", "format_arg": None})
+    ]
 
 
-class TestFormFieldSectionOverEntityFallback:
-    """When a surface defines sections, _build_form_fields must use section
-    fields — NOT fall back to entity fields."""
+# =============================================================================
+# Route collisions: two surfaces for one (entity, mode)
+# =============================================================================
 
-    def test_surface_with_sections_uses_section_fields(self):
-        """Surface with sections produces only the section-defined fields."""
-        entity = _sole_trader_entity()
-        surface = ir.SurfaceSpec(
-            name="sole_trader_create",
-            title="Add Sole Trader",
-            entity_ref="SoleTrader",
-            mode=SurfaceMode.CREATE,
-            sections=[
-                ir.SurfaceSection(
-                    name="main",
-                    title="New Sole Trader",
-                    elements=[
-                        ir.SurfaceElement(field_name="owner", label="Owner"),
-                        ir.SurfaceElement(field_name="trading_name", label="Trading Name"),
-                        ir.SurfaceElement(field_name="utr", label="UTR"),
-                    ],
-                )
-            ],
-            actions=[],
-        )
-
-        fields = _build_form_fields(surface, entity)
-
-        assert len(fields) == 3
-        assert [f.name for f in fields] == ["owner", "trading_name", "utr"]
-        assert [f.label for f in fields] == ["Owner", "Trading Name", "UTR"]
-
-    def test_explicit_field_format_reaches_detail_context(self):
-        entity = ir.EntitySpec(
-            name="Invoice",
-            title="Invoice",
-            fields=[
-                ir.FieldSpec(
-                    name="amount",
-                    type=ir.FieldType(kind=FieldTypeKind.DECIMAL),
-                )
-            ],
-        )
-        surface = ir.SurfaceSpec(
-            name="invoice_detail",
-            title="Invoice",
-            entity_ref="Invoice",
-            mode=SurfaceMode.VIEW,
-            sections=[
-                ir.SurfaceSection(
-                    name="summary",
-                    title="Summary",
-                    elements=[
-                        ir.SurfaceElement(
-                            field_name="amount",
-                            label="Amount",
-                            format=ir.FieldFormatSpec(kind="currency"),
-                        )
-                    ],
-                )
-            ],
-        )
-
-        fields = _build_form_fields(surface, entity)
-
-        assert len(fields) == 1
-        assert fields[0].extra["format_kind"] == "currency"
-        assert fields[0].extra["format_arg"] is None
-
-    def test_surface_without_sections_falls_back_to_entity_fields(self):
-        """Surface without sections produces all non-PK entity fields."""
-        entity = _sole_trader_entity()
-        surface = ir.SurfaceSpec(
-            name="sole_trader_create",
-            title="Add Sole Trader",
-            entity_ref="SoleTrader",
-            mode=SurfaceMode.CREATE,
-            sections=[],
-            actions=[],
-        )
-
-        fields = _build_form_fields(surface, entity)
-
-        assert len(fields) == 5
-        assert {f.name for f in fields} == {
-            "trading_name",
-            "nino",
-            "utr",
-            "is_vat_registered",
-            "vat_number",
-        }
+_SECTIONED = _surface(
+    "sole_trader_create", "SoleTrader", SurfaceMode.CREATE, _el("trading_name"), _el("utr")
+)
+_SECTIONLESS = _surface("add_sole_trader", "SoleTrader", SurfaceMode.CREATE)
 
 
-class TestRouteCollisionPrefersSectioned:
-    """When two surfaces for the same entity+mode produce the same route,
-    compile_appspec_to_templates must prefer the surface with sections."""
+def _view(name: str, render: str | None) -> ir.SurfaceSpec:
+    return _surface(name, "SoleTrader", SurfaceMode.VIEW, _el("trading_name"), render=render)
 
-    def test_sectioned_surface_wins_over_sectionless(self):
-        """Surface with explicit sections wins when a sectionless surface
-        maps to the same route (same entity + mode)."""
-        entity = _sole_trader_entity()
 
-        # Surface WITH sections — user-defined field subset
-        surface_with = ir.SurfaceSpec(
-            name="sole_trader_create",
-            title="Add Sole Trader",
-            entity_ref="SoleTrader",
-            mode=SurfaceMode.CREATE,
-            sections=[
-                ir.SurfaceSection(
-                    name="main",
-                    title="New Sole Trader",
-                    elements=[
-                        ir.SurfaceElement(field_name="owner", label="Owner"),
-                        ir.SurfaceElement(field_name="trading_name", label="Trading Name"),
-                        ir.SurfaceElement(field_name="utr", label="UTR"),
-                    ],
-                )
-            ],
-            actions=[],
-        )
-
-        # Surface WITHOUT sections — same entity + mode, different name
-        surface_without = ir.SurfaceSpec(
-            name="add_sole_trader",
-            title="New Sole Trader",
-            entity_ref="SoleTrader",
-            mode=SurfaceMode.CREATE,
-            sections=[],
-            actions=[],
-        )
-
-        # Order: sectionless first, then sectioned — sectioned must still win
-        appspec = ir.AppSpec(
-            name="test_app",
-            title="Test App",
-            version="0.1.0",
-            domain=ir.DomainSpec(entities=[entity]),
-            surfaces=[surface_without, surface_with],
-        )
-
-        contexts = compile_appspec_to_templates(appspec)
-
-        route = "/soletrader/create"
-        assert route in contexts
-        ctx = contexts[route]
-        assert ctx.form is not None
-        # Must have 3 section-defined fields, not 5 entity-fallback fields
-        assert len(ctx.form.fields) == 3
-        assert [f.name for f in ctx.form.fields] == ["owner", "trading_name", "utr"]
-
-    def test_sectioned_surface_wins_regardless_of_order(self):
-        """Surface with sections wins even when it appears first in the list
-        (a sectionless surface must not overwrite it)."""
-        entity = _sole_trader_entity()
-
-        surface_with = ir.SurfaceSpec(
-            name="sole_trader_create",
-            title="Add Sole Trader",
-            entity_ref="SoleTrader",
-            mode=SurfaceMode.CREATE,
-            sections=[
-                ir.SurfaceSection(
-                    name="main",
-                    title="New Sole Trader",
-                    elements=[
-                        ir.SurfaceElement(field_name="trading_name", label="Trading Name"),
-                        ir.SurfaceElement(field_name="utr", label="UTR"),
-                    ],
-                )
-            ],
-            actions=[],
-        )
-
-        surface_without = ir.SurfaceSpec(
-            name="add_sole_trader",
-            title="New Sole Trader",
-            entity_ref="SoleTrader",
-            mode=SurfaceMode.CREATE,
-            sections=[],
-            actions=[],
-        )
-
-        # Order: sectioned first, then sectionless — sectioned must still win
-        appspec = ir.AppSpec(
-            name="test_app",
-            title="Test App",
-            version="0.1.0",
-            domain=ir.DomainSpec(entities=[entity]),
-            surfaces=[surface_with, surface_without],
-        )
-
-        contexts = compile_appspec_to_templates(appspec)
-
-        route = "/soletrader/create"
-        assert route in contexts
-        ctx = contexts[route]
-        assert ctx.form is not None
-        assert len(ctx.form.fields) == 2
+@pytest.mark.parametrize(
+    ("surfaces", "route", "winner"),
+    [
+        pytest.param([_SECTIONED], "/soletrader/create", "sole_trader_create", id="single-surface"),
+        pytest.param(
+            [_SECTIONLESS, _SECTIONED],
+            "/soletrader/create",
+            "sole_trader_create",
+            id="sectioned-wins-declared-second",
+        ),
+        pytest.param(
+            [_SECTIONED, _SECTIONLESS],
+            "/soletrader/create",
+            "sole_trader_create",
+            id="sectioned-wins-declared-first",
+        ),
+        pytest.param(
+            [_view("plain_detail", None), _view("custom_detail", "class_summary_viewer")],
+            "/soletrader/{id}",
+            "custom_detail",
+            # The pre-#1301 bug: the earlier plain surface won and the custom
+            # renderer never dispatched.
+            id="render-surface-wins-declared-second-#1301",
+        ),
+        pytest.param(
+            [_view("custom_detail", "class_summary_viewer"), _view("plain_detail", None)],
+            "/soletrader/{id}",
+            "custom_detail",
+            id="render-surface-wins-declared-first-#1301",
+        ),
+        pytest.param(
+            [_view("first_detail", None), _view("second_detail", None)],
+            "/soletrader/{id}",
+            "first_detail",
+            id="no-render-first-sectioned-wins",
+        ),
+    ],
+)
+def test_route_collision_winner(surfaces: list[ir.SurfaceSpec], route: str, winner: str) -> None:
+    ctx = _compile_app([_sole_trader()], surfaces)[route]
+    assert ctx.view_name == winner
+    if ctx.form is not None:
+        # The sectioned surface's fields, not the 5-field entity fallback.
         assert [f.name for f in ctx.form.fields] == ["trading_name", "utr"]
 
-    def test_no_collision_with_single_surface(self):
-        """A single surface with sections compiles correctly."""
-        entity = _sole_trader_entity()
-
-        surface = ir.SurfaceSpec(
-            name="sole_trader_create",
-            title="Add Sole Trader",
-            entity_ref="SoleTrader",
-            mode=SurfaceMode.CREATE,
-            sections=[
-                ir.SurfaceSection(
-                    name="main",
-                    title="New Sole Trader",
-                    elements=[
-                        ir.SurfaceElement(field_name="owner", label="Owner"),
-                        ir.SurfaceElement(field_name="trading_name", label="Trading Name"),
-                        ir.SurfaceElement(field_name="utr", label="UTR"),
-                    ],
-                )
-            ],
-            actions=[],
-        )
-
-        appspec = ir.AppSpec(
-            name="test_app",
-            title="Test App",
-            version="0.1.0",
-            domain=ir.DomainSpec(entities=[entity]),
-            surfaces=[surface],
-        )
-
-        contexts = compile_appspec_to_templates(appspec)
-
-        route = "/soletrader/create"
-        assert route in contexts
-        ctx = contexts[route]
-        assert ctx.form is not None
-        assert len(ctx.form.fields) == 3
-        assert [f.name for f in ctx.form.fields] == ["owner", "trading_name", "utr"]
-
-
-class TestRouteCollisionPrefersRender:
-    """#1301: when two VIEW surfaces for the same entity collide on the same
-    route AND both have sections, the one declaring `render:` must win — its
-    custom detail renderer should dispatch, not be silently dropped."""
-
-    @staticmethod
-    def _view(name: str, *, render: str | None) -> ir.SurfaceSpec:
-        return ir.SurfaceSpec(
-            name=name,
-            title=name,
-            entity_ref="SoleTrader",
-            mode=SurfaceMode.VIEW,
-            render=render,
-            sections=[
-                ir.SurfaceSection(
-                    name="main",
-                    title="Detail",
-                    elements=[ir.SurfaceElement(field_name="trading_name", label="Trading Name")],
-                )
-            ],
-            actions=[],
-        )
-
-    def _compile(self, surfaces: list[ir.SurfaceSpec]) -> dict:
-        appspec = ir.AppSpec(
-            name="test_app",
-            title="Test App",
-            version="0.1.0",
-            domain=ir.DomainSpec(entities=[_sole_trader_entity()]),
-            surfaces=surfaces,
-        )
-        return compile_appspec_to_templates(appspec)
-
-    def test_render_surface_wins_when_declared_second(self):
-        """The pre-#1301 bug: a no-render surface declared first beat a later
-        `render:` surface (both sectioned), so the custom renderer never ran."""
-        plain = self._view("assessment_detail", render=None)
-        custom = self._view("assessment_event_detail", render="class_summary_viewer")
-        contexts = self._compile([plain, custom])  # plain first
-        ctx = contexts["/soletrader/{id}"]
-        assert ctx.view_name == "assessment_event_detail"  # render: surface won
-
-    def test_render_surface_wins_when_declared_first(self):
-        custom = self._view("assessment_event_detail", render="class_summary_viewer")
-        plain = self._view("assessment_detail", render=None)
-        contexts = self._compile([custom, plain])  # custom first
-        ctx = contexts["/soletrader/{id}"]
-        assert ctx.view_name == "assessment_event_detail"
-
-    def test_no_render_collision_unchanged(self):
-        """When neither surface declares render:, the prior sections/order
-        tiebreak is unchanged (first sectioned surface wins)."""
-        a = self._view("first_detail", render=None)
-        b = self._view("second_detail", render=None)
-        contexts = self._compile([a, b])
-        assert contexts["/soletrader/{id}"].view_name == "first_detail"
-
 
 # =============================================================================
-# Related entity tabs (hub-and-spoke pattern, #301)
+# Related tabs on detail pages (hub-and-spoke #301, polymorphic FK #321)
 # =============================================================================
 
 
-def _company_entity() -> ir.EntitySpec:
-    """Hub entity for testing related tabs."""
-    return ir.EntitySpec(
-        name="Company",
-        title="Company",
-        fields=[
-            ir.FieldSpec(
-                name="id",
-                type=ir.FieldType(kind=FieldTypeKind.UUID),
-                modifiers=[FieldModifier.PK],
-            ),
-            ir.FieldSpec(
-                name="name",
-                type=ir.FieldType(kind=FieldTypeKind.STR, max_length=200),
-                is_required=True,
-            ),
-            ir.FieldSpec(
-                name="status",
-                type=ir.FieldType(kind=FieldTypeKind.ENUM, enum_values=["active", "inactive"]),
-            ),
-        ],
+def _hub_surfaces(**detail_kw: Any) -> list[ir.SurfaceSpec]:
+    return [
+        _surface("company_list", "Company", SurfaceMode.LIST),
+        _surface("company_detail", "Company", SurfaceMode.VIEW, **detail_kw),
+        _surface("contact_list", "Contact", SurfaceMode.LIST),
+        _surface("task_list", "Task", SurfaceMode.LIST),
+    ]
+
+
+def test_hub_detail_page_auto_tabs() -> None:
+    contexts = _compile_app([_company(), _contact(), _task()], _hub_surfaces())
+    assert contexts["/company"].detail is None  # list pages carry no tabs
+    [group] = contexts["/company/{id}"].detail.related_groups
+    assert (group.group_id, group.display, group.is_auto) == ("group-auto", "table", True)
+    tabs = [
+        (t.tab_id, t.label, t.filter_field, t.api_endpoint, t.create_url, t.detail_url_template,
+         [c.key for c in t.columns])
+        for t in group.tabs
+    ]  # fmt: skip
+    assert tabs == [
+        # FK and PK columns are dropped from the spoke's tab
+        ("tab-contact", "Contact", "company", "/contacts", "/contact/create", "/contact/{id}",
+         ["full_name", "email"]),
+        ("tab-task", "Task", "company", "/tasks", "/task/create", "/task/{id}",
+         ["title", "completed"]),
+    ]  # fmt: skip
+
+
+def test_multiple_fk_paths_from_one_entity_get_distinct_tabs() -> None:
+    """#1523: duplicate tab_ids break the HM tab strip's panel targeting and
+    identical labels make tabs indistinguishable; both vary by FK field."""
+    contexts = _compile_app(
+        [_company(), _contact(_ref("billing_company", "Company"))],
+        [_surface("company_detail", "Company", SurfaceMode.VIEW)],
     )
+    tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
+    assert sorted((t.tab_id, t.label, t.filter_field) for t in tabs) == [
+        ("tab-contact-billing-company", "Contact · Billing Company", "billing_company"),
+        ("tab-contact-company", "Contact · Company", "company"),
+    ]
 
 
-def _contact_entity() -> ir.EntitySpec:
-    """Related entity with FK to Company."""
-    return ir.EntitySpec(
-        name="Contact",
-        title="Contact",
-        fields=[
-            ir.FieldSpec(
-                name="id",
-                type=ir.FieldType(kind=FieldTypeKind.UUID),
-                modifiers=[FieldModifier.PK],
-            ),
-            ir.FieldSpec(
-                name="full_name",
-                type=ir.FieldType(kind=FieldTypeKind.STR, max_length=200),
-                is_required=True,
-            ),
-            ir.FieldSpec(
-                name="email",
-                type=ir.FieldType(kind=FieldTypeKind.EMAIL),
-            ),
-            ir.FieldSpec(
-                name="company",
-                type=ir.FieldType(kind=FieldTypeKind.REF, ref_entity="Company"),
-            ),
-        ],
+@pytest.mark.parametrize(
+    ("related_groups", "expected"),
+    [
+        pytest.param(
+            [ir.RelatedGroup(name="people", title="People",
+                             display=ir.RelatedDisplayMode.STATUS_CARDS, show=["Contact"])],
+            [("People", "status_cards", False, [("Contact", ["full_name", "email"])]),
+             ("Other", "table", True, [("Task", ["title", "completed"])])],
+            id="declared-group-then-auto-group-for-the-rest",
+        ),
+        pytest.param(
+            [ir.RelatedGroup(name="work", title="Work", display=ir.RelatedDisplayMode.TABLE,
+                             show=["Task"], columns=["title"])],
+            [("Work", "table", False, [("Task", ["title"])]),
+             ("Other", "table", True, [("Contact", ["full_name", "email"])])],
+            id="declared-columns-project-the-tab-#1600",
+        ),
+    ],
+)  # fmt: skip
+def test_declared_related_groups(
+    related_groups: list[ir.RelatedGroup], expected: list[tuple[Any, ...]]
+) -> None:
+    contexts = _compile_app(
+        [_company(), _contact(), _task()],
+        [_surface("company_detail", "Company", SurfaceMode.VIEW, related_groups=related_groups)],
     )
-
-
-def _task_entity() -> ir.EntitySpec:
-    """Another related entity with FK to Company."""
-    return ir.EntitySpec(
-        name="Task",
-        title="Task",
-        fields=[
-            ir.FieldSpec(
-                name="id",
-                type=ir.FieldType(kind=FieldTypeKind.UUID),
-                modifiers=[FieldModifier.PK],
-            ),
-            ir.FieldSpec(
-                name="title",
-                type=ir.FieldType(kind=FieldTypeKind.STR, max_length=200),
-                is_required=True,
-            ),
-            ir.FieldSpec(
-                name="completed",
-                type=ir.FieldType(kind=FieldTypeKind.BOOL),
-            ),
-            ir.FieldSpec(
-                name="company",
-                type=ir.FieldType(kind=FieldTypeKind.REF, ref_entity="Company"),
-            ),
-        ],
-    )
-
-
-class TestRelatedEntityTabs:
-    """Tests for related entity tab generation on detail (VIEW) pages."""
-
-    def _make_hub_appspec(self) -> ir.AppSpec:
-        """Build an AppSpec with Company (hub) + Contact, Task (spokes)."""
-        company = _company_entity()
-        contact = _contact_entity()
-        task = _task_entity()
-        return ir.AppSpec(
-            name="test_app",
-            title="Test App",
-            version="0.1.0",
-            domain=ir.DomainSpec(entities=[company, contact, task]),
-            surfaces=[
-                ir.SurfaceSpec(
-                    name="company_list",
-                    title="Companies",
-                    entity_ref="Company",
-                    mode=SurfaceMode.LIST,
-                    actions=[],
-                ),
-                ir.SurfaceSpec(
-                    name="company_detail",
-                    title="Company Detail",
-                    entity_ref="Company",
-                    mode=SurfaceMode.VIEW,
-                    actions=[],
-                ),
-                ir.SurfaceSpec(
-                    name="contact_list",
-                    title="Contacts",
-                    entity_ref="Contact",
-                    mode=SurfaceMode.LIST,
-                    actions=[],
-                ),
-                ir.SurfaceSpec(
-                    name="task_list",
-                    title="Tasks",
-                    entity_ref="Task",
-                    mode=SurfaceMode.LIST,
-                    actions=[],
-                ),
-            ],
+    groups = contexts["/company/{id}"].detail.related_groups
+    got = [
+        (
+            g.label,
+            g.display,
+            g.is_auto,
+            [(t.entity_name, [c.key for c in t.columns]) for t in g.tabs],
         )
-
-    def test_view_surface_has_related_tabs(self):
-        """VIEW surface for hub entity gets related tabs from reverse refs."""
-        appspec = self._make_hub_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-
-        detail_ctx = contexts.get("/company/{id}")
-        assert detail_ctx is not None
-        assert detail_ctx.detail is not None
-        assert len(detail_ctx.detail.related_groups) == 1
-        assert len(detail_ctx.detail.related_groups[0].tabs) == 2
-
-    def test_related_tab_attributes(self):
-        """Related tab attributes — labels, filter_field, api_endpoint, columns, urls.
-
-        Combined: labels, filter_field, api_endpoint, columns_exclude_fk, create_url, detail_url.
-        """
-        appspec = self._make_hub_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
-
-        # Labels
-        labels = {t.label for t in tabs}
-        assert "Contact" in labels
-        assert "Task" in labels
-
-        # Filter field — every tab uses 'company' FK
-        for tab in tabs:
-            assert tab.filter_field == "company"
-
-        # API endpoints
-        endpoints = {t.entity_name: t.api_endpoint for t in tabs}
-        assert endpoints["Contact"] == "/contacts"
-        assert endpoints["Task"] == "/tasks"
-
-        # Contact tab specific assertions
-        contact_tab = next(t for t in tabs if t.entity_name == "Contact")
-        col_keys = [c.key for c in contact_tab.columns]
-        assert "company" not in col_keys
-        assert "id" not in col_keys
-        assert "full_name" in col_keys
-        assert "email" in col_keys
-        assert contact_tab.create_url == "/contact/create"
-        assert contact_tab.detail_url_template == "/contact/{id}"
-
-    def test_related_group_columns_projection(self):
-        """related columns: filters tab columns to declared fields (#1600 P1)."""
-        company = _company_entity()
-        contact = _contact_entity()
-        task = _task_entity()
-        appspec = ir.AppSpec(
-            name="test_app",
-            title="Test App",
-            version="0.1.0",
-            domain=ir.DomainSpec(entities=[company, contact, task]),
-            surfaces=[
-                ir.SurfaceSpec(
-                    name="company_detail",
-                    title="Company Detail",
-                    entity_ref="Company",
-                    mode=SurfaceMode.VIEW,
-                    actions=[],
-                    related_groups=[
-                        ir.RelatedGroup(
-                            name="work",
-                            title="Work",
-                            display=ir.RelatedDisplayMode.TABLE,
-                            show=["Task"],
-                            columns=["title"],
-                        ),
-                    ],
-                ),
-            ],
-        )
-        contexts = compile_appspec_to_templates(appspec)
-        groups = contexts["/company/{id}"].detail.related_groups
-        work = next(g for g in groups if g.group_id == "group-work")
-        task_tab = next(t for t in work.tabs if t.entity_name == "Task")
-        assert [c.key for c in task_tab.columns] == ["title"]
-
-    def test_list_surface_has_no_related_tabs(self):
-        """LIST surfaces should not have related tabs."""
-        appspec = self._make_hub_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-        list_ctx = contexts.get("/company")
-        assert list_ctx is not None
-        assert list_ctx.detail is None  # LIST surface has no detail
-
-    def test_entity_without_reverse_refs_has_no_tabs(self):
-        """A VIEW surface for an entity with no reverse refs gets no tabs."""
-        entity = _contact_entity()
-        appspec = ir.AppSpec(
-            name="test_app",
-            domain=ir.DomainSpec(entities=[entity]),
-            surfaces=[
-                ir.SurfaceSpec(
-                    name="contact_detail",
-                    title="Contact Detail",
-                    entity_ref="Contact",
-                    mode=SurfaceMode.VIEW,
-                    actions=[],
-                ),
-            ],
-        )
-        contexts = compile_appspec_to_templates(appspec)
-        detail_ctx = contexts["/contact/{id}"]
-        assert detail_ctx.detail is not None
-        assert len(detail_ctx.detail.related_groups) == 0
-
-    def test_compile_surface_to_context_with_reverse_refs(self):
-        """compile_surface_to_context passes reverse_refs to view surfaces."""
-        company = _company_entity()
-        contact = _contact_entity()
-        surface = ir.SurfaceSpec(
-            name="company_detail",
-            title="Company Detail",
-            entity_ref="Company",
-            mode=SurfaceMode.VIEW,
-            actions=[],
-        )
-        ctx = compile_surface_to_context(
-            surface,
-            company,
-            reverse_refs=[("Contact", "company", contact)],
-        )
-        assert ctx.detail is not None
-        assert len(ctx.detail.related_groups) == 1
-        assert len(ctx.detail.related_groups[0].tabs) == 1
-        assert ctx.detail.related_groups[0].tabs[0].entity_name == "Contact"
-
-    def test_single_fk_path_tab_keeps_historical_shape(self):
-        """One FK path → tab_id/label unchanged (byte-stable for existing apps)."""
-        company = _company_entity()
-        contact = _contact_entity()
-        surface = ir.SurfaceSpec(
-            name="company_detail",
-            title="Company Detail",
-            entity_ref="Company",
-            mode=SurfaceMode.VIEW,
-            actions=[],
-        )
-        ctx = compile_surface_to_context(
-            surface,
-            company,
-            reverse_refs=[("Contact", "company", contact)],
-        )
-        tab = ctx.detail.related_groups[0].tabs[0]
-        assert tab.tab_id == "tab-contact"
-        assert tab.label == "Contact"
-
-    def test_multi_fk_path_tabs_disambiguated_by_fk_field(self):
-        """#1523: N FK paths from one entity → N distinct tab_ids and labels.
-
-        Duplicate tab_ids are a functional bug (the HM tab strip keys the
-        panel DOM ids on tab_id, so identical ids break panel targeting);
-        identical labels make the tabs indistinguishable. Both must vary by
-        the FK field.
-        """
-        company = _company_entity()
-        contact = _contact_entity()
-        surface = ir.SurfaceSpec(
-            name="company_detail",
-            title="Company Detail",
-            entity_ref="Company",
-            mode=SurfaceMode.VIEW,
-            actions=[],
-        )
-        ctx = compile_surface_to_context(
-            surface,
-            company,
-            reverse_refs=[
-                ("Contact", "company", contact),
-                ("Contact", "billing_company", contact),
-            ],
-        )
-        tabs = ctx.detail.related_groups[0].tabs
-        assert len(tabs) == 2
-        assert {t.tab_id for t in tabs} == {
-            "tab-contact-company",
-            "tab-contact-billing-company",
-        }
-        assert {t.label for t in tabs} == {
-            "Contact · Company",
-            "Contact · Billing Company",
-        }
-        # Each tab still filters by its own FK path — the data was never identical.
-        assert {t.filter_field for t in tabs} == {"company", "billing_company"}
+        for g in groups
+    ]
+    assert got == expected
 
 
-def _audit_log_entity() -> ir.EntitySpec:
-    """Entity with polymorphic FK (entity_type enum + entity_id uuid)."""
-    return ir.EntitySpec(
-        name="AuditLog",
-        title="Audit Log",
-        fields=[
-            ir.FieldSpec(
-                name="id",
-                type=ir.FieldType(kind=FieldTypeKind.UUID),
-                modifiers=[FieldModifier.PK],
-            ),
-            ir.FieldSpec(
-                name="entity_type",
-                type=ir.FieldType(
-                    kind=FieldTypeKind.ENUM,
-                    enum_values=["company", "sole_trader"],
-                ),
-            ),
-            ir.FieldSpec(
-                name="entity_id",
-                type=ir.FieldType(kind=FieldTypeKind.UUID),
-            ),
-            ir.FieldSpec(
-                name="action",
-                type=ir.FieldType(kind=FieldTypeKind.STR, max_length=100),
-            ),
-        ],
-    )
-
-
-class TestPolymorphicFKTabs:
-    """Tests for polymorphic FK detection and related tab generation (#321)."""
-
-    def _make_poly_appspec(self) -> ir.AppSpec:
-        """Build AppSpec with Company, SoleTrader, and AuditLog (polymorphic FK)."""
-        company = _company_entity()
-        sole_trader = _sole_trader_entity()
-        audit = _audit_log_entity()
-        return ir.AppSpec(
-            name="test_app",
-            title="Test App",
-            version="0.1.0",
-            domain=ir.DomainSpec(entities=[company, sole_trader, audit]),
-            surfaces=[
-                ir.SurfaceSpec(
-                    name="company_detail",
-                    title="Company Detail",
-                    entity_ref="Company",
-                    mode=SurfaceMode.VIEW,
-                    actions=[],
-                ),
-                ir.SurfaceSpec(
-                    name="sole_trader_detail",
-                    title="Sole Trader Detail",
-                    entity_ref="SoleTrader",
-                    mode=SurfaceMode.VIEW,
-                    actions=[],
-                ),
-                ir.SurfaceSpec(
-                    name="audit_list",
-                    title="Audit Logs",
-                    entity_ref="AuditLog",
-                    mode=SurfaceMode.LIST,
-                    actions=[],
-                ),
-            ],
-        )
-
-    def test_company_gets_audit_tab_from_polymorphic_fk(self):
-        """Company detail page gets AuditLog tab via polymorphic FK."""
-        appspec = self._make_poly_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-        detail_ctx = contexts.get("/company/{id}")
-        assert detail_ctx is not None
-        assert detail_ctx.detail is not None
-        tabs = detail_ctx.detail.related_groups[0].tabs
-        audit_tabs = [t for t in tabs if t.entity_name == "AuditLog"]
-        assert len(audit_tabs) == 1
-
-    def test_sole_trader_gets_audit_tab_from_polymorphic_fk(self):
-        """SoleTrader detail page gets AuditLog tab via polymorphic FK."""
-        appspec = self._make_poly_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-        detail_ctx = contexts.get("/soletrader/{id}")
-        assert detail_ctx is not None
-        assert detail_ctx.detail is not None
-        tabs = detail_ctx.detail.related_groups[0].tabs
-        audit_tabs = [t for t in tabs if t.entity_name == "AuditLog"]
-        assert len(audit_tabs) == 1
-
-    def test_polymorphic_tab_attributes(self):
-        """Polymorphic tab attributes — type_filter, type_value_per_target, columns, api_endpoint.
-
-        Combined: has_type_filter, type_value_matches_target, columns_exclude_type_and_id, api_endpoint.
-        """
-        appspec = self._make_poly_appspec()
-        contexts = compile_appspec_to_templates(appspec)
-
-        # Company side: type discriminator + filter_field + columns + api endpoint
-        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
-        audit_tab = next(t for t in tabs if t.entity_name == "AuditLog")
-        assert audit_tab.filter_type_field == "entity_type"
-        assert audit_tab.filter_type_value == "company"
-        assert audit_tab.filter_field == "entity_id"
-        col_keys = [c.key for c in audit_tab.columns]
-        assert "entity_type" not in col_keys
-        assert "entity_id" not in col_keys
-        assert "action" in col_keys
-        assert audit_tab.api_endpoint == "/auditlogs"
-
-        # SoleTrader side: type_value matches target entity
-        st_tabs = contexts["/soletrader/{id}"].detail.related_groups[0].tabs
-        st_audit_tab = next(t for t in st_tabs if t.entity_name == "AuditLog")
-        assert st_audit_tab.filter_type_value == "sole_trader"
-
-    def test_non_enum_type_field_not_detected(self):
-        """entity_type as str (not enum) should NOT trigger polymorphic detection."""
-        entity = ir.EntitySpec(
-            name="Note",
-            title="Note",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                ir.FieldSpec(
-                    name="entity_type",
-                    type=ir.FieldType(kind=FieldTypeKind.STR, max_length=100),
-                ),
-                ir.FieldSpec(
-                    name="entity_id",
-                    type=ir.FieldType(kind=FieldTypeKind.UUID),
-                ),
-            ],
-        )
-        company = _company_entity()
-        appspec = ir.AppSpec(
-            name="test_app",
-            domain=ir.DomainSpec(entities=[company, entity]),
-            surfaces=[
-                ir.SurfaceSpec(
-                    name="company_detail",
-                    title="Company Detail",
-                    entity_ref="Company",
-                    mode=SurfaceMode.VIEW,
-                    actions=[],
-                ),
-            ],
-        )
-        contexts = compile_appspec_to_templates(appspec)
-        assert len(contexts["/company/{id}"].detail.related_groups) == 0
-
-    def test_compile_surface_to_context_with_poly_refs(self):
-        """compile_surface_to_context passes poly_refs to view surfaces."""
-        company = _company_entity()
-        audit = _audit_log_entity()
-        surface = ir.SurfaceSpec(
-            name="company_detail",
-            title="Company Detail",
-            entity_ref="Company",
-            mode=SurfaceMode.VIEW,
-            actions=[],
-        )
-        ctx = compile_surface_to_context(
-            surface,
-            company,
-            poly_refs=[("AuditLog", "entity_type", "entity_id", "company", audit)],
-        )
-        assert ctx.detail is not None
-        assert len(ctx.detail.related_groups) == 1
-        assert len(ctx.detail.related_groups[0].tabs) == 1
-        tab = ctx.detail.related_groups[0].tabs[0]
-        assert tab.entity_name == "AuditLog"
-        assert tab.filter_type_field == "entity_type"
-        assert tab.filter_type_value == "company"
-
-
-class TestBuildEntityColumns:
-    """Tests for _build_entity_columns helper."""
-
-    def test_company_entity_columns(self):
-        """Company entity columns exclude PK, include regular fields, enum is badge.
-
-        Combined: excludes_pk, includes_regular_fields, enum_field_is_badge_type.
-        """
-        entity = _company_entity()
-        cols = _build_entity_columns(entity)
-        keys = [c.key for c in cols]
-        assert all(k != "id" for k in keys)  # PK excluded
-        assert "name" in keys  # regular field included
-        assert "status" in keys
-        status_col = next(c for c in cols if c.key == "status")
-        assert status_col.type == "badge"  # enum → badge
-
-    def test_bool_field_type(self):
-        """Bool fields map to bool column type."""
-        task = _task_entity()
-        cols = _build_entity_columns(task)
-        completed_col = next(c for c in cols if c.key == "completed")
-        assert completed_col.type == "bool"
-
-    def test_ref_field_maps_to_ref_type(self):
-        """Ref (FK) fields map to ref column type, not text (#308)."""
-        contact = _contact_entity()
-        cols = _build_entity_columns(contact)
-        company_col = next(c for c in cols if c.key == "company")
-        assert company_col.type == "ref"
-
-    @pytest.mark.parametrize(
-        ("entity_name", "field_name", "kind", "ref_entity", "expected_key", "expected_label"),
+@pytest.mark.parametrize(
+    ("route", "type_value"),
+    [
+        pytest.param("/company/{id}", "company", id="company"),
+        pytest.param("/soletrader/{id}", "sole_trader", id="sole-trader"),
+    ],
+)
+def test_polymorphic_fk_tab(route: str, type_value: str) -> None:
+    contexts = _compile_app(
+        [_company(), _sole_trader(), _audit_log()],
         [
-            pytest.param(
-                "Task",
-                "assigned_to_id",
-                FieldTypeKind.REF,
-                "User",
-                "assigned_to",
-                "Assigned To",
-                id="test_ref_field_id_suffix_stripped_for_column_key",
-            ),
-            pytest.param(
-                "LineItem",
-                "order_id",
-                FieldTypeKind.BELONGS_TO,
-                "Order",
-                "order",
-                "Order",
-                id="test_belongs_to_field_maps_to_ref_type",
-            ),
+            _surface("company_detail", "Company", SurfaceMode.VIEW),
+            _surface("sole_trader_detail", "SoleTrader", SurfaceMode.VIEW),
+            _surface("audit_list", "AuditLog", SurfaceMode.LIST),
         ],
     )
-    def test_fk_id_suffix_stripped_for_column_key(
-        self, entity_name, field_name, kind, ref_entity, expected_key, expected_label
-    ):
-        """Ref/Belongs_to fields with _id suffix use relation name as column key (#553)."""
-        entity = ir.EntitySpec(
-            name=entity_name,
-            title=entity_name,
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                ir.FieldSpec(
-                    name=field_name,
-                    type=ir.FieldType(kind=kind, ref_entity=ref_entity),
-                ),
-            ],
-        )
-        cols = _build_entity_columns(entity)
-        ref_col = next(c for c in cols if c.type == "ref")
-        assert ref_col.key == expected_key
-        assert ref_col.label == expected_label
-
-
-class TestEnumFilterLabels:
-    """Tests for #584 — enum filter options use human-readable labels."""
-
-    def test_inline_enum_filter_labels_title_cased(self):
-        """Inline enum values get snake_case converted to Title Case."""
-        from dazzle.page.converters.template_compiler import _infer_filter_type
-
-        field = ir.FieldSpec(
-            name="status",
-            type=ir.FieldType(
-                kind=FieldTypeKind.ENUM, enum_values=["in_progress", "on_hold", "done"]
-            ),
-        )
-        ftype, opts = _infer_filter_type(field, None, "status")
-        assert ftype == "select"
-        assert opts[0] == {"value": "in_progress", "label": "In Progress"}
-        assert opts[1] == {"value": "on_hold", "label": "On Hold"}
-        assert opts[2] == {"value": "done", "label": "Done"}
-
-
-class TestRefFilterType:
-    """Tests for #759 — ref/belongs_to fields render as select dropdowns."""
-
-    @pytest.mark.parametrize(
-        ("kind", "field_name", "ref_entity"),
-        [
-            pytest.param(
-                FieldTypeKind.REF,
-                "client_id",
-                "Client",
-                id="test_ref_field_returns_select_filter_type",
-            ),
-            pytest.param(
-                FieldTypeKind.BELONGS_TO,
-                "order_id",
-                "Order",
-                id="test_belongs_to_field_returns_select_filter_type",
-            ),
-        ],
+    [tab] = [
+        t for t in contexts[route].detail.related_groups[0].tabs if t.entity_name == "AuditLog"
+    ]
+    assert (tab.filter_type_field, tab.filter_type_value, tab.filter_field) == (
+        "entity_type",
+        type_value,
+        "entity_id",
     )
-    def test_fk_field_returns_select_filter_type(self, kind, field_name, ref_entity):
-        """REF/BELONGS_TO fields should infer filter_type 'select' with empty options."""
-        from dazzle.page.converters.template_compiler import _infer_filter_type
-
-        field = ir.FieldSpec(
-            name=field_name,
-            type=ir.FieldType(kind=kind, ref_entity=ref_entity),
-        )
-        ftype, opts = _infer_filter_type(field, None, field_name)
-        assert ftype == "select"
-        assert opts == []
-
-    def test_ref_column_has_ref_entity_and_api(self):
-        """ColumnContext for a filterable ref field includes ref entity name and API URL."""
-        from dazzle.page.converters.template_compiler import _build_columns
-
-        entity = ir.EntitySpec(
-            name="Task",
-            fields=[
-                ir.FieldSpec(
-                    name="id", type=ir.FieldType(kind=FieldTypeKind.UUID), is_primary_key=True
-                ),
-                ir.FieldSpec(
-                    name="assignee_id",
-                    type=ir.FieldType(kind=FieldTypeKind.REF, ref_entity="User"),
-                ),
-            ],
-        )
-        surface = ir.SurfaceSpec(
-            name="task_list",
-            title="Tasks",
-            entity_ref="Task",
-            mode=SurfaceMode.LIST,
-        )
-        ux = ir.UXSpec(filter=["assignee_id"])
-        cols = _build_columns(surface, entity, ux_spec=ux)
-        assignee_col = next(c for c in cols if c.key == "assignee")
-        assert assignee_col.filterable is True
-        assert assignee_col.filter_type == "select"
-        assert assignee_col.filter_ref_entity == "User"
-        assert assignee_col.filter_ref_api == "/users"
-        # cycle 1365: list columns carry Avatar link meta (parity with workspace)
-        assert assignee_col.ref_entity == "User"
-        assert assignee_col.ref_route == "/app/user/{id}"
+    assert tab.api_endpoint == "/auditlogs"
+    assert [c.key for c in tab.columns] == ["action"]  # discriminator + id hidden
 
 
-class TestRelatedGroupValidation:
-    """Tests for related group validation in the linker."""
-
-    def test_related_group_unknown_entity(self):
-        """Related group referencing unknown entity produces validation error."""
-        from dazzle.core.linker_impl import SymbolTable, validate_references
-
-        surface = ir.SurfaceSpec(
-            name="contact_detail",
-            title="Contact Detail",
-            entity_ref="Contact",
-            mode=ir.SurfaceMode.VIEW,
-            related_groups=[
-                ir.RelatedGroup(
-                    name="compliance",
-                    title="Compliance",
-                    display=ir.RelatedDisplayMode.STATUS_CARDS,
-                    show=["NonExistentEntity"],
-                ),
-            ],
-        )
-        contact = _contact_entity()
-        symbols = SymbolTable()
-        symbols.add_entity(contact, "test")
-        symbols.add_surface(surface, "test")
-        errors = validate_references(symbols)
-        assert any("NonExistentEntity" in e and "unknown entity" in e.lower() for e in errors)
-
-    def test_related_group_no_fk_to_parent(self):
-        """Related group entity without FK to surface entity produces error."""
-        from dazzle.core.linker_impl import SymbolTable, validate_references
-
-        standalone = ir.EntitySpec(
-            name="Standalone",
-            title="Standalone",
-            fields=[
-                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
-                ir.FieldSpec(name="value", type=ir.FieldType(kind=ir.FieldTypeKind.STR)),
-            ],
-        )
-        contact = _contact_entity()
-        surface = ir.SurfaceSpec(
-            name="contact_detail",
-            title="Contact Detail",
-            entity_ref="Contact",
-            mode=ir.SurfaceMode.VIEW,
-            related_groups=[
-                ir.RelatedGroup(
-                    name="misc",
-                    title="Misc",
-                    display=ir.RelatedDisplayMode.TABLE,
-                    show=["Standalone"],
-                ),
-            ],
-        )
-        symbols = SymbolTable()
-        symbols.add_entity(contact, "test")
-        symbols.add_entity(standalone, "test")
-        symbols.add_surface(surface, "test")
-        errors = validate_references(symbols)
-        assert any("Standalone" in e and "no fk" in e.lower() for e in errors)
-
-    def test_related_group_duplicate_entity(self):
-        """Same entity in two related groups produces validation error."""
-        from dazzle.core.linker_impl import SymbolTable, validate_references
-
-        tax_return = ir.EntitySpec(
-            name="TaxReturn",
-            title="Tax Return",
-            fields=[
-                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
-                ir.FieldSpec(
-                    name="contact",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Contact"),
-                ),
-            ],
-        )
-        contact = _contact_entity()
-        surface = ir.SurfaceSpec(
-            name="contact_detail",
-            title="Contact Detail",
-            entity_ref="Contact",
-            mode=ir.SurfaceMode.VIEW,
-            related_groups=[
-                ir.RelatedGroup(
-                    name="a", title="A", display=ir.RelatedDisplayMode.TABLE, show=["TaxReturn"]
-                ),
-                ir.RelatedGroup(
-                    name="b", title="B", display=ir.RelatedDisplayMode.TABLE, show=["TaxReturn"]
-                ),
-            ],
-        )
-        symbols = SymbolTable()
-        symbols.add_entity(contact, "test")
-        symbols.add_entity(tax_return, "test")
-        symbols.add_surface(surface, "test")
-        errors = validate_references(symbols)
-        assert any(
-            "TaxReturn" in e and ("duplicate" in e.lower() or "appears in both" in e.lower())
-            for e in errors
-        )
-
-    def test_related_group_on_non_view_surface(self):
-        """Related group on a list surface produces validation error."""
-        from dazzle.core.linker_impl import SymbolTable, validate_references
-
-        contact = _contact_entity()
-        surface = ir.SurfaceSpec(
-            name="contact_list",
-            title="Contacts",
-            entity_ref="Contact",
-            mode=ir.SurfaceMode.LIST,
-            related_groups=[
-                ir.RelatedGroup(
-                    name="a", title="A", display=ir.RelatedDisplayMode.TABLE, show=["TaxReturn"]
-                ),
-            ],
-        )
-        symbols = SymbolTable()
-        symbols.add_entity(contact, "test")
-        symbols.add_surface(surface, "test")
-        errors = validate_references(symbols)
-        assert any("related" in e.lower() and "view" in e.lower() for e in errors)
+@pytest.mark.parametrize(
+    "entities",
+    [
+        pytest.param([_contact()], id="entity-without-reverse-refs"),
+        # entity_type as str (not enum) is not a polymorphic discriminator (#321)
+        pytest.param([_company(), _audit_log(K.STR)], id="str-type-field-is-not-polymorphic"),
+    ],
+)
+def test_detail_page_without_related_tabs(entities: list[ir.EntitySpec]) -> None:
+    hub = entities[0]
+    route = f"/{hub.name.lower()}/{{id}}"
+    contexts = _compile_app(entities, [_surface("detail", hub.name, SurfaceMode.VIEW)])
+    assert contexts[route].detail.related_groups == []
 
 
-class TestTripleRelatedGroups:
-    """Tests for related_groups on VerifiableTriple."""
-
-    def test_triple_includes_related_groups(self):
-        """VerifiableTriple includes related_groups from surface."""
-        from dazzle.core.ir.triples import derive_triples
-
-        contact = _contact_entity()
-        tax_return = ir.EntitySpec(
-            name="TaxReturn",
-            title="Tax Return",
-            fields=[
-                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
-                ir.FieldSpec(
-                    name="contact",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Contact"),
-                ),
-            ],
-        )
-        surface = ir.SurfaceSpec(
-            name="contact_detail",
-            title="Contact Detail",
-            entity_ref="Contact",
-            mode=ir.SurfaceMode.VIEW,
-            sections=[
-                ir.SurfaceSection(
-                    name="main",
-                    elements=[
-                        ir.SurfaceElement(field_name="full_name"),
-                    ],
-                ),
-            ],
-            related_groups=[
-                ir.RelatedGroup(
-                    name="compliance",
-                    title="Compliance",
-                    display=ir.RelatedDisplayMode.STATUS_CARDS,
-                    show=["TaxReturn"],
-                ),
-            ],
-        )
-        persona = ir.PersonaSpec(id="admin", label="Admin")
-
-        triples = derive_triples([contact, tax_return], [surface], [persona])
-        triple = next(t for t in triples if t.surface == "contact_detail")
-        assert triple.related_groups == ["compliance"]
-
-    def test_triple_empty_related_groups_when_no_groups(self):
-        """VerifiableTriple has empty related_groups when surface has none."""
-        from dazzle.core.ir.triples import derive_triples
-
-        contact = _contact_entity()
-        surface = ir.SurfaceSpec(
-            name="contact_detail",
-            title="Contact Detail",
-            entity_ref="Contact",
-            mode=ir.SurfaceMode.VIEW,
-            sections=[
-                ir.SurfaceSection(
-                    name="main",
-                    elements=[
-                        ir.SurfaceElement(field_name="full_name"),
-                    ],
-                ),
-            ],
-        )
-        persona = ir.PersonaSpec(id="admin", label="Admin")
-
-        triples = derive_triples([contact], [surface], [persona])
-        triple = next(t for t in triples if t.surface == "contact_detail")
-        assert triple.related_groups == []
+# =============================================================================
+# Column types: entity columns (via a spoke's related tab) and list filters
+# =============================================================================
 
 
-class TestRelatedGroupContext:
-    """Tests for RelatedGroupContext model."""
-
-    def test_related_group_context_model(self):
-        """RelatedGroupContext wraps RelatedTabContext with display mode."""
-        from dazzle.render.context import RelatedGroupContext, RelatedTabContext
-
-        tab = RelatedTabContext(
-            tab_id="tab-tax-return",
-            label="Tax Return",
-            entity_name="TaxReturn",
-            api_endpoint="/tax-returns",
-            filter_field="contact",
-            columns=[],
-        )
-        group = RelatedGroupContext(
-            group_id="group-compliance",
-            label="Compliance",
-            display="status_cards",
-            tabs=[tab],
-        )
-        assert group.display == "status_cards"
-        assert len(group.tabs) == 1
-        assert group.is_auto is False
+def _spoke_columns(*fields: ir.FieldSpec) -> dict[str, tuple[str, str]]:
+    hub = _entity("Hub")
+    spoke = _entity("Spoke", _ref("hub", "Hub"), *fields)
+    ctx = compile_surface_to_context(
+        _surface("hub_detail", "Hub", SurfaceMode.VIEW), hub, reverse_refs=[("Spoke", "hub", spoke)]
+    )
+    return {c.key: (c.type, c.label) for c in ctx.detail.related_groups[0].tabs[0].columns}
 
 
-class TestRelatedGroupCompiler:
-    """Tests for related group compilation."""
+@pytest.mark.parametrize(
+    ("field", "expected"),
+    [
+        pytest.param(_str("name"), {"name": ("text", "Name")}, id="str-text"),
+        pytest.param(
+            _f("status", K.ENUM, enum_values=["a", "b"]),
+            {"status": ("badge", "Status")},
+            id="enum-badge",
+        ),
+        pytest.param(_f("completed", K.BOOL), {"completed": ("bool", "Completed")}, id="bool"),
+        pytest.param(
+            _ref("company", "Company"),
+            {"company": ("ref", "Company")},
+            id="ref-is-ref-not-text-#308",
+        ),
+        pytest.param(
+            _ref("assigned_to_id", "User"),
+            {"assigned_to": ("ref", "Assigned To")},
+            id="ref-id-suffix-stripped-for-key-#553",
+        ),
+        pytest.param(
+            _ref("order_id", "Order", K.BELONGS_TO),
+            {"order": ("ref", "Order")},
+            id="belongs-to-is-ref-id-suffix-stripped-#553",
+        ),
+    ],
+)
+def test_entity_column(field: ir.FieldSpec, expected: dict[str, tuple[str, str]]) -> None:
+    # The PK and the FK back to the hub are never columns.
+    assert _spoke_columns(field) == expected
 
-    def test_view_surface_with_related_groups(self):
-        """VIEW surface with related_groups produces RelatedGroupContext."""
-        company = _company_entity()
-        contact = _contact_entity()
-        task = _task_entity()
-        appspec = ir.AppSpec(
-            name="test_app",
-            title="Test App",
-            version="0.1.0",
-            domain=ir.DomainSpec(entities=[company, contact, task]),
-            surfaces=[
-                ir.SurfaceSpec(
-                    name="company_detail",
-                    title="Company Detail",
-                    entity_ref="Company",
-                    mode=SurfaceMode.VIEW,
-                    related_groups=[
-                        ir.RelatedGroup(
-                            name="people",
-                            title="People",
-                            display=ir.RelatedDisplayMode.STATUS_CARDS,
-                            show=["Contact"],
-                        ),
-                    ],
-                ),
-            ],
-        )
-        contexts = compile_appspec_to_templates(appspec)
-        detail_ctx = contexts["/company/{id}"]
-        assert len(detail_ctx.detail.related_groups) == 2
-        people_group = detail_ctx.detail.related_groups[0]
-        assert people_group.label == "People"
-        assert people_group.display == "status_cards"
-        assert people_group.is_auto is False
-        assert len(people_group.tabs) == 1
-        assert people_group.tabs[0].entity_name == "Contact"
-        other_group = detail_ctx.detail.related_groups[1]
-        assert other_group.display == "table"
-        assert other_group.is_auto is True
-        assert len(other_group.tabs) == 1
-        assert other_group.tabs[0].entity_name == "Task"
 
-    def test_view_surface_without_related_groups_auto_groups(self):
-        """VIEW surface without related_groups auto-groups all tabs."""
-        company = _company_entity()
-        contact = _contact_entity()
-        task = _task_entity()
-        appspec = ir.AppSpec(
-            name="test_app",
-            title="Test App",
-            version="0.1.0",
-            domain=ir.DomainSpec(entities=[company, contact, task]),
-            surfaces=[
-                ir.SurfaceSpec(
-                    name="company_list",
-                    title="Companies",
-                    entity_ref="Company",
-                    mode=SurfaceMode.LIST,
-                    actions=[],
-                ),
-                ir.SurfaceSpec(
-                    name="company_detail",
-                    title="Company Detail",
-                    entity_ref="Company",
-                    mode=SurfaceMode.VIEW,
-                    actions=[],
-                ),
-                ir.SurfaceSpec(
-                    name="contact_list",
-                    title="Contacts",
-                    entity_ref="Contact",
-                    mode=SurfaceMode.LIST,
-                    actions=[],
-                ),
-                ir.SurfaceSpec(
-                    name="task_list",
-                    title="Tasks",
-                    entity_ref="Task",
-                    mode=SurfaceMode.LIST,
-                    actions=[],
-                ),
-            ],
-        )
-        contexts = compile_appspec_to_templates(appspec)
-        detail_ctx = contexts["/company/{id}"]
-        assert len(detail_ctx.detail.related_groups) == 1
-        auto_group = detail_ctx.detail.related_groups[0]
-        assert auto_group.is_auto is True
-        assert auto_group.display == "table"
-        assert len(auto_group.tabs) == 2
+@pytest.mark.parametrize(
+    ("field", "column", "expected"),
+    [
+        pytest.param(
+            _f("status", K.ENUM, enum_values=["in_progress", "on_hold", "done"]),
+            "status",
+            {
+                "filter_type": "select",
+                "filter_options": [
+                    {"value": "in_progress", "label": "In Progress"},
+                    {"value": "on_hold", "label": "On Hold"},
+                    {"value": "done", "label": "Done"},
+                ],
+            },
+            id="enum-filter-labels-title-cased-#584",
+        ),
+        pytest.param(
+            _ref("assignee_id", "User"),
+            "assignee",
+            {
+                "filterable": True,
+                "filter_type": "select",
+                "filter_options": [],
+                "filter_ref_entity": "User",
+                "filter_ref_api": "/users",
+                # cycle 1365: list columns carry the avatar link meta
+                "ref_entity": "User",
+                "ref_route": "/app/user/{id}",
+            },
+            id="ref-filter-is-entity-select-#759",
+        ),
+        pytest.param(
+            _ref("order_id", "Order", K.BELONGS_TO),
+            "order",
+            {"filter_type": "select", "filter_options": [], "filter_ref_entity": "Order"},
+            id="belongs-to-filter-is-entity-select-#759",
+        ),
+    ],
+)
+def test_list_filter_column(field: ir.FieldSpec, column: str, expected: dict[str, Any]) -> None:
+    surface = _surface("task_list", "Task", SurfaceMode.LIST, ux=ir.UXSpec(filter=[field.name]))
+    ctx = compile_surface_to_context(surface, _entity("Task", field), app_prefix="/app")
+    [col] = [c for c in ctx.table.columns if c.key == column]
+    assert _attrs(col, expected) == expected
+
+
+# =============================================================================
+# Linker validation of related groups
+# =============================================================================
+
+_TAX_RETURN = _entity("TaxReturn", _ref("contact", "Contact"))
+_STANDALONE = _entity("Standalone", _str("value"))
+
+
+def _related(name: str, *show: str) -> ir.RelatedGroup:
+    return ir.RelatedGroup(
+        name=name, title=name, display=ir.RelatedDisplayMode.TABLE, show=list(show)
+    )
+
+
+@pytest.mark.parametrize(
+    ("mode", "groups", "message"),
+    [
+        pytest.param(
+            SurfaceMode.VIEW,
+            [_related("c", "NonExistentEntity")],
+            "related group 'c' references unknown entity 'NonExistentEntity'",
+            id="unknown-entity",
+        ),
+        pytest.param(
+            SurfaceMode.VIEW,
+            [_related("misc", "Standalone")],
+            "entity 'Standalone' has no FK to 'Contact'",
+            id="no-fk-to-parent",
+        ),
+        pytest.param(
+            SurfaceMode.VIEW,
+            [_related("a", "TaxReturn"), _related("b", "TaxReturn")],
+            "entity 'TaxReturn' appears in both related group 'b' and a previous group",
+            id="same-entity-in-two-groups",
+        ),
+        pytest.param(
+            SurfaceMode.LIST,
+            [_related("a", "TaxReturn")],
+            "has related blocks but is not mode: view",
+            id="related-on-non-view-surface",
+        ),
+    ],
+)
+def test_related_group_validation(
+    mode: SurfaceMode, groups: list[ir.RelatedGroup], message: str
+) -> None:
+    symbols = SymbolTable()
+    for entity in (_company(), _contact(), _TAX_RETURN, _STANDALONE):
+        symbols.add_entity(entity, "test")
+    symbols.add_surface(_surface("contact_detail", "Contact", mode, related_groups=groups), "test")
+    errors = validate_references(symbols)
+    assert any(message in e for e in errors), errors
+
+
+@pytest.mark.parametrize(
+    ("groups", "expected"),
+    [
+        pytest.param([_related("compliance", "TaxReturn")], ["compliance"], id="with-groups"),
+        pytest.param([], [], id="without-groups"),
+    ],
+)
+def test_verifiable_triple_carries_related_groups(
+    groups: list[ir.RelatedGroup], expected: list[str]
+) -> None:
+    surface = _surface(
+        "contact_detail", "Contact", SurfaceMode.VIEW, _el("full_name"), related_groups=groups
+    )
+    triples = derive_triples(
+        [_contact(), _TAX_RETURN], [surface], [ir.PersonaSpec(id="admin", label="Admin")]
+    )
+    assert next(t for t in triples if t.surface == "contact_detail").related_groups == expected

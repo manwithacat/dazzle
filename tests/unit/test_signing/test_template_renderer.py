@@ -1,81 +1,55 @@
-"""Unit tests for dazzle.signing.template_renderer (#1287)."""
+"""File-based signing templates: lookup and rendering (#1287)."""
 
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
-from dazzle.signing.template_renderer import (
-    find_signing_template,
-    render_signing_template_file,
+import pytest
+
+from dazzle.signing.template_renderer import find_signing_template, render_signing_template_file
+
+_ENTITY = SimpleNamespace(name="TestEntity", label="Test Entity")
+
+
+@pytest.mark.parametrize(
+    ("template", "row", "expected"),
+    [
+        pytest.param(
+            "<p>Party: {{ row.party }}</p>", {"party": "ACME"}, "<p>Party: ACME</p>", id="row-field"
+        ),
+        pytest.param("<h1>{{ entity.name }}</h1>", {}, "<h1>TestEntity</h1>", id="entity-field"),
+        pytest.param(
+            "<p>{{ row.missing }}</p>", {}, "<p></p>", id="unknown-placeholder-renders-empty"
+        ),
+        pytest.param(
+            "<p>{{  row.party  }}</p>", {"party": "ACME"}, "<p>ACME</p>", id="extra-whitespace"
+        ),
+        pytest.param(
+            "<p>{{ row.party }} signed on {{ row.date }}</p>",
+            {"party": "Acme", "date": "2026-01-01"},
+            "<p>Acme signed on 2026-01-01</p>",
+            id="several-placeholders",
+        ),
+        pytest.param(
+            "<p>{{ row.note }}</p>",
+            {"note": "<script>alert('xss')</script>"},
+            "<p>&lt;script&gt;alert(&#x27;xss&#x27;)&lt;/script&gt;</p>",
+            id="user-content-is-html-escaped",
+        ),
+    ],
 )
-
-
-class _Row:
-    def __init__(self, **kwargs: object) -> None:
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-
-
-class _Entity:
-    name = "TestEntity"
-    label = "Test Entity"
-
-
-def test_substitutes_row_fields(tmp_path: Path) -> None:
-    template = tmp_path / "t.html.j2"
-    template.write_text("<p>Party: {{ row.party }}</p>")
-    out = render_signing_template_file(template, row=_Row(party="ACME"), entity=_Entity())
-    assert out == "<p>Party: ACME</p>"
-
-
-def test_substitutes_entity_fields(tmp_path: Path) -> None:
-    template = tmp_path / "t.html.j2"
-    template.write_text("<h1>{{ entity.name }}</h1>")
-    out = render_signing_template_file(template, row=_Row(), entity=_Entity())
-    assert out == "<h1>TestEntity</h1>"
-
-
-def test_escapes_user_content(tmp_path: Path) -> None:
-    template = tmp_path / "t.html.j2"
-    template.write_text("<p>{{ row.note }}</p>")
-    out = render_signing_template_file(
-        template,
-        row=_Row(note="<script>alert('xss')</script>"),
-        entity=_Entity(),
+def test_render(template: str, row: dict[str, str], expected: str, tmp_path: Path) -> None:
+    path = tmp_path / "t.html.j2"
+    path.write_text(template)
+    assert (
+        render_signing_template_file(path, row=SimpleNamespace(**row), entity=_ENTITY) == expected
     )
-    assert "<script>" not in out
-    assert "&lt;script&gt;" in out
 
 
-def test_unknown_placeholder_renders_empty(tmp_path: Path) -> None:
-    template = tmp_path / "t.html.j2"
-    template.write_text("<p>{{ row.missing }}</p>")
-    out = render_signing_template_file(template, row=_Row(), entity=_Entity())
-    assert out == "<p></p>"
-
-
-def test_tolerates_extra_whitespace_in_braces(tmp_path: Path) -> None:
-    template = tmp_path / "t.html.j2"
-    template.write_text("<p>{{  row.party  }}</p>")
-    out = render_signing_template_file(template, row=_Row(party="ACME"), entity=_Entity())
-    assert out == "<p>ACME</p>"
-
-
-def test_multiple_placeholders_in_one_template(tmp_path: Path) -> None:
-    template = tmp_path / "t.html.j2"
-    template.write_text("<p>{{ row.party }} signed on {{ row.date }}</p>")
-    out = render_signing_template_file(
-        template, row=_Row(party="Acme", date="2026-01-01"), entity=_Entity()
-    )
-    assert out == "<p>Acme signed on 2026-01-01</p>"
-
-
-def test_find_signing_template_hit(tmp_path: Path) -> None:
+@pytest.mark.parametrize(("entity", "found"), [("TestDoc", True), ("Nothing", False)])
+def test_find_signing_template(entity: str, found: bool, tmp_path: Path) -> None:
     target = tmp_path / "templates" / "letters" / "TestDoc" / "default.html.j2"
     target.parent.mkdir(parents=True)
     target.write_text("hi")
-    assert find_signing_template(tmp_path, "TestDoc") == target
-
-
-def test_find_signing_template_miss(tmp_path: Path) -> None:
-    assert find_signing_template(tmp_path, "Nothing") is None
+    assert find_signing_template(tmp_path, entity) == (target if found else None)

@@ -67,39 +67,39 @@ Files dominated by tests that pin internal call shapes (high mocks, short body, 
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 9023
+- **Twin pairs**: 8647
 
 ### Top 30 twin pairs
 
 | File A | File B | A | B | Shared | Overlap |
 |---|---|---:|---:|---:|---:|
-| `test_parser.py` | `test_rbac_verifier.py` | 130 | 43 | 36 | 0.84 |
-| `test_fidelity_scorer.py` | `test_parser.py` | 39 | 130 | 34 | 0.87 |
 | `test_fidelity_scorer.py` | `test_rbac_verifier.py` | 39 | 43 | 29 | 0.74 |
-| `test_parser.py` | `test_workspace_layout_prefs.py` | 130 | 31 | 29 | 0.94 |
-| `test_parser.py` | `test_structured_content.py` | 130 | 32 | 27 | 0.84 |
-| `test_events.py` | `test_parser.py` | 36 | 130 | 26 | 0.72 |
 | `test_expression_lang.py` | `test_org_activation.py` | 82 | 36 | 26 | 0.72 |
 | `test_expression_lang.py` | `test_rbac_ui_fixes.py` | 82 | 30 | 26 | 0.87 |
 | `test_persona_journey.py` | `test_ux_contract_checker.py` | 55 | 36 | 26 | 0.72 |
-| `test_parser.py` | `test_rbac_ui_fixes.py` | 130 | 30 | 25 | 0.83 |
-| `test_parser.py` | `test_ses_adapter.py` | 130 | 31 | 24 | 0.77 |
-| `test_parser.py` | `test_sla_manager.py` | 130 | 32 | 24 | 0.75 |
 | `test_expression_lang.py` | `test_sla_manager.py` | 82 | 32 | 23 | 0.72 |
 | `test_workspace_layout_prefs.py` | `test_workspace_rendering.py` | 31 | 46 | 23 | 0.74 |
 | `test_curl_test_generator.py` | `test_pdf_viewer_component.py` | 28 | 52 | 22 | 0.79 |
 | `test_expression_lang.py` | `test_otp_store.py` | 82 | 28 | 22 | 0.79 |
 | `test_expression_lang.py` | `test_workspace_layout_prefs.py` | 82 | 31 | 22 | 0.71 |
 | `test_onboarding_renderer.py` | `test_pdf_viewer_component.py` | 25 | 52 | 22 | 0.88 |
-| `test_parser.py` | `test_session_manager.py` | 130 | 26 | 22 | 0.85 |
-| `test_parser.py` | `test_vendor_mock_generator.py` | 130 | 27 | 22 | 0.81 |
 | `test_demo_data_loader.py` | `test_persona_journey.py` | 27 | 55 | 21 | 0.78 |
 | `test_demo_data_loader.py` | `test_schema_diff.py` | 27 | 40 | 21 | 0.78 |
 | `test_expression_lang.py` | `test_vendor_mock_generator.py` | 82 | 27 | 21 | 0.78 |
-| `test_otp_store.py` | `test_parser.py` | 28 | 130 | 21 | 0.75 |
 | `test_auth_views_login_magic_link.py` | `test_two_factor_views.py` | 22 | 35 | 20 | 0.91 |
 | `test_css_clip_check.py` | `test_expression_lang.py` | 21 | 82 | 20 | 0.95 |
-| `test_css_clip_check.py` | `test_parser.py` | 21 | 130 | 20 | 0.95 |
 | `test_css_clip_check.py` | `test_persona_journey.py` | 21 | 55 | 20 | 0.95 |
 | `test_css_clip_check.py` | `test_workspace_layout_prefs.py` | 21 | 31 | 20 | 0.95 |
 | `test_css_clip_check.py` | `test_workspace_rendering.py` | 21 | 46 | 20 | 0.95 |
+| `test_curl_test_generator.py` | `test_list_chrome_parity_phase1.py` | 28 | 33 | 20 | 0.71 |
+| `test_list_chrome_parity_phase1.py` | `test_site_section_hero_builder.py` | 33 | 23 | 20 | 0.87 |
+| `test_parser.py` | `test_workspace_layout_prefs.py` | 25 | 31 | 20 | 0.8 |
+| `test_parser.py` | `test_workspace_rendering.py` | 25 | 46 | 20 | 0.8 |
+| `test_pdf_viewer_component.py` | `test_site_section_simple_builders.py` | 52 | 27 | 20 | 0.74 |
+| `test_persona_journey.py` | `test_vendor_mock_generator.py` | 55 | 27 | 20 | 0.74 |
+| `test_predicate_policy_mode.py` | `test_workspace_rendering.py` | 28 | 46 | 20 | 0.71 |
+| `test_site_section_final_builders.py` | `test_site_section_simple_builders.py` | 24 | 27 | 20 | 0.83 |
+| `test_sla_manager.py` | `test_vendor_mock_generator.py` | 32 | 27 | 20 | 0.74 |
+| `test_vendor_mock_generator.py` | `test_workspace_rendering.py` | 27 | 46 | 20 | 0.74 |
+| `test_computed_evaluator.py` | `test_expression_lang.py` | 21 | 82 | 19 | 0.9 |
+| `test_css_clip_check.py` | `test_sla_manager.py` | 21 | 32 | 19 | 0.9 |
