@@ -25,12 +25,12 @@ Agents and tools **must** reason in these IDs (not free-text “polymorphism”)
 dazzle representation patterns
 dazzle representation decide --text "company or sole trader client overview"
 dazzle representation classify -p .
-dazzle prove representation -p .
+dazzle agent wall -p .   # Representation: OK|FAIL line (the prove); exits 1 on FAIL
 ```
 
 - **decide** — ladder → `pattern_id` + DSL sketch + reject list
 - **classify** — project AppSpec evidence (hand-rolled poly, exclusive sets, open-via gaps)
-- **prove** — static integrity gate (complements `dazzle db verify` for DB row counts)
+- **prove** — static integrity gate, run by `dazzle agent wall` (complements `dazzle db verify` for DB row counts)
 
 ## Default (opinionated)
 
@@ -153,7 +153,7 @@ Apply via hand migration / ops SQL. Dazzle maps `json` fields to **JSONB**.
 ```bash
 dazzle representation decide --tenant-json
 dazzle representation classify -p .   # json_field info; json_identity_smell warning
-dazzle prove representation -p .
+dazzle agent wall -p .   # Representation: OK|FAIL line (the prove); exits 1 on FAIL
 ```
 
 `json_identity_smell`: entity has only json bags beside system columns — promote
@@ -176,4 +176,4 @@ Locale and money rules ([#1597](https://github.com/manwithacat/dazzle/issues/159
 5. “Kinds of X with shared lifecycle” → state machine or separate entities before `subtype_of:`.
 6. Tenant-variable shape → `rel.json_extension` (core FKs stay columns).
 7. Never dual-lock row drill / open-via — use framework `open:` hops.
-8. Close the loop: `representation classify` + `prove representation` + `db verify`.
+8. Close the loop: `representation classify` + `agent wall` (representation prove) + `db verify`.

@@ -29,24 +29,6 @@ class PhaseKind(StrEnum):
     OFFBOARDING = "offboarding"
 
 
-# ---------------------------------------------------------------------------
-# Standard action vocabulary
-# ---------------------------------------------------------------------------
-
-ACTION_VOCABULARY: dict[str, dict[str, str]] = {
-    # Observe archetype — "show me"
-    "browse": {"archetype": "observe", "meaning": "Navigate, read, verify content visible"},
-    "search": {"archetype": "observe", "meaning": "Find specific items via filtering"},
-    # Act archetype — "do this"
-    "submit": {"archetype": "act", "meaning": "Create or update data"},
-    "upload": {"archetype": "act", "meaning": "Attach a file"},
-    "configure": {"archetype": "act", "meaning": "Adjust settings or preferences"},
-    # Decide archetype — "I've checked this, proceed"
-    "review": {"archetype": "decide", "meaning": "Assess content for correctness"},
-    "approve": {"archetype": "decide", "meaning": "Authorize a state transition"},
-}
-
-
 class SceneSpec(BaseModel):
     """A single scene — a persona action on a surface within a rhythm phase."""
 
@@ -96,30 +78,8 @@ class RhythmSpec(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Evaluation output models
+# Gap analysis models
 # ---------------------------------------------------------------------------
-
-
-class SceneDimensionScore(BaseModel):
-    """Score for a single evaluation dimension of a scene."""
-
-    dimension: Literal["arrival", "orientation", "action", "completion", "confidence"]
-    score: Literal["pass", "partial", "fail", "skip"]
-    evidence: str = Field(..., description="What the agent observed")
-
-    model_config = ConfigDict(frozen=True)
-
-
-class SceneEvaluation(BaseModel):
-    """Agent-produced evaluation of a scene across five dimensions."""
-
-    scene_name: str
-    phase_name: str
-    dimensions: list[SceneDimensionScore]
-    gap_type: Literal["capability", "surface", "workflow", "feedback", "none"]
-    story_ref: str | None = None
-
-    model_config = ConfigDict(frozen=True)
 
 
 class Gap(BaseModel):
@@ -164,27 +124,5 @@ class GapsReport(BaseModel):
     gaps: list[Gap]
     summary: GapsSummary
     roadmap_order: list[Gap]
-
-    model_config = ConfigDict(frozen=True)
-
-
-class LifecycleStep(BaseModel):
-    """Status of one step in the operating model lifecycle."""
-
-    step: int
-    name: str
-    status: Literal["complete", "partial", "not_started"]
-    evidence: str
-    suggestions: list[str] = Field(default_factory=list)
-
-    model_config = ConfigDict(frozen=True)
-
-
-class LifecycleReport(BaseModel):
-    """Full lifecycle status report."""
-
-    steps: list[LifecycleStep]
-    current_focus: str
-    maturity: Literal["new_domain", "building", "evaluating", "mature"]
 
     model_config = ConfigDict(frozen=True)

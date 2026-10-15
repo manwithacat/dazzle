@@ -210,7 +210,6 @@
   "src/dazzle/cli/runtime_impl/build.py": 7,
   "src/dazzle/e2e/runner.py": 1,
   "src/dazzle/cli/qa.py": 29,
-  "src/dazzle/cli/rhythm.py": 15,
   "src/dazzle/page/field_source_alias.py": 1,
   "src/dazzle/core/story_emitter.py": 1,
   "src/dazzle/mcp/server/handlers/dsl/analysis.py": 2,

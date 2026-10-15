@@ -36,7 +36,7 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 
 ### `agent`
 
-Agent closed-loop control plane (#1605): context (brownfield map + runtime.truth + next_steps), prove (static binding evidence), playbook (domain_logic map→bind→scaffold→prove). Does NOT write files — use CLI `dazzle scaffold` / `dazzle prove`. For data-shape judgement (exclusive FKs / poly_ref / JSONB) use CLI `dazzle representation decide` (#1617).
+Agent closed-loop control plane (#1605): context (brownfield map + runtime.truth + next_steps), prove (static binding evidence), playbook (domain_logic map→bind→scaffold→prove). Does NOT write files — use CLI `dazzle scaffold` / `dazzle agent prove`. For data-shape judgement (exclusive FKs / poly_ref / JSONB) use CLI `dazzle representation decide` (#1617).
 
 **Operations (3):** `context`, `prove`, `playbook`
 

@@ -135,19 +135,7 @@ The DSL captures structure deterministically. Agents add temporal and domain-spe
 
 ## Using MCP Tools
 
-Most users won't hand-write rhythm DSL. The MCP agent generates it from natural language:
-
-**Generate a rhythm:**
-```
-"Generate an onboarding rhythm for new users"
-→ rhythm propose (analyzes surfaces + entities, generates complete rhythm DSL)
-```
-
-**Check a rhythm for gaps:**
-```
-"Are there any issues with the onboarding rhythm?"
-→ rhythm evaluate (static analysis: surface existence, entity coverage, navigation coherence)
-```
+The `rhythm` MCP tool reads rhythms back from the parsed AppSpec:
 
 **Find missing rhythms:**
 ```
@@ -161,22 +149,15 @@ Most users won't hand-write rhythm DSL. The MCP agent generates it from natural 
 → rhythm get (full rhythm detail as JSON)
 ```
 
-The `propose` operation is the primary interface. It translates natural language intent into correct DSL — resolving which surfaces a persona would naturally use, grouping them into phases, and emitting valid DSL with explicit surface bindings.
+`rhythm list` names every rhythm with its persona, cadence and phase counts.
 
-## Evaluation: What Gets Checked
+## Gap Analysis
 
-Rhythm evaluation (v1) is static analysis against the parsed AppSpec. No running app required.
-
-Four checks:
-
-1. **Surface existence** — do all `on:` references point to real surfaces?
-2. **Entity coverage** — if a scene references an entity, does the bound surface actually use that entity?
-3. **Navigation coherence** — can the persona navigate between surfaces in scene order? (Uses workspace/experience definitions)
-4. **Phase progression** — do later phases reference data that earlier phases would create?
-
-The output is a structured report: pass/fail per check, with specific gaps identified.
-
-A future v2 will add agent walkthrough — an LLM agent navigating the running app as the persona, attempting each scene in phase order. Not yet implemented.
+The `pipeline` quality run carries a `rhythm(gaps)` step: static analysis against the
+parsed AppSpec, no running app required. It reports scenes whose story is missing or still
+draft, scenes with no `story:` link, stories no scene references, personas with no ambient
+phase, and personas with stories but no rhythm. The gap kinds,
+severities and ordering are in the [Rhythms reference](../reference/rhythms.md#gaps-analysis).
 
 ## Full Example
 

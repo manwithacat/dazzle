@@ -281,7 +281,7 @@ def _dsl_sketch(pid: PatternId) -> str:
 def _next_steps(pid: PatternId) -> list[str]:
     common = [
         "dazzle representation classify -p .",
-        "dazzle prove representation -p .",
+        "dazzle agent wall -p .  # Representation: OK|FAIL (the prove)",
     ]
     if pid == PatternId.EXCLUSIVE_FKS:
         return [

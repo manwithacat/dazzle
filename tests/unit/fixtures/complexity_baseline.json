@@ -846,13 +846,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/cli/prove.py": {
-    "functions": {
-      "prove_representation_cmd": 12,
-      "prove_story": 15
-    },
-    "mi_rank": "A"
-  },
   "dazzle/cli/qa.py": {
     "functions": {
       "_build_db_reader": 1,
@@ -920,17 +913,6 @@
       "representation_decide": 12,
       "representation_gin_sql": 2,
       "representation_patterns": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/rhythm.py": {
-    "functions": {
-      "landing_drift_lines": 3,
-      "rhythm_evaluate": 2,
-      "rhythm_fidelity": 4,
-      "rhythm_gaps": 2,
-      "rhythm_lifecycle": 2,
-      "rhythm_propose": 2
     },
     "mi_rank": "A"
   },
@@ -1247,15 +1229,6 @@
       "_render_json_report": 4,
       "run_guide_walk": 12,
       "run_interaction_walk": 17
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/vocab.py": {
-    "functions": {
-      "vocab_expand": 9,
-      "vocab_init": 6,
-      "vocab_list": 19,
-      "vocab_show": 12
     },
     "mi_rank": "A"
   },
@@ -3633,13 +3606,9 @@
       "Gap": 1,
       "GapsReport": 1,
       "GapsSummary": 1,
-      "LifecycleReport": 1,
-      "LifecycleStep": 1,
       "PhaseKind": 1,
       "PhaseSpec": 1,
       "RhythmSpec": 1,
-      "SceneDimensionScore": 1,
-      "SceneEvaluation": 1,
       "SceneSpec": 1
     },
     "mi_rank": "A"
@@ -9789,24 +9758,15 @@
   },
   "dazzle/mcp/server/handlers/rhythm.py": {
     "functions": {
-      "_action_matches": 7,
       "_build_gaps_summary": 3,
-      "_extract_keywords": 5,
       "_layer_evaluated_gaps": 9,
-      "_load_latest_scores": 4,
-      "_naive_stem": 4,
       "_seed_gap_relations": 6,
-      "_submit_scores": 3,
       "_surfaces_accessible_by_persona": 8,
       "coverage_rhythms_handler": 14,
       "gaps_rhythm_handler": 1,
       "get_rhythm_handler": 6,
       "list_rhythms_handler": 6,
-      "rhythm_evaluate_impl": 37,
-      "rhythm_fidelity_impl": 31,
-      "rhythm_gaps_impl": 16,
-      "rhythm_lifecycle_impl": 44,
-      "rhythm_propose_impl": 16
+      "rhythm_gaps_impl": 16
     },
     "mi_rank": "C"
   },
@@ -12631,8 +12591,7 @@
     "functions": {
       "_partition_findings": 10,
       "_prove_note": 1,
-      "prove_representation": 11,
-      "prove_representation_project": 2
+      "prove_representation": 11
     },
     "mi_rank": "A"
   },

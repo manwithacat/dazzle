@@ -332,7 +332,7 @@ def classify_appspec(appspec: Any) -> dict[str, Any]:
         "findings": findings,
         "note": (
             "Classification is static AppSpec evidence (#1617). "
-            "Use dazzle prove representation to gate integrity."
+            "Use dazzle agent wall (its representation prove) to gate integrity."
         ),
     }
 

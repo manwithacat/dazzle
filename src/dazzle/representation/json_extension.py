@@ -25,5 +25,5 @@ def json_extension_checklist() -> list[str]:
         "List/detail: omit json columns or accept compact summary (not raw dump)",
         "Query paths into the bag: apply GIN via gin_index_sql() / hand migration",
         "dazzle representation decide --tenant-json → rel.json_extension",
-        "dazzle prove representation catches json_identity_smell",
+        "dazzle agent wall (representation prove) catches json_identity_smell",
     ]

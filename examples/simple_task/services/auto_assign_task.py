@@ -18,7 +18,7 @@
 """Host implementation for ``auto_assign_task`` (#1605 closed loop / ST-017).
 
 Demo body: picks a stable synthetic assignee UUID and a human reason so
-``dazzle prove story --journey`` / ``--runtime`` can pass_host readiness.
+``dazzle agent prove --journey`` / ``--runtime`` can pass_host readiness.
 Replace with real repository lookups in dual-lock production.
 """
 

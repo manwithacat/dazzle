@@ -392,13 +392,9 @@ from .rhythm import (
     Gap,
     GapsReport,
     GapsSummary,
-    LifecycleReport,
-    LifecycleStep,
     PhaseKind,
     PhaseSpec,
     RhythmSpec,
-    SceneDimensionScore,
-    SceneEvaluation,
     SceneSpec,
 )
 
@@ -1039,13 +1035,9 @@ __all__ = [
     "Gap",
     "GapsReport",
     "GapsSummary",
-    "LifecycleReport",
-    "LifecycleStep",
     "PhaseKind",
     "PhaseSpec",
     "RhythmSpec",
-    "SceneDimensionScore",
-    "SceneEvaluation",
     "SceneSpec",
     # Seed Templates (v0.38.0)
     "SeedFieldTemplate",

@@ -1,9 +1,9 @@
 {
-  "src_lines": 322538,
-  "test_lines": 310741,
-  "docs_lines": 48045,
+  "src_lines": 321100,
+  "test_lines": 310092,
+  "docs_lines": 47923,
   "construct_count": 31,
-  "written": "2026-10-15",
+  "written": "2026-10-16",
   "exceptions": [
     {
       "date": "2026-10-11",

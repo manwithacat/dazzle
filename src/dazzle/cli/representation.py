@@ -22,7 +22,7 @@ from dazzle.representation import (
 representation_app = typer.Typer(
     help=(
         "Data-representation judgement (#1617): named hatch patterns, "
-        "decide ladder, project classify. Pair with `dazzle prove representation`."
+        "decide ladder, project classify. Pair with `dazzle agent wall` (representation prove)."
     ),
     no_args_is_help=True,
 )

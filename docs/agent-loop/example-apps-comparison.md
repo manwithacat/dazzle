@@ -20,6 +20,6 @@ After label: `after-1605-sequence` @ `37051220c`
 ## What changed
 - MCP `agent` tool: context / prove / playbook
 - Story DSL: `executed_by` + `narrative_only`; validate hard-fails accepted+unbound
-- CLI: `dazzle scaffold`, `dazzle prove story`
+- CLI: `dazzle scaffold`, `dazzle agent prove`
 - Example accepted stories migrated (narrative_only or process bind)
 - Prove ST-017: `{'story_id': 'ST-017', 'executed_by': 'process.task_auto_assignment', 'result': 'pass', 'reason': 'process_exists', 'evidence': ['process:task_auto_assignment']}`

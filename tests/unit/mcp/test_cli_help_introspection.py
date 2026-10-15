@@ -61,8 +61,6 @@ class TestIntrospectionCompleteness:
         "mcp run",
         "mcp setup",
         "deploy plan",
-        "vocab init",
-        "vocab list",
         "auth create-user",
         "auth list-users",
         "db revision",

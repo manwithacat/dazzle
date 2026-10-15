@@ -250,23 +250,10 @@ entity TicketArticle "Related Article":
 
 ## Commands
 
+The parser expands every `@use` from `manifest.yml` when it loads the DSL, so
+there is no separate vocabulary command: browse the entries in `manifest.yml`.
+
 ```bash
-# List all vocabulary entries
-dazzle vocab list
-
-# List by category
-dazzle vocab list --scope data
-dazzle vocab list --scope ui
-dazzle vocab list --scope workflow
-
-# Show details of specific entry
-dazzle vocab show ticket_entity
-dazzle vocab show comment_entity
-dazzle vocab show ticket_lifecycle
-
-# Expand DSL file to see generated code
-dazzle vocab expand dsl/app.dsl
-
 # Validate and build with vocabulary
 dazzle validate
 dazzle build
@@ -274,7 +261,7 @@ dazzle build
 
 ## Tags
 
-Find entries by tag:
+Entries carry tags in `manifest.yml`:
 - `common` - Frequently used patterns
 - `audit`, `timestamp` - Time tracking
 - `enum`, `status`, `priority`, `ticket` - Status and priority fields
@@ -283,13 +270,6 @@ Find entries by tag:
 - `entity`, `comment`, `discussion`, `template`, `pattern` - Entity templates
 - `crud`, `ui`, `dashboard`, `form` - User interface patterns
 - `workflow`, `lifecycle`, `experience` - Process patterns
-
-```bash
-# Filter by tag
-dazzle vocab list --tag ticket
-dazzle vocab list --tag workflow
-dazzle vocab list --tag ui
-```
 
 ## Stability Levels
 

@@ -5,7 +5,6 @@ This package contains the main CLI application and modularized sub-commands:
 
 - runtime_impl/: Runtime commands (serve, build, stop, etc.)
 - project.py: Project commands (init, validate, lint, etc.)
-- vocab.py: Vocabulary management commands
 - testing.py: Test commands
 - e2e.py: E2E testing (UX coverage, viewport)
 - mcp.py: MCP server commands
@@ -207,11 +206,9 @@ from dazzle.cli.fitness import fitness_app  # noqa: E402
 from dazzle.cli.mcp import mcp_app  # noqa: E402
 from dazzle.cli.perf import perf_app  # noqa: E402
 from dazzle.cli.pipeline import pipeline_app  # noqa: E402
-from dazzle.cli.prove import prove_app  # noqa: E402
 from dazzle.cli.qa import qa_app  # noqa: E402
 from dazzle.cli.rbac import rbac_app  # noqa: E402
 from dazzle.cli.representation import representation_app  # noqa: E402
-from dazzle.cli.rhythm import rhythm_app  # noqa: E402
 from dazzle.cli.scaffold import scaffold_app  # noqa: E402
 from dazzle.cli.sentinel import sentinel_app  # noqa: E402
 from dazzle.cli.signing import signing_app  # noqa: E402
@@ -220,7 +217,6 @@ from dazzle.cli.story import story_app  # noqa: E402
 from dazzle.cli.tenant import tenant_app  # noqa: E402
 from dazzle.cli.testing import test_app  # noqa: E402
 from dazzle.cli.ux import ux_app  # noqa: E402
-from dazzle.cli.vocab import vocab_app  # noqa: E402
 
 app.add_typer(analytics_app, name="analytics")
 app.add_typer(agent_app, name="agent")
@@ -230,9 +226,7 @@ app.add_typer(db_app, name="db")
 app.add_typer(demo_app, name="demo")
 app.add_typer(fitness_app, name="fitness")
 app.add_typer(docs_app, name="docs")
-app.add_typer(vocab_app, name="vocab")
 app.add_typer(scaffold_app, name="scaffold")
-app.add_typer(prove_app, name="prove")
 app.add_typer(representation_app, name="representation")
 app.add_typer(story_app, name="story")
 app.add_typer(tenant_app, name="tenant")
@@ -245,7 +239,6 @@ app.add_typer(pipeline_app, name="pipeline")
 app.add_typer(perf_app, name="perf")
 app.add_typer(rbac_app, name="rbac")
 app.add_typer(mcp_app, name="mcp")
-app.add_typer(rhythm_app, name="rhythm")
 app.add_typer(qa_app, name="qa")
 app.add_typer(sentinel_app, name="sentinel")
 app.add_typer(ux_app, name="ux")

@@ -49,12 +49,6 @@ There is no `init` command. Start a new app with the MCP `bootstrap` tool (from 
 |---------|-------------|
 | `dazzle deploy` | Plan infrastructure + generate buildpack (Heroku) deploy files |
 
-### Vocabulary
-
-| Command | Description |
-|---------|-------------|
-| `dazzle vocab` | Manage app-local vocabulary (macros, aliases, patterns) |
-
 ### Tooling
 
 | Command | Description |
@@ -86,11 +80,9 @@ there requires a row here.
 | `dazzle mcp` | MCP (Model Context Protocol) server commands |
 | `dazzle perf` | On-demand local OpenTelemetry tracing |
 | `dazzle pipeline` | Run the deterministic quality pipeline |
-| `dazzle prove` | Static story binding evidence (agent closed loop #1605) + representation prove (#1617) |
 | `dazzle qa` | QA toolkit — visual quality evaluation and screenshot capture |
 | `dazzle rbac` | RBAC verification and compliance |
 | `dazzle representation` | Data-representation judgement — patterns, decide, classify (#1617) |
-| `dazzle rhythm` | Rhythm analysis and lifecycle management |
 | `dazzle scaffold` | Scaffold domain artefacts from agent closed-loop maps (#1605) |
 | `dazzle sentinel` | SaaS Sentinel — failure-mode detection for Dazzle applications |
 | `dazzle signing` | Provision the native document signing primitive |
@@ -99,7 +91,6 @@ there requires a row here.
 | `dazzle tenant` | Multi-tenant schema management |
 | `dazzle test` | Multi-tier test runner (dsl-run / playwright / agent) |
 | `dazzle ux` | UX verification — deterministic interaction testing |
-| `dazzle vocab` | Manage app-local vocabulary (macros, aliases, patterns) |
 
 ---
 

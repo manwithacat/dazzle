@@ -7,13 +7,9 @@ from dazzle.core.ir.rhythm import (
     Gap,
     GapsReport,
     GapsSummary,
-    LifecycleReport,
-    LifecycleStep,
     PhaseKind,
     PhaseSpec,
     RhythmSpec,
-    SceneDimensionScore,
-    SceneEvaluation,
     SceneSpec,
 )
 
@@ -55,8 +51,8 @@ def test_scene_spec_frozen():
         pass
 
 
-def test_phase_spec_and_evaluation_models():
-    """Combined: PhaseSpec, SceneDimensionScore, SceneEvaluation, Gap."""
+def test_phase_spec_and_gap_models():
+    """Combined: PhaseSpec, Gap."""
     # PhaseSpec construction
     scenes = [
         SceneSpec(name="browse", surface="course_list"),
@@ -65,33 +61,6 @@ def test_phase_spec_and_evaluation_models():
     phase = PhaseSpec(name="discovery", scenes=scenes)
     assert phase.name == "discovery"
     assert len(phase.scenes) == 2
-
-    # SceneDimensionScore — basic
-    score = SceneDimensionScore(
-        dimension="arrival",
-        score="pass",
-        evidence="Page loaded successfully",
-    )
-    assert score.dimension == "arrival"
-    assert score.score == "pass"
-
-    # SceneEvaluation
-    dims = [
-        SceneDimensionScore(dimension="arrival", score="pass", evidence="ok"),
-        SceneDimensionScore(dimension="orientation", score="pass", evidence="ok"),
-        SceneDimensionScore(dimension="action", score="fail", evidence="no button"),
-        SceneDimensionScore(dimension="completion", score="skip", evidence="n/a"),
-        SceneDimensionScore(dimension="confidence", score="skip", evidence="n/a"),
-    ]
-    ev = SceneEvaluation(
-        scene_name="browse",
-        phase_name="discovery",
-        dimensions=dims,
-        gap_type="capability",
-        story_ref="browse_courses",
-    )
-    assert ev.gap_type == "capability"
-    assert len(ev.dimensions) == 5
 
     # Gap
     gap = Gap(
@@ -215,35 +184,3 @@ def test_gaps_report():
     )
     assert len(report.gaps) == 1
     assert report.roadmap_order[0].kind == "ambient"
-
-
-# --- Task 6: Lifecycle models ---
-
-
-def test_lifecycle_step():
-    step = LifecycleStep(
-        step=1,
-        name="model_domain",
-        status="complete",
-        evidence="5 entities with fields and relationships",
-        suggestions=[],
-    )
-    assert step.status == "complete"
-
-
-def test_lifecycle_report():
-    steps = [
-        LifecycleStep(
-            step=1, name="model_domain", status="complete", evidence="ok", suggestions=[]
-        ),
-        LifecycleStep(
-            step=2,
-            name="write_stories",
-            status="not_started",
-            evidence="",
-            suggestions=["Run story propose"],
-        ),
-    ]
-    report = LifecycleReport(steps=steps, current_focus="write_stories", maturity="new_domain")
-    assert report.maturity == "new_domain"
-    assert report.current_focus == "write_stories"

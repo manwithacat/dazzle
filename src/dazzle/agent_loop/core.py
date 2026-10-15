@@ -380,7 +380,7 @@ def next_steps(payload: dict[str, Any]) -> list[dict[str, str]]:
                 "kind": "cli",
                 "command": (
                     f"Bind accepted story {sid} (executed_by or narrative_only), then "
-                    f"`dazzle prove story {sid} --static` "
+                    f"`dazzle agent prove {sid} --static` "
                     f"or bulk: `dazzle story bind-migrate --unbound-to narrative_only`"
                 ),
             }
@@ -390,7 +390,7 @@ def next_steps(payload: dict[str, Any]) -> list[dict[str, str]]:
             {
                 "rank": "1",
                 "kind": "cli",
-                "command": "dazzle prove story --static  # re-check binding evidence (not runtime)",
+                "command": "dazzle agent prove --static  # re-check binding evidence (not runtime)",
             }
         )
 

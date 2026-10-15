@@ -240,7 +240,7 @@ def _representation_instruction_bits(
         (
             f"4b. Data shape (#1617): analysis.representation_decision chose **{pid}**. "
             f"Author DSL per that sketch; reject list is binding. After entities+open-via, "
-            f"run `dazzle prove representation`. "
+            f"run `dazzle agent wall` (its Representation line is the prove). "
             f"Playbook: agent(operation=playbook, name=domain_data_shape)."
         ),
     ]

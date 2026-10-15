@@ -132,16 +132,10 @@ entity Task "Task":
 
 ## Commands
 
+The parser expands every `@use` from `manifest.yml` when it loads the DSL, so
+there is no separate vocabulary command: browse the entries in `manifest.yml`.
+
 ```bash
-# List all vocabulary entries
-dazzle vocab list
-
-# Show details of specific entry
-dazzle vocab show crud_surface_set
-
-# Expand DSL file to see generated code
-dazzle vocab expand dsl/app.dsl
-
 # Validate and build with vocabulary
 dazzle validate
 dazzle build
@@ -149,7 +143,7 @@ dazzle build
 
 ## Tags
 
-Find entries by tag:
+Entries carry tags in `manifest.yml`:
 - `common` - Frequently used patterns
 - `audit`, `timestamp` - Time tracking
 - `enum`, `status`, `priority` - Enumeration fields
@@ -157,12 +151,6 @@ Find entries by tag:
 - `crud`, `ui` - User interface patterns
 - `form`, `list`, `detail` - Specific surface types
 - `entity`, `template` - Complete entity templates
-
-```bash
-# Filter by tag
-dazzle vocab list --tag common
-dazzle vocab list --tag ui
-```
 
 ## Stability Levels
 

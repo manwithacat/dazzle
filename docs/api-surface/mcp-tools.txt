@@ -12,8 +12,8 @@
 # Count: 19 tools
 
 tool: agent
-  description_hash: cd8534578f40
-  description_len: 352
+  description_hash: 4a70c1acfcb7
+  description_len: 358
   {
     "properties": {
       "mode": {

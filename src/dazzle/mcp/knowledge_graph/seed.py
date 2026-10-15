@@ -20,8 +20,9 @@ logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
 SEED_SCHEMA_VERSION = (
-    48  # v48: pattern `capability` gate removed (ship AI); v47: enterprise_sso pattern parked (ship AD, DD-013); v46: KB stops teaching
-    # unread clauses (ship X); v41: MCP tools removed (ship I)
+    49  # v49: rhythm doc page drops evaluate/lifecycle (ship AS); v48: pattern `capability`
+    # gate removed (ship AI); v47: enterprise_sso pattern parked (ship AD, DD-013); v46: KB
+    # stops teaching unread clauses (ship X); v41: MCP tools removed (ship I)
 )
 
 

@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 282 BaseModels, 103 Enums, 17 other (functions / typealiases / constants)
+# Counts: 278 BaseModels, 103 Enums, 17 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -1236,13 +1236,6 @@ ir_class: LensAggregatePrimary
     - share: str | None = None
     - via: ViaCondition | None = None
 
-ir_class: LifecycleReport
-  required:
-    - current_focus: str
-    - maturity: Literal[new_domain, building, evaluating, mature]
-    - steps: list[LifecycleStep]
-  optional: (none)
-
 ir_class: LifecycleSpec
   required:
     - states: list[LifecycleStateSpec]
@@ -1255,15 +1248,6 @@ ir_class: LifecycleStateSpec
     - name: str
     - order: int
   optional: (none)
-
-ir_class: LifecycleStep
-  required:
-    - evidence: str
-    - name: str
-    - status: Literal[complete, partial, not_started]
-    - step: int
-  optional:
-    - suggestions: list[str] = []
 
 ir_class: LifecycleTransitionSpec
   required:
@@ -1815,22 +1799,6 @@ ir_class: ScenarioSpec
     - description: str | None = None
     - persona_entries: list[PersonaScenarioEntry] = []
     - seed_data_path: str | None = None
-
-ir_class: SceneDimensionScore
-  required:
-    - dimension: Literal[arrival, orientation, action, completion, confidence]
-    - evidence: str
-    - score: Literal[pass, partial, fail, skip]
-  optional: (none)
-
-ir_class: SceneEvaluation
-  required:
-    - dimensions: list[SceneDimensionScore]
-    - gap_type: Literal[capability, surface, workflow, feedback, none]
-    - phase_name: str
-    - scene_name: str
-  optional:
-    - story_ref: str | None = None
 
 ir_class: SceneSpec
   required:

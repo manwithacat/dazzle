@@ -23,7 +23,6 @@ def attach_representation_to_wall(wall: dict[str, Any], appspec: Any) -> dict[st
             "classify_counts": proved.get("classify_counts"),
             "commands": {
                 "classify": "dazzle representation classify -p .",
-                "prove": "dazzle prove representation -p .",
             },
         }
         note = out.get("note") or ""

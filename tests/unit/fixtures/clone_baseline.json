@@ -24,14 +24,6 @@
     ]
   },
   {
-    "signature": "c110390b0e47acf8a942164d3be42943",
-    "count": 2,
-    "names": [
-      "dazzle/cli/rhythm.py::rhythm_gaps",
-      "dazzle/cli/rhythm.py::rhythm_lifecycle"
-    ]
-  },
-  {
     "signature": "exact:c401f08efd6a7dae7009649c0c6f3ccc",
     "count": 8,
     "names": [

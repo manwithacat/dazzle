@@ -57,7 +57,7 @@ Do **not** invert this order. Equal-looking files are not equal in authority
 2. `AGENTS.md` for commands and hard rules
 3. ADR if the change is constitutional
 4. DD if the work is labeled `future` or residual of a closed umbrella
-5. Counter-prior / representation prove if the design smells like a known failure
+5. Counter-prior (MCP `knowledge counter_prior`) if the design smells like a known failure
 6. Examples and source only after the above
 
 ## How ADRs, DDs, and counter-priors compose

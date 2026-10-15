@@ -21,8 +21,8 @@ Paper: [Epistemic Engineering](https://doi.org/10.5281/zenodo.21415599) (Barlow,
 5. **Constitutional?** → `docs/adr/`.
 6. **Parked residual / `future` issue?** → `docs/decisions/` (`rg '^status: PARKED'`).
    Do **not** implement a PARKED DD without moving it to `FORCED` with a named consumer.
-7. **Design smells like a corpus pathology?** → `docs/counter-priors/` or
-   `dazzle prove representation` / MCP knowledge counter_prior.
+7. **Design smells like a corpus pathology?** → `docs/counter-priors/` via
+   MCP `knowledge counter_prior` (`code_shape=` / `query=`).
 8. **Then** code / DSL / unit packs / examples.
 
 ## Authority (do not invert)

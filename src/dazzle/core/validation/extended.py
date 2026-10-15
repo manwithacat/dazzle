@@ -523,7 +523,7 @@ def _lint_story_execution_bindings(appspec: ir.AppSpec) -> tuple[list[str], list
 
     Returns (errors, warnings). Errors hard-fail validate so ST-xxx is not
     acceptance theatre. Shape of executed_by is checked lightly here;
-    ``dazzle prove`` / agent prove do deeper target existence checks.
+    ``dazzle agent prove`` / MCP agent prove do deeper target existence checks.
     """
     errors: list[str] = []
     warnings: list[str] = []

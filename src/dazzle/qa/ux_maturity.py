@@ -497,8 +497,8 @@ CRITERIA: list[Criterion] = [
         "The scene target resolves to a workspace root route OR a list-mode surface's route "
         "keyed by the surface's entity through the app_paths SSOT (so it matches registration, "
         "never a dead link). An explicit default_workspace stays authoritative and cold-start "
-        "(no rhythm) is byte-identical; declared-vs-rhythm drift surfaces as an advisory line "
-        "in `dazzle rhythm fidelity`.",
+        "(no rhythm) is byte-identical; declared-vs-rhythm drift is detected by "
+        "`check_landing_drift` (page/runtime/landing_resolver.py).",
         "medium",
         _probe_2a,
     ),

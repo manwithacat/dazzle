@@ -28,12 +28,10 @@ CATEGORY_MAP: dict[str, str] = {
     "pipeline": "Pipeline",
     "story": "Stories",
     "test": "Testing",
-    "vocab": "Vocabulary",
     "tenant": "Tenancy",
     "rbac": "RBAC",
     "sentinel": "Quality",
     "demo": "Data",
-    "rhythm": "Stories",
     "compliance": "Compliance",
     "docs": "Documentation",
     # --- top-level command names → display category ---

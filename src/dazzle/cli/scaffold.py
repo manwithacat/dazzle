@@ -82,7 +82,7 @@ def {name}({inputs or "*args, **kwargs"}) -> dict[str, Any]:
     path.write_text(body, encoding="utf-8")
     typer.echo(f"Wrote {_display_path(path, root)}")
     typer.echo(f"Bind stories with: executed_by: service.{name}")
-    typer.echo("Prove with: dazzle prove story <ST-id>  # or agent(operation=prove)")
+    typer.echo("Prove with: dazzle agent prove <ST-id>  # or agent(operation=prove)")
 
 
 @scaffold_app.command("story")
@@ -136,7 +136,7 @@ def handle_{fn}(ctx: dict) -> dict:
     typer.echo("--- checklist ---")
     typer.echo(f"1. Edit stories.dsl: bind {story_id} via executed_by or narrative_only")
     typer.echo("2. Implement handler / service / process step")
-    typer.echo(f"3. dazzle prove story {story_id}")
+    typer.echo(f"3. dazzle agent prove {story_id}")
     typer.echo("4. agent(operation=context) — confirm binding_gate pass")
 
 
@@ -170,4 +170,4 @@ def scaffold_process_step(
         typer.echo("1. Declare service: on the step in processes.dsl")
         typer.echo("2. dazzle scaffold service <name>")
     typer.echo(f"3. Bind stories: executed_by: process.{process}.step.{step}")
-    typer.echo("4. dazzle prove story <ST-id>")
+    typer.echo("4. dazzle agent prove <ST-id>")

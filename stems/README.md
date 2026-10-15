@@ -65,7 +65,7 @@ Each stem file:
 1. Open `stems/INDEX.md` → the stem that matches the task
 2. `AGENTS.md` for commands and hard rules
 3. ADR if constitutional; **DD** if the work is parked residual (`future` / umbrella leftover)
-4. Counter-prior / `dazzle prove representation` when the design smells like a known failure
+4. Counter-prior (MCP `knowledge counter_prior`) when the design smells like a known failure
 5. Only then local code / examples
 
 Do not treat `docs/` guides as equal weight to `stems/`.

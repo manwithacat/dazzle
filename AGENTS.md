@@ -216,7 +216,7 @@ MCP = fast knowledge/query (prefer no side effects); CLI = process, writes, long
   point for "build me an app"; `knowledge` (concept, examples, cli_help, workflow,
   counter_prior, search_commands) is the fastest orientation call.
 - **CLI process groups**: `agent`, `auth`, `compliance`, `db`, `demo`, `deploy`, `e2e`,
-  `rbac`, `rhythm`, `sentinel`, `story`, `tenant`, `test`, `ux` —
+  `rbac`, `sentinel`, `story`, `tenant`, `test`, `ux` —
   `dazzle <group> --help` or `dazzle search <keyword>`.
 
 ## Autonomous Loops (awareness)

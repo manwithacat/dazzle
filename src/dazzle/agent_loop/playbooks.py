@@ -14,7 +14,7 @@ Agents must **map → bind → scaffold → prove --static**, not dual-lock chro
 - **MCP** — `agent(operation=context|prove|playbook)` when mcp extra installed
 - **CLI (default dual-lock path)** — no mcp required:
   - `dazzle agent context`
-  - `dazzle prove story --static`
+  - `dazzle agent prove --static`
   - `dazzle agent playbook domain_logic`
   - `dazzle scaffold …`
   - `dazzle story bind-migrate …`
@@ -23,7 +23,7 @@ Agents must **map → bind → scaffold → prove --static**, not dual-lock chro
 1. **Map** — `dazzle agent context`
 2. **Bind** — `executed_by:` or `narrative_only: true` on every accepted story
 3. **Scaffold** — `dazzle scaffold service|story|process-step …`
-4. **Prove** — `dazzle prove story --static` (binding evidence only)
+4. **Prove** — `dazzle agent prove --static` (binding evidence only)
 5. **Gate** — validate fails accepted+unbound
 
 ## Language
@@ -32,7 +32,7 @@ Agents must **map → bind → scaffold → prove --static**, not dual-lock chro
   (service file, entrypoint, not scaffold-only). **Not** browser e2e.
 - `pass_journey` / `fail_journey` / `skip_journey` — surface hub / open-via
   hop graph + process host ready. **Still not** Playwright e2e.
-- `dazzle prove story --runtime` / `--journey`
+- `dazzle agent prove --runtime` / `--journey`
 
 ## Story wall (binding)
 - `dazzle agent wall` — buckets: pass_journey / fail_journey / pass_static /
@@ -67,7 +67,7 @@ features**, not host folklore. Agents must **decide → author → classify → 
 1. **Decide** — `dazzle representation decide --text '…'`
 2. **Author** — DSL sketch from decide (invariant + open for exclusive FKs)
 3. **Classify** — `dazzle representation classify -p .`
-4. **Prove** — `dazzle prove representation -p .`
+4. **Prove** — `dazzle agent wall -p .` (Representation: OK|FAIL line; exits 1 on FAIL)
 5. **DB verify** (optional) — `dazzle db verify` for `exclusive_conflict` rows
 
 ## Commands
@@ -75,7 +75,6 @@ features**, not host folklore. Agents must **decide → author → classify → 
 dazzle representation patterns
 dazzle representation decide --text "company or sole trader client"
 dazzle representation classify -p .
-dazzle prove representation -p .
 dazzle agent wall -p . --markdown   # includes Representation: OK|FAIL line
 dazzle agent playbook domain_data_shape
 ```

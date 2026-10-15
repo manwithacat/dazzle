@@ -27,7 +27,8 @@ that the catalogue cannot answer with TPT / exclusive FKs / JSONB extension.
 - Classify hard-fails hand-rolled `*_type` + `*_id` pairs (`hand_rolled_poly`)
 - Framework `AuditEntry` poly skipped as residual (not a product dual-lock)
 - ADR-0042 realizes ADR-0027’s pre-committed escape hatch for **scoped** poly
-- `dazzle prove representation` / classify / decide are the agent tools
+- `dazzle representation classify` / `decide` and the representation prove
+  (the `Representation:` line of `dazzle agent wall`) are the agent tools
 
 **What P3 is *not*:** re-opening untyped poly or dual-lock host folklore.
 
@@ -39,7 +40,7 @@ that the catalogue cannot answer with TPT / exclusive FKs / JSONB extension.
 3. Keep hand-rolled pairs as hard classify fail
 4. Acceptance:
    - Named consumer app uses `poly_ref` **without** host dual-lock
-   - `representation prove` green on that app
+   - representation prove green on that app (`dazzle agent wall` exits 0)
    - Counter-prior still forbids untyped poly
 
 ### #1622 — STI / EAV-as-JSONB (P4)

@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
-from dazzle.core.appspec_loader import load_project_appspec
-from dazzle.representation.classify import classify_appspec, classify_project
+from dazzle.representation.classify import classify_appspec
 from dazzle.representation.patterns import PatternId
 
 _FAIL_KINDS = frozenset(
@@ -92,23 +90,3 @@ def _prove_note() -> str:
         "Also run `dazzle db verify` for exclusive_conflict row counts. "
         f"Default pattern remains {PatternId.EXPLICIT_REF}."
     )
-
-
-def prove_representation_project(project_root: Path) -> dict[str, Any]:
-    """Load project and prove representation."""
-    root = project_root.resolve()
-    classified = classify_project(root)
-    if not classified.get("ok"):
-        return {
-            "ok": False,
-            "result": "fail_representation",
-            "error": classified.get("error"),
-            "checked": 0,
-            "passed": 0,
-            "failed": 1,
-        }
-    appspec = load_project_appspec(root)
-    out = prove_representation(appspec)
-    out["project_root"] = str(root)
-    out["classify_counts"] = classified.get("counts")
-    return out

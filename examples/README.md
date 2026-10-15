@@ -60,14 +60,9 @@ but *journey hubs*, *open-via hops*, and *representation integrity* so agents
 don’t stop at warehouse-style lists (CyFuture pilot criticism).
 
 ```bash
-# Fleet: every example with dazzle.toml
-bash scripts/example_agent_prove.sh
-
-# Single app
 cd examples/simple_task
-dazzle prove representation -p .
-dazzle prove story --journey
-dazzle agent wall -p . --markdown
+dazzle agent prove --journey
+dazzle agent wall -p . --markdown   # Representation: OK|FAIL line is the representation prove
 dazzle agent playbook domain_data_shape
 ```
 
