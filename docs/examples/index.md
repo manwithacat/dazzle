@@ -63,10 +63,10 @@ Examples are tested in CI with different priority levels:
 
 ## Creating Your Own
 
-Start a new project with:
+Copy `simple_task` and edit it, or run the MCP `bootstrap` tool against a `SPEC.md`:
 
 ```bash
-dazzle init my_app
+cp -r examples/simple_task my_app
 cd my_app
 dazzle serve
 ```

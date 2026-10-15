@@ -278,7 +278,7 @@ _TITLECASE_TOKEN = re.compile(r"\b([A-Z][a-z]+(?:[A-Z][a-z]+)*)\b")
 # ---------------------------------------------------------------------------
 #
 # The Domain map is a markdown table under a ``## Domain map`` heading in
-# ``SPEC.md`` (laid down by ``dazzle init`` since v0.70.46). The strict
+# ``SPEC.md`` (scaffolded by the since-removed ``dazzle init``). The strict
 # guard requires every DSL entity to appear as an entity name in some row
 # of that table — substring matches in prose don't count.
 #

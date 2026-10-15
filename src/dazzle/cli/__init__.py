@@ -71,13 +71,11 @@ def main_callback(
 # Project Commands (top-level)
 # =============================================================================
 from dazzle.cli.project import (  # noqa: E402
-    init_command,
     inspect_command,
     lint_command,
     validate_command,
 )
 
-app.command(name="init")(init_command)
 app.command(name="validate")(validate_command)
 app.command(name="lint")(lint_command)
 # `inspect_command` (project entities/surfaces dumper) is registered

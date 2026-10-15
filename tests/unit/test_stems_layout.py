@@ -90,9 +90,3 @@ def test_all_examples_have_stems() -> None:
         if not local or any(not p.is_file() for p in local):
             missing.append(f"{path.name}:broken-index")
     assert not missing, f"examples missing coherent stems/: {missing}"
-
-
-def test_blank_template_includes_stems() -> None:
-    blank = REPO / "src" / "dazzle" / "templates" / "blank" / "stems"
-    assert (blank / "README.md").is_file()
-    assert (blank / "INDEX.md").is_file()

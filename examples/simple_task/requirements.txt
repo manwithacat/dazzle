@@ -7,9 +7,9 @@
 #
 # The distribution is `dazzle-dsl` — `dazzle` is a different, unrelated
 # package on PyPI (PEP 503 normalises only the import name, which stays
-# `dazzle`). The major.minor pin is substituted at `dazzle init` time and
-# tracks the installed framework (#1630).
-dazzle-dsl~={{framework_minor}}
+# `dazzle`). Pin the major.minor of the framework you run, e.g.
+# `dazzle-dsl~=0.117`, matching `framework_version` in dazzle.toml (#1630).
+dazzle-dsl
 fastapi>=0.100.0
 uvicorn[standard]>=0.24.0
 pydantic>=2.0

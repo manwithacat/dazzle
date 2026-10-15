@@ -24,8 +24,6 @@ src/dazzle/
 │   ├── main.py         # CLI entry point (Click-based)
 │   ├── commands/       # CLI command implementations
 │   └── output.py       # CLI output formatting
-├── templates/          # Project templates
-│   └── blank/          # Blank project template
 └── __init__.py         # Package initialization
 ```
 
@@ -182,7 +180,6 @@ def build(format):
 ```
 
 **Commands**:
-- `dazzle init` - Create new project
 - `dazzle validate` - Validate DSL
 - `dazzle build` - Generate artifacts
 - `dazzle lint` - Run linter

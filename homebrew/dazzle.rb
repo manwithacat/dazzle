@@ -135,13 +135,12 @@ class Dazzle < Formula
     <<~EOS
       DAZZLE has been installed!
 
-      Quick start:
-        dazzle init my-project
+      Quick start: copy examples/simple_task from the Dazzle
+      repository (or run the MCP bootstrap tool), then:
         cd my-project
         dazzle serve
 
       Commands:
-        dazzle init       Create a new project
         dazzle serve      Start development server (API + UI)
         dazzle validate   Validate DSL files
         dazzle lint       Extended checks

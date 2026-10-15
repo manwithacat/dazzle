@@ -169,19 +169,3 @@ def test_unavailable_commands_not_written(minimal_project: Path) -> None:
     # issues requires GitHub remote
     assert not (commands_dir / "issues.md").exists()
     assert not (skills_root / "issues").exists()
-
-
-def test_blank_template_has_harness_neutral_layout() -> None:
-    """Product blank template mirrors the in-repo multi-agent layout (#1575)."""
-    from dazzle import __file__ as dazzle_file
-
-    blank = Path(dazzle_file).resolve().parent / "templates" / "blank"
-    agents = (blank / "AGENTS.md").read_text()
-    assert "Canonical project instructions" in agents
-    claude = (blank / ".claude" / "CLAUDE.md").read_text()
-    first = next(ln for ln in claude.splitlines() if ln.strip())
-    assert re.fullmatch(r"@(\.\./)?AGENTS\.md", first.strip())
-    assert len(claude.splitlines()) <= 30
-    copilot = (blank / ".github" / "copilot-instructions.md").read_text()
-    assert "AGENTS.md" in copilot
-    assert len(copilot.splitlines()) <= 25

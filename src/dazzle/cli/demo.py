@@ -82,7 +82,7 @@ def _find_data_dir(project_root: Path) -> Path | None:
     1. ``demo_data/`` at the project root (explicit, user-curated)
     2. ``.dazzle/demo_data/`` (generated via ``dazzle demo generate``)
     3. ``dsl/seeds/demo_data/`` (blueprint-only — the default location
-       used by ``dazzle init`` and by the example apps; #817)
+       used by the example apps; #817)
     """
     for candidate in [
         project_root / "demo_data",

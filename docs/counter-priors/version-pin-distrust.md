@@ -7,7 +7,7 @@ summary: >-
   Trusting CLI banner version alone for dazzle.toml framework_version pins, or
   inventing pins from partial package metadata. Use installed package version
   (dazzle version / status.mcp version_cognition), project pin, and compatibility
-  together. Init now stamps ~{{framework_minor}} from installed package (#1629 G7).
+  together (#1629 G7).
 triggers_text:
   - "framework_version"
   - "install ~0."
@@ -51,7 +51,7 @@ while pin and installed may already match under tilde rules
 
 ## Right shape
 
-1. After `dazzle init`, pin is `~{{major.minor}}` from **installed** package.
+1. A new project pins `framework_version = "~major.minor"` of the **installed** package.
 2. For decisions: use `status(operation=mcp)` → `version_cognition` (installed,
    project_pin, compatible) or `dazzle version` / doctor — not banner alone.
 3. If serve rejects pin: fix `framework_version` in dazzle.toml to match

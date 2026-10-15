@@ -42,7 +42,6 @@ CATEGORY_MAP: dict[str, str] = {
     "build-ui": "Code Generation",
     "build-api": "Code Generation",
     "migrate": "Runtime",
-    "init": "Project",
     "validate": "Validation",
     "lint": "Validation",
     "inspect": "Validation",
@@ -67,14 +66,6 @@ ENRICHMENTS: dict[str, dict[str, Any]] = {
             "Dazzle is the recommended runtime - no code generation needed",
             "Use --test-mode for E2E testing with Playwright",
             "Set DATABASE_URL / REDIS_URL — dazzle serve runs against your own Postgres + Redis",
-        ],
-    },
-    "init": {
-        "creates": [
-            "dazzle.toml - Project manifest",
-            "dsl/ - DSL source directory",
-            "dsl/app.dsl - Starter DSL file",
-            "README.md - Getting started guide",
         ],
     },
     "lint": {
@@ -272,8 +263,8 @@ dazzle serve           # Start the app
 
 ## Create a New Project
 ```bash
-dazzle init my-app         # Create new project
-dazzle init --from simple_task  # Copy from example
+# Run the `bootstrap` MCP tool, or copy examples/simple_task from the repo
+cp -r examples/simple_task my-app
 ```
 
 ## Validate & Inspect
@@ -437,8 +428,8 @@ def get_workflow_guide(workflow: str) -> dict[str, Any]:
                 {
                     "step": 1,
                     "action": "Create a new project",
-                    "command": "dazzle init my-app && cd my-app",
-                    "notes": "This creates dazzle.toml and dsl/app.dsl starter files",
+                    "command": "cp -r examples/simple_task my-app && cd my-app",
+                    "notes": "Or run the `bootstrap` MCP tool; either gives you dazzle.toml and dsl/app.dsl",
                 },
                 {
                     "step": 2,
@@ -525,9 +516,9 @@ After validation succeeds, generate realistic demo data:
             "steps": [
                 {
                     "step": 1,
-                    "action": "Initialize project",
-                    "command": "dazzle init my-app",
-                    "notes": "Or use --from simple_task to copy an example",
+                    "action": "Start from the minimal example",
+                    "command": "cp -r examples/simple_task my-app",
+                    "notes": "Or run the `bootstrap` MCP tool from a SPEC.md",
                 },
                 {
                     "step": 2,

@@ -9,12 +9,15 @@ Build a complete task manager from scratch in 10 minutes.
 
 ## Step 1: Create Project
 
+Copy the minimal example from the Dazzle repository (or run the MCP
+`bootstrap` tool against a `SPEC.md`):
+
 ```bash
-dazzle init my_tasks
+cp -r examples/simple_task my_tasks
 cd my_tasks
 ```
 
-This creates:
+The parts you edit:
 
 ```
 my_tasks/

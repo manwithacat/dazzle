@@ -346,7 +346,6 @@ namespaces = false
 
 [tool.setuptools.package-data]
 dazzle = ["py.typed"]
-"dazzle.examples" = ["**/*"]
 # Alembic migration assets (#1308). The `dazzle db` CLI loads these by file
 # path via `version_locations` / `script_location` — they are NOT importable
 # modules, so without this entry they're dropped from the wheel: `script.py.mako`
@@ -550,9 +549,7 @@ disable_error_code = ["valid-type"]
 line-length = 100
 target-version = "py312"
 src = ["src"]
-# Exclude bundled examples from linting (they may have auto-generated code)
 exclude = [
-    "src/dazzle/examples/*",
     # Third-party packages accidentally installed into src/
     "src/PIL/",
     "src/contourpy/",

@@ -190,16 +190,6 @@ if [ -f "$PYTHON_PATH" ]; then
     else
         echo "❌ Failed to import dazzle module"
     fi
-
-    # Check examples
-    echo
-    echo "📦 Checking bundled examples..."
-    EXAMPLES=$($PYTHON_PATH -c "from dazzle.examples import list_examples; print(','.join(list_examples()))" 2>/dev/null)
-    if [ -n "$EXAMPLES" ]; then
-        echo "✅ Bundled examples: $EXAMPLES"
-    else
-        echo "❌ No bundled examples found"
-    fi
 else
     echo "❌ Python not found at expected location: $PYTHON_PATH"
 fi

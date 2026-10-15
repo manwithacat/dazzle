@@ -120,11 +120,8 @@ app/sync/
 
 ## Scaffold
 
-Generate the `app/` structure for an existing project:
-
-```bash
-dazzle init --with-app    # Add app/ structure to existing project
-```
+Create the `app/` sub-packages by hand as you need them — one directory per
+category above, each with an `__init__.py`, plus a plain `scripts/` directory.
 
 ## Project Post-Build Hook (#1290)
 
@@ -189,4 +186,4 @@ async def integration_transport(request):
 ## See Also
 
 - [Customising rendered output](htmx-templates.md#customising-rendered-output) — custom renderers + per-entity detail viewers (replaces the removed Jinja template-override mechanism)
-- [CLI Reference](cli.md) — `dazzle init` command options
+- [CLI Reference](cli.md) — command options

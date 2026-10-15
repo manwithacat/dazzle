@@ -767,7 +767,7 @@ def load_manifest(path: Path) -> ProjectManifest:
     if not path.exists():
         raise DazzleError(
             f"No dazzle.toml found at {path}. "
-            "Run from a Dazzle project root, or `dazzle init` to create one."
+            "Run from a Dazzle project root; start a new app with the MCP `bootstrap` tool or by copying `examples/simple_task`."
         )
     data = tomllib.loads(path.read_text(encoding="utf-8"))
 

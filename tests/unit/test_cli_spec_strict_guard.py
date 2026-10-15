@@ -47,7 +47,7 @@ def test_extract_domain_map_finds_entities_in_rows() -> None:
 
 def test_extract_domain_map_ignores_placeholder_row() -> None:
     """The `(populated as you add entities)` placeholder row from
-    `dazzle init` must not yield phantom entities."""
+    the old `dazzle init` scaffold must not yield phantom entities."""
     spec = """\
 ## Domain map
 

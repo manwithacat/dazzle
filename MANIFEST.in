@@ -6,9 +6,6 @@ include CONTRIBUTING.md
 # Include type stubs
 recursive-include src/dazzle py.typed *.pyi
 
-# Include templates
-recursive-include src/dazzle/templates *.dsl *.toml *.md .gitignore
-
 # Include UI runtime static files (JS, CSS, fonts). Path updated by #1055
 # (v0.67.98) — dazzle_page nested under dazzle.page. woff2 + OFL.txt added by
 # #1572: the vendored Geist fonts were silently dropped from distributions

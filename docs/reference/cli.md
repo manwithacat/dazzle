@@ -6,9 +6,8 @@ Complete reference for the `dazzle` command-line interface.
 
 ### Project Creation
 
-| Command | Description |
-|---------|-------------|
-| `dazzle init` | Create a new project (optionally from an example) |
+There is no `init` command. Start a new app with the MCP `bootstrap` tool (from a
+`SPEC.md`), or copy `examples/simple_task` from the repository and edit it.
 
 ### Project Operations
 
@@ -106,37 +105,6 @@ there requires a row here.
 ---
 
 ## Key Commands
-
-### dazzle init
-
-Create a new project.
-
-```bash
-dazzle init [PATH] [OPTIONS]
-```
-
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--from` | `-f` | Copy from a built-in example |
-| `--name` | `-n` | Project name (defaults to directory name) |
-| `--title` | `-t` | Project title |
-| `--here` | | Initialize in current directory even if not empty |
-| `--list` | `-l` | List available examples |
-| `--no-llm` | | Skip LLM instrumentation files |
-| `--no-git` | | Skip git repository initialization |
-
-```bash
-# Create new project
-dazzle init my_app
-
-# Create from example
-dazzle init my_app --from simple_task
-
-# List available examples
-dazzle init --list
-```
-
----
 
 ### dazzle validate
 

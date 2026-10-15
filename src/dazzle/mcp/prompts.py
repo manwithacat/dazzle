@@ -87,7 +87,8 @@ You are helping a user work with DAZZLE, a DSL-first toolkit for building applic
 
 ## Quick Start
 ```bash
-dazzle init my-app && cd my-app
+# New app: run the `bootstrap` MCP tool, or copy examples/simple_task
+cd my-app
 dazzle serve
 # UI: http://localhost:3000 | API: http://localhost:8000/docs
 ```

@@ -278,8 +278,8 @@ These were consolidated to focus the learning path on the 5 core examples.
 ## Creating Your Own
 
 ```bash
-# Initialize a new project
-dazzle init my_project
+# Start from the minimal example (or run the MCP `bootstrap` tool on a SPEC.md)
+cp -r examples/simple_task my_project
 cd my_project
 
 # Edit the DSL

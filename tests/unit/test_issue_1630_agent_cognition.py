@@ -140,12 +140,6 @@ def test_demo_ops_lists_stable_ids_and_1630_rules() -> None:
     assert any("runtime.json" in s for s in pb["order"])
 
 
-def test_init_template_framework_version_placeholder() -> None:
-    text = (REPO / "src/dazzle/templates/blank/dazzle.toml").read_text()
-    assert "framework_minor" in text or "~0.106" in text
-    assert "~0.38" not in text
-
-
 def test_or_filter_same_field_collapses_to_in() -> None:
     from dazzle.core import ir
     from dazzle.core.scope_filter_or import or_tree_to_in_filters

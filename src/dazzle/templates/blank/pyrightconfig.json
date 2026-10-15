@@ -1,8 +1,0 @@
-{
-  "typeCheckingMode": "strict",
-  "reportMissingTypeStubs": "warning",
-  "reportUnknownMemberType": "warning",
-  "reportMissingTypeArgument": "error",
-  "reportUntypedFunctionDecorator": "error",
-  "pythonVersion": "3.12"
-}

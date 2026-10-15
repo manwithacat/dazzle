@@ -37,7 +37,7 @@ Resolution order (first match wins):
    - else `grok-cli` if the Grok Build CLI is installed
    - else an error explaining all onboarding paths
 
-New projects (`dazzle init`) pin `driver = "auto"` so evaluating Dazzle
+Leave `driver` unset (or set `driver = "auto"`) so evaluating Dazzle
 works with whichever subscription CLI you already have.
 
 `dazzle doctor` reports the resolved driver and, for subscription

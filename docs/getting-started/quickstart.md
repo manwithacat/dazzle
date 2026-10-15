@@ -22,17 +22,15 @@ entity Task "Task":
 
 ## Step 1: Create a Project
 
+Copy the minimal example from the Dazzle repository:
+
 ```bash
-dazzle init my_app
+cp -r examples/simple_task my_app
 cd my_app
 ```
 
-Or start from a built-in example:
-
-```bash
-dazzle init my_app --from simple_task
-cd my_app
-```
+Or, from an agent session with the Dazzle MCP server, run the `bootstrap` tool
+against a `SPEC.md` describing your app.
 
 ## Step 2: Validate Your DSL
 

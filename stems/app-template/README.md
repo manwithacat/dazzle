@@ -1,8 +1,7 @@
 # App stems (template notes)
 
 Not a runnable example. Copy the pattern into an app’s `stems/` directory
-(see `src/dazzle/templates/blank/stems/` for the scaffold shipped with
-`dazzle init`).
+(see `examples/simple_task/stems/` for a minimal worked app).
 
 ## What goes here
 

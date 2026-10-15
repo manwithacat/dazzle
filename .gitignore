@@ -83,7 +83,6 @@ pytest-of-*/
 # standalone CI can fail a pixel diff. A darwin capture is local.
 packages/hatchi-maxchi/tests/baselines/darwin/
 examples/*/screenshots/
-src/dazzle/examples/**/screenshots/
 tests/e2e/screenshots/
 *.db
 

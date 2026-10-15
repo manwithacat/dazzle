@@ -246,48 +246,21 @@ def _wrong_distribution_sites() -> list[str]:
 
 
 def test_no_wrong_distribution_name_in_install_hints() -> None:
-    """`dazzle[...]` -> `dazzle-dsl[...]`; requirements pin `dazzle-dsl~={{framework_minor}}`.
+    """`dazzle[...]` -> `dazzle-dsl[...]`.
 
     The PyPI distribution is `dazzle-dsl`; `dazzle` is an unrelated package.
     Twenty-one runtime error messages across the process, channels, events, PRA
     and pitch subsystems told users to install the wrong project, and
-    `templates/blank/requirements.txt` shipped `dazzle>=0.9.4` into every
-    scaffolded app.
+    the (since removed) `dazzle init` template shipped `dazzle>=0.9.4` into
+    every scaffolded app.
     """
     hits = _wrong_distribution_sites()
     assert not hits, (
         "Install hints name the wrong PyPI distribution. `dazzle` is a different, "
         "unrelated package; the distribution is `dazzle-dsl` (the import name and "
         "`dazzle` console command are unchanged — PEP 503 only normalises the import "
-        "name). Use `dazzle-dsl[<extra>]`, and in generated requirements.txt use "
-        "`dazzle-dsl~={{framework_minor}}` so the pin tracks the installed framework:\n  "
-        + "\n  ".join(hits)
+        "name). Use `dazzle-dsl[<extra>]`:\n  " + "\n  ".join(hits)
     )
-
-
-def test_generated_requirements_pins_track_framework_minor() -> None:
-    """The blank template must not carry a hand-maintained version floor.
-
-    It was pinned at `dazzle>=0.9.4` while the framework was at 0.114.x — ten
-    majors of drift that no gate caught, because nothing compared the template
-    against the installed version. `{{framework_minor}}` is substituted by
-    `copy_template` from `_installed_framework_minor()` (#1630), so the pin can
-    no longer rot.
-    """
-    template = _SRC / "templates" / "blank" / "requirements.txt"
-    assert template.is_file(), "blank template requirements.txt is the init scaffold"
-    text = template.read_text(encoding="utf-8")
-    assert "dazzle-dsl" in text, "template must pin the real distribution"
-    assert "{{framework_minor}}" in text, (
-        "template must pin via {{framework_minor}} so the floor tracks the "
-        "installed framework instead of being hand-maintained"
-    )
-    for match in re.finditer(r"^dazzle-dsl\s*([<>=!~][^\s#]*)", text, re.MULTILINE):
-        assert match.group(1).startswith("~"), (
-            "generated requirements must use a compatible-release pin "
-            "(~major.minor) so `dazzle init` cannot scaffold a project the "
-            "framework will not run"
-        )
 
 
 # The canonical role-name rule lives in `core.strings.normalize_role`, beside

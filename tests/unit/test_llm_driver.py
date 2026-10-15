@@ -371,16 +371,3 @@ class TestManifestLlmConfig:
         toml = tmp_path / "dazzle.toml"
         toml.write_text('[project]\nname = "x"\nroot = "x.core"\n', encoding="utf-8")
         assert load_manifest(toml).llm.driver == "auto"
-
-    def test_blank_template_uses_auto(self) -> None:
-        """dazzle init's blank template must default to auto so either
-        subscription CLI (or an API key) works without editing dazzle.toml."""
-        from pathlib import Path
-
-        import dazzle
-
-        template = Path(dazzle.__file__).parent / "templates" / "blank" / "dazzle.toml"
-        content = template.read_text(encoding="utf-8")
-        assert "[llm]" in content
-        assert 'driver = "auto"' in content
-        assert "grok-cli" in content

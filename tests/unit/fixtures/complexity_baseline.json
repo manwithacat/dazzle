@@ -897,13 +897,10 @@
   },
   "dazzle/cli/project.py": {
     "functions": {
-      "_is_directory_empty": 5,
       "_print_human_diagnostics": 11,
       "_print_vscode_diagnostics": 5,
       "_print_vscode_parse_error": 6,
       "_renderer_registration_advisory": 2,
-      "_scaffold_app_directory": 6,
-      "init_command": 19,
       "inspect_command": 23,
       "lint_command": 13,
       "validate_command": 12
@@ -3143,42 +3140,6 @@
       "InfraRequirements.__post_init__": 4,
       "analyze_infra_requirements": 19,
       "get_required_env_vars": 6
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/core/init_impl/__init__.py": {
-    "functions": {},
-    "mi_rank": "A"
-  },
-  "dazzle/core/init_impl/project.py": {
-    "functions": {
-      "_init_git_repository": 5,
-      "_installed_framework_minor": 3,
-      "create_mcp_config": 1,
-      "init_project": 12,
-      "list_examples": 6
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/core/init_impl/spec.py": {
-    "functions": {
-      "create_spec_template": 1,
-      "create_specs_scaffold": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/core/init_impl/templates.py": {
-    "functions": {
-      "copy_template": 15,
-      "substitute_template_vars": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/core/init_impl/validation.py": {
-    "functions": {
-      "InitError": 1,
-      "sanitize_name": 7,
-      "validate_project_name": 5
     },
     "mi_rank": "A"
   },
@@ -5552,38 +5513,6 @@
       "Snapshotter.__init__": 3,
       "Snapshotter.capture": 3,
       "Snapshotter.restore": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/examples/__init__.py": {
-    "functions": {
-      "get_examples_dir": 1,
-      "list_examples": 4
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/examples/simple_task/services/calculate_overdue_penalty.py": {
-    "functions": {
-      "CalculateOverduePenaltyResult": 1,
-      "calculate_overdue_penalty": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/examples/simple_task/tests/e2e/test_simple_task_generated.py": {
-    "functions": {
-      "base_url": 1,
-      "test_Task_create_valid": 2,
-      "test_Task_delete": 2,
-      "test_Task_update_valid": 2,
-      "test_Task_validation_required_title": 2,
-      "test_Task_view_detail": 2,
-      "test_auth_login": 2,
-      "test_auth_logout": 2,
-      "test_auth_protected_route": 2,
-      "test_navigate_task_create": 2,
-      "test_navigate_task_detail": 2,
-      "test_navigate_task_edit": 2,
-      "test_navigate_task_list": 2
     },
     "mi_rank": "A"
   },

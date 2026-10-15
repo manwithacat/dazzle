@@ -2,12 +2,10 @@
 Project commands for DAZZLE CLI.
 
 Commands for creating, validating, and working with DAZZLE projects:
-- init: Initialize a new project
 - validate: Parse and validate DSL
 - lint: Extended validation checks
 - inspect: Inspect entities and surfaces
 - analyze-spec: LLM-powered spec analysis
-- example: Create project from example
 
 For code generation, use:
 - dazzle serve: Run your DSL directly (rapid iteration)
@@ -16,7 +14,6 @@ For code generation, use:
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -29,11 +26,6 @@ from dazzle.core.capabilities import suggest_capability, unknown_capability_ids
 from dazzle.core.discovery import RelevanceGroup
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.init_impl import (
-    InitError,
-    init_project,
-    list_examples,
-)
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
@@ -50,34 +42,6 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # Helper Functions
 # =============================================================================
-
-
-def _is_directory_empty(directory: Path) -> bool:
-    """
-    Check if directory is empty (or has only files we commonly allow).
-
-    A directory is considered "empty" for init purposes if it contains:
-    - No files at all, OR
-    - Only .git directory, OR
-    - Only .git and common files (.gitignore, README.md, LICENSE, .DS_Store)
-    """
-    if not directory.exists():
-        return True
-
-    contents = list(directory.iterdir())
-
-    if len(contents) == 0:
-        return True
-
-    # Allow some common files that might be pre-created
-    allowed_files = {".git", ".gitignore", "README.md", "LICENSE", ".DS_Store"}
-    actual_files = {item.name for item in contents}
-
-    # If all files are in allowed list, consider it empty
-    if actual_files.issubset(allowed_files):
-        return True
-
-    return False
 
 
 def _print_human_diagnostics(
@@ -161,189 +125,6 @@ def _print_vscode_parse_error(error: ParseError, root: Path) -> None:
 
 # Note: These command functions are defined here but registered on the main app
 # in cli/__init__.py. They're top-level commands, not sub-commands.
-
-
-_APP_SUBDIRS = (
-    ("app", "Custom application code"),
-    ("app/db", "Database operations (snapshots, migrations, fixups)"),
-    ("app/sync", "External data integration (API clients, importers)"),
-    ("app/render", "Document generation (PDF, reports)"),
-    ("app/qa", "Quality assurance tooling"),
-    ("app/demo", "Demo data generation and management"),
-    ("scripts", "One-shot scripts (fixups, experiments)"),
-)
-
-
-def _scaffold_app_directory(
-    target: Path,
-    log: Callable[[str], None] | None = None,
-) -> None:
-    """Generate the recommended app/ directory structure (#715).
-
-    Creates sub-packages with ``__init__.py`` files for production code,
-    and a ``scripts/`` directory for one-shot scripts.
-    """
-    if log is None:
-
-        def log(msg: str) -> None:
-            pass
-
-    log("Creating app/ directory structure...")
-    for subdir, purpose in _APP_SUBDIRS:
-        dir_path = target / subdir
-        dir_path.mkdir(parents=True, exist_ok=True)
-        init_file = dir_path / "__init__.py"
-        if subdir != "scripts" and not init_file.exists():
-            init_file.write_text(f'"""{purpose}."""\n', encoding="utf-8")
-        log(f"  Created {subdir}/")
-
-    # .gitkeep for scripts/ so it's tracked even when empty
-    gitkeep = target / "scripts" / ".gitkeep"
-    if not gitkeep.exists():
-        gitkeep.write_text("", encoding="utf-8")
-
-
-def init_command(
-    path: str | None = typer.Argument(
-        None, help="Directory to create project in (defaults to current directory if empty)"
-    ),
-    from_example: str | None = typer.Option(
-        None, "--from", "-f", help="Copy from example (e.g., 'simple_task', 'support_tickets')"
-    ),
-    name: str | None = typer.Option(
-        None, "--name", "-n", help="Project name (defaults to directory name)"
-    ),
-    title: str | None = typer.Option(None, "--title", "-t", help="Project title"),
-    here: bool = typer.Option(
-        False, "--here", help="Initialize in current directory even if not empty"
-    ),
-    list_examples_flag: bool = typer.Option(False, "--list", "-l", help="List available examples"),
-    no_llm: bool = typer.Option(
-        False, "--no-llm", help="Skip LLM instrumentation (context files for AI assistants)"
-    ),
-    no_git: bool = typer.Option(False, "--no-git", help="Skip git repository initialization"),
-    with_app: bool = typer.Option(
-        False, "--with-app", help="Generate app/ directory structure for custom Python code"
-    ),
-) -> None:
-    """
-    Initialize a new DAZZLE project.
-
-    By default, initializes in current directory if it's empty,
-    or creates a new directory if a path is provided.
-
-    Creates project structure with:
-    - dazzle.toml manifest
-    - dsl/ directory with starter module
-    - README.md with getting started guide
-    - .gitignore and git repository (unless --no-git)
-    - LLM context files for AI assistants (unless --no-llm)
-
-    Use --with-app to also generate the recommended app/ directory structure
-    for custom Python code (services, integrations, data generation).
-
-    Examples:
-        dazzle init                              # Init in current dir (if empty)
-        dazzle init --here                       # Force init in current dir
-        dazzle init ./my-project                 # Create new directory
-        dazzle init --from simple_task           # Init from example (current dir)
-        dazzle init ./my-app --from support_tickets  # New dir from example
-        dazzle init --list                       # Show available examples
-        dazzle init --no-llm --no-git            # Minimal setup
-        dazzle init --with-app                   # Include app/ structure
-    """
-    if list_examples_flag:
-        examples = list_examples()
-        if not examples:
-            typer.echo("No examples available.")
-            return
-
-        typer.echo("Available examples:\n")
-        for ex in examples:
-            typer.echo(f"  {ex}")
-        typer.echo("\nUse: dazzle init --from <example>  # Current directory")
-        typer.echo("Or:  dazzle init ./my-project --from <example>  # New directory")
-        return
-
-    # Determine target directory
-    if path is None:
-        target = Path(".").resolve()
-
-        if not _is_directory_empty(target) and not here:
-            typer.echo(f"Error: Current directory is not empty: {target}", err=True)
-            typer.echo("", err=True)
-
-            contents = [item.name for item in target.iterdir() if not item.name.startswith(".")]
-            if contents:
-                typer.echo("Current directory contains:", err=True)
-                for item in sorted(contents)[:5]:
-                    typer.echo(f"  - {item}", err=True)
-                if len(contents) > 5:
-                    typer.echo(f"  ... and {len(contents) - 5} more items", err=True)
-                typer.echo("", err=True)
-
-            typer.echo("Options:", err=True)
-            typer.echo("  1. Initialize anyway:  dazzle init --here", err=True)
-            typer.echo("  2. Create new dir:     dazzle init ./my-project", err=True)
-            typer.echo("  3. Clear directory first (be careful!)", err=True)
-            typer.echo("", err=True)
-            typer.echo("Tip: --here will not overwrite existing files", err=True)
-            raise typer.Exit(code=1)
-    else:
-        target = Path(path).resolve()
-
-    try:
-        allow_existing = path is None
-
-        def progress(msg: str) -> None:
-            typer.echo(msg)
-
-        typer.echo("")
-
-        init_project(
-            target_dir=target,
-            project_name=name,
-            from_example=from_example,
-            title=title,
-            no_llm=no_llm,
-            no_git=no_git,
-            allow_existing=allow_existing,
-            progress_callback=progress,
-        )
-
-        # Generate app/ structure if requested (#715)
-        if with_app:
-            _scaffold_app_directory(target, progress)
-
-        typer.echo("")
-        if path is None:
-            typer.echo(f"✓ Project initialized in: {target}")
-        else:
-            typer.echo(f"✓ Project created at: {target}")
-
-        typer.echo("\nNext steps:")
-        if path is not None:
-            typer.echo(f"  cd {path}")
-        if not from_example:
-            typer.echo("  # 1. Edit SPEC.md with your project requirements")
-            typer.echo("  # 2. Work with an AI assistant to create DSL from your spec")
-        typer.echo("  dazzle validate")
-        typer.echo("  dazzle serve  # Run your app with Dazzle Runtime")
-
-        try:
-            from dazzle.mcp.setup import check_mcp_server
-
-            status = check_mcp_server()
-            if not status.get("registered"):
-                typer.echo("\n💡 Tip: Enable DAZZLE MCP server for Claude Code:")
-                typer.echo("  dazzle mcp-setup")
-                typer.echo("  Then restart Claude Code to access DAZZLE tools")
-        except Exception:
-            logger.debug("Failed to check MCP server status", exc_info=True)
-
-    except InitError as e:
-        typer.echo(f"Initialization failed: {e}", err=True)
-        raise typer.Exit(code=1)
 
 
 def _renderer_registration_advisory(extra_renderers: list[str]) -> str | None:
@@ -630,7 +411,6 @@ def inspect_command(
 
 # Export all command functions
 __all__ = [
-    "init_command",
     "validate_command",
     "lint_command",
     "inspect_command",

@@ -38,7 +38,7 @@ class TestIntrospectionCompleteness:
     # captures leaves, not groups, so `inspect` no longer shows up at
     # the top level — its subcommands live in SUB_COMMANDS below.
     TOP_LEVEL = [
-        "serve", "init", "validate", "lint",
+        "serve", "validate", "lint",
         "doctor", "grammar", "build",
     ]
     # fmt: on
@@ -131,8 +131,6 @@ class TestDataQuality:
         # serve should have the hand-written 'output' dict
         assert "output" in commands["serve"]
         assert commands["serve"]["output"]["ui_url"] == "http://localhost:3000"
-        # init should have 'creates'
-        assert "creates" in commands["init"]
         # lint should have 'checks'
         assert "checks" in commands["lint"]
 

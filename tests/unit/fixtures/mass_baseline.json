@@ -1,7 +1,7 @@
 {
-  "src_lines": 338034,
-  "test_lines": 347650,
-  "docs_lines": 47885,
+  "src_lines": 336139,
+  "test_lines": 347452,
+  "docs_lines": 47851,
   "construct_count": 31,
   "written": "2026-10-15",
   "exceptions": [

@@ -1,4 +1,4 @@
-"""Core DAZZLE: IR, parser, linker, validator, project init."""
+"""Core DAZZLE: IR, parser, linker, validator."""
 
 from . import ir
 from .errors import (
@@ -9,7 +9,6 @@ from .errors import (
     ParseError,
     ValidationError,
 )
-from .init_impl import InitError, init_project, list_examples
 from .linker import build_appspec
 from .lint import lint_appspec
 from .parser import parse_modules
@@ -28,7 +27,4 @@ __all__ = [
     "lint_appspec",
     "load_project",
     "load_project_with_manifest",
-    "init_project",
-    "list_examples",
-    "InitError",
 ]

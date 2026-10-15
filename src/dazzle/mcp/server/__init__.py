@@ -476,7 +476,7 @@ def _prompt_text(name: str, args: dict[str, str]) -> str:
 
 1. Use get_workflow_guide("getting_started") to get the complete guide
 2. Walk them through:
-   - Creating a new project with `dazzle init`
+   - Starting a new project with the `bootstrap` tool (or a copy of `examples/simple_task`)
    - Understanding the project structure
    - Writing their first entity and surface in DSL
    - Running with `dazzle serve`
