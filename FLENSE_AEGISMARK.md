@@ -92,6 +92,15 @@ gated on the consumer inventory — but prove it here rather than trust it:
    - **Islands are not rendered (DD-011)**; only `entity:` has effect. The locale middleware is
      mounted (ship AB), so `param locale.*` defaults and tenant config reach rendered dates. The
      feedback widget mounts again when `feedback_widget: enabled` is declared (ship AB).
+   - **Phase 6 (2026-10-15, on `main` after v0.117.0; next release tag carries it).** Revisions
+     `0023_flense_park_enterprise_auth` and `0024_flense_park_two_factor` drop seven framework tables
+     (`connections`, `connection_secret_events`, `scim_groups`, `scim_group_members`,
+     `saml_consumed_assertions`, `_dazzle_otp_codes`, `_dazzle_recovery_codes`), all empty everywhere:
+     `dazzle db upgrade head` once more after the pin bump. Before it, confirm
+     `SELECT count(*) FROM users WHERE totp_enabled OR email_otp_enabled` is 0 (2FA is parked,
+     DD-014; such a user would sign in with password alone). `dazzle init`, the `saml` extra,
+     `dazzle auth connection` and `dazzle capability` no longer exist; `/_ops/sse/events` now requires
+     the app's auth posture (`live: on` workspaces keep working for signed-in users).
    - **Removed, none used by a consumer:** the `dazzle i18n` CLI and string translation (DD-012),
      `dazzle serve --watch-source`, `dazzle test list|feedback|dsl-generate|dsl-coverage|run-all`,
      six `dazzle e2e` wrappers, the `mobile`, `push`, `sendgrid` and `i18n` extras, the

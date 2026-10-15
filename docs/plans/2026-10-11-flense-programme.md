@@ -373,3 +373,45 @@ under the push gate, CI checked each wake, one line per wake in `.dazzle/flense-
 AJ–AN may run concurrently with AD–AI because they touch disjoint files; two distillation
 ships never run at once. The phase closes with a `minor` bump, plan §9 updated with the
 measured numbers, and `FLENSE_*.md` refreshed if any consumer action results.
+
+### 9.7 Result (2026-10-15, twelve ships, e5b93a20e → ecff20838)
+
+All twelve ships landed on `main` the same day, each gated with `make ci-fast`, pushed under
+the push gate, CI green on every pushed tip: AE, AJ, AO (a security fix AE surfaced), AH, AK,
+AF, AL, AD, AM, AG, AN, AI. Net −61,286 lines across 628 files (−82,775 / +21,489).
+
+| Measure | After ship AC | Phase 6 target | After ship AI |
+|---|---:|---:|---:|
+| Framework src lines | 339,095 | ≤ 322,000 | **323,851** (−15,244; target missed by 1.9k) |
+| Test lines | 350,984 | ≤ 295,000 | **319,714** (−31,270; tests are now fewer lines than src) |
+| Docs lines in tree | 47,806 | ≤ 48,000 | 47,862 |
+| Top-level constructs | 31 | 31 | 31 |
+| Test functions | 16,750 | — | 14,307 |
+| Exact clone families | 76 | ≤ 20 | 36 (the rest are detector false positives, `clones.py:194` drops string-valued AST fields, or deliberate per-class shape — `docs/reference/clone-residue.md`) |
+| Redundancy clusters ≥3 | 989 | ≤ 600 | 745 (2,786 tests inside; the five distilled areas are at 0–2) |
+| Cross-file clusters / implementation mirrors | 24 / 74 | — | 2 / 11 |
+| Framework tables in scope | 30 | — | 23 (revisions 0023 and 0024) |
+
+What the phase found that mattered more than the lines: `/_ops/sse/all` streamed every
+tenant's entity events to any client, and `/_ops/sse/events` had no auth dependency and let
+the client choose the tenant (AE, AO — both closed); the metrics middleware had never had an
+emitter and the observability guide described a Redis stream that never existed (AE); the
+wheel shipped a Vite SPA (AF); the enterprise-auth and 2FA code paths were live for every app
+with no consumer able to exercise them (AD, AG); the `#1399` "prefer the resolved tenant"
+branch read a request attribute nothing sets (AO); `expr_field_dependencies` does not descend
+into `IfExpr` (AH finding); a permit-denied list request is not audited where update and
+delete are (AN finding); `mint_token` accepts a colon email that `verify_token` always rejects
+(AM finding); two sentinel scans saved in the same second order at random (AL finding).
+
+Open for the operator after this phase: drop `memberships.external_id` and its unique index
+(AD); drop the four 2FA columns on `users` (AG); drop `email_outbox` and `OutboxRepository`
+(AI: never constructed); `devices` (ship O) still unsigned; `process_persistence.save_processes`
+has no writer while `app_factory.py:805` reads the store (AI); the file-size error message and
+python-magic dependence in `file_storage.py` (AK); `sentinel/store.py` same-second scan
+ordering (AL); `spec_analyze` relationship extraction takes articles as targets (AL). The §7
+targets (≤ 250k / ≤ 200k) remain Phase 7 material: the runtime monoliths (`page_routes.py`,
+`server.py`, `auth/store.py`) and features consumers use.
+
+Consumer actions from this phase are in each `FLENSE_*.md` §2 step 6: `dazzle db upgrade head`
+now reaches 0024 (seven empty framework tables dropped), confirm no user row has
+`totp_enabled`/`email_otp_enabled` set, and AegisMark's enterprise-auth runbook is obsolete.
