@@ -95,10 +95,6 @@ class FitFinding:
         return asdict(self)
 
 
-def ontology_path() -> Path:
-    return ONTOLOGY_PATH
-
-
 def load_ontology(path: Path | None = None) -> dict[str, Any]:
     p = path or ONTOLOGY_PATH
     data = tomllib.loads(p.read_text(encoding="utf-8"))

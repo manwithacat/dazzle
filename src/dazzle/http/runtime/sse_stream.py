@@ -21,7 +21,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from dazzle.core.clock import utcnow
@@ -71,7 +71,6 @@ class StreamSubscription:
     subscription_id: str
     stream_type: StreamType
     tenant_id: str | None = None  # Server-resolved tenant key (None = untenanted)
-    last_event_id: str | None = None  # For reconnection
     created_at: datetime = field(default_factory=utcnow)
 
 
@@ -204,7 +203,6 @@ class SSEStreamManager:
         self,
         stream_type: StreamType,
         tenant_id: str | None = None,
-        last_event_id: str | None = None,
     ) -> str:
         """
         Create a new SSE subscription.
@@ -212,7 +210,6 @@ class SSEStreamManager:
         Args:
             stream_type: Type of stream to subscribe to
             tenant_id: Server-resolved tenant key (never client-supplied)
-            last_event_id: Last event ID for reconnection
 
         Returns:
             Subscription ID
@@ -222,7 +219,6 @@ class SSEStreamManager:
             subscription_id=sub_id,
             stream_type=stream_type,
             tenant_id=tenant_id,
-            last_event_id=last_event_id,
         )
         self._subscriptions[sub_id] = subscription
         self._queues[sub_id] = asyncio.Queue(maxsize=100)
@@ -315,9 +311,12 @@ def create_sse_routes(
     @router.get("/events")
     async def stream_events(
         auth_context: Any = Depends(auth_dep),
-        last_event_id: str | None = Header(None, alias="Last-Event-ID"),
     ) -> StreamingResponse:
-        """Stream bare entity-change nudges for the caller's server-resolved tenant."""
+        """Stream bare entity-change nudges for the caller's server-resolved tenant.
+
+        A reconnecting client's ``Last-Event-ID`` is not read: nothing is
+        buffered to replay, and the nudge only prompts the page to refetch.
+        """
         if require_auth and not (
             auth_context is not None and getattr(auth_context, "is_authenticated", False)
         ):
@@ -325,7 +324,6 @@ def create_sse_routes(
         sub_id = stream_manager.create_subscription(
             stream_type=StreamType.EVENTS,
             tenant_id=live_tenant_key(),
-            last_event_id=last_event_id,
         )
 
         return StreamingResponse(

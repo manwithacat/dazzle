@@ -27,7 +27,6 @@ class ContractKind(StrEnum):
     EDIT_FORM = "edit_form"
     DETAIL_VIEW = "detail_view"
     WORKSPACE = "workspace"
-    ROUND_TRIP = "round_trip"
     RBAC = "rbac"
 
 
@@ -171,29 +170,6 @@ class WorkspaceContract(Contract):
     @property
     def url_path(self) -> str:
         return f"/app/workspaces/{self.workspace}"
-
-
-@dataclass
-class RoundTripContract(Contract):
-    """Contract asserting that an HTMX round-trip returns the expected DOM."""
-
-    url: str = ""
-    hx_target: str = ""
-    method: str = "GET"
-    expected_elements: list[str] = field(default_factory=list)
-
-    def __post_init__(self) -> None:
-        self.kind = ContractKind.ROUND_TRIP
-
-    def _id_key(self) -> str:
-        return (
-            f"round_trip:{self.url}:{self.hx_target}:{self.method}"
-            f":{','.join(sorted(self.expected_elements))}"
-        )
-
-    @property
-    def url_path(self) -> str:
-        return self.url
 
 
 @dataclass

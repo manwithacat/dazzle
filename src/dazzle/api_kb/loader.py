@@ -12,8 +12,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from dazzle.core.dsl_parser_impl.process import format_duration
-
 logger = logging.getLogger(__name__)
 
 
@@ -25,14 +23,6 @@ class EnvVarSpec:
     required: bool = True
     description: str = ""
     example: str = ""
-
-    def to_env_example_line(self) -> str:
-        """Generate a line for .env.example file."""
-        comment = f"# {self.description}" if self.description else ""
-        example_value = self.example or ""
-        return (
-            f"{comment}\n{self.name}={example_value}" if comment else f"{self.name}={example_value}"
-        )
 
 
 @dataclass
@@ -75,40 +65,6 @@ class AuthSpec:
     token_url: str | None = None
     scopes: list[str] = field(default_factory=list)
 
-    def to_dsl_auth_profile(self) -> str:
-        """Generate DSL auth_profile declaration."""
-        if self.auth_type == "api_key":
-            parts = ["api_key"]
-            if self.header:
-                parts.append(f'header="{self.header}"')
-            if self.env_var:
-                parts.append(f'key_env="{self.env_var}"')
-            return " ".join(parts)
-        elif self.auth_type == "oauth2":
-            parts = ["oauth2"]
-            if self.env_var:
-                # Convention: CLIENT_ID and CLIENT_SECRET derived from base env var
-                base = self.env_var.replace("_CLIENT_ID", "").replace("_CLIENT_SECRET", "")
-                parts.append(f'client_id_env="{base}_CLIENT_ID"')
-                parts.append(f'client_secret_env="{base}_CLIENT_SECRET"')
-            if self.token_url:
-                parts.append(f'token_url="{self.token_url}"')
-            return " ".join(parts)
-        elif self.auth_type == "bearer":
-            parts = ["bearer"]
-            if self.env_var:
-                parts.append(f'token_env="{self.env_var}"')
-            return " ".join(parts)
-        elif self.auth_type == "basic":
-            parts = ["basic"]
-            if self.env_var:
-                base = self.env_var.replace("_USER", "").replace("_PASS", "")
-                parts.append(f'username_env="{base}_USER"')
-                parts.append(f'password_env="{base}_PASS"')
-            return " ".join(parts)
-        else:
-            return "none"
-
 
 @dataclass
 class SandboxSpec:
@@ -148,28 +104,6 @@ class ApiPack:
     operations: list[OperationSpec] = field(default_factory=list)
     foreign_models: list[ForeignModelSpec] = field(default_factory=list)
     infrastructure: InfrastructureSpec | None = None
-
-    def generate_env_example(self) -> str:
-        """Generate .env.example content for this pack."""
-        lines = [f"# {self.provider} ({self.name} pack)"]
-        for env_var in self.env_vars:
-            lines.append(env_var.to_env_example_line())
-        return "\n".join(lines)
-
-    def generate_service_dsl(self) -> str:
-        """Generate DSL service block for this pack.
-
-        Note: The parser requires spec: and auth_profile: directives.
-        Uses inline spec with pack reference for traceability.
-        """
-        lines = [f'service {self.name.replace("_", "")} "{self.provider}":']
-        # Use inline spec with pack name for documentation
-        lines.append(f'  spec: inline "pack:{self.name}"')
-        if self.auth:
-            lines.append(f"  auth_profile: {self.auth.to_dsl_auth_profile()}")
-        if self.docs_url:
-            lines.append(f"  # Docs: {self.docs_url}")
-        return "\n".join(lines)
 
     def generate_fragment_source(self, operation: str, **overrides: Any) -> dict[str, Any]:
         """Convert a pack operation into a fragment source config dict.
@@ -272,73 +206,6 @@ class ApiPack:
             result["field_map"] = dict(op.field_map)
         result.update(overrides)
         return result
-
-    def generate_integration_template(self) -> str | None:
-        """Generate a DSL integration block template with cache directives.
-
-        For each foreign model with a cache_ttl and matching GET operations,
-        generates an integration + mapping block with cache settings.
-
-        Returns None if no cacheable models exist.
-        """
-
-        service_name = self.name.replace("_", "")
-        cacheable: list[tuple[ForeignModelSpec, list[OperationSpec]]] = []
-
-        for model in self.foreign_models:
-            if model.cache_ttl is None:
-                continue
-            # Find GET operations that match this model (by model name heuristic)
-            model_lower = model.name.lower()
-            get_ops = [
-                op
-                for op in self.operations
-                if op.method == "GET"
-                and (
-                    model_lower in op.name.lower()
-                    or model_lower in op.path.lower()
-                    or model_lower in op.description.lower()
-                )
-            ]
-            if get_ops:
-                cacheable.append((model, get_ops))
-
-        if not cacheable:
-            return None
-
-        lines = [f"integration {service_name}_sync on {service_name}:"]
-
-        for model, ops in cacheable:
-            ttl_str = format_duration(model.cache_ttl or 0)
-            for op in ops:
-                mapping_name = op.name
-                lines.append("")
-                lines.append(f"  mapping {mapping_name}:")
-                lines.append(f"    entity: {model.name}")
-                lines.append(f'    request: GET "{op.path}"')
-                lines.append("    trigger: manual")
-                lines.append(f'    cache: "{ttl_str}"')
-
-        return "\n".join(lines)
-
-    def generate_foreign_model_dsl(self, model: ForeignModelSpec) -> str:
-        """Generate DSL foreign_model block for a model."""
-        service_name = self.name.replace("_", "")
-        lines = [f'foreign_model {model.name} from {service_name} "{model.description}":']
-        lines.append(f"  key: {model.key_field}")
-        if model.cache_ttl:
-            lines.append(f'  constraint cache ttl="{model.cache_ttl}"')
-        lines.append("")
-        for field_name, field_spec in model.fields.items():
-            field_type = field_spec.get("type", "str")
-            modifiers = []
-            if field_spec.get("required"):
-                modifiers.append("required")
-            if field_spec.get("pk"):
-                modifiers.append("pk")
-            modifier_str = " " + " ".join(modifiers) if modifiers else ""
-            lines.append(f"  {field_name}: {field_type}{modifier_str}")
-        return "\n".join(lines)
 
 
 def _get_packs_dir() -> Path:
@@ -586,29 +453,3 @@ def search_packs(
         ]
 
     return results
-
-
-def generate_env_example(pack_names: list[str] | None = None) -> str:
-    """
-    Generate .env.example content for specified packs or all loaded packs.
-
-    Args:
-        pack_names: List of pack names, or None for all packs
-
-    Returns:
-        Combined .env.example content
-    """
-    _discover_packs()
-    cache = _pack_cache
-
-    if pack_names is None:
-        packs = list(cache.values())
-    else:
-        packs = [cache[name] for name in pack_names if name in cache]
-
-    sections = []
-    for pack in packs:
-        if pack.env_vars:
-            sections.append(pack.generate_env_example())
-
-    return "\n\n".join(sections)

@@ -1296,22 +1296,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_capability_cognition.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 5,
-    "members": [
-      "test_active_capabilities_for_reads_manifest",
-      "test_active_capabilities_for_missing_manifest_is_empty",
-      "test_active_capabilities_for_malformed_manifest_is_empty",
-      "test_lint_appspec_forwards_active_capabilities",
-      "test_pattern_capability_round_trips_through_kg"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_cohort_strip_composite_primary_1144.py",
     "class": "(module)",
     "assertion_shape": "('eq',)",
@@ -4739,20 +4723,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/e2e/test_lifecycle.py",
-    "class": "TestLockFileHolderQueries",
-    "assertion_shape": "('is',)",
-    "size": 3,
-    "members": [
-      "test_holder_pid_alive_returns_false_when_no_lock",
-      "test_holder_pid_alive_returns_true_when_current_pid",
-      "test_holder_age_seconds_returns_none_when_no_lock"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/e2e/test_runner.py",
     "class": "TestModeRunnerFailurePaths",
     "assertion_shape": "('not', 'truthy_name')",
@@ -5405,20 +5375,6 @@
       "test_first_access_writes_second_within_window_does_not",
       "test_denied_always_writes",
       "test_new_window_writes_again"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_capability_cli.py",
-    "class": "(module)",
-    "assertion_shape": "('eq', 'in', 'in')",
-    "size": 3,
-    "members": [
-      "test_list_shows_registered_capabilities",
-      "test_enable_writes_manifest_entry",
-      "test_enable_does_not_clobber_enabled_in_other_table"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -8793,20 +8749,6 @@
       "test_load_empty",
       "test_load_corrupt_file",
       "test_load_seeds_fallback"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_process_persistence.py",
-    "class": "TestAddProcesses",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 3,
-    "members": [
-      "test_add_new",
-      "test_skip_duplicate",
-      "test_overwrite_duplicate"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",

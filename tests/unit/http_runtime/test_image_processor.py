@@ -43,10 +43,6 @@ RGBA = (200, 200, "RGBA")
 # =============================================================================
 
 
-def test_is_available() -> None:
-    assert ImageProcessor.is_available() is True
-
-
 @pytest.mark.parametrize(
     ("source", "box", "fmt", "expected"),
     [
@@ -71,50 +67,6 @@ def test_generate_thumbnail(source, box, fmt, expected) -> None:
 def test_invalid_image_data_raises() -> None:
     with pytest.raises(ImageProcessingError):
         ImageProcessor.generate_thumbnail(b"not an image", 100, 100)
-
-
-@pytest.mark.parametrize(
-    ("source", "max_dimension", "size"),
-    [
-        pytest.param((4000, 3000, "RGB"), 1024, (1024, 768), id="downscale-to-max-1024"),
-        pytest.param((4000, 3000, "RGB"), 1000, (1000, 750), id="downscale-keeps-4x3"),
-        pytest.param(LANDSCAPE, 2048, (800, 600), id="small-image-not-resized"),
-    ],
-)
-def test_optimize_image(source, max_dimension, size) -> None:
-    original = _png(*source)
-    optimized = ImageProcessor.optimize_image(original, max_dimension=max_dimension)
-    assert _open(optimized)[0] == size
-    if size != source[:2]:
-        assert len(optimized) < len(original)
-
-
-def test_get_dimensions_and_format() -> None:
-    data = _png(*LANDSCAPE)
-    assert ImageProcessor.get_dimensions(data) == (800, 600)
-    assert ImageProcessor.get_format(data) == "PNG"
-
-
-@pytest.mark.parametrize(
-    ("source", "expected"),
-    [
-        pytest.param(LANDSCAPE, ((800, 600), "JPEG", "RGB"), id="png-to-jpeg"),
-        pytest.param(RGBA, ((200, 200), "JPEG", "RGB"), id="rgba-to-jpeg-drops-alpha"),
-    ],
-)
-def test_convert_format(source, expected) -> None:
-    assert _open(ImageProcessor.convert_format(_png(*source), "JPEG")) == expected
-
-
-@pytest.mark.parametrize(
-    ("source", "size"),
-    [
-        pytest.param(LANDSCAPE, 150, id="from-landscape"),
-        pytest.param((300, 500, "RGB"), 100, id="from-portrait"),
-    ],
-)
-def test_crop_to_square(source, size) -> None:
-    assert _open(ImageProcessor.crop_to_square(_png(*source), size=size))[0] == (size, size)
 
 
 # =============================================================================

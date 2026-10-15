@@ -315,9 +315,9 @@
       "file_a": "tests/unit/test_persona_journey.py",
       "file_b": "tests/unit/test_python_audit_agent.py",
       "tests_a": 55,
-      "tests_b": 28,
+      "tests_b": 27,
       "shared_shape_count": 20,
-      "overlap_ratio": 0.71
+      "overlap_ratio": 0.74
     },
     {
       "file_a": "tests/unit/test_persona_journey.py",
@@ -414,6 +414,14 @@
       "tests_b": 55,
       "shared_shape_count": 19,
       "overlap_ratio": 0.76
+    },
+    {
+      "file_a": "tests/unit/test_python_audit_agent.py",
+      "file_b": "tests/unit/test_workspace_rendering.py",
+      "tests_a": 27,
+      "tests_b": 42,
+      "shared_shape_count": 19,
+      "overlap_ratio": 0.7
     },
     {
       "file_a": "tests/unit/test_scope_rules.py",
@@ -518,14 +526,6 @@
       "tests_b": 21,
       "shared_shape_count": 17,
       "overlap_ratio": 0.81
-    },
-    {
-      "file_a": "tests/unit/test_bar_chart_bucketed_aggregate.py",
-      "file_b": "tests/unit/test_task_inbox_data_resolution.py",
-      "tests_a": 40,
-      "tests_b": 20,
-      "shared_shape_count": 17,
-      "overlap_ratio": 0.85
     }
   ]
 }

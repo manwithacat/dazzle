@@ -144,10 +144,6 @@ class CleanReport:
     dry_run: bool = False
     nested_before: list[str] = field(default_factory=list)
 
-    @property
-    def removed_count(self) -> int:
-        return len(self.removed)
-
 
 def prune_snapshots(
     project_root: Path | None = None,

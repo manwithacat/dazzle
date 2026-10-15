@@ -647,12 +647,6 @@ def _default_workspace_list_entities(appspec: Any, workspace_name: str) -> list[
     return preferred + other
 
 
-def _default_workspace_list_entity(appspec: Any, workspace_name: str) -> str | None:
-    """First list/queue source for a workspace (compat helper)."""
-    entities = _default_workspace_list_entities(appspec, workspace_name)
-    return entities[0] if entities else None
-
-
 def _list_total(resp: httpx.Response) -> int | None:
     if resp.status_code != 200:
         return 0

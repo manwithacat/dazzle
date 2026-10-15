@@ -365,19 +365,6 @@ def _check_palette_contrast(themespec: ThemeSpecYAML, result: ThemeSpecValidatio
             result.add_warning(f"palette contrast ({mode}): {failure} (UI hairline — advisory)")
 
 
-def validate_agent_edit(themespec: ThemeSpecYAML, field_path: str) -> bool:
-    """Check if a field path is allowed for agent editing.
-
-    Args:
-        themespec: ThemeSpecYAML to check against.
-        field_path: Dotted field path to check.
-
-    Returns:
-        True if the field is agent-editable.
-    """
-    return field_path in themespec.meta.agent_editable_fields
-
-
 # =============================================================================
 # Scaffolding
 # =============================================================================

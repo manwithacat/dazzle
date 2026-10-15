@@ -5,7 +5,6 @@ import pytest
 from dazzle.core.anti_turing import (
     AntiTuringValidator,
     ViolationType,
-    validate_dsl_content,
 )
 
 
@@ -255,28 +254,6 @@ entity Task:
         )
 
     # === Convenience Function Tests ===
-
-    def test_validate_dsl_content_valid(self) -> None:
-        """validate_dsl_content should return True for valid DSL."""
-        dsl = """
-entity Task:
-  id: uuid pk
-  title: str(200) required
-"""
-        is_valid, message = validate_dsl_content(dsl)
-        assert is_valid is True
-        assert "passed" in message.lower()
-
-    def test_validate_dsl_content_invalid(self) -> None:
-        """validate_dsl_content should return False for invalid DSL."""
-        dsl = """
-entity Task:
-  id: uuid pk
-  compute: if x > 0 then y else z
-"""
-        is_valid, message = validate_dsl_content(dsl)
-        assert is_valid is False
-        assert "violation" in message.lower()
 
     # === Edge Case Tests ===
     # (empty-content / only-comments live as rows in the valid-DSL table above)

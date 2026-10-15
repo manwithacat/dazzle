@@ -155,13 +155,6 @@ class Comparison(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    @property
-    def left_operand(self) -> str:
-        """Get the left side of the comparison as a string."""
-        if self.function:
-            return f"{self.function.name}({self.function.argument})"
-        return self.field or ""
-
 
 class ViaBinding(BaseModel):
     """A single binding inside a via() scope clause.

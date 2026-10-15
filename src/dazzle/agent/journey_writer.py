@@ -56,10 +56,6 @@ class SessionWriter:
             run_date=date.today().isoformat(),
         )
 
-    def list_personas(self) -> list[str]:
-        """Return persona names from existing JSONL files."""
-        return sorted(p.stem for p in self.output_dir.glob("*.jsonl"))
-
     def close(self) -> None:
         """Close all open file handles."""
         for fh in self._handles.values():

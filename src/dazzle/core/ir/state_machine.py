@@ -225,11 +225,6 @@ class StateTransition(WildcardTransition, BaseModel):
         """Check if this is an automatic transition."""
         return self.trigger == TransitionTrigger.AUTO
 
-    @property
-    def has_guards(self) -> bool:
-        """Check if this transition has any guards."""
-        return len(self.guards) > 0
-
 
 class StateMachineSpec(BaseModel, TransitionGraph[StateTransition]):
     """

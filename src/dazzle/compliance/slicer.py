@@ -1,18 +1,6 @@
-"""Load DocumentSpec YAML and slice AuditSpec for per-document agent context."""
+"""Slice AuditSpec for per-document agent context."""
 
-from pathlib import Path
 from typing import Any
-
-import yaml
-
-
-def load_document_spec(path: Path) -> dict[str, Any]:
-    """Load a DocumentSpec YAML file. Returns the document_pack dict."""
-    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if not isinstance(raw, dict) or "document_pack" not in raw:
-        raise KeyError(f"DocumentSpec at {path} is missing required 'document_pack' key")
-    result: dict[str, Any] = raw["document_pack"]
-    return result
 
 
 def slice_auditspec(

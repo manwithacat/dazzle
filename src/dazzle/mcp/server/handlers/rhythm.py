@@ -1,7 +1,10 @@
 """
 Rhythm tool handlers.
 
-Handles rhythm listing, retrieval, evaluation, coverage, and proposal.
+The ``rhythm`` MCP tool registers ``list``, ``get`` and ``coverage``; the pipeline
+calls ``gaps_rhythm_handler``. The ``*_impl`` functions (evaluate, propose,
+fidelity, gaps, lifecycle) are what ``dazzle rhythm`` calls; they have no MCP
+operation.
 """
 
 import json
@@ -245,22 +248,6 @@ def rhythm_evaluate_impl(
     return result
 
 
-@wrap_handler_errors
-def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Evaluate a rhythm — static analysis of completeness, or submit scores."""
-    name: str = args.get("name", "")
-    action = args.get("action", "evaluate")
-    result = rhythm_evaluate_impl(
-        project_root,
-        name=name,
-        action=action,
-        scores=args.get("scores", []),
-    )
-    if "error" in result:
-        return error_response(result["error"])
-    return json.dumps(result, indent=2)
-
-
 def _submit_scores(project_root: Path, rhythm_name: str, scores_data: list[dict[str, Any]]) -> str:
     """Persist agent-produced scene evaluation scores."""
     import datetime
@@ -467,18 +454,8 @@ def rhythm_propose_impl(project_root: Path, persona_id: str) -> dict[str, Any]:
     }
 
 
-@wrap_handler_errors
-def propose_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Propose a rhythm for a given persona based on app analysis."""
-    persona_id = args.get("persona", "")
-    result = rhythm_propose_impl(project_root, persona_id=persona_id)
-    if "error" in result:
-        return error_response(result["error"])
-    return json.dumps(result, indent=2)
-
-
 # ---------------------------------------------------------------------------
-# Fidelity handler
+# Fidelity
 # ---------------------------------------------------------------------------
 
 
@@ -689,16 +666,6 @@ def rhythm_fidelity_impl(project_root: Path, name: str) -> dict[str, Any]:
         "scenes_with_advisories": scenes_with_advisories,
         "details": scene_results,
     }
-
-
-@wrap_handler_errors
-def fidelity_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Measure how well surfaces serve scene intent (rhythm fidelity)."""
-    name = args.get("name", "")
-    result = rhythm_fidelity_impl(project_root, name=name)
-    if "error" in result:
-        return error_response(result["error"])
-    return json.dumps(result, indent=2)
 
 
 def rhythm_gaps_impl(project_root: Path) -> dict[str, Any]:
@@ -967,7 +934,7 @@ def _layer_evaluated_gaps(project_root: Path, gaps: list[dict[str, Any]]) -> Non
 
 
 # ---------------------------------------------------------------------------
-# Lifecycle handler
+# Lifecycle
 # ---------------------------------------------------------------------------
 
 
@@ -1211,9 +1178,3 @@ def rhythm_lifecycle_impl(project_root: Path) -> dict[str, Any]:
     )
 
     return report.model_dump()
-
-
-@wrap_handler_errors
-def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Report lifecycle status against the 8-step operating model."""
-    return json.dumps(rhythm_lifecycle_impl(project_root), indent=2)

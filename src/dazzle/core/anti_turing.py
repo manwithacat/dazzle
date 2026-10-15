@@ -362,23 +362,3 @@ class AntiTuringValidator:
             lines.append("")
 
         return "\n".join(lines)
-
-
-def validate_dsl_content(content: str, strict: bool = False) -> tuple[bool, str]:
-    """
-    Convenience function to validate DSL content.
-
-    Args:
-        content: The DSL content to validate
-        strict: If True, treat warnings as errors
-
-    Returns:
-        Tuple of (is_valid, message)
-    """
-    validator = AntiTuringValidator(strict=strict)
-    violations = validator.validate(content)
-
-    if not violations:
-        return True, "Anti-Turing validation passed."
-
-    return False, validator.format_violations(violations)

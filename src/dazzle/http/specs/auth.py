@@ -166,8 +166,3 @@ class TenancyRuleSpec(BaseModel):
         default=False, description="Allow cross-tenant access for superusers?"
     )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
-    @property
-    def is_multi_tenant(self) -> bool:
-        """Check if multi-tenancy is enabled."""
-        return self.strategy != TenancyStrategy.NONE

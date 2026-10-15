@@ -1005,16 +1005,6 @@ def _ruff_severity(code: str) -> Severity:
     return _RUFF_SEVERITY.get(prefix, Severity.INFO)
 
 
-def _should_include(min_version_str: str, target: tuple[int, int]) -> bool:
-    """Return True if the finding's min Python version <= the project's target."""
-    try:
-        parts = min_version_str.split(".")
-        min_ver = (int(parts[0]), int(parts[1]))
-        return min_ver <= target
-    except (IndexError, ValueError):
-        return True
-
-
 # ---------------------------------------------------------------------------
 # Agent
 # ---------------------------------------------------------------------------

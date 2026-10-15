@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from dazzle.testing.browser_gate import BrowserGate, configure_browser_gate, get_browser_gate
+from dazzle.testing.browser_gate import BrowserGate, get_browser_gate
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
@@ -112,13 +112,6 @@ class TestSingleton:
         a = get_browser_gate()
         b = get_browser_gate()
         assert a is b
-
-    def test_configure_replaces_instance(self):
-        a = get_browser_gate()
-        b = configure_browser_gate(max_concurrent=7)
-        assert b is not a
-        assert b.max_concurrent == 7
-        assert get_browser_gate() is b
 
     def teardown_method(self):
         import dazzle.testing.browser_gate as mod

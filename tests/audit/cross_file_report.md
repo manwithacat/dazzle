@@ -9,7 +9,7 @@ Tests sharing the same `(class_name, assertion_shape, public_target)` across mul
 - **Clusters of size ≥4 across ≥2 files**: 2
 - **Tests inside cross-file clusters**: 12
 - **Theoretical saving**: ~10 if each cluster collapses to one parametric test
-- **Skipped (no attributable public target)**: 1,204 tests — shape matches without a shared target are not actionable
+- **Skipped (no attributable public target)**: 1,192 tests — shape matches without a shared target are not actionable
 
 ### Top 25 cross-file clusters
 
@@ -43,7 +43,7 @@ Files dominated by tests that pin internal call shapes (high mocks, short body, 
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 7653
+- **Twin pairs**: 7602
 
 ### Top 30 twin pairs
 
@@ -72,7 +72,7 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_curl_test_generator.py` | `test_list_chrome_parity_phase1.py` | 28 | 33 | 20 | 0.71 |
 | `test_parser.py` | `test_workspace_layout_prefs.py` | 25 | 31 | 20 | 0.8 |
 | `test_parser.py` | `test_workspace_rendering.py` | 25 | 42 | 20 | 0.8 |
-| `test_persona_journey.py` | `test_python_audit_agent.py` | 55 | 28 | 20 | 0.71 |
+| `test_persona_journey.py` | `test_python_audit_agent.py` | 55 | 27 | 20 | 0.74 |
 | `test_persona_journey.py` | `test_vendor_mock_generator.py` | 55 | 27 | 20 | 0.74 |
 | `test_predicate_policy_mode.py` | `test_workspace_rendering.py` | 28 | 42 | 20 | 0.71 |
 | `test_rbac_enforcement.py` | `test_vendor_mock_generator.py` | 30 | 27 | 20 | 0.74 |

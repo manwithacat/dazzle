@@ -12,8 +12,6 @@ from dazzle.core.ir.process import (
     StepKind,
 )
 from dazzle.core.process_persistence import (
-    add_processes,
-    load_process_index,
     load_processes,
     save_processes,
 )
@@ -93,50 +91,6 @@ class TestSaveAndLoad:
         loaded = load_processes(tmp_path)
         assert len(loaded) == 1
         assert loaded[0].name == "from_runtime"
-
-
-class TestAddProcesses:
-    """Test add_processes merge logic."""
-
-    def test_add_new(self, tmp_path: Path):
-        save_processes(tmp_path, [_make_process("existing")])
-        result = add_processes(tmp_path, [_make_process("new_one")])
-        assert len(result) == 2
-        names = {p.name for p in result}
-        assert names == {"existing", "new_one"}
-
-    def test_skip_duplicate(self, tmp_path: Path):
-        save_processes(tmp_path, [_make_process("existing", title="Original")])
-        result = add_processes(tmp_path, [_make_process("existing", title="Updated")])
-        assert len(result) == 1
-        assert result[0].title == "Original"
-
-    def test_overwrite_duplicate(self, tmp_path: Path):
-        save_processes(tmp_path, [_make_process("existing", title="Original")])
-        result = add_processes(
-            tmp_path, [_make_process("existing", title="Updated")], overwrite=True
-        )
-        assert len(result) == 1
-        assert result[0].title == "Updated"
-
-
-class TestProcessIndex:
-    """Test lightweight index loading."""
-
-    def test_index_returns_summaries(self, tmp_path: Path):
-        save_processes(
-            tmp_path,
-            [_make_process("proc_a", implements=["ST-001", "ST-002"])],
-        )
-
-        index = load_process_index(tmp_path)
-        assert len(index) == 1
-        assert index[0]["name"] == "proc_a"
-        assert index[0]["implements"] == ["ST-001", "ST-002"]
-        assert index[0]["step_count"] == 1
-
-    def test_index_empty(self, tmp_path: Path):
-        assert load_process_index(tmp_path) == []
 
 
 class TestAppFactoryProcessMerge:

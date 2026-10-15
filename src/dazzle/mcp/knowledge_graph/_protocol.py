@@ -7,7 +7,7 @@ captures that contract so mypy can verify it without ``# type: ignore``.
 """
 
 import sqlite3
-from typing import Any, Protocol
+from typing import Protocol
 
 from .models import Entity, PathResult, Relation
 
@@ -43,13 +43,5 @@ class KGStoreProtocol(Protocol):
         max_depth: int = 5,
         relation_types: list[str] | None = None,
     ) -> list[PathResult]: ...
-
-    def get_neighbourhood(
-        self,
-        entity_id: str,
-        depth: int = 1,
-        relation_types: list[str] | None = None,
-        direction: str = "both",
-    ) -> dict[str, Any]: ...
 
     def resolve_alias(self, alias: str) -> str | None: ...

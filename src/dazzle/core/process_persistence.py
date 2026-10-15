@@ -10,7 +10,6 @@ import json
 import logging
 import tempfile
 from pathlib import Path
-from typing import Any
 
 from dazzle.core.paths import project_processes_dir
 
@@ -65,29 +64,6 @@ def load_processes(project_root: Path) -> list[ProcessSpec]:
         return []
 
 
-def load_process_index(project_root: Path) -> list[dict[str, Any]]:
-    """Load lightweight process summaries without full Pydantic validation."""
-    processes_file = _find_processes_file(project_root)
-    if processes_file is None:
-        return []
-
-    try:
-        content = processes_file.read_text(encoding="utf-8")
-        data = json.loads(content)
-        return [
-            {
-                "name": p.get("name", ""),
-                "title": p.get("title", ""),
-                "implements": p.get("implements", []),
-                "step_count": len(p.get("steps", [])),
-            }
-            for p in data.get("processes", [])
-        ]
-    except (json.JSONDecodeError, ValueError) as e:
-        logger.warning("Failed to load process index from %s: %s", processes_file, e)
-        return []
-
-
 def save_processes(
     project_root: Path,
     processes: list[ProcessSpec],
@@ -123,36 +99,3 @@ def save_processes(
         raise
 
     return processes_file
-
-
-def add_processes(
-    project_root: Path,
-    new_processes: list[ProcessSpec],
-    *,
-    overwrite: bool = False,
-) -> list[ProcessSpec]:
-    """Add new processes, optionally overwriting existing ones.
-
-    Args:
-        project_root: Root directory of the DAZZLE project.
-        new_processes: Processes to add.
-        overwrite: If True, replace processes with matching names.
-
-    Returns:
-        List of all processes after the operation.
-    """
-    existing = load_processes(project_root)
-    existing_names = {p.name for p in existing}
-
-    if overwrite:
-        new_names = {p.name for p in new_processes}
-        existing = [p for p in existing if p.name not in new_names]
-        existing.extend(new_processes)
-    else:
-        for proc in new_processes:
-            if proc.name not in existing_names:
-                existing.append(proc)
-                existing_names.add(proc.name)
-
-    save_processes(project_root, existing)
-    return existing

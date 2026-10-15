@@ -304,15 +304,6 @@ class TestFileBasedHeuristics:
 
 
 class TestVersionFiltering:
-    def test_filter_by_python_version(self, tmp_path: Path) -> None:
-        """Findings with min_version above target are filtered out."""
-        from dazzle.sentinel.agents.python_audit import _should_include
-
-        assert _should_include("3.9", (3, 9)) is True
-        assert _should_include("3.11", (3, 9)) is False
-        assert _should_include("3.12", (3, 12)) is True
-        assert _should_include("3.10", (3, 12)) is True
-
     def test_get_target_version_from_pyproject(self, tmp_path: Path) -> None:
         """Reads requires-python from pyproject.toml."""
         (tmp_path / "pyproject.toml").write_text('[project]\nrequires-python = ">=3.12"\n')

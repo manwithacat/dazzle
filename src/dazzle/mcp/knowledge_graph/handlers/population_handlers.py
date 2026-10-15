@@ -1,7 +1,6 @@
 """Auto-population handlers for the Knowledge Graph.
 
-Handles populating the KG from code files, DSL AppSpec, MCP tools,
-and test coverage information.
+Handles populating the KG from code files and the DSL AppSpec.
 """
 
 from __future__ import annotations
@@ -16,7 +15,6 @@ from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
-from dazzle.core.strings import to_snake_case
 
 if TYPE_CHECKING:
     from ..store import KnowledgeGraph
@@ -25,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class PopulationHandlers:
-    """Handles auto-populate, appspec indexing, MCP tool indexing, and test coverage."""
+    """Handles auto-populate from code files and AppSpec indexing."""
 
     def __init__(self, graph: KnowledgeGraph):
         self._graph = graph
@@ -125,10 +123,6 @@ class PopulationHandlers:
         - Entity relationships (foreign keys)
         - Surface-to-entity "uses" relations
 
-        This enables queries like:
-        - "Which surfaces use Entity X?" via handle_get_dependents("entity:Task")
-        - "What fields does Entity Y have?" via handle_query("Order")
-
         Args:
             project_path: Path to the DAZZLE project directory
 
@@ -185,132 +179,6 @@ class PopulationHandlers:
             errors_list = stats["errors"]
             errors_list.append(f"Error: {e}")
             logger.warning("Error indexing %s: %s", project_path, e)
-
-        return stats
-
-    # =========================================================================
-    # MCP Tool Population
-    # =========================================================================
-
-    def handle_populate_mcp_tools(self) -> dict[str, Any]:
-        """
-        Populate the knowledge graph with MCP tool definitions.
-
-        Indexes all registered MCP tools to enable queries like:
-        - "which tool handles user creation?"
-        - "what operations does the story tool support?"
-
-        Creates nodes:
-        - tool:{name} for each MCP tool with description and schema
-        - Extracts operation keywords from descriptions
-
-        Returns:
-            Stats about what was indexed
-        """
-        stats: dict[str, Any] = {
-            "tools_created": 0,
-            "operations_indexed": 0,
-            "errors": [],
-        }
-
-        try:
-            # Import tools from the MCP server
-            from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
-
-            tools = get_all_consolidated_tools()
-
-            for tool in tools:
-                tool_id = f"tool:{tool.name}"
-                tool_name = tool.name
-
-                # Extract operation keywords from description
-                description = tool.description or ""
-                operations = self._extract_operations_from_description(description)
-
-                # Extract input parameters
-                input_schema = (
-                    getattr(tool, "input_schema", None) or getattr(tool, "inputSchema", None) or {}
-                )
-                properties = input_schema.get("properties", {})
-                param_names = list(properties.keys())
-
-                self._graph.create_entity(
-                    entity_id=tool_id,
-                    name=tool_name,
-                    entity_type="mcp_tool",
-                    metadata={
-                        "description": description,
-                        "operations": operations,
-                        "parameters": param_names,
-                        "required": input_schema.get("required", []),
-                    },
-                )
-                stats["tools_created"] += 1
-                stats["operations_indexed"] += len(operations)
-
-        except ImportError as e:
-            error_msg = f"Could not import MCP tools: {e}"
-            errors_list: list[str] = stats["errors"]
-            errors_list.append(error_msg)
-            logger.warning(error_msg)
-        except Exception as e:
-            error_msg = f"Error indexing MCP tools: {e}"
-            errors_list = stats["errors"]
-            errors_list.append(error_msg)
-            logger.warning(error_msg)
-
-        return stats
-
-    # =========================================================================
-    # Test Coverage Population
-    # =========================================================================
-
-    def handle_populate_test_coverage(
-        self,
-        tests_path: str,
-        source_path: str | None = None,
-    ) -> dict[str, Any]:
-        """
-        Populate the knowledge graph with test coverage information.
-
-        Scans test files to understand what modules are tested and creates
-        coverage relations between test files and source modules.
-
-        Enables queries like:
-        - "which modules have tests?"
-        - "what tests cover auth.py?"
-        - "which modules lack test coverage?"
-
-        Args:
-            tests_path: Path to tests directory
-            source_path: Optional source directory to match against
-
-        Returns:
-            Stats about what was indexed
-        """
-        tests_root = Path(tests_path)
-        if not tests_root.exists():
-            return {"error": f"Tests path does not exist: {tests_path}"}
-
-        stats: dict[str, Any] = {
-            "test_files_created": 0,
-            "test_classes_found": 0,
-            "coverage_relations_created": 0,
-            "errors": [],
-        }
-
-        # Find all test files
-        test_patterns = ["**/test_*.py", "**/*_test.py"]
-        test_files: list[Path] = []
-        for pattern in test_patterns:
-            test_files.extend(tests_root.glob(pattern))
-
-        for test_file in test_files:
-            try:
-                self._index_test_file(test_file, tests_root, source_path, stats)
-            except Exception as e:
-                stats["errors"].append(f"{test_file}: {e}")
-                logger.warning("Error indexing test file %s: %s", test_file, e)
 
         return stats
 
@@ -632,135 +500,6 @@ class PopulationHandlers:
                 },
             )
             stats["services_created"] += 1
-
-    # =========================================================================
-    # Private Helpers — MCP Tools
-    # =========================================================================
-
-    def _extract_operations_from_description(self, description: str) -> list[str]:
-        """Extract operation keywords from a tool description."""
-        operation_keywords = [
-            "list",
-            "get",
-            "create",
-            "update",
-            "delete",
-            "search",
-            "query",
-            "validate",
-            "inspect",
-            "generate",
-            "run",
-            "execute",
-            "propose",
-            "save",
-            "fetch",
-            "analyze",
-            "coverage",
-            "scaffold",
-            "review",
-            "test",
-            "check",
-        ]
-
-        description_lower = description.lower()
-        found_operations = []
-        for op in operation_keywords:
-            if op in description_lower:
-                found_operations.append(op)
-
-        return found_operations
-
-    # =========================================================================
-    # Private Helpers — Test Coverage
-    # =========================================================================
-
-    def _index_test_file(
-        self,
-        test_file: Path,
-        tests_root: Path,
-        source_path: str | None,
-        stats: dict[str, Any],
-    ) -> None:
-        """Index a single test file into the knowledge graph."""
-        rel_path = test_file.relative_to(tests_root)
-        test_id = f"test:{rel_path}"
-        test_name = test_file.stem
-
-        # Parse the test file to extract test classes
-        try:
-            source = test_file.read_text(encoding="utf-8")
-            tree = ast.parse(source, filename=str(test_file))
-        except (SyntaxError, UnicodeDecodeError) as e:
-            stats["errors"].append(f"{test_file}: Parse error - {e}")
-            return
-
-        # Find test classes and functions
-        test_classes: list[str] = []
-        test_functions: list[str] = []
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef) and node.name.startswith("Test"):
-                test_classes.append(node.name)
-            elif isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
-                # Only count top-level test functions (not methods)
-                if isinstance(node, ast.FunctionDef):
-                    test_functions.append(node.name)
-
-        stats["test_classes_found"] += len(test_classes)
-
-        # Infer what module this test file covers
-        covered_modules = self._infer_covered_modules(test_name, test_classes)
-
-        # Create test file entity
-        self._graph.create_entity(
-            entity_id=test_id,
-            name=test_name,
-            entity_type="test_file",
-            metadata={
-                "path": str(rel_path),
-                "test_classes": test_classes,
-                "test_function_count": len(test_functions),
-                "covered_modules": covered_modules,
-            },
-        )
-        stats["test_files_created"] += 1
-
-        # Create coverage relations to inferred modules
-        for module_name in covered_modules:
-            module_id = f"file:{module_name}.py"
-            self._graph.create_relation(
-                source_id=test_id,
-                target_id=module_id,
-                relation_type="tests",
-                create_missing_entities=True,
-            )
-            stats["coverage_relations_created"] += 1
-
-    def _infer_covered_modules(self, test_name: str, test_classes: list[str]) -> list[str]:
-        """Infer which modules a test file covers based on naming conventions."""
-        covered: set[str] = set()
-
-        # From test file name: test_auth.py -> auth
-        if test_name.startswith("test_"):
-            module_name = test_name[5:]  # Remove "test_" prefix
-            if module_name:
-                covered.add(module_name)
-        elif test_name.endswith("_test"):
-            module_name = test_name[:-5]  # Remove "_test" suffix
-            if module_name:
-                covered.add(module_name)
-
-        # From test class names: TestAuthStore -> auth_store or auth
-        for class_name in test_classes:
-            if class_name.startswith("Test"):
-                # Convert TestAuthStore -> auth_store
-                name = class_name[4:]  # Remove "Test"
-                # Convert CamelCase to snake_case
-                snake_name = to_snake_case(name)
-                if snake_name:
-                    covered.add(snake_name)
-
-        return list(covered)
 
     # =========================================================================
     # Private Helpers — Code File Population

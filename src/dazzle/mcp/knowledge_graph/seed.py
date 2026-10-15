@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
 SEED_SCHEMA_VERSION = (
-    47  # v47: enterprise_sso pattern parked (ship AD, DD-013); v46: KB stops teaching
+    48  # v48: pattern `capability` gate removed (ship AI); v47: enterprise_sso pattern parked (ship AD, DD-013); v46: KB stops teaching
     # unread clauses (ship X); v41: MCP tools removed (ship I)
 )
 
@@ -220,12 +220,6 @@ def _seed_semantic_kb(graph: KnowledgeGraph, stats: dict[str, int]) -> None:
                 "example": pattern_data.get("example", ""),
                 "triggers": pattern_data.get("triggers", []),
                 "category": pattern_data.get("category"),
-                # #1342: the opt-in capability gate must round-trip through the KG,
-                # else `_propose_patterns` reads capability=None under a seeded KG
-                # (full-suite/production) and the gate silently no-ops — the #1265
-                # isolation-pass/full-suite-fail pathology. The generic read in
-                # `_get_semantic_index_from_kg` picks any truthy key up.
-                "capability": pattern_data.get("capability"),
             },
         )
         stats["patterns"] += 1

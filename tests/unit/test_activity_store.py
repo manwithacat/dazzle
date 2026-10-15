@@ -144,53 +144,6 @@ class TestEventLogging:
         assert events2[0]["tool"] == "story"
 
 
-# ── Activity stats ───────────────────────────────────────────────────────────
-
-
-class TestActivityStats:
-    def test_stats_empty(self, graph):
-        stats = graph.get_activity_stats()
-        assert stats["total_events"] == 0
-        assert stats["tool_calls_ok"] == 0
-        assert stats["tool_calls_error"] == 0
-        assert stats["by_tool"] == []
-
-    def test_stats_aggregation(self, activity_store, graph):
-        activity_store.log_event("tool_start", "dsl", "validate")
-        activity_store.log_event("tool_end", "dsl", "validate", success=True, duration_ms=50.0)
-        activity_store.log_event("tool_start", "dsl", "lint")
-        activity_store.log_event("tool_end", "dsl", "lint", success=True, duration_ms=30.0)
-        activity_store.log_event("tool_start", "story", "propose")
-        activity_store.log_event("tool_end", "story", "propose", success=False, error="boom")
-
-        stats = graph.get_activity_stats()
-        assert stats["total_events"] == 6
-        assert stats["tool_calls_ok"] == 2
-        assert stats["tool_calls_error"] == 1
-        assert stats["success_rate"] == pytest.approx(66.7, abs=0.1)
-        assert len(stats["by_tool"]) == 2  # dsl and story
-
-    def test_stats_filtered_by_session(self, graph):
-        from dazzle.mcp.server.activity_log import ActivityStore
-
-        sid1 = graph.start_activity_session(project_name="proj1")
-        sid2 = graph.start_activity_session(project_name="proj2")
-        s1 = ActivityStore(graph, sid1)
-        s2 = ActivityStore(graph, sid2)
-
-        s1.log_event("tool_end", "dsl", success=True, duration_ms=10)
-        s2.log_event("tool_end", "story", success=True, duration_ms=20)
-        s2.log_event("tool_end", "story", success=False, duration_ms=5)
-
-        stats1 = graph.get_activity_stats(session_id=sid1)
-        assert stats1["tool_calls_ok"] == 1
-        assert stats1["tool_calls_error"] == 0
-
-        stats2 = graph.get_activity_stats(session_id=sid2)
-        assert stats2["tool_calls_ok"] == 1
-        assert stats2["tool_calls_error"] == 1
-
-
 # ── Thread safety ────────────────────────────────────────────────────────────
 
 

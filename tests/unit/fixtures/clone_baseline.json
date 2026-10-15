@@ -514,16 +514,6 @@
     ]
   },
   {
-    "signature": "exact:35053aa6fc3502dc4fa395b3cda62345",
-    "count": 4,
-    "names": [
-      "dazzle/mcp/knowledge_graph/handlers/entity_handlers.py::__init__",
-      "dazzle/mcp/knowledge_graph/handlers/population_handlers.py::__init__",
-      "dazzle/mcp/knowledge_graph/handlers/query_handlers.py::__init__",
-      "dazzle/mcp/knowledge_graph/handlers/relation_handlers.py::__init__"
-    ]
-  },
-  {
     "signature": "405f7fb0f67f8c9f6efeb3858653e356",
     "count": 2,
     "names": [
@@ -545,14 +535,6 @@
     "names": [
       "dazzle/mcp/server/handlers_consolidated.py::handle_agent",
       "dazzle/mcp/server/handlers_consolidated.py::handle_spec_analyze"
-    ]
-  },
-  {
-    "signature": "d1fd251097bc48e047126f66466f5278",
-    "count": 2,
-    "names": [
-      "dazzle/perf/storage.py::iter_events",
-      "dazzle/perf/storage.py::iter_spans"
     ]
   },
   {

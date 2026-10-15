@@ -376,21 +376,6 @@ class I18nConfig:
 
 
 @dataclass
-class CapabilitiesConfig:
-    """Opt-in capability declarations (#1342).
-
-    Reads ``[capabilities]`` from dazzle.toml:
-
-        [capabilities]
-        enabled = ["<capability id>"]
-
-    Default empty → a greenfield app activates no gated capability.
-    """
-
-    enabled: list[str] = field(default_factory=list)
-
-
-@dataclass
 class SpecConfig:
     """Spec-drift guard configuration (#1106 Proposal 3).
 
@@ -608,9 +593,6 @@ class ProjectManifest:
     tenant: TenantConfig = field(default_factory=TenantConfig)
     i18n: I18nConfig = field(default_factory=I18nConfig)  # #955
     spec: SpecConfig = field(default_factory=SpecConfig)  # #1106 Prop 3
-    capabilities: CapabilitiesConfig = field(
-        default_factory=CapabilitiesConfig
-    )  # #1342 opt-in feature gating
     signing: SigningConfig = field(default_factory=SigningConfig)  # #1283 phase 8
     framework_version: str | None = None
     cdn: bool = False  # Local-first; opt-in via [ui] cdn = true in dazzle.toml
@@ -1034,18 +1016,6 @@ def load_manifest(path: Path) -> ProjectManifest:
     spec_data = data.get("spec", {}) if isinstance(data.get("spec"), dict) else {}
     spec_config = SpecConfig(strict=bool(spec_data.get("strict", False)))
 
-    # Parse [capabilities] block (#1342 opt-in feature gating)
-    cap_data = data.get("capabilities", {}) if isinstance(data.get("capabilities"), dict) else {}
-    raw_enabled = cap_data.get("enabled", [])
-    if not isinstance(raw_enabled, list):
-        # Fail loud, not open: a scalar (e.g. enabled = "area.feature")
-        # would otherwise shred into characters and silently activate nothing.
-        raise ValueError(
-            "[capabilities] enabled must be a list of capability ids, "
-            f"got {type(raw_enabled).__name__}"
-        )
-    capabilities_config = CapabilitiesConfig(enabled=[str(x) for x in raw_enabled])
-
     # Parse [signing] block (#1283 phase 8 — PdfBranding wire-up)
     signing_data = data.get("signing", {}) if isinstance(data.get("signing"), dict) else {}
     signing_config = SigningConfig(
@@ -1074,7 +1044,6 @@ def load_manifest(path: Path) -> ProjectManifest:
         tenant=tenant_config,
         i18n=i18n_config,
         spec=spec_config,
-        capabilities=capabilities_config,
         signing=signing_config,
         framework_version=project.get("framework_version"),
         cdn=cdn_enabled,

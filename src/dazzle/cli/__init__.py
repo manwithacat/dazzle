@@ -197,7 +197,6 @@ app.command(name="migrate")(migrate_command)
 from dazzle.cli.agent_commands import agent_app  # noqa: E402
 from dazzle.cli.analytics import analytics_app  # noqa: E402
 from dazzle.cli.auth import auth_app  # noqa: E402
-from dazzle.cli.capability import capability_app  # noqa: E402
 from dazzle.cli.compliance import compliance_app  # noqa: E402
 from dazzle.cli.db import db_app  # noqa: E402
 from dazzle.cli.demo import demo_app  # noqa: E402
@@ -226,7 +225,6 @@ from dazzle.cli.vocab import vocab_app  # noqa: E402
 app.add_typer(analytics_app, name="analytics")
 app.add_typer(agent_app, name="agent")
 app.add_typer(auth_app, name="auth")
-app.add_typer(capability_app, name="capability")
 app.add_typer(compliance_app, name="compliance")
 app.add_typer(db_app, name="db")
 app.add_typer(demo_app, name="demo")

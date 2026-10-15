@@ -222,7 +222,6 @@ class TestThemeSpecLoader:
             save_themespec,
             scaffold_themespec,
             themespec_exists,
-            validate_agent_edit,
             validate_themespec,
         )
 
@@ -235,10 +234,8 @@ class TestThemeSpecLoader:
         assert ts_custom.palette.brand_hue == 180.0
         assert ts_custom.palette.brand_chroma == 0.2
 
-        # validate valid + agent edit
+        # validate valid
         assert validate_themespec(ts_def).is_valid
-        assert validate_agent_edit(ts_def, "palette.brand_hue") is True
-        assert validate_agent_edit(ts_def, "meta.version") is False
 
         # save+load roundtrip (subdir A)
         sub_a = tmp_path / "a"

@@ -569,10 +569,6 @@ class PostgresBackend:
             self._connection = None
 
     @property
-    def backend_type(self) -> str:
-        return "postgres"
-
-    @property
     def placeholder(self) -> str:
         return "%s"
 

@@ -677,10 +677,6 @@ class CustomService(BaseService[T]):
             # Default stub implementation
             return {"status": "ok", "service": self.service_name, "message": "Not implemented"}
 
-    def set_handler(self, handler: Callable[..., Any]) -> None:
-        """Set the handler function for this service."""
-        self._handler = handler
-
 
 # =============================================================================
 # Service Factory

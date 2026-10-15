@@ -33,16 +33,6 @@ class ScreenshotResult:
     passed: bool = True
 
 
-@dataclass
-class VisualRegressionReport:
-    """Aggregated visual regression results."""
-
-    screenshots: list[ScreenshotResult]
-    new_baselines: int = 0
-    regressions: int = 0
-    unchanged: int = 0
-
-
 def _safe_filename(page_path: str, viewport_name: str) -> str:
     """Generate a deterministic filename from page path and viewport."""
     slug = page_path.strip("/").replace("/", "_") or "root"

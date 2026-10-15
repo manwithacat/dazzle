@@ -180,24 +180,6 @@ def _get_max_td_number(test_ids: set[str]) -> int:
     return max_num
 
 
-def get_next_test_design_id(project_root: Path) -> str:
-    """Generate the next test design ID (TD-001, TD-002, etc.).
-
-    Args:
-        project_root: Root directory of the DAZZLE project.
-
-    Returns:
-        Next test design ID in format TD-XXX.
-    """
-    existing = load_test_designs(project_root)
-
-    if not existing:
-        return "TD-001"
-
-    max_num = _get_max_td_number({d.test_id for d in existing})
-    return f"TD-{max_num + 1:03d}"
-
-
 class AddTestDesignsResult(BaseModel):
     """Result of adding test designs, including any ID remappings."""
 

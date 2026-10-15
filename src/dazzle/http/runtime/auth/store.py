@@ -1572,14 +1572,6 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, LazyPgStore):
     # User Preferences (v0.38.0)
     # =========================================================================
 
-    def get_preferences(self, user_id: UUID) -> dict[str, str]:
-        """Get all preferences for a user as {key: value} dict."""
-        rows = self._execute(
-            "SELECT key, value FROM user_preferences WHERE user_id = %s",
-            (str(user_id),),
-        )
-        return {r["key"]: r["value"] for r in rows}
-
     def set_preference(self, user_id: UUID, key: str, value: str) -> None:
         """Set a user preference (upsert)."""
         now = datetime.now(UTC).isoformat()

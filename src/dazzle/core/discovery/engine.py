@@ -35,7 +35,6 @@ def suggest_capabilities(
     *,
     examples_dir: Path | None = None,
     suppress: bool = False,
-    active: set[str] | None = None,
 ) -> list[RelevanceGroup]:
     """Return one :class:`RelevanceGroup` per capability applicable to *appspec*.
 
@@ -51,7 +50,6 @@ def suggest_capabilities(
         suppress: If ``True``, return an empty list immediately without
             running any rules. Useful for CI environments where discovery
             output is not desired.
-        active: Capability ids the project has opted into (#1342 Phase 2).
 
     Returns:
         One :class:`RelevanceGroup` per capability, in first-seen order. Returns
@@ -96,19 +94,10 @@ def suggest_capabilities(
                 category=item.category,
                 examples=refs,
                 kg_entity=item.kg_entity,
-                gated_by=item.gated_by,
             )
         )
 
-    # Drop relevance gated by a capability that isn't active (#1342 Phase 2).
-    # Default-empty active set keeps every existing caller unchanged, since no
-    # rule sets gated_by yet — nothing is filtered until one does.
-    from dazzle.core.capabilities.cognition import partition_by_capability
-
-    surfaced, _gated = partition_by_capability(
-        enriched, active or set(), capability_of=lambda r: r.gated_by
-    )
-    return fold_relevance(surfaced)
+    return fold_relevance(enriched)
 
 
 def fold_relevance(
@@ -140,7 +129,6 @@ def fold_relevance(
                 capability=item.capability,
                 category=item.category,
                 kg_entity=item.kg_entity,
-                gated_by=item.gated_by,
             )
             accumulators[key] = acc
         acc.occurrences += 1
@@ -155,7 +143,6 @@ def fold_relevance(
             capability=acc.capability,
             category=acc.category,
             kg_entity=acc.kg_entity,
-            gated_by=acc.gated_by,
             occurrences=acc.occurrences,
             contexts=acc.contexts[:contexts_cap],
             contexts_truncated=len(acc.contexts) > contexts_cap,
@@ -174,7 +161,6 @@ class _Group:
     capability: str
     category: str
     kg_entity: str
-    gated_by: str | None
     occurrences: int = 0
     contexts: list[str] = field(default_factory=list)
     examples: list[ExampleRef] = field(default_factory=list)

@@ -65,8 +65,3 @@ CATEGORIES: list[Category] = [
 ]
 
 _CATEGORY_INDEX: dict[str, Category] = {c.id: c for c in CATEGORIES}
-
-
-def get_category(category_id: str) -> Category | None:
-    """Look up a category by its id. Returns None if not found."""
-    return _CATEGORY_INDEX.get(category_id)

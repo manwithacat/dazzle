@@ -226,8 +226,3 @@ class UXSpec(BaseModel):
     measure: str | None = None  # app | product | wide | full (shell max-width)
 
     model_config = ConfigDict(frozen=True)
-
-    @property
-    def has_attention_signals(self) -> bool:
-        """Check if any attention signals are defined."""
-        return len(self.attention_signals) > 0

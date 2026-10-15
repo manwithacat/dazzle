@@ -1,7 +1,9 @@
 """
-MCP handler for the Sentinel failure-mode detection tool.
+Handlers for the Sentinel failure-mode detection tool.
 
-Operations: scan, findings, suppress, status, history, fuzz_summary
+MCP operations (``sentinel`` tool): findings, status, history, fuzz_summary.
+``scan_handler`` and ``suppress_handler`` have no MCP operation; only
+``dazzle sentinel scan`` and ``dazzle sentinel suppress`` call them.
 """
 
 import json

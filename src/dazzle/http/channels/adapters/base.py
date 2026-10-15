@@ -51,15 +51,6 @@ class SendResult:
     latency_ms: float | None = None
     timestamp: datetime = field(default_factory=utcnow)
 
-    @property
-    def is_success(self) -> bool:
-        return self.status == SendStatus.SUCCESS
-
-    @property
-    def is_retryable(self) -> bool:
-        """Check if the error is retryable."""
-        return self.status in (SendStatus.RATE_LIMITED, SendStatus.QUEUED)
-
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {

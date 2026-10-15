@@ -11,7 +11,6 @@ from pathlib import Path
 import pytest
 
 from dazzle.core.demo_blueprint_persistence import (
-    delete_blueprint,
     get_blueprint_dir,
     get_blueprint_file,
     load_blueprint,
@@ -140,7 +139,6 @@ def test_blueprint_persistence_combined() -> None:
     - load_blueprint returns None when no file exists.
     - save+load round-trips a populated blueprint with fields preserved.
     - JSON format wraps the blueprint under 'blueprint' with version '1.0'.
-    - delete_blueprint returns True when present, False when absent.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         project = Path(tmpdir)
@@ -175,12 +173,6 @@ def test_blueprint_persistence_combined() -> None:
         assert content["version"] == "1.0"
         assert content["blueprint"]["project_id"] == "test_project"
         assert content["blueprint"]["domain_description"] == "Test domain"
-
-        # 5) delete returns True when present; subsequent load is None;
-        # second delete returns False.
-        assert delete_blueprint(project) is True
-        assert load_blueprint(project) is None
-        assert delete_blueprint(project) is False
 
 
 class TestBlueprintDataGenerator:

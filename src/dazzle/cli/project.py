@@ -22,7 +22,6 @@ import typer
 from dazzle.cli.utils import load_project_appspec
 from dazzle.core.admin_builder import format_injected_as_dsl
 from dazzle.core.anti_turing import AntiTuringValidator
-from dazzle.core.capabilities import suggest_capability, unknown_capability_ids
 from dazzle.core.discovery import RelevanceGroup
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.fileset import discover_dsl_files
@@ -186,22 +185,6 @@ def validate_command(
     root = manifest_path.parent
 
     try:
-        # Capability declarations must reference known capabilities (#1342).
-        # Checked first so a bad [capabilities] id fails fast and clearly,
-        # independent of DSL state.
-        declared = load_manifest(manifest_path).capabilities.enabled
-        bad_caps = unknown_capability_ids(declared)
-        if bad_caps:
-            for cid in bad_caps:
-                hint = suggest_capability(cid)
-                suffix = f" — did you mean '{hint}'?" if hint else ""
-                typer.secho(
-                    f"✗ Unknown capability '{cid}' in [capabilities].{suffix}",
-                    fg=typer.colors.RED,
-                    err=True,
-                )
-            raise typer.Exit(code=1)
-
         # #1438: importing api_kb registers its pack-ops provider into core's
         # validation registry so the `source=<pack>.<op>` typo check (#996) is active
         # — core no longer imports api_kb itself (core ↛ api_kb/mcp contract).

@@ -208,11 +208,6 @@ class TestGapAnalysis(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     @property
-    def high_severity_gaps(self) -> list[TestGap]:
-        """Get gaps with high severity."""
-        return [g for g in self.gaps if g.severity == "high"]
-
-    @property
     def gap_count_by_category(self) -> dict[str, int]:
         """Get count of gaps by category."""
         counts: dict[str, int] = {}

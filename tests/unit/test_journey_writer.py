@@ -163,18 +163,3 @@ class TestLoadSession:
         writer = SessionWriter(tmp_path)
         with pytest.raises(FileNotFoundError):
             writer.load_session("nonexistent")
-
-
-class TestListPersonas:
-    def test_empty_dir(self, tmp_path: pytest.TempPathFactory) -> None:
-        writer = SessionWriter(tmp_path)
-        assert writer.list_personas() == []
-
-    def test_lists_from_jsonl_files(self, tmp_path: pytest.TempPathFactory) -> None:
-        writer = SessionWriter(tmp_path)
-        writer.write_step(_make_step(persona="admin"))
-        writer.write_step(_make_step(persona="teacher"))
-        writer.write_step(_make_step(persona="student"))
-
-        personas = writer.list_personas()
-        assert sorted(personas) == ["admin", "student", "teacher"]

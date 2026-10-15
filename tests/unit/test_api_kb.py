@@ -7,12 +7,10 @@ Tests the pack loader, search functionality, and DSL generation.
 import pytest
 
 from dazzle.api_kb import (
-    EnvVarSpec,
     list_packs,
     load_pack,
     search_packs,
 )
-from dazzle.api_kb.loader import generate_env_example
 
 
 class TestPackLoading:
@@ -171,102 +169,6 @@ class TestPackContents:
         assert "amount" in payment_intent.fields
         assert "currency" in payment_intent.fields
         assert "status" in payment_intent.fields
-
-
-class TestDSLGeneration:
-    """Tests for DSL code generation from packs."""
-
-    def test_generate_service_dsl_stripe(self):
-        """Test generating DSL service block for Stripe."""
-        pack = load_pack("stripe_payments")
-        assert pack is not None
-
-        dsl = pack.generate_service_dsl()
-
-        assert "service stripe" in dsl.lower() or "service stripepayments" in dsl.lower()
-        assert 'inline "pack:stripe_payments"' in dsl
-        assert "auth_profile:" in dsl
-
-    def test_generate_foreign_model_dsl(self):
-        """Test generating DSL foreign_model block."""
-        pack = load_pack("stripe_payments")
-        assert pack is not None
-
-        payment_intent = next((m for m in pack.foreign_models if m.name == "PaymentIntent"), None)
-        assert payment_intent is not None
-
-        dsl = pack.generate_foreign_model_dsl(payment_intent)
-
-        assert "foreign_model PaymentIntent" in dsl
-        assert "key: id" in dsl
-        assert "id:" in dsl
-        assert "amount:" in dsl
-
-    def test_auth_profile_api_key(self):
-        """Test auth profile DSL for API key auth."""
-        pack = load_pack("stripe_payments")
-        assert pack is not None
-        assert pack.auth is not None
-
-        profile = pack.auth.to_dsl_auth_profile()
-
-        assert "api_key" in profile
-        assert 'header="Authorization"' in profile
-        assert "STRIPE_SECRET_KEY" in profile
-
-    def test_auth_profile_oauth2(self):
-        """OAuth2 profile text does not depend on a built-in vendor pack."""
-        from dazzle.api_kb.loader import AuthSpec
-
-        profile = AuthSpec(
-            auth_type="oauth2",
-            env_var="ACCOUNTING_CLIENT_ID",
-            token_url="https://example.test/token",
-        ).to_dsl_auth_profile()
-
-        assert profile.startswith("oauth2 ")
-        assert 'client_id_env="ACCOUNTING_CLIENT_ID"' in profile
-        assert 'client_secret_env="ACCOUNTING_CLIENT_SECRET"' in profile
-        assert 'token_url="https://example.test/token"' in profile
-
-
-class TestEnvExampleGeneration:
-    """Tests for .env.example generation."""
-
-    def test_generate_env_example_single_pack(self):
-        """Test generating .env.example for a single pack."""
-        pack = load_pack("stripe_payments")
-        assert pack is not None
-
-        env_example = pack.generate_env_example()
-
-        assert "Stripe" in env_example
-        assert "STRIPE_SECRET_KEY" in env_example
-        assert "STRIPE_PUBLISHABLE_KEY" in env_example
-
-    def test_generate_env_example_multiple_packs(self):
-        """Test generating .env.example for multiple packs."""
-        env_example = generate_env_example(["stripe_payments", "companies_house_lookup"])
-
-        assert "Stripe" in env_example
-        assert "STRIPE_SECRET_KEY" in env_example
-        assert "Companies House" in env_example
-        assert "COMPANIES_HOUSE_API_KEY" in env_example
-
-    def test_env_var_to_example_line(self):
-        """Test EnvVarSpec to .env.example line conversion."""
-        env_var = EnvVarSpec(
-            name="TEST_API_KEY",
-            required=True,
-            description="Test API key",
-            example="test_123",
-        )
-
-        line = env_var.to_env_example_line()
-
-        assert "TEST_API_KEY" in line
-        assert "test_123" in line
-        assert "Test API key" in line
 
 
 class TestFragmentSourceGeneration:

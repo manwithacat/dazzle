@@ -1,5 +1,5 @@
 """
-Knowledge Graph query mixin — path finding, neighbourhood traversal, search.
+Knowledge Graph query mixin — path finding, adjacency, search.
 
 Provides graph traversal capabilities via recursive CTEs and
 iterative BFS, plus text search and raw SQL query support.
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from .models import Entity, PathResult, Relation
+from .models import Entity, PathResult
 
 if TYPE_CHECKING:
     from ._protocol import KGStoreProtocol
@@ -107,154 +107,6 @@ class KnowledgeGraphQuery:
         finally:
             self._close_connection(conn)
 
-    def get_neighbourhood(
-        self: KGStoreProtocol,
-        entity_id: str,
-        depth: int = 1,
-        relation_types: list[str] | None = None,
-        direction: str = "both",
-    ) -> dict[str, Any]:
-        """
-        Get the neighborhood of an entity (entities within N hops).
-
-        Args:
-            entity_id: Center entity
-            depth: How many hops to traverse
-            relation_types: Filter by relation types
-            direction: "outgoing", "incoming", or "both"
-
-        Returns:
-            Dict with 'center', 'entities', 'relations' keys
-        """
-        visited_ids: set[str] = {entity_id}
-        all_relations: list[Relation] = []
-        frontier = {entity_id}
-
-        for _ in range(depth):
-            next_frontier: set[str] = set()
-            for eid in frontier:
-                relations = self.get_relations(
-                    entity_id=eid,
-                    relation_type=relation_types[0]
-                    if relation_types and len(relation_types) == 1
-                    else None,
-                    direction=direction,
-                )
-                for rel in relations:
-                    # Filter by relation types if multiple specified
-                    if relation_types and rel.relation_type not in relation_types:
-                        continue
-                    all_relations.append(rel)
-                    # Add neighbors to next frontier
-                    neighbor = rel.target_id if rel.source_id == eid else rel.source_id
-                    if neighbor not in visited_ids:
-                        next_frontier.add(neighbor)
-                        visited_ids.add(neighbor)
-            frontier = next_frontier
-
-        # Fetch entity details
-        entities = []
-        for eid in visited_ids:
-            entity = self.get_entity(eid)
-            if entity:
-                entities.append(entity)
-
-        return {
-            "center": entity_id,
-            "entities": entities,
-            "relations": all_relations,
-        }
-
-    def get_dependents(
-        self: KGStoreProtocol,
-        entity_id: str,
-        relation_types: list[str] | None = None,
-        transitive: bool = False,
-        max_depth: int = 5,
-    ) -> list[Entity]:
-        """
-        Get entities that depend on this entity (incoming relations).
-
-        Args:
-            entity_id: Target entity
-            relation_types: Filter by relation types (default: all)
-            transitive: Include transitive dependents
-            max_depth: Max depth for transitive search
-        """
-        if not transitive:
-            relations = self.get_relations(
-                entity_id=entity_id,
-                direction="incoming",
-            )
-            if relation_types:
-                relations = [r for r in relations if r.relation_type in relation_types]
-
-            entity_ids = {r.source_id for r in relations}
-            return [e for eid in entity_ids if (e := self.get_entity(eid))]
-
-        # Transitive: use recursive traversal
-        visited: set[str] = set()
-        frontier = {entity_id}
-
-        for _ in range(max_depth):
-            next_frontier: set[str] = set()
-            for eid in frontier:
-                relations = self.get_relations(entity_id=eid, direction="incoming")
-                if relation_types:
-                    relations = [r for r in relations if r.relation_type in relation_types]
-                for rel in relations:
-                    if rel.source_id not in visited and rel.source_id != entity_id:
-                        visited.add(rel.source_id)
-                        next_frontier.add(rel.source_id)
-            frontier = next_frontier
-
-        return [e for eid in visited if (e := self.get_entity(eid))]
-
-    def get_dependencies(
-        self: KGStoreProtocol,
-        entity_id: str,
-        relation_types: list[str] | None = None,
-        transitive: bool = False,
-        max_depth: int = 5,
-    ) -> list[Entity]:
-        """
-        Get entities this entity depends on (outgoing relations).
-
-        Args:
-            entity_id: Source entity
-            relation_types: Filter by relation types
-            transitive: Include transitive dependencies
-            max_depth: Max depth for transitive search
-        """
-        if not transitive:
-            relations = self.get_relations(
-                entity_id=entity_id,
-                direction="outgoing",
-            )
-            if relation_types:
-                relations = [r for r in relations if r.relation_type in relation_types]
-
-            entity_ids = {r.target_id for r in relations}
-            return [e for eid in entity_ids if (e := self.get_entity(eid))]
-
-        # Transitive: use recursive traversal
-        visited: set[str] = set()
-        frontier = {entity_id}
-
-        for _ in range(max_depth):
-            next_frontier: set[str] = set()
-            for eid in frontier:
-                relations = self.get_relations(entity_id=eid, direction="outgoing")
-                if relation_types:
-                    relations = [r for r in relations if r.relation_type in relation_types]
-                for rel in relations:
-                    if rel.target_id not in visited and rel.target_id != entity_id:
-                        visited.add(rel.target_id)
-                        next_frontier.add(rel.target_id)
-            frontier = next_frontier
-
-        return [e for eid in visited if (e := self.get_entity(eid))]
-
     # =========================================================================
     # DSL Adjacency
     # =========================================================================
@@ -290,30 +142,6 @@ class KnowledgeGraphQuery:
             return paths[0].length
 
         return -1
-
-    def persona_capability_map(self: KGStoreProtocol, persona_id: str) -> dict[str, list[Entity]]:
-        """
-        Build a capability map for a persona: what can they access?
-
-        Queries the graph neighbourhood from the persona node to find
-        reachable workspaces, surfaces, and entities.
-
-        Args:
-            persona_id: Persona node ID (e.g., "persona:teacher")
-
-        Returns:
-            Dict with 'workspaces', 'surfaces', 'entities' keys,
-            each containing a list of reachable Entity nodes.
-        """
-        hood = self.get_neighbourhood(persona_id, depth=2)
-        entities = hood["entities"]
-
-        return {
-            "workspaces": [e for e in entities if e.entity_type == "dsl_workspace"],
-            "surfaces": [e for e in entities if e.entity_type == "dsl_surface"],
-            "entities": [e for e in entities if e.entity_type == "dsl_entity"],
-            "stories": [e for e in entities if e.entity_type == "dsl_story"],
-        }
 
     # =========================================================================
     # Query Interface
@@ -355,30 +183,6 @@ class KnowledgeGraphQuery:
                 params,
             ).fetchall()
             return [Entity.from_row(row) for row in rows]
-        finally:
-            self._close_connection(conn)
-
-    def query_sql(
-        self: KGStoreProtocol, sql: str, params: list[Any] | None = None
-    ) -> list[dict[str, Any]]:
-        """
-        Execute raw SQL query (read-only).
-
-        Args:
-            sql: SQL query (must be SELECT)
-            params: Query parameters
-
-        Returns:
-            List of result dicts
-        """
-        sql_upper = sql.strip().upper()
-        if not sql_upper.startswith("SELECT"):
-            raise ValueError("Only SELECT queries allowed")
-
-        conn = self._get_connection()
-        try:
-            rows = conn.execute(sql, params or []).fetchall()
-            return [dict(row) for row in rows]
         finally:
             self._close_connection(conn)
 

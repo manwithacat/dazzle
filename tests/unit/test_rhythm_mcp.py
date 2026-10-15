@@ -2,9 +2,10 @@
 
 `list` / `get` / `coverage` are the operations the `rhythm` tool registers, so
 they are exercised through its dispatcher (`handle_rhythm`). `evaluate`,
-`gaps`, `lifecycle`, `fidelity` and `propose` are not on the tool; they are
-exercised through their public `*_rhythm_handler` entry points. Every test
-patches only the AppSpec loader.
+`gaps`, `lifecycle`, `fidelity` and `propose` are not on the tool; `gaps` is
+exercised through `gaps_rhythm_handler` (the pipeline calls it) and the rest
+through the `rhythm_*_impl` functions `dazzle rhythm` calls. Every test patches
+only the AppSpec loader.
 """
 
 import json
@@ -202,8 +203,25 @@ def _run(op: str, app: MagicMock, args: dict[str, Any] | None = None, project: P
             raw = handle_rhythm(
                 {"operation": op, "_resolved_project_path": project, **(args or {})}
             )
+        elif op == "gaps":
+            raw = handlers.gaps_rhythm_handler(project, args or {})
         else:
-            raw = getattr(handlers, f"{op}_rhythm_handler")(project, args or {})
+            a = args or {}
+            impls = {
+                "evaluate": lambda: handlers.rhythm_evaluate_impl(
+                    project,
+                    name=a.get("name", ""),
+                    action=a.get("action", "evaluate"),
+                    scores=a.get("scores", []),
+                ),
+                "propose": lambda: handlers.rhythm_propose_impl(
+                    project, persona_id=a.get("persona", "")
+                ),
+                "fidelity": lambda: handlers.rhythm_fidelity_impl(project, name=a.get("name", "")),
+                "lifecycle": lambda: handlers.rhythm_lifecycle_impl(project),
+            }
+            result = impls[op]()
+            return {"error": result["error"]} if "error" in result else result
     return json.loads(raw)
 
 

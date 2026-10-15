@@ -76,7 +76,6 @@ there requires a row here.
 | `dazzle agent` | Agent-first development commands |
 | `dazzle analytics` | Analytics, consent, and privacy tooling |
 | `dazzle auth` | Manage authentication users and sessions |
-| `dazzle capability` | Manage opt-in feature capabilities |
 | `dazzle compliance` | Compliance documentation tools (ISO 27001 / SOC 2) |
 | `dazzle db` | Database migration commands (Alembic) |
 | `dazzle demo` | Demo data management commands |

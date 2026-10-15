@@ -739,13 +739,6 @@ tool: spec_analyze
   description_len: 369
   {
     "properties": {
-      "active_capabilities": {
-        "description": "Capability ids the project has opted into; others are not surfaced proactively.",
-        "items": {
-          "type": "string"
-        },
-        "type": "array"
-      },
       "answers": {
         "description": "Answers to generated questions (for refine_spec)",
         "type": "object"

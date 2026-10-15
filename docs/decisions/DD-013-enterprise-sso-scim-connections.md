@@ -36,8 +36,10 @@ Restore from the commit this DD was parked at
 `auth.enterprise.scim` (no probe, always available once declared). The
 registry, `[capabilities]` manifest parsing, `dazzle capability enable|disable`
 and the cognition gate (bootstrap / spec-analyze / lint suggest
-`dazzle capability enable …` instead of pushing the pattern) are still in the
-tree with nothing registered. `AuthSubsystem` mounted each route group only
+`dazzle capability enable …` instead of pushing the pattern) were removed in
+flense ship AI, since with nothing registered they gated nothing; restore them
+from `23cf59372` with the protocol (`core/capabilities/`, `cli/capability.py`,
+`CapabilitiesConfig` in `core/manifest.py`). `AuthSubsystem` mounted each route group only
 when its capability was active (`_mount_enterprise_capabilities`,
 `_mount_enterprise_sso`, `_mount_saml`, `_mount_scim`, `_any_enterprise_active`)
 and a boot guard (`auth/capability_guard.py`, #1344) logged loudly when
@@ -153,8 +155,7 @@ When a force lands:
 
 - The code, tests and operator guide at `23cf59372dc91d2636dbde0e6aceb549cd40efd3`
   (the `archive` branch holds retired docs, not this code; use the SHA).
-- Kept in the tree: the capability registry and `[capabilities]` parsing (empty
-  registry), social OAuth via Authlib, magic link, member admin and
+- Kept in the tree: social OAuth via Authlib, magic link, member admin and
   `manage_members`, org activation, global Identity + Organization + fenced
   Membership, `memberships.external_id`, the DNS resolvers (now in
   `tenant/aliases.py`), and the `sso` extra (Authlib + dnspython).

@@ -283,7 +283,6 @@ Low-level narrative analysis (untrusted draft). Operations: discover_entities (e
 - `spec_text` *(string)* — The narrative spec text to analyze
 - `entities` *(array)* — Entity names (for identify_lifecycles, generate_questions)
 - `answers` *(object)* — Answers to generated questions (for refine_spec)
-- `active_capabilities` *(array)* — Capability ids the project has opted into; others are not surfaced proactively.
 
 ---
 

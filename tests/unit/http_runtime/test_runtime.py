@@ -344,12 +344,11 @@ class TestServiceGenerator:
     @pytest.mark.asyncio
     async def test_custom_service_with_handler(self) -> None:
         """Test custom service with a handler."""
-        service: Any = CustomService(service_name="add_numbers")
 
         async def add_handler(a: int, b: int) -> dict[str, int]:
             return {"sum": a + b}
 
-        service.set_handler(add_handler)
+        service: Any = CustomService(service_name="add_numbers", handler=add_handler)
 
         result = await service.execute(a=5, b=3)
         assert result["sum"] == 8

@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from dazzle.qa import CapturedScreen, Finding, QAReport
-from dazzle.qa.categories import CATEGORIES, get_category
+from dazzle.qa.categories import CATEGORIES
 
 
 class TestCapturedScreen:
@@ -140,16 +140,6 @@ class TestCategories:
                 "medium",
                 "low",
             ), f"Category {cat.id} has invalid severity_default: {cat.severity_default}"
-
-    def test_get_category_by_id(self) -> None:
-        cat = get_category("data_quality")
-        assert cat is not None
-        assert cat.id == "data_quality"
-        assert cat.severity_default == "high"
-
-    def test_get_category_unknown_returns_none(self) -> None:
-        result = get_category("nonexistent_category")
-        assert result is None
 
     def test_high_severity_categories(self) -> None:
         high_cats = {c.id for c in CATEGORIES if c.severity_default == "high"}

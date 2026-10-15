@@ -63,17 +63,6 @@ class MigrationPlan:
 # =============================================================================
 
 
-@dataclass
-class ColumnInfo:
-    """Information about a database column."""
-
-    name: str
-    type: str
-    not_null: bool
-    default: Any
-    is_pk: bool
-
-
 class MigrationError(Exception):
     """Error during migration execution."""
 

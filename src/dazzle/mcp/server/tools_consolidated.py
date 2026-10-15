@@ -684,13 +684,6 @@ def _tool_spec_analyze() -> Tool:
                     "type": "object",
                     "description": "Answers to generated questions (for refine_spec)",
                 },
-                # #1756 — gates which proactive capability notes refinement may
-                # surface; read but never declared.
-                "active_capabilities": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Capability ids the project has opted into; others are not surfaced proactively.",
-                },
             },
             "required": ["operation"],
         },

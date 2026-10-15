@@ -8,7 +8,6 @@ import pytest
 
 from dazzle.qa.work_surface_utility import (
     load_ontology,
-    ontology_path,
     residual,
     scan_project,
     summary,
@@ -29,10 +28,6 @@ _REQUIRED_IDS = frozenset(
         "status_list",
     }
 )
-
-
-def test_ontology_file_exists() -> None:
-    assert ontology_path().is_file()
 
 
 def test_ontology_loads_required_surfaces() -> None:

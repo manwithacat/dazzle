@@ -556,18 +556,6 @@ class SessionManager:
             "personas": results,
         }
 
-    async def diff_routes(
-        self,
-        routes: list[str],
-        persona_ids: list[str] | None = None,
-    ) -> list[dict[str, Any]]:
-        """Run diff_route for multiple routes."""
-        results = []
-        for route in routes:
-            result = await self.diff_route(route, persona_ids)
-            results.append(result)
-        return results
-
     # =========================================================================
     # Private
     # =========================================================================

@@ -54,7 +54,6 @@ def _make_app_with_prefs(
         roles=["admin"],
         preferences=prefs or {},
     )
-    mock_store.get_preferences.return_value = prefs or {}
 
     router = create_auth_routes(mock_store)
     app = FastAPI()

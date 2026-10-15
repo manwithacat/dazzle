@@ -984,7 +984,6 @@ class DSLTestGenerator:
     def __init__(self, appspec: AppSpec):
         self.appspec = appspec
         self.coverage = TestCoverage()
-        self._test_id_counter = 0
         self._entity_map: dict[str, EntitySpec] = {e.name: e for e in appspec.domain.entities}
         self._entity_deps = self._build_dependency_graph()
         self._creatable_entities: set[str] = {
@@ -994,11 +993,6 @@ class DSLTestGenerator:
         self._crud_builder = CRUDTestBuilder(self._entity_map, self._creatable_entities)
         self._sm_builder = StateMachineTestBuilder(self._entity_map)
         self._persona_builder = PersonaTestBuilder()
-
-    def _next_id(self, prefix: str) -> str:
-        """Generate next test ID with prefix."""
-        self._test_id_counter += 1
-        return f"{prefix}_{self._test_id_counter:03d}"
 
     def _build_dependency_graph(self) -> dict[str, list[str]]:
         """Build a graph of entity dependencies."""

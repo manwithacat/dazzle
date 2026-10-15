@@ -75,11 +75,6 @@ class FieldPath:
         return ".".join(self.path)
 
     @property
-    def is_simple(self) -> bool:
-        """Single field, no relation traversal."""
-        return len(self.path) == 1
-
-    @property
     def field_name(self) -> str:
         """The final field name."""
         return self.path[-1]

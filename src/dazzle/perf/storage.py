@@ -89,19 +89,3 @@ def iter_spans(db_path: Path, run_id: str) -> Iterator[Span]:
         attrs_json = data.pop("attributes_json")
         data["attributes"] = json.loads(attrs_json) if attrs_json else {}
         yield Span(**data)
-
-
-def iter_events(db_path: Path, run_id: str) -> Iterator[Event]:
-    """Yield every ``Event`` belonging to ``run_id``."""
-    with sqlite3.connect(db_path) as conn:
-        conn.row_factory = sqlite3.Row
-        rows = conn.execute(
-            "SELECT span_id, run_id, name, timestamp_ns, attributes_json "
-            "FROM events WHERE run_id = ? ORDER BY timestamp_ns",
-            (run_id,),
-        ).fetchall()
-    for row in rows:
-        data = dict(row)
-        attrs_json = data.pop("attributes_json")
-        data["attributes"] = json.loads(attrs_json) if attrs_json else {}
-        yield Event(**data)

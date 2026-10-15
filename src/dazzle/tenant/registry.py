@@ -145,25 +145,6 @@ class TenantRegistry:
                 cur.execute(_ALTER_ADD_IS_TEST_SQL)
             conn.commit()
 
-    def update_config(self, slug: str, config: dict[str, Any]) -> TenantRecord:
-        """Replace the per-tenant configuration JSON for ``slug``.
-
-        Caller is responsible for type-coercing values to the schema
-        declared in `tenancy: per_tenant_config:` (use
-        :func:`dazzle.tenant.config_coercion.coerce_config`). The
-        registry stores the dict verbatim as JSONB.
-        """
-        if Jsonb is None:
-            raise RuntimeError("psycopg is required to update tenant config")
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(_UPDATE_CONFIG, (Jsonb(config), slug))
-                row = cur.fetchone()
-            conn.commit()
-        if row is None:
-            raise ValueError(f"Tenant '{slug}' not found")
-        return _row_to_record(row)
-
     def create(
         self,
         slug: str,

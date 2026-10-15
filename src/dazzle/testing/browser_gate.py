@@ -163,14 +163,3 @@ def get_browser_gate() -> BrowserGate:
             if _gate is None:
                 _gate = BrowserGate()
     return _gate
-
-
-def configure_browser_gate(
-    max_concurrent: int | None = None,
-    headless: bool | None = None,
-) -> BrowserGate:
-    """Reconfigure the global gate.  Returns the new instance."""
-    global _gate  # noqa: PLW0603  # browser gate reconfiguration at startup
-    with _gate_lock:
-        _gate = BrowserGate(max_concurrent=max_concurrent, headless=headless)
-    return _gate

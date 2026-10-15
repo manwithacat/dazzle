@@ -8,7 +8,7 @@ Schema:
 Uses recursive CTEs for graph traversal (paths, neighborhoods).
 
 Method groups are split into mixin classes for maintainability:
-- KnowledgeGraphQuery: path finding, neighbourhood traversal, search
+- KnowledgeGraphQuery: path finding, adjacency, search
 - KnowledgeGraphMetadata: aliases, seed metadata, concept/inference lookup
 - KnowledgeGraphActivity: telemetry logging, activity event streaming
 """
@@ -16,7 +16,6 @@ Method groups are split into mixin classes for maintainability:
 import json
 import sqlite3
 import time
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -42,7 +41,7 @@ class KnowledgeGraph(
     Thread-safe via connection-per-call pattern.
 
     Method groups are provided by mixin classes:
-    - KnowledgeGraphQuery: path finding, neighbourhood, search, stats
+    - KnowledgeGraphQuery: path finding, adjacency, search, stats
     - KnowledgeGraphMetadata: aliases, seed metadata, concept/inference lookup
     - KnowledgeGraphActivity: telemetry, activity sessions, event streaming
     """
@@ -418,22 +417,6 @@ class KnowledgeGraph(
             created_at=now,
         )
 
-    def delete_relation(self, source_id: str, target_id: str, relation_type: str) -> bool:
-        """Delete a specific relation."""
-        conn = self._get_connection()
-        try:
-            cursor = conn.execute(
-                """
-                DELETE FROM relations
-                WHERE source_id = ? AND target_id = ? AND relation_type = ?
-            """,
-                (source_id, target_id, relation_type),
-            )
-            conn.commit()
-            return cursor.rowcount > 0
-        finally:
-            self._close_connection(conn)
-
     def get_relations(
         self,
         entity_id: str | None = None,
@@ -486,217 +469,3 @@ class KnowledgeGraph(
             return [Relation.from_row(row) for row in rows]
         finally:
             self._close_connection(conn)
-
-    # =========================================================================
-    # Import / Export
-    # =========================================================================
-
-    EXPORT_VERSION = "1.0"
-
-    def export_project_data(self) -> dict[str, Any]:
-        """
-        Export all non-framework entities and their inter-relations as JSON-serializable dict.
-
-        Framework entities (metadata.source == "framework") are excluded because
-        they are always re-seeded on startup.
-
-        Returns:
-            Dict with version, metadata, entities, and relations lists.
-        """
-        conn = self._get_connection()
-        try:
-            # Collect all non-framework entity IDs
-            rows = conn.execute("SELECT * FROM entities ORDER BY id").fetchall()
-            project_entities: list[Entity] = []
-            project_ids: set[str] = set()
-            for row in rows:
-                entity = Entity.from_row(row)
-                if entity.metadata.get("source") == "framework":
-                    continue
-                project_entities.append(entity)
-                project_ids.add(entity.id)
-
-            # Collect relations where both endpoints are project entities
-            rel_rows = conn.execute(
-                "SELECT * FROM relations ORDER BY source_id, target_id, relation_type"
-            ).fetchall()
-            project_relations: list[Relation] = []
-            for row in rel_rows:
-                rel = Relation.from_row(row)
-                if rel.source_id in project_ids and rel.target_id in project_ids:
-                    project_relations.append(rel)
-
-            return {
-                "version": self.EXPORT_VERSION,
-                "exported_at": datetime.now(UTC).isoformat(),
-                "dazzle_version": _get_dazzle_version(),
-                "entities": [
-                    {
-                        "id": e.id,
-                        "entity_type": e.entity_type,
-                        "name": e.name,
-                        "metadata": e.metadata,
-                        "created_at": e.created_at,
-                        "updated_at": e.updated_at,
-                    }
-                    for e in project_entities
-                ],
-                "relations": [
-                    {
-                        "source_id": r.source_id,
-                        "target_id": r.target_id,
-                        "relation_type": r.relation_type,
-                        "metadata": r.metadata,
-                        "created_at": r.created_at,
-                    }
-                    for r in project_relations
-                ],
-            }
-        finally:
-            self._close_connection(conn)
-
-    def import_project_data(
-        self,
-        data: dict[str, Any],
-        mode: str = "merge",
-    ) -> dict[str, int]:
-        """
-        Import project data from an export dict.
-
-        Args:
-            data: Export dict (must have "version", "entities", "relations").
-            mode: "merge" (additive upsert) or "replace" (wipe project data first).
-
-        Returns:
-            Stats dict with entities_imported, relations_imported,
-            entities_skipped, relations_skipped counts.
-        """
-        version = data.get("version", "")
-        if version != self.EXPORT_VERSION:
-            raise ValueError(
-                f"Unsupported export version: {version!r} (expected {self.EXPORT_VERSION!r})"
-            )
-
-        if mode not in ("merge", "replace"):
-            raise ValueError(f"Invalid import mode: {mode!r} (expected 'merge' or 'replace')")
-
-        stats = {
-            "entities_imported": 0,
-            "relations_imported": 0,
-            "entities_skipped": 0,
-            "relations_skipped": 0,
-        }
-
-        conn = self._get_connection()
-        try:
-            if mode == "replace":
-                # Delete all non-framework entities (cascade deletes their relations)
-                conn.execute(
-                    "DELETE FROM entities WHERE json_extract(metadata, '$.source') != 'framework'"
-                    " OR metadata IS NULL"
-                    " OR json_extract(metadata, '$.source') IS NULL"
-                )
-                conn.commit()
-
-            now = time.time()
-
-            # Import entities
-            for ent_data in data.get("entities", []):
-                eid = ent_data["id"]
-                meta = ent_data.get("metadata", {})
-
-                if mode == "merge":
-                    # Check if entity exists
-                    existing = conn.execute(
-                        "SELECT id FROM entities WHERE id = ?", (eid,)
-                    ).fetchone()
-                    if existing:
-                        # Update existing
-                        conn.execute(
-                            "UPDATE entities SET name = ?, entity_type = ?, metadata = ?, "
-                            "updated_at = ? WHERE id = ?",
-                            (
-                                ent_data["name"],
-                                ent_data["entity_type"],
-                                json.dumps(meta) if meta else None,
-                                now,
-                                eid,
-                            ),
-                        )
-                    else:
-                        conn.execute(
-                            "INSERT INTO entities (id, entity_type, name, metadata, "
-                            "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-                            (
-                                eid,
-                                ent_data["entity_type"],
-                                ent_data["name"],
-                                json.dumps(meta) if meta else None,
-                                now,
-                                now,
-                            ),
-                        )
-                else:
-                    # Replace mode — always insert
-                    conn.execute(
-                        "INSERT INTO entities (id, entity_type, name, metadata, "
-                        "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-                        (
-                            eid,
-                            ent_data["entity_type"],
-                            ent_data["name"],
-                            json.dumps(meta) if meta else None,
-                            now,
-                            now,
-                        ),
-                    )
-                stats["entities_imported"] += 1
-
-            # Import relations
-            for rel_data in data.get("relations", []):
-                src = rel_data["source_id"]
-                tgt = rel_data["target_id"]
-                rtype = rel_data["relation_type"]
-                meta = rel_data.get("metadata", {})
-
-                if mode == "merge":
-                    existing = conn.execute(
-                        "SELECT 1 FROM relations WHERE source_id = ? AND target_id = ? "
-                        "AND relation_type = ?",
-                        (src, tgt, rtype),
-                    ).fetchone()
-                    if existing:
-                        stats["relations_skipped"] += 1
-                        continue
-
-                try:
-                    conn.execute(
-                        "INSERT INTO relations (source_id, target_id, relation_type, "
-                        "metadata, created_at) VALUES (?, ?, ?, ?, ?)",
-                        (
-                            src,
-                            tgt,
-                            rtype,
-                            json.dumps(meta) if meta else None,
-                            now,
-                        ),
-                    )
-                    stats["relations_imported"] += 1
-                except sqlite3.IntegrityError:
-                    stats["relations_skipped"] += 1
-
-            conn.commit()
-        finally:
-            self._close_connection(conn)
-
-        return stats
-
-
-def _get_dazzle_version() -> str:
-    """Get the current Dazzle version string."""
-    try:
-        from dazzle._version import get_version
-
-        return get_version()
-    except Exception:
-        return "unknown"

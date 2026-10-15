@@ -10,7 +10,6 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from dazzle.core.capabilities.cognition import active_capabilities_for
 from dazzle.representation import decide_representation
 
 from .common import extract_progress
@@ -72,7 +71,7 @@ def handle_bootstrap(arguments: dict[str, Any], project_path: Path | None = None
     # Phase 2: Run cognition pass
     # spec_source is always set when spec_text is set
     progress.log_sync("Running cognition pass...")
-    return _run_cognition_pass(spec_text, spec_source or "unknown", work_dir)
+    return _run_cognition_pass(spec_text, spec_source or "unknown")
 
 
 def _find_spec(work_dir: Path, arguments: dict[str, Any]) -> tuple[str | None, str | None]:
@@ -114,14 +113,8 @@ def _is_template_readme(content: str) -> bool:
     return matches >= 3
 
 
-def _run_cognition_pass(spec_text: str, spec_source: str, work_dir: Path | None = None) -> str:
+def _run_cognition_pass(spec_text: str, spec_source: str) -> str:
     """Run the full cognition pass and return mission briefing."""
-    # Capabilities this app has opted into (#1342) — gates pattern proposals so a
-    # stated-but-undeclared requirement (e.g. "Okta") surfaces as a "declare the
-    # capability" suggestion rather than full guidance the app can't yet use.
-
-    active = active_capabilities_for(work_dir) if work_dir is not None else set()
-
     # Run all analysis operations
     entities_raw = handle_spec_analyze({"operation": "discover_entities", "spec_text": spec_text})
     entities_result = json.loads(entities_raw)
@@ -160,7 +153,6 @@ def _run_cognition_pass(spec_text: str, spec_source: str, work_dir: Path | None 
         {
             "operation": "propose_patterns",
             "spec_text": spec_text,
-            "active_capabilities": list(active),
         }
     )
     patterns_result = json.loads(patterns_raw)
@@ -194,8 +186,6 @@ def _run_cognition_pass(spec_text: str, spec_source: str, work_dir: Path | None 
             # #1249 — pattern proposals + anti-pattern flags
             "pattern_proposals": patterns_result.get("pattern_proposals", []),
             "antipattern_flags": patterns_result.get("antipattern_flags", []),
-            # #1342 — capability opt-in suggestions
-            "capability_suggestions": patterns_result.get("capability_suggestions", []),
             # #1617 S1 — representation hatch choice
             "representation_decision": representation_decision,
             # #1631 — offline extract is draft

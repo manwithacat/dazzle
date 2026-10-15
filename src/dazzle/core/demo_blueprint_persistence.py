@@ -138,19 +138,3 @@ def save_blueprint(project_root: Path, blueprint: DemoDataBlueprint) -> Path:
     )
 
     return blueprint_file
-
-
-def delete_blueprint(project_root: Path) -> bool:
-    """Delete the Demo Data Blueprint file.
-
-    Args:
-        project_root: Root directory of the project
-
-    Returns:
-        True if deleted, False if not found
-    """
-    blueprint_file = get_blueprint_file(project_root)
-    if blueprint_file.exists():
-        blueprint_file.unlink()
-        return True
-    return False

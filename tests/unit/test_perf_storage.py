@@ -8,7 +8,6 @@ from pathlib import Path
 from dazzle.perf.storage import (
     Span,
     get_run,
-    iter_events,
     iter_spans,
     list_runs,
 )
@@ -70,14 +69,6 @@ def test_iter_spans_returns_typed_rows(tmp_path: Path) -> None:
     assert by_name["child"].parent_span_id == "s1"
     assert by_name["child"].duration_ns == 70
     assert by_name["child"].attributes == {"k": 1}
-
-
-def test_iter_events_returns_rows(tmp_path: Path) -> None:
-    db = tmp_path / "run.db"
-    _seed(db, run_id="r1")
-    events = list(iter_events(db, "r1"))
-    assert len(events) == 1
-    assert events[0].name == "milestone"
 
 
 def test_span_dataclass_is_immutable(tmp_path: Path) -> None:
