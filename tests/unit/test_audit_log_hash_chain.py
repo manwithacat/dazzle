@@ -12,7 +12,6 @@ table and reports tamper as a structured ChainVerifyResult.
 from __future__ import annotations
 
 import hashlib
-import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -22,7 +21,6 @@ from dazzle.http.runtime.audit_log import (
     _AUDIT_ROW_COLUMNS,
     AuditLogger,
     ChainVerifyResult,
-    _canonical_payload,
     _compute_row_hash,
 )
 
@@ -454,39 +452,27 @@ class TestNoneToHashChainSwitch:
 
 
 # =============================================================================
-# Canonical-payload determinism — sort_keys + default=str
+# Row-hash format — a known answer an external auditor can recompute
 # =============================================================================
 
 
-class TestCanonicalPayload:
-    def test_payload_is_deterministic(self) -> None:
-        """Same content, different dict-insertion order → same canonical payload."""
-        row_a = {c: f"v-{c}" for c in _AUDIT_ROW_COLUMNS}
-        row_b = {c: f"v-{c}" for c in reversed(_AUDIT_ROW_COLUMNS)}
-        assert _canonical_payload(row_a) == _canonical_payload(row_b)
+class TestRowHashFormat:
+    """The stored ``row_hash`` is an externally recomputable format:
+    ``sha256(prev_hash + payload)`` where payload is the row's audit columns
+    as sorted, whitespace-free JSON (``default=str``), ``row_hash`` excluded.
+    An auditor holding the rows can verify the chain without Dazzle."""
 
-    def test_payload_excludes_row_hash(self) -> None:
-        """row_hash is NOT part of the canonical payload (would be circular)."""
-        row = {c: f"v-{c}" for c in _AUDIT_ROW_COLUMNS}
-        row["row_hash"] = "DOES_NOT_MATTER"
-        payload = _canonical_payload(row)
-        assert "row_hash" not in payload
-        assert "DOES_NOT_MATTER" not in payload
-
-    def test_hash_is_sha256_hexdigest(self) -> None:
-        row = {c: f"v-{c}" for c in _AUDIT_ROW_COLUMNS}
+    def test_row_hash_known_answer(self) -> None:
         prev = "ab" * 32
-        h = _compute_row_hash(prev, row)
-        expected = hashlib.sha256((prev + _canonical_payload(row)).encode()).hexdigest()
-        assert h == expected
-        assert len(h) == 64
+        row = {"operation": "update", "entity_name": "Task", "evaluation_time_us": 12}
+        reordered_with_own_hash = {
+            "row_hash": "DOES_NOT_MATTER",
+            "evaluation_time_us": 12,
+            "entity_name": "Task",
+            "operation": "update",
+        }
+        payload = '{"entity_name":"Task","evaluation_time_us":12,"operation":"update"}'
+        expected = hashlib.sha256((prev + payload).encode()).hexdigest()
 
-    def test_payload_json_compact_no_whitespace(self) -> None:
-        row = {c: f"v-{c}" for c in _AUDIT_ROW_COLUMNS}
-        payload = _canonical_payload(row)
-        # Compact: no spaces after separators
-        assert ", " not in payload
-        assert ": " not in payload
-        # Round-trips
-        parsed = json.loads(payload)
-        assert parsed["operation"] == "v-operation"
+        assert _compute_row_hash(prev, row) == expected
+        assert _compute_row_hash(prev, reordered_with_own_hash) == expected

@@ -15,6 +15,8 @@ silently regress again:
 
 from __future__ import annotations
 
+import pytest
+
 from dazzle.http.runtime.renderers.fragment_adapter import _field_to_primitive
 from dazzle.render.fragment import FragmentRenderer
 
@@ -25,166 +27,167 @@ def _render(field_dict: dict) -> str:
     return _R.render(_field_to_primitive(field_dict))
 
 
-# ── 1. required enum placeholder (data correctness) ──────────────────────────
+_ENUM = [("low", "Low"), ("high", "High")]
 
 
-def test_required_enum_has_disabled_placeholder_selected() -> None:
+@pytest.mark.parametrize(
+    ("field", "present", "absent"),
+    [
+        # 1. required enum placeholder (data correctness)
+        pytest.param(
+            {"name": "priority", "label": "Priority", "required": True, "options": _ENUM},
+            ['<option value="" disabled selected>'],
+            ['<option value="low" selected>'],
+            id="required_enum_starts_on_disabled_placeholder",
+        ),
+        pytest.param(
+            {"name": "p", "label": "P", "value": "high", "options": _ENUM},
+            ['<option value="" disabled>', '<option value="high" selected>'],
+            ['<option value="" disabled selected>'],
+            id="enum_with_value_selects_value_not_placeholder",
+        ),
+        # 2. CREATE default values
+        pytest.param(
+            {"name": "qty", "label": "Qty", "kind": "number", "default": "5"},
+            ['value="5"'],
+            [],
+            id="number_default_seeds_value_on_create",
+        ),
+        pytest.param(
+            {"name": "st", "label": "St", "default": "high", "options": _ENUM},
+            ['<option value="high" selected>'],
+            ['<option value="low" selected>'],
+            id="enum_default_selects_option_on_create",
+        ),
+        pytest.param(
+            {"name": "qty", "label": "Qty", "kind": "number", "default": "5", "value": "12"},
+            ['value="12"'],
+            ['value="5"'],
+            id="edit_value_wins_over_default",
+        ),
+        # 3 + 4. data-dazzle-field + a11y on plain fields
+        pytest.param(
+            {"name": "title", "label": "Title", "kind": "text", "required": True},
+            [
+                'id="field-title"',
+                'data-dazzle-field="title"',
+                'class="dz-form-input"',
+                'required aria-required="true"',
+                '<label for="field-title" class="dz-form-label">',
+                'class="dz-form-required"',
+                "(required)",
+            ],
+            [],
+            id="plain_input_harness_and_a11y_attrs",
+        ),
+        pytest.param(
+            {"name": "desc", "label": "Desc", "kind": "textarea"},
+            [
+                '<textarea id="field-desc" name="desc" data-dazzle-field="desc"',
+                'class="dz-form-input dz-form-textarea"',
+                'rows="4"',
+            ],
+            [],
+            id="textarea",
+        ),
+        pytest.param(
+            {"name": "done", "label": "Done", "kind": "checkbox", "value": "true"},
+            [
+                'type="checkbox"',
+                'id="field-done"',
+                'data-dazzle-field="done"',
+                'class="dz-form-checkbox"',
+                " checked",
+            ],
+            [],
+            id="checkbox",
+        ),
+        pytest.param(
+            {"name": "due", "label": "Due", "kind": "date", "placeholder": "ignored"},
+            ['type="date"'],
+            ["ignored"],
+            id="native_date_input_drops_placeholder",
+        ),
+        # 5. help text
+        pytest.param(
+            {"name": "email", "label": "Email", "kind": "email", "help": "We never share it"},
+            [
+                '<p id="hint-email" class="dz-form-hint">We never share it</p>',
+                'aria-describedby="hint-email"',
+            ],
+            [],
+            id="help_renders_hint_paragraph_and_describedby",
+        ),
+        pytest.param(
+            {"name": "x", "label": "X", "kind": "text"},
+            [],
+            ["aria-describedby", "dz-form-hint"],
+            id="no_help_no_describedby",
+        ),
+    ],
+)
+def test_plain_field_render(field: dict, present: list[str], absent: list[str]) -> None:
+    html = _render(field)
+    for fragment in present:
+        assert fragment in html
+    for fragment in absent:
+        assert fragment not in html
+
+
+@pytest.mark.parametrize(
+    ("kind", "value", "group", "companion", "companion_label"),
+    [
+        pytest.param(
+            "number",
+            "12",
+            "data-dz-number-group",
+            "data-dz-number-value",
+            "Number value",
+            id="number_cycle_2149",
+        ),
+        pytest.param(
+            "date",
+            "2026-06-01",
+            "data-dz-date-group",
+            "data-dz-date-iso",
+            "ISO date",
+            id="date_cycle_2145",
+        ),
+        pytest.param(
+            "time",
+            "14:30",
+            "data-dz-time-group",
+            "data-dz-time-iso",
+            "ISO time",
+            id="time_cycle_2144",
+        ),
+        pytest.param(
+            "datetime-local",
+            "2026-06-01T14:30",
+            "data-dz-time-group",
+            "data-dz-time-iso",
+            "ISO datetime",
+            id="datetime_local",
+        ),
+    ],
+)
+def test_typed_input_emits_unsubmitted_companion(
+    kind: str, value: str, group: str, companion: str, companion_label: str
+) -> None:
+    """Leftover junk must not invent a number/date/time: the typed input gets a
+    companion read-out that has no `name`, so only the real input is submitted."""
     html = _render(
-        {
-            "name": "priority",
-            "label": "Priority",
-            "required": True,
-            "options": [("low", "Low"), ("high", "High")],
-        }
+        {"name": "f", "label": "F", "kind": kind, "value": value, "placeholder": "ignored"}
     )
-    # Leading disabled+selected empty option so a required select starts blank.
-    assert '<option value="" disabled selected>' in html
-    # The first real option must NOT be auto-selected.
-    assert '<option value="low" selected>' not in html
-
-
-def test_enum_with_value_does_not_select_placeholder() -> None:
-    html = _render(
-        {"name": "p", "label": "P", "value": "high", "options": [("low", "Low"), ("high", "High")]}
-    )
-    assert '<option value="" disabled>' in html  # present but not selected
-    assert '<option value="high" selected>' in html
-
-
-# ── 2. CREATE default values ─────────────────────────────────────────────────
-
-
-def test_number_default_seeds_value_on_create() -> None:
-    html = _render({"name": "qty", "label": "Qty", "kind": "number", "default": "5"})
-    assert 'value="5"' in html
-
-
-def test_enum_default_selects_option_on_create() -> None:
-    html = _render(
-        {
-            "name": "st",
-            "label": "St",
-            "default": "high",
-            "options": [("low", "Low"), ("high", "High")],
-        }
-    )
-    assert '<option value="high" selected>' in html
-
-
-def test_edit_value_wins_over_default() -> None:
-    html = _render({"name": "qty", "label": "Qty", "kind": "number", "default": "5", "value": "12"})
-    assert 'value="12"' in html
-    assert 'value="5"' not in html
-
-
-# ── 3 + 4. data-dazzle-field + a11y on plain fields ──────────────────────────
-
-
-def test_plain_input_carries_harness_and_a11y_attrs() -> None:
-    html = _render({"name": "title", "label": "Title", "kind": "text", "required": True})
-    assert 'id="field-title"' in html
-    assert 'data-dazzle-field="title"' in html
-    assert 'class="dz-form-input"' in html
-    assert 'required aria-required="true"' in html
-    # label association + required indicator.
-    assert '<label for="field-title" class="dz-form-label">' in html
-    assert 'class="dz-form-required"' in html
-    assert "(required)" in html
-
-
-def test_textarea_parity() -> None:
-    html = _render({"name": "desc", "label": "Desc", "kind": "textarea"})
-    assert '<textarea id="field-desc" name="desc" data-dazzle-field="desc"' in html
-    assert 'class="dz-form-input dz-form-textarea"' in html
-    assert 'rows="4"' in html
-
-
-def test_checkbox_parity() -> None:
-    html = _render({"name": "done", "label": "Done", "kind": "checkbox", "value": "true"})
-    assert 'type="checkbox"' in html
-    assert 'id="field-done"' in html
-    assert 'data-dazzle-field="done"' in html
-    assert 'class="dz-form-checkbox"' in html
-    assert " checked" in html
-
-
-def test_date_input_suppresses_placeholder() -> None:
-    html = _render({"name": "due", "label": "Due", "kind": "date", "placeholder": "ignored"})
-    assert 'type="date"' in html
-    assert "ignored" not in html  # native date inputs drop the placeholder (legacy parity)
-
-
-def test_number_field_emits_companion() -> None:
-    """Cycle 2149 — leftover junk must not invent a number. Companion has no name."""
-    html = _render({"name": "qty", "label": "Qty", "kind": "number", "value": "12"})
-    assert 'type="number"' in html
-    assert "data-dz-number-group" in html
-    assert "data-dz-number-value" in html
-    assert 'aria-label="Number value"' in html
-    assert 'name="qty"' in html
-    assert html.count("name=") == 1  # companion is not submitted
-    assert 'value="12"' in html
-
-
-def test_date_field_emits_iso_companion() -> None:
-    """Cycle 2145 — leftover ISO must not invent a date. Companion has no name."""
-    html = _render({"name": "due", "label": "Due", "kind": "date", "value": "2026-06-01"})
-    assert 'type="date"' in html
-    assert "data-dz-date-group" in html
-    assert "data-dz-date-iso" in html
-    assert 'aria-label="ISO date"' in html
-    assert 'name="due"' in html
-    assert html.count("name=") == 1  # companion is not submitted
-    assert 'value="2026-06-01"' in html
-    assert "ignored" not in html
-
-
-def test_time_field_emits_iso_companion() -> None:
-    """Cycle 2144 — leftover ISO must not invent a time. Companion has no name."""
-    html = _render({"name": "due", "label": "Due", "kind": "time", "value": "14:30"})
-    assert 'type="time"' in html
-    assert "data-dz-time-group" in html
-    assert "data-dz-time-iso" in html
-    assert 'aria-label="ISO time"' in html
-    assert 'name="due"' in html
-    assert html.count("name=") == 1  # companion is not submitted
-    assert 'value="14:30"' in html
-    assert "ignored" not in html
-
-
-def test_datetime_local_field_emits_iso_companion() -> None:
-    html = _render(
-        {
-            "name": "starts",
-            "label": "Starts",
-            "kind": "datetime-local",
-            "value": "2026-06-01T14:30",
-            "placeholder": "ignored",
-        }
-    )
-    assert 'type="datetime-local"' in html
-    assert "data-dz-time-group" in html
-    assert "data-dz-time-iso" in html
-    assert 'aria-label="ISO datetime"' in html
-    assert "ignored" not in html
+    assert f'type="{kind}"' in html
+    assert group in html
+    assert companion in html
+    assert f'aria-label="{companion_label}"' in html
+    assert f'value="{value}"' in html
+    assert 'name="f"' in html
     assert html.count("name=") == 1
-
-
-# ── 5. help text ─────────────────────────────────────────────────────────────
-
-
-def test_help_renders_hint_paragraph_and_describedby() -> None:
-    html = _render(
-        {"name": "email", "label": "Email", "kind": "email", "help": "We never share it"}
-    )
-    assert '<p id="hint-email" class="dz-form-hint">We never share it</p>' in html
-    assert 'aria-describedby="hint-email"' in html
-
-
-def test_no_help_no_describedby() -> None:
-    html = _render({"name": "x", "label": "X", "kind": "text"})
-    assert "aria-describedby" not in html
-    assert "dz-form-hint" not in html
+    if kind != "number":  # native date/time inputs drop the placeholder (legacy parity)
+        assert "ignored" not in html
 
 
 # NOTE: the `def test_field_wrapper_matches_legacy` legacy-vs-substrate parity test was removed in ADR-0049

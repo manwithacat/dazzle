@@ -16,7 +16,6 @@ Loads the rbac_validation fixture DSL and runs compliance checks at two layers:
 NIST Reference: https://csrc.nist.gov/publications/detail/sp/800-162/final
 """
 
-import json
 from pathlib import Path
 
 import pytest
@@ -539,96 +538,3 @@ class TestAuditCompleteness:
         assert PermissionKind.DELETE in staff.audit.operations
         assert PermissionKind.READ not in staff.audit.operations
         assert PermissionKind.LIST not in staff.audit.operations
-
-
-# ---------------------------------------------------------------------------
-# Check 7: Compliance Report (Aggregate)
-# ---------------------------------------------------------------------------
-
-
-class TestComplianceReport:
-    """Aggregates all checks into a structured compliance report."""
-
-    def test_generate_compliance_report(self, appspec, entity_map) -> None:
-        """Generate a NIST compliance summary report."""
-        # 1. Policy completeness
-        analysis = _analyze(appspec, None)
-        completeness_ok = len(analysis["entities_without_rules"]) == 0
-
-        # 2. Conflicts — all resolved via Cedar semantics
-        conflicts = _find_conflicts(appspec, None)
-        all_cedar_resolved = all(
-            c["resolution"] == "FORBID wins (Cedar semantics)" for c in conflicts["conflicts"]
-        )
-
-        # 3. Separation of duty — Prescription create vs update
-        rx = entity_map["Prescription"]
-        sod_violations = []
-        for persona in ALL_PERSONAS:
-            if persona == "admin":
-                continue
-            can_create = _evaluate_role_aware(rx, persona, PermissionKind.CREATE) == "allow"
-            can_update = _evaluate_role_aware(rx, persona, PermissionKind.UPDATE) == "allow"
-            if can_create and can_update:
-                sod_violations.append(persona)
-
-        # 4. Default deny — intern denied on MedicalRecord
-        intern_denied = all(
-            _evaluate_role_aware(entity_map["MedicalRecord"], "intern", op) == "deny"
-            for op in PermissionKind
-        )
-
-        # 5. Audit completeness
-        audited = all(
-            entity_map[n].audit is not None and entity_map[n].audit.enabled
-            for n in TestAuditCompleteness.AUDITED_ENTITIES
-        )
-        audit_log_not_audited = (
-            entity_map["AuditLog"].audit is not None and not entity_map["AuditLog"].audit.enabled
-        )
-
-        report = {
-            "nist_sp_800_162_compliance": {
-                "section_3_1_policy_completeness": {
-                    "pass": completeness_ok,
-                    "entities_without_rules": analysis["entities_without_rules"],
-                },
-                "section_4_3_conflict_detection": {
-                    "pass": all_cedar_resolved,
-                    "conflict_count": conflicts["conflict_count"],
-                    "all_cedar_resolved": all_cedar_resolved,
-                },
-                "section_5_2_separation_of_duty": {
-                    "pass": len(sod_violations) == 0,
-                    "violations": sod_violations,
-                },
-                "section_3_2_default_deny": {
-                    "pass": intern_denied,
-                },
-                "section_5_1_least_privilege": {
-                    "pass": True,  # Validated per-persona in TestLeastPrivilege
-                },
-                "section_6_audit": {
-                    "pass": audited and audit_log_not_audited,
-                    "all_sensitive_audited": audited,
-                    "audit_log_self_audit_disabled": audit_log_not_audited,
-                },
-            },
-            "overall_pass": all(
-                [
-                    completeness_ok,
-                    all_cedar_resolved,
-                    len(sod_violations) == 0,
-                    intern_denied,
-                    audited,
-                    audit_log_not_audited,
-                ]
-            ),
-        }
-
-        # Verify overall pass
-        assert report["overall_pass"], f"Compliance report failed:\n{json.dumps(report, indent=2)}"
-
-        # Verify each section passes
-        for section, data in report["nist_sp_800_162_compliance"].items():
-            assert data["pass"], f"{section} failed: {json.dumps(data, indent=2)}"

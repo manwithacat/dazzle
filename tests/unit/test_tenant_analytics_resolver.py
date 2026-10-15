@@ -28,10 +28,6 @@ from dazzle.core.ir import (
     AnalyticsProviderInstance,
     AnalyticsSpec,
 )
-from dazzle.http.runtime.security_middleware import (
-    _build_csp_header,
-    _resolve_request_providers,
-)
 
 
 @pytest.fixture(autouse=True)
@@ -241,81 +237,94 @@ class TestPerTenantResolution:
 
 
 class TestPerTenantCSPHeader:
-    def test_fallback_used_when_no_resolver(self) -> None:
-        gtm = get_provider_definition("gtm")
-        providers = _resolve_request_providers(_FakeRequest(), [gtm])
-        assert gtm in providers
+    """The Content-Security-Policy header a request receives carries exactly
+    the analytics origins its tenant resolves to — driven through the
+    security-headers middleware on a live app."""
 
-    def test_resolver_providers_win_over_fallback(self) -> None:
-        """When a resolver returns plausible-only, the request's CSP must
-        NOT include GTM's origins even though the app-wide fallback has GTM."""
-        plausible_def = get_provider_definition("plausible")
-        gtm_def = get_provider_definition("gtm")
+    GTM = "googletagmanager.com"
+    PLAUSIBLE = "plausible.io"
 
-        def plausible_only(_request: Any) -> TenantAnalyticsConfig:
-            return TenantAnalyticsConfig(
-                providers=[AnalyticsProviderInstance(name="plausible", params={"domain": "x.com"})]
+    @staticmethod
+    def _csp(host: str, fallback: list[str]) -> str:
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+
+        from dazzle.http.runtime.security_middleware import (
+            SecurityHeadersConfig,
+            create_security_headers_middleware,
+        )
+
+        app = FastAPI()
+        app.get("/")(lambda: {"ok": True})
+        app.add_middleware(
+            create_security_headers_middleware(
+                SecurityHeadersConfig(enable_csp=True),
+                analytics_providers=[get_provider_definition(n) for n in fallback],
             )
+        )
+        response = TestClient(app, base_url=f"http://{host}").get("/")
+        return response.headers["Content-Security-Policy"]
 
-        set_tenant_analytics_resolver(plausible_only)
+    @staticmethod
+    def _by_host(request: Any) -> TenantAnalyticsConfig:
+        return {
+            "acme.example.com": TenantAnalyticsConfig(
+                providers=[AnalyticsProviderInstance(name="gtm", params={"id": "GTM-X"})]
+            ),
+            "beta.example.com": TenantAnalyticsConfig(
+                providers=[AnalyticsProviderInstance(name="plausible", params={"domain": "x"})]
+            ),
+        }.get(request.url.hostname, TenantAnalyticsConfig())
 
-        providers = _resolve_request_providers(_FakeRequest(), [gtm_def])
-        assert plausible_def in providers
-        assert gtm_def not in providers
+    @staticmethod
+    def _broken(_request: Any) -> TenantAnalyticsConfig:
+        raise RuntimeError("boom")
 
-    def test_csp_origins_differ_per_tenant(self) -> None:
-        """End-to-end: the CSP header string itself differs between tenants."""
+    @staticmethod
+    def _unknown_and_gtm(_request: Any) -> TenantAnalyticsConfig:
+        return TenantAnalyticsConfig(
+            providers=[
+                AnalyticsProviderInstance(name="does_not_exist", params={}),
+                AnalyticsProviderInstance(name="gtm", params={"id": "G"}),
+            ]
+        )
 
-        def by_host(request: _FakeRequest) -> TenantAnalyticsConfig:
-            host = getattr(request, "hostname", "")
-            if host == "acme.example.com":
-                return TenantAnalyticsConfig(
-                    providers=[AnalyticsProviderInstance(name="gtm", params={"id": "GTM-X"})]
-                )
-            if host == "beta.example.com":
-                return TenantAnalyticsConfig(
-                    providers=[AnalyticsProviderInstance(name="plausible", params={"domain": "x"})]
-                )
-            return TenantAnalyticsConfig()
+    @staticmethod
+    def _plausible_only(_request: Any) -> TenantAnalyticsConfig:
+        return TenantAnalyticsConfig(
+            providers=[AnalyticsProviderInstance(name="plausible", params={"domain": "x.com"})]
+        )
 
-        set_tenant_analytics_resolver(by_host)
+    @pytest.mark.parametrize(
+        ("resolver", "fallback", "host", "present", "absent"),
+        [
+            pytest.param(
+                None, ["gtm"], "a.test", [GTM], [], id="app-wide-fallback-without-resolver"
+            ),
+            pytest.param(
+                "_plausible_only",
+                ["gtm"],
+                "a.test",
+                [PLAUSIBLE],
+                [GTM],
+                id="resolver-wins-over-fallback",
+            ),
+            pytest.param("_by_host", [], "acme.example.com", [GTM], [PLAUSIBLE], id="tenant-acme"),
+            pytest.param("_by_host", [], "beta.example.com", [PLAUSIBLE], [GTM], id="tenant-beta"),
+            pytest.param("_by_host", [], "unknown.test", [], [GTM, PLAUSIBLE], id="tenant-unknown"),
+            pytest.param("_broken", ["gtm"], "a.test", [GTM], [], id="broken-resolver-falls-back"),
+            pytest.param(
+                "_unknown_and_gtm", [], "a.test", [GTM], [], id="unknown-provider-name-filtered"
+            ),
+        ],
+    )
+    def test_csp_carries_the_request_tenants_analytics_origins(
+        self, resolver: str | None, fallback: list[str], host: str, present: list, absent: list
+    ) -> None:
+        if resolver is not None:
+            set_tenant_analytics_resolver(getattr(self, resolver))
 
-        acme_providers = _resolve_request_providers(_FakeRequest(hostname="acme.example.com"), [])
-        beta_providers = _resolve_request_providers(_FakeRequest(hostname="beta.example.com"), [])
-        none_providers = _resolve_request_providers(_FakeRequest(hostname="unknown"), [])
+        csp = self._csp(host, fallback)
 
-        acme_csp = _build_csp_header(None, providers=acme_providers)
-        beta_csp = _build_csp_header(None, providers=beta_providers)
-        none_csp = _build_csp_header(None, providers=none_providers)
-
-        assert "googletagmanager.com" in acme_csp
-        assert "plausible.io" not in acme_csp
-        assert "plausible.io" in beta_csp
-        assert "googletagmanager.com" not in beta_csp
-        assert "googletagmanager.com" not in none_csp
-        assert "plausible.io" not in none_csp
-
-    def test_resolver_exception_falls_back(self) -> None:
-        gtm = get_provider_definition("gtm")
-
-        def broken(_request: Any) -> TenantAnalyticsConfig:
-            raise RuntimeError("boom")
-
-        set_tenant_analytics_resolver(broken)
-        # Fail closed: use the fallback.
-        providers = _resolve_request_providers(_FakeRequest(), [gtm])
-        assert gtm in providers
-
-    def test_unknown_provider_name_filtered_out(self) -> None:
-        def resolver(_request: Any) -> TenantAnalyticsConfig:
-            return TenantAnalyticsConfig(
-                providers=[
-                    AnalyticsProviderInstance(name="does_not_exist", params={}),
-                    AnalyticsProviderInstance(name="gtm", params={"id": "G"}),
-                ]
-            )
-
-        set_tenant_analytics_resolver(resolver)
-        providers = _resolve_request_providers(_FakeRequest(), [])
-        names = {p.name for p in providers}
-        assert names == {"gtm"}
+        assert [o for o in present if o not in csp] == []
+        assert [o for o in absent if o in csp] == []

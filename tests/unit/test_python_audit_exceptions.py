@@ -15,7 +15,6 @@ from pathlib import Path
 import pytest
 
 from dazzle.sentinel.agents.python_audit import (
-    PythonAuditAgent,
     _detect_fallback_control_flow,
     _detect_silent_swallow,
     _detect_try_as_conditional,
@@ -149,52 +148,3 @@ def test_exception_shape_fires(detector: _Detector, src: str, expected_line: int
 )
 def test_exception_shape_negative_no_fire(detector: _Detector, src: str) -> None:
     assert detector(_parse(src), Path("app/x.py")) == []
-
-
-# ---------------------------------------------------------------------------
-# Heuristic integration
-# ---------------------------------------------------------------------------
-
-
-def test_heuristic_yields_finding_with_catalogue_entry(tmp_path: Path) -> None:
-    """End-to-end: the heuristic produces Findings carrying the catalogue entry id."""
-    app_dir = tmp_path / "app"
-    app_dir.mkdir()
-    (app_dir / "sync.py").write_text(
-        "def sync():\n    try:\n        v = d[k]\n    except KeyError:\n        v = None\n"
-    )
-
-    agent = PythonAuditAgent(project_path=tmp_path)
-    findings = agent.check_exceptions_as_control_flow(appspec=None)  # type: ignore[arg-type]
-
-    assert len(findings) == 1
-    assert findings[0].heuristic_id == "PA-LLM-07"
-    assert findings[0].catalogue_entry == "exceptions-as-control-flow"
-    assert findings[0].remediation is not None
-    assert any(
-        "docs/counter-priors/exceptions-as-control-flow.md" in ref
-        for ref in findings[0].remediation.references
-    )
-
-
-def test_heuristic_skips_tests_and_scripts(tmp_path: Path) -> None:
-    """Test and script files are out of scope."""
-    for sub in ("tests", "scripts"):
-        d = tmp_path / sub
-        d.mkdir()
-        (d / "f.py").write_text("try:\n    do()\nexcept:\n    pass\n")
-
-    agent = PythonAuditAgent(project_path=tmp_path)
-    assert agent.check_exceptions_as_control_flow(appspec=None) == []  # type: ignore[arg-type]
-
-
-def test_heuristic_noqa_suppression(tmp_path: Path) -> None:
-    """A `# noqa: PA-LLM-07` comment on the try line suppresses the finding."""
-    app_dir = tmp_path / "app"
-    app_dir.mkdir()
-    (app_dir / "x.py").write_text(
-        "def f():\n    try:  # noqa: PA-LLM-07 - boundary suppression\n"
-        "        v = d[k]\n    except KeyError:\n        v = None\n"
-    )
-    agent = PythonAuditAgent(project_path=tmp_path)
-    assert agent.check_exceptions_as_control_flow(appspec=None) == []  # type: ignore[arg-type]

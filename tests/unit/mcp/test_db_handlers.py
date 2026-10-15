@@ -4,10 +4,11 @@ import importlib.util
 import json
 import sys
 from pathlib import Path
-from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+from tests.unit.mcp.conftest import install_handlers_common_real
 
 from .._fake_pg import scalar_conn
 
@@ -17,49 +18,7 @@ def _import_db_handler():
     # Mock the handlers package and common module
     sys.modules.setdefault("dazzle.mcp.server.handlers", MagicMock(pytest_plugins=[]))
 
-    common_mock = ModuleType("dazzle.mcp.server.handlers.common")
-
-    def _extract_progress(args=None):
-        ctx = MagicMock()
-        ctx.log_sync = MagicMock()
-        return ctx
-
-    def _load_project_appspec(project_root):
-        return MagicMock()
-
-    def _wrap_handler_errors(fn):
-        from functools import wraps
-
-        @wraps(fn)
-        def wrapper(*a, **kw):
-            try:
-                return fn(*a, **kw)
-            except Exception as exc:
-                return json.dumps({"error": str(exc)})
-
-        return wrapper
-
-    def _error_response(msg):
-        return json.dumps({"error": msg})
-
-    def _wrap_async_handler_errors(fn):
-        from functools import wraps
-
-        @wraps(fn)
-        async def wrapper(*a, **kw):
-            try:
-                return await fn(*a, **kw)
-            except Exception as exc:
-                return json.dumps({"error": str(exc)})
-
-        return wrapper
-
-    common_mock.error_response = _error_response
-    common_mock.extract_progress = _extract_progress
-    common_mock.load_project_appspec = _load_project_appspec
-    common_mock.wrap_handler_errors = _wrap_handler_errors
-    common_mock.wrap_async_handler_errors = _wrap_async_handler_errors
-    sys.modules["dazzle.mcp.server.handlers.common"] = common_mock
+    install_handlers_common_real()
 
     # Import the module directly from file
     module_path = (

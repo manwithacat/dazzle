@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from dazzle.http.runtime.workspace_columns import (
     build_entity_columns,
     field_kind_to_col_type,
@@ -40,18 +42,24 @@ def test_media_thumb_html_emits_img() -> None:
     assert "data-dz-media-frame" in html
 
 
-def test_media_thumb_alt_sanitizes_schema_field_labels() -> None:
+@pytest.mark.parametrize(
+    ("label", "alt"),
+    [
+        pytest.param("Photo Url", "Photo", id="schema-label-photo-url"),
+        pytest.param("photo_url", "Photo", id="field-name-photo-url"),
+        pytest.param("Logo Url", "Photo", id="schema-label-logo-url"),
+        pytest.param("Hana Design Lead", "Hana Design Lead", id="human-label-kept"),
+    ],
+)
+def test_media_thumb_alt_sanitizes_schema_field_labels(label: str, alt: str) -> None:
     """Cycle 1951: alt must not dump 'Photo Url' schema labels on team cards."""
-    from dazzle.render.cell_chrome import _sanitize_media_alt
+    html = _render_media_thumb_html(
+        "https://placehold.co/64x64/111111/FFFFFF/png?text=A", alt=label
+    )
 
-    url = "https://placehold.co/64x64/111111/FFFFFF/png?text=A"
-    assert _sanitize_media_alt("Photo Url") == "Photo"
-    assert _sanitize_media_alt("photo_url") == "Photo"
-    assert _sanitize_media_alt("Logo Url") == "Photo"
-    assert _sanitize_media_alt("Hana Design Lead") == "Hana Design Lead"
-    html = _render_media_thumb_html(url, alt="Photo Url")
-    assert 'alt="Photo"' in html
-    assert "Photo Url" not in html
+    assert f'alt="{alt}"' in html
+    if label != alt:
+        assert label not in html
 
 
 def test_field_kind_palette_and_logo_names() -> None:

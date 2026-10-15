@@ -67,16 +67,16 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_form_widget_search_select_phase3.py::test_endpoint_and_typeahead_wiring",
     # cycle 2144: time leftover ISO must not invent a clock
     "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[dz-time-leftover-iso-2144]",
-    "tests/unit/test_form_field_parity_phase3b.py::test_time_field_emits_iso_companion",
-    "tests/unit/test_form_field_parity_phase3b.py::test_datetime_local_field_emits_iso_companion",
+    "tests/unit/test_form_field_parity_phase3b.py::test_typed_input_emits_unsubmitted_companion[time_cycle_2144]",
+    "tests/unit/test_form_field_parity_phase3b.py::test_typed_input_emits_unsubmitted_companion[datetime_local]",
     # cycle 2145: standalone date leftover ISO must not invent a date
     "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[dz-date-leftover-iso-2145]",
     # cycle 2148: search-box leftover q must not invent Aurora
     "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[gallery-mock-search-filters-leftover-q-2148]",
-    "tests/unit/test_form_field_parity_phase3b.py::test_date_field_emits_iso_companion",
+    "tests/unit/test_form_field_parity_phase3b.py::test_typed_input_emits_unsubmitted_companion[date_cycle_2145]",
     # cycle 2149: standalone number leftover junk must not invent a value
     "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[dz-number-leftover-2149]",
-    "tests/unit/test_form_field_parity_phase3b.py::test_number_field_emits_companion",
+    "tests/unit/test_form_field_parity_phase3b.py::test_typed_input_emits_unsubmitted_companion[number_cycle_2149]",
     # cycle 2150: grid-edit leftover ISO must not invent a date commit
     "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[dz-grid-edit-leftover-date-2150]",
     # cycle 2153: grid-edit leftover time ISO must not invent a clock
@@ -436,8 +436,8 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2234: 2233 pack missed chrome-gate 303 vs leftover 400 (×3 Pythons)
     "tests/integration/test_auth_password_mode_chrome_gate.py::test_post_signup_password_leftover_email_stays_put",
     "tests/integration/test_auth_password_mode_chrome_gate.py::test_post_signup_password_blank_email_redirects_with_error",
-    "tests/integration/test_auth_signup_magic_link_chrome_gate.py::test_post_signup_malformed_email_stays_put_no_user_no_mail",
-    "tests/integration/test_auth_signup_magic_link_chrome_gate.py::test_post_signup_empty_email_redirects_no_user_no_mail",
+    "tests/integration/test_auth_magic_link_pages.py::test_signup_malformed_email_stays_on_form_without_user_or_mail",
+    "tests/integration/test_auth_magic_link_pages.py::test_issuance_with_empty_email_redirects_without_token_or_mail",
     # cycle 2225: 2224 pack missed sibling GETs that still used leftover tokens
     "tests/integration/test_auth_password_reset_chrome_gate.py::test_get_reset_password_chrome_on_renders_typed_view_with_token",
     "tests/integration/test_auth_password_reset_chrome_gate.py::test_get_reset_password_renders_mismatch_error",

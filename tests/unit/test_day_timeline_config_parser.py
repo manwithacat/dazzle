@@ -2,118 +2,62 @@
 `day_timeline_config:` DSL block parser.
 
 Mirrors the cohort_strip_config_parser tests; same shape contract,
-simpler config (three string fields, no nested lens block).
+simpler config (string fields, no nested lens block).
 """
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
-from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.errors import ParseError
+from tests.unit.helpers.dsl import region_config
 
-
-def _parse(body: str) -> object:
-    src = f"""module ops
-app demo_app "Demo"
-
+_SLOT = """
 entity Slot "Slot":
   id: uuid pk
   name: str(100) required
   period_start: datetime
   period_end: datetime
-
-workspace dash "Dash":
-  today_slots:
-    source: Slot
-    display: day_timeline
-    day_timeline_config:
-{body}
 """
-    result = parse_dsl(src, "test.dsl")
-    fragment = result[5]
-    region = fragment.workspaces[0].regions[0]
-    return region.day_timeline_config
+
+_BOUNDS = "starts_at: period_start\nends_at: period_end\n"
+
+
+def _parse(body: str) -> Any:
+    return region_config(entity=_SLOT, display="day_timeline", body=body)
 
 
 def test_parses_minimal_config() -> None:
-    cfg = _parse(
-        """      starts_at: period_start
-      ends_at: period_end
-"""
-    )
-    assert cfg is not None
-    assert cfg.starts_at == "period_start"
-    assert cfg.ends_at == "period_end"
-    assert cfg.card == ""  # optional
+    """When `card:` is omitted the runtime falls through to a minimal default
+    body (start/end label only) — IR carries the empty string."""
+    cfg = _parse(_BOUNDS)
+    assert (cfg.starts_at, cfg.ends_at, cfg.card) == ("period_start", "period_end", "")
 
 
-def test_parses_card_template_name() -> None:
-    cfg = _parse(
-        """      starts_at: period_start
-      ends_at: period_end
-      card: lesson_card
-"""
-    )
-    assert cfg.card == "lesson_card"
+@pytest.mark.parametrize(
+    ("extra", "attr", "expected"),
+    [
+        pytest.param("card: lesson_card", "card", "lesson_card", id="card-template-name"),
+        # #1234 — `today` / `now` are lexer-reserved keywords but must be
+        # usable as the `as_of:` date anchor.
+        pytest.param("as_of: today", "as_of", "today", id="as-of-today-keyword-1234"),
+        pytest.param("as_of: now", "as_of", "now", id="as-of-now-keyword-1234"),
+    ],
+)
+def test_parses_optional_key(extra: str, attr: str, expected: str) -> None:
+    assert getattr(_parse(_BOUNDS + extra), attr) == expected
 
 
-def test_rejects_missing_starts_at() -> None:
-    with pytest.raises(ParseError, match="starts_at"):
-        _parse(
-            """      ends_at: period_end
-"""
-        )
-
-
-def test_rejects_missing_ends_at() -> None:
-    with pytest.raises(ParseError, match="ends_at"):
-        _parse(
-            """      starts_at: period_start
-"""
-        )
-
-
-def test_rejects_unknown_key() -> None:
-    with pytest.raises(ParseError, match="Unknown day_timeline_config key"):
-        _parse(
-            """      starts_at: period_start
-      ends_at: period_end
-      bogus: 1
-"""
-        )
-
-
-def test_parses_as_of_today() -> None:
-    """#1234 — `today` is a lexer-reserved keyword but must be usable as
-    the `as_of:` value (date anchor for HH:MM time-field composition)."""
-    cfg = _parse(
-        """      starts_at: period_start
-      ends_at: period_end
-      as_of: today
-"""
-    )
-    assert cfg.as_of == "today"
-
-
-def test_parses_as_of_now() -> None:
-    """#1234 — `now` is the sibling of `today` for instant-anchored
-    timelines; must also pass through `expect_identifier_or_keyword()`."""
-    cfg = _parse(
-        """      starts_at: period_start
-      ends_at: period_end
-      as_of: now
-"""
-    )
-    assert cfg.as_of == "now"
-
-
-def test_runtime_default_card_is_empty_string() -> None:
-    """When `card:` is omitted the runtime falls through to a minimal
-    default body (start/end label only) — IR carries empty string."""
-    cfg = _parse(
-        """      starts_at: period_start
-      ends_at: period_end
-"""
-    )
-    assert cfg.card == ""
+@pytest.mark.parametrize(
+    ("body", "error"),
+    [
+        pytest.param("ends_at: period_end\n", "starts_at", id="missing-starts-at"),
+        pytest.param("starts_at: period_start\n", "ends_at", id="missing-ends-at"),
+        pytest.param(_BOUNDS + "bogus: 1\n", "Unknown day_timeline_config key", id="unknown-key"),
+    ],
+)
+def test_rejects_invalid_config(body: str, error: str) -> None:
+    with pytest.raises(ParseError, match=error):
+        _parse(body)

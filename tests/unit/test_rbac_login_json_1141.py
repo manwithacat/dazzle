@@ -4,72 +4,69 @@ Pre-fix the verifier sent form-encoded data which the framework's
 own JSON-only /auth/login rejects with 422. Surfaced as a generic
 "Admin login failed" on every persona row. Two correctness gates:
 
-1. The login request body shape MUST be `json={...}`, not
-   `data={...}` — that's the framework auth contract.
+1. The login request on the wire is ``application/json`` with the
+   credentials as a JSON object — the framework auth contract.
 2. The error message MUST include the response body excerpt — bare
    "Login failed (422)" was the diagnostic gap that made this issue
-   take hours to triage.
+   take hours to triage — capped so a stack-trace body stays readable.
+
+Driven through a real ``httpx.AsyncClient`` on a ``MockTransport``, so the
+assertions are on the request the server would actually receive.
 """
 
-from __future__ import annotations
+import json
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
+import httpx
 import pytest
 
 from dazzle.cli.rbac import _login
 
 
-@pytest.mark.asyncio
-async def test_login_sends_json_not_form_data() -> None:
-    """The kwarg passed to async_retrying_request must be `json=`,
-    matching the framework's /auth/login contract."""
-    client = AsyncMock()
-    resp = MagicMock(status_code=200, cookies={"session": "abc"}, text="")
+def _client(status: int, body: str = "", cookies: str = "") -> tuple[httpx.AsyncClient, list]:
+    seen: list[httpx.Request] = []
 
-    with patch(
-        "dazzle.core.http_client.async_retrying_request", AsyncMock(return_value=resp)
-    ) as req:
-        cookies = await _login(client, "http://x", "e@x", "pw")
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        headers = {"set-cookie": cookies} if cookies else {}
+        return httpx.Response(status, text=body, headers=headers)
+
+    return httpx.AsyncClient(transport=httpx.MockTransport(handler)), seen
+
+
+@pytest.mark.asyncio
+async def test_login_posts_json_credentials_and_returns_session_cookies() -> None:
+    client, seen = _client(200, cookies="session=abc; Path=/")
+
+    cookies = await _login(client, "http://app.test", "e@x", "pw")
 
     assert cookies == {"session": "abc"}
-    # async_retrying_request was called with json= kwarg, not data=
-    call_kwargs = req.call_args.kwargs
-    assert call_kwargs.get("json") == {"email": "e@x", "password": "pw"}
-    assert "data" not in call_kwargs
+    [request] = seen
+    assert (request.method, str(request.url)) == ("POST", "http://app.test/auth/login")
+    assert request.headers["content-type"] == "application/json"
+    assert json.loads(request.content) == {"email": "e@x", "password": "pw"}
 
 
 @pytest.mark.asyncio
-async def test_login_error_includes_body_excerpt() -> None:
-    """A 422 from a project that requires extra fields used to
-    surface as bare 'Login failed (422): <email>'. Operator now sees
-    the body so the cause is actionable."""
-    client = AsyncMock()
-    resp = MagicMock(status_code=422)
-    resp.text = '{"detail":[{"loc":["body","captcha"],"msg":"required"}]}'
+@pytest.mark.parametrize(
+    ("body", "expected_excerpt"),
+    [
+        pytest.param(
+            '{"detail":[{"loc":["body","captcha"],"msg":"required"}]}',
+            "captcha",
+            id="excerpt-names-the-missing-field",
+        ),
+        pytest.param("X" * 5000, "X" * 200, id="excerpt-capped-at-200-chars"),
+    ],
+)
+async def test_login_failure_message_carries_status_email_and_body_excerpt(
+    body: str, expected_excerpt: str
+) -> None:
+    client, _ = _client(422, body=body)
 
-    with patch("dazzle.core.http_client.async_retrying_request", AsyncMock(return_value=resp)):
-        with pytest.raises(RuntimeError) as exc_info:
-            await _login(client, "http://x", "e@x", "pw")
+    with pytest.raises(RuntimeError) as exc_info:
+        await _login(client, "http://app.test", "e@x", "pw")
 
-    msg = str(exc_info.value)
-    assert "422" in msg
-    assert "e@x" in msg
-    assert "captcha" in msg, f"body excerpt missing from error: {msg!r}"
-
-
-@pytest.mark.asyncio
-async def test_login_truncates_long_body_excerpts() -> None:
-    """Body excerpts cap at ~200 chars — a stack-trace-shaped 500
-    body shouldn't bury the operator's error log."""
-    client = AsyncMock()
-    resp = MagicMock(status_code=500)
-    resp.text = "X" * 5000
-
-    with patch("dazzle.core.http_client.async_retrying_request", AsyncMock(return_value=resp)):
-        with pytest.raises(RuntimeError) as exc_info:
-            await _login(client, "http://x", "e@x", "pw")
-
-    msg = str(exc_info.value)
-    # 200 chars + repr quoting overhead — well under the original 5000.
-    assert len(msg) < 400
+    message = str(exc_info.value)
+    assert message.startswith("Login failed (422): e@x")
+    assert expected_excerpt in message
+    assert len(message) < 400

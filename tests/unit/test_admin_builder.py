@@ -485,76 +485,85 @@ class TestAdminDefaultUX:
         assert ux_logs.sort[0].field == "timestamp"
 
 
-def test_synthetic_lint_skips_combined() -> None:
-    """Combined #824 lint-skip contract for `_`-prefixed framework names:
-    - _platform_admin workspace skipped by persona + access-declaration lints.
-    - _admin_* synthetic surfaces skipped by UX lint.
-    - Real adopter workspaces (no `_` prefix) STILL trigger persona lint
-      (guard that the skip rule doesn't over-correct).
-    """
+def _lint_spec(*, workspaces: tuple = (), surfaces: tuple = ()) -> object:
     from dazzle.core import ir as _ir
-    from dazzle.core.validator import (
-        _lint_list_surface_ux,
-        _lint_workspace_access_declarations,
-        _lint_workspace_personas,
-    )
 
-    # 1) _platform_admin skipped by persona lint (alongside a normal user_ws).
-    synthetic_ws = _ir.WorkspaceSpec(name="_platform_admin", title="Admin")
-    user_ws = _ir.WorkspaceSpec(
-        name="user_ws",
-        title="User",
-        access=_ir.WorkspaceAccessSpec(allow_personas=["admin"]),
-    )
-    spec_a = _ir.AppSpec(
+    return _ir.AppSpec(
         name="t",
         app_name="t",
         app_title="T",
         domain=_ir.DomainSpec(entities=[]),
-        workspaces=[synthetic_ws, user_ws],
+        workspaces=list(workspaces),
+        surfaces=list(surfaces),
         personas=[_ir.PersonaSpec(id="admin", label="A")],
     )
-    assert not any("_platform_admin" in w for w in _lint_workspace_personas(spec_a))
 
-    # 2) _platform_admin skipped by access-declaration lint.
-    spec_b = _ir.AppSpec(
-        name="t",
-        app_name="t",
-        app_title="T",
-        domain=_ir.DomainSpec(entities=[]),
-        workspaces=[_ir.WorkspaceSpec(name="_platform_admin", title="Admin")],
-        personas=[_ir.PersonaSpec(id="admin", label="A")],
+
+def _workspace(name: str) -> object:
+    from dazzle.core import ir as _ir
+
+    return _ir.WorkspaceSpec(name=name, title=name)
+
+
+def _list_surface(name: str) -> object:
+    from dazzle.core import ir as _ir
+
+    return _ir.SurfaceSpec(
+        name=name, title=name, mode=_ir.SurfaceMode.LIST, target="Entity", entity_ref="Entity"
     )
-    assert not any("_platform_admin" in w for w in _lint_workspace_access_declarations(spec_b))
 
-    # 3) Synthetic _admin_* surfaces skipped by UX lint.
-    for name in ("_admin_metrics", "_admin_sessions", "_admin_events"):
-        synthetic = _ir.SurfaceSpec(
-            name=name,
-            title=name,
-            mode=_ir.SurfaceMode.LIST,
-            target="Entity",
-            entity_ref="Entity",
-        )
-        spec_c = _ir.AppSpec(
-            name="t",
-            app_name="t",
-            app_title="T",
-            domain=_ir.DomainSpec(entities=[]),
-            surfaces=[synthetic],
-        )
-        assert not any(name in w for w in _lint_list_surface_ux(spec_c)), (
-            f"synthetic surface {name} should not produce lint warnings"
-        )
 
-    # 4) Adopter workspace (no `_` prefix) STILL triggers lint.
-    unclaimed_ws = _ir.WorkspaceSpec(name="orphan_workspace", title="Orphan")
-    spec_d = _ir.AppSpec(
-        name="t",
-        app_name="t",
-        app_title="T",
-        domain=_ir.DomainSpec(entities=[]),
-        workspaces=[unclaimed_ws],
-        personas=[_ir.PersonaSpec(id="admin", label="A")],
+_NO_PERSONA = "has no associated persona"
+_NO_ACCESS = "has no access: declaration"
+_NO_UX = "(mode: list) has no ux block"
+
+
+@pytest.mark.parametrize(
+    ("spec_kwargs", "warning", "expected"),
+    [
+        pytest.param(
+            {"workspaces": ("_platform_admin",)},
+            f"Workspace '_platform_admin' {_NO_PERSONA}",
+            False,
+            id="synthetic-workspace-skips-persona-lint",
+        ),
+        pytest.param(
+            {"workspaces": ("_platform_admin",)},
+            f"Workspace '_platform_admin' {_NO_ACCESS}",
+            False,
+            id="synthetic-workspace-skips-access-lint",
+        ),
+        pytest.param(
+            {"surfaces": ("_admin_metrics",)},
+            f"Surface '_admin_metrics' {_NO_UX}",
+            False,
+            id="synthetic-surface-skips-list-ux-lint",
+        ),
+        pytest.param(
+            {"workspaces": ("orphan_workspace",)},
+            f"Workspace 'orphan_workspace' {_NO_PERSONA}",
+            True,
+            id="adopter-workspace-still-gets-persona-lint",
+        ),
+        pytest.param(
+            {"surfaces": ("orders",)},
+            f"Surface 'orders' {_NO_UX}",
+            True,
+            id="adopter-surface-still-gets-list-ux-lint",
+        ),
+    ],
+)
+def test_extended_lint_exempts_only_underscore_framework_names_824(
+    spec_kwargs: dict, warning: str, expected: bool
+) -> None:
+    """#824: `_`-prefixed framework workspaces and synthetic `_admin_*`
+    surfaces are exempt from the persona, access-declaration and list-UX
+    lints; adopter names without the prefix still get them."""
+    from dazzle.core.validator import extended_lint
+
+    spec = _lint_spec(
+        workspaces=tuple(_workspace(n) for n in spec_kwargs.get("workspaces", ())),
+        surfaces=tuple(_list_surface(n) for n in spec_kwargs.get("surfaces", ())),
     )
-    assert any("orphan_workspace" in w for w in _lint_workspace_personas(spec_d))
+
+    assert any(w.startswith(warning) for w in extended_lint(spec)) is expected

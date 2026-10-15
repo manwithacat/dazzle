@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+import pytest
 
-from dazzle.core.dsl_parser_impl import parse_dsl
+from tests.unit.helpers.dsl import parse_fragment
 
 _DSL = """module t
 app t "T"
@@ -29,15 +29,13 @@ surface task_board "Board":
 """
 
 
-def _surfaces(dsl: str):
-    n, a, t, c, u, frag = parse_dsl(dsl, Path("t.dsl"))
-    return {s.name: s for s in frag.surfaces}
-
-
-def test_emits_clause_parses_into_tuple() -> None:
-    board = _surfaces(_DSL)["task_board"]
-    assert board.emits == ("task_detail", "task_create")
-
-
-def test_absent_emits_defaults_empty() -> None:
-    assert _surfaces(_DSL)["task_detail"].emits == ()
+@pytest.mark.parametrize(
+    ("surface", "expected"),
+    [
+        pytest.param("task_board", ("task_detail", "task_create"), id="declared-in-order"),
+        pytest.param("task_detail", (), id="absent-defaults-empty"),
+    ],
+)
+def test_emits_clause(surface: str, expected: tuple[str, ...]) -> None:
+    surfaces = {s.name: s for s in parse_fragment(_DSL).surfaces}
+    assert surfaces[surface].emits == expected

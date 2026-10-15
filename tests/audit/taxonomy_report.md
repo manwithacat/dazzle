@@ -1,4 +1,4 @@
-# Test Suite Taxonomy — Pass 1 (14,724 test functions)
+# Test Suite Taxonomy — Pass 1 (14,393 test functions)
 
 Static classification per `docs/proposals/Suite Distillation Strategy.md`. No execution; AST + import-shape heuristics only. Confidence < 0.8 means the classifier could be wrong; see rationale field.
 
@@ -6,34 +6,32 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 
 | Archetype | Count | % | High-confidence count |
 |---|---:|---:|---:|
-| contract | 11,936 | 81.1% | 0 |
-| smoke | 1,662 | 11.3% | 753 |
-| parametric_cluster | 581 | 3.9% | 581 |
-| regression_pin | 418 | 2.8% | 418 |
-| implementation_mirror | 72 | 0.5% | 0 |
+| contract | 11,654 | 81.0% | 0 |
+| smoke | 1,616 | 11.2% | 719 |
+| parametric_cluster | 647 | 4.5% | 647 |
+| regression_pin | 410 | 2.8% | 410 |
 | property_based | 44 | 0.3% | 44 |
+| implementation_mirror | 11 | 0.1% | 0 |
 | snapshot | 9 | 0.1% | 9 |
 | belt_and_braces | 2 | 0.0% | 0 |
 
 ## Action thresholds
 
-- **Definitely keep**: 12,988 (contract + regression_pin + parametric + snapshot + property_based)
+- **Definitely keep**: 12,764 (contract + regression_pin + parametric + snapshot + property_based)
 - **Property-based (fuzzable; the target archetype)**: 44
-- **Review for collapse/rewrite**: 74 (implementation_mirror + belt_and_braces)
-- **Smoke tests** (canary; keep but never as sole coverage): 1,662
+- **Review for collapse/rewrite**: 13 (implementation_mirror + belt_and_braces)
+- **Smoke tests** (canary; keep but never as sole coverage): 1,616
 
 ## Top 10 implementation-mirror files
 
-- `tests/unit/test_domain_user_attributes.py` — 7 likely-mirror tests
-- `tests/unit/test_qa/test_cli_signing_wiring.py` — 5 likely-mirror tests
-- `tests/unit/test_rbac_enforcement.py` — 5 likely-mirror tests
-- `tests/unit/test_audit_log_hash_chain.py` — 4 likely-mirror tests
-- `tests/unit/test_cli_coverage.py` — 4 likely-mirror tests
 - `tests/integration/test_rbac_verifier_e2e.py` — 3 likely-mirror tests
-- `tests/unit/test_audit_log.py` — 3 likely-mirror tests
-- `tests/unit/test_rbac_login_json_1141.py` — 3 likely-mirror tests
-- `tests/unit/test_scope_via.py` — 3 likely-mirror tests
-- `tests/unit/test_cli_spec_status.py` — 2 likely-mirror tests
+- `tests/unit/test_db_baseline_reconcile_1309.py` — 2 likely-mirror tests
+- `tests/integration/test_current_tenant_scope_pg.py` — 1 likely-mirror tests
+- `tests/integration/test_db_resanitize_rich_text_pg.py` — 1 likely-mirror tests
+- `tests/integration/test_migrate_autostamp_pg.py` — 1 likely-mirror tests
+- `tests/unit/test_grammar_gen.py` — 1 likely-mirror tests
+- `tests/unit/test_message_scroller_emitter.py` — 1 likely-mirror tests
+- `tests/unit/test_nav_icons.py` — 1 likely-mirror tests
 
 ## Top 10 smoke-test files
 

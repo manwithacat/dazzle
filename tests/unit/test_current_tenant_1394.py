@@ -155,38 +155,31 @@ class TestMarkerResolutionFailsClosed:
 class TestCreateScopeFailsClosed:
     """`field = current_tenant` create-scope must deny when no host tenant is
     bound — even when the payload omits the field (the `None == None` fail-open
-    the security review caught)."""
+    the security review caught) and for `!=` (`left != sentinel` would always
+    be True). Driven through the public ``check_create_predicate``."""
 
-    def test_resolve_value_denies_without_host_tenant(self) -> None:
-        from dazzle.core.ir.predicates import CompOp
-        from dazzle.http.runtime.scope_create_eval import _CT_DENY, _compare, _resolve_value
+    @pytest.mark.parametrize(
+        ("host_tenant", "op", "payload", "allowed"),
+        [
+            pytest.param(None, CompOp.EQ, {}, False, id="deny-no-host-tenant-field-omitted"),
+            pytest.param(None, CompOp.EQ, {"org": "t-any"}, False, id="deny-no-host-tenant-eq"),
+            pytest.param(None, CompOp.NEQ, {"org": "t-any"}, False, id="deny-no-host-tenant-neq"),
+            pytest.param(None, CompOp.NEQ, {}, False, id="deny-no-host-tenant-neq-field-omitted"),
+            pytest.param("tenant-A", CompOp.EQ, {"org": "tenant-A"}, True, id="allow-own-tenant"),
+            pytest.param("tenant-A", CompOp.EQ, {"org": "tenant-B"}, False, id="deny-other-tenant"),
+        ],
+    )
+    def test_create_scope_on_current_tenant(
+        self, host_tenant: str | None, op: CompOp, payload: dict, allowed: bool
+    ) -> None:
+        from dazzle.http.runtime.scope_create_eval import check_create_predicate
+        from dazzle.http.runtime.tenant_isolation import set_current_host_tenant_id
 
-        # No host tenant in context → sentinel, not None.
-        resolved = _resolve_value(ValueRef(current_tenant=True), "u1", {})
-        assert resolved is _CT_DENY
-        # The sentinel denies for EVERY operator — including NEQ, which would
-        # otherwise be `left != sentinel` → always True → fail open.
-        assert _compare(None, CompOp.EQ, resolved) is False
-        assert _compare("any-tenant", CompOp.EQ, resolved) is False
-        assert _compare("any-tenant", CompOp.NEQ, resolved) is False
-        assert _compare(None, CompOp.NEQ, resolved) is False
+        if host_tenant is not None:
+            set_current_host_tenant_id(host_tenant)  # reset by the autouse fixture
+        predicate = ColumnCheck(field="org", op=op, value=ValueRef(current_tenant=True))
 
-    def test_resolve_value_binds_host_tenant_when_present(self) -> None:
-        from dazzle.core.ir.predicates import CompOp
-        from dazzle.http.runtime.scope_create_eval import _compare, _resolve_value
-        from dazzle.http.runtime.tenant_isolation import (
-            _current_host_tenant_id,
-            set_current_host_tenant_id,
-        )
-
-        token = set_current_host_tenant_id("tenant-A")
-        try:
-            resolved = _resolve_value(ValueRef(current_tenant=True), "u1", {})
-        finally:
-            _current_host_tenant_id.reset(token)
-        assert resolved == "tenant-A"
-        assert _compare("tenant-A", CompOp.EQ, resolved) is True
-        assert _compare("tenant-B", CompOp.EQ, resolved) is False
+        assert check_create_predicate(predicate, payload, user_id="u1") is allowed
 
 
 # ──────────────────────────── display gate ────────────────────────────

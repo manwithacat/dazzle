@@ -6,7 +6,9 @@ the auth UserRecord or preferences.
 """
 
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+
+import pytest
 
 
 def _make_user_and_session() -> tuple[Any, Any]:
@@ -138,6 +140,10 @@ class TestValidateSessionMergesDomainAttrs:
     """Test that validate_session merges domain user attributes into preferences."""
 
     def test_domain_attrs_merged_into_preferences(self) -> None:
+        """Full #684 path: a psycopg3 ``UUID`` FK on the domain User row reaches
+        ``preferences`` as a string, so a ``current_user.org`` scope can bind it."""
+        from uuid import uuid4
+
         from dazzle.http.runtime.auth.store import AuthStore
 
         with patch.object(AuthStore, "_init_db"):
@@ -147,6 +153,7 @@ class TestValidateSessionMergesDomainAttrs:
             )
 
         user, session = _make_user_and_session()
+        org_uuid = uuid4()
 
         with (
             patch.object(store, "get_session", return_value=session),
@@ -160,6 +167,7 @@ class TestValidateSessionMergesDomainAttrs:
                         {
                             "school": "school-456",
                             "department": "maths",
+                            "org": org_uuid,
                             "email": "admin@oakwood.sch.uk",
                             "id": "x",
                         }
@@ -170,8 +178,12 @@ class TestValidateSessionMergesDomainAttrs:
             ctx = store.validate_session("session-abc")
 
         assert ctx.is_authenticated
-        assert ctx.preferences.get("school") == "school-456"
-        assert ctx.preferences.get("department") == "maths"
+        assert ctx.preferences == {
+            "school": "school-456",
+            "department": "maths",
+            "org": str(org_uuid),
+            "entity_id": "x",
+        }
 
     def test_explicit_preferences_take_priority(self) -> None:
         from dazzle.http.runtime.auth.store import AuthStore
@@ -204,143 +216,65 @@ class TestValidateSessionMergesDomainAttrs:
         assert ctx.preferences["school"] == "override-school"
 
 
-class TestResolveUserAttributeWithPreferences:
-    """Test that _resolve_user_attribute picks up domain attrs via preferences."""
-
-    def test_resolves_school_from_preferences(self) -> None:
-        from dazzle.http.runtime.route_generator import _resolve_user_attribute
-
-        auth_context = MagicMock()
-        auth_context.user = MagicMock()
-        auth_context.user.school = MagicMock(spec=[])  # not a scalar
-        auth_context.user.school_id = MagicMock(spec=[])  # not a scalar
-        auth_context.preferences = {"school": "school-uuid-456"}
-
-        result = _resolve_user_attribute("school", auth_context)
-        assert result == "school-uuid-456"
-
-    def test_returns_rbac_deny_when_not_found(self) -> None:
-        from dazzle.http.runtime.route_generator import _resolve_user_attribute
-
-        auth_context = MagicMock()
-        auth_context.user = MagicMock()
-        # Make getattr return non-scalar
-        auth_context.user.school = MagicMock(spec=[])
-        auth_context.user.school_id = MagicMock(spec=[])
-        auth_context.preferences = {}
-
-        result = _resolve_user_attribute("school", auth_context)
-        assert result == "__RBAC_DENY__"
-
-    def test_resolves_entity_id_from_preferences(self) -> None:
-        """current_user in via clauses should resolve to DSL entity ID (#534)."""
-        from dazzle.http.runtime.route_generator import _resolve_user_attribute
-
-        auth_context = MagicMock()
-        auth_context.user = MagicMock()
-        auth_context.user.entity_id = MagicMock(spec=[])  # not a scalar on UserRecord
-        auth_context.preferences = {"entity_id": "dsl-user-uuid-789"}
-
-        result = _resolve_user_attribute("entity_id", auth_context)
-        assert result == "dsl-user-uuid-789"
-
-    def test_uuid_preference_resolves_not_deny(self) -> None:
-        """UUID FK attrs stored as strings must resolve, not produce __RBAC_DENY__ (#684)."""
-        from dazzle.http.runtime.route_generator import _resolve_user_attribute
-
-        auth_context = MagicMock()
-        auth_context.user = MagicMock()
-        auth_context.user.department = MagicMock(spec=[])  # not a scalar
-        auth_context.preferences = {"department": "b3b49b49-02d1-50f5-9266-e20ecfd8c103"}
-
-        result = _resolve_user_attribute("department", auth_context)
-        # Must resolve to the UUID string, NOT __RBAC_DENY__
-        assert result == "b3b49b49-02d1-50f5-9266-e20ecfd8c103"
-        assert result != "__RBAC_DENY__"
+_DENY = "__RBAC_DENY__"
+_ORG = "b3b49b49-02d1-50f5-9266-e20ecfd8c103"
 
 
-class TestPositiveAuthResolution:
-    """Verify that permitted users with FK ref attrs get data, not empty results (#684).
+def _auth(*, prefs: dict[str, str] | None = None, membership_tenant: str | None = None) -> Any:
+    """A real ``AuthContext`` for the authenticated school admin."""
+    from dazzle.http.runtime.auth.models import AuthContext, MembershipRecord
 
-    Exercises the positive auth path: when a user HAS the required FK
-    attributes (e.g. scope: org_id = current_user.org), the scope
-    resolution produces a usable filter value — not __RBAC_DENY__.
+    user, session = _make_user_and_session()
+    membership = (
+        MembershipRecord(id="m-1", tenant_id=membership_tenant, identity_id=str(user.id))
+        if membership_tenant
+        else None
+    )
+    return AuthContext(
+        user=user,
+        session=session,
+        is_authenticated=True,
+        preferences=prefs or {},
+        active_membership=membership,
+    )
 
-    Uses generic DSL entity names, not domain-specific ones.
-    """
 
-    def test_uuid_fk_attrs_resolve_through_full_auth_path(self) -> None:
-        """Full path: UUID FK in domain User row → session prefs → scope resolution.
+# One row per resolution rule of ``current_user.<attr>`` in a scope predicate.
+# The deny rows are the fail-closed contract: each is its own case id.
+_RESOLUTION_CASES = [
+    pytest.param("email", {}, "admin@oakwood.sch.uk", id="builtin-userrecord-field"),
+    pytest.param(
+        "school", {"school": "school-uuid-456"}, "school-uuid-456", id="domain-attr-from-prefs"
+    ),
+    pytest.param(
+        "school", {"school_id": "school-uuid-99"}, "school-uuid-99", id="id-variant-from-prefs"
+    ),
+    pytest.param(
+        "entity_id", {"entity_id": "dsl-user-789"}, "dsl-user-789", id="entity-id-from-prefs-#534"
+    ),
+    pytest.param("org", {"org": _ORG}, _ORG, id="uuid-string-pref-resolves-#684"),
+    pytest.param("tier", {"tier": "3"}, "3", id="int-like-string-pref"),
+    pytest.param("school", {}, _DENY, id="deny-when-attr-missing"),
+    pytest.param(
+        "tenant_id", {"tenant_id": "spoofed"}, _DENY, id="deny-tenant-id-from-prefs-not-membership"
+    ),
+]
 
-        Simulates: entity with `scope: org_id = current_user.org` where
-        the User entity has `org: ref Organisation` (a UUID FK column).
-        """
-        from uuid import UUID, uuid4
 
-        from dazzle.http.runtime.auth.store import AuthStore
-        from dazzle.http.runtime.route_generator import _resolve_user_attribute
+@pytest.mark.parametrize(("attr", "prefs", "expected"), _RESOLUTION_CASES)
+def test_current_user_attribute_resolution(attr: str, prefs: dict[str, str], expected: str) -> None:
+    from dazzle.http.runtime.scope_filters import _resolve_user_attribute
 
-        with patch.object(AuthStore, "_init_db"):
-            store = AuthStore(
-                database_url="postgresql://localhost/test",
-                user_entity_table="User",
-            )
+    assert _resolve_user_attribute(attr, _auth(prefs=prefs)) == expected
 
-        # Simulate a domain User row as psycopg3 returns it — UUID FK columns
-        # come back as uuid.UUID objects, not strings
-        org_uuid = uuid4()
-        team_uuid = uuid4()
-        domain_row = {
-            "id": UUID("00000000-0000-0000-0000-000000000001"),
-            "email": "user@example.com",
-            "password_hash": "hashed",
-            "org": org_uuid,  # ref Organisation — psycopg3 returns UUID
-            "team": team_uuid,  # ref Team — psycopg3 returns UUID
-            "display_name": "Test User",
-        }
 
-        # Step 1: _load_domain_user_attributes must convert UUID→str
-        with patch.object(store, "_execute", return_value=[domain_row]):
-            attrs = store._load_domain_user_attributes("user@example.com")
+def test_current_user_tenant_id_binds_the_active_membership() -> None:
+    from dazzle.http.runtime.scope_filters import _resolve_user_attribute
 
-        assert isinstance(attrs["org"], str)
-        assert isinstance(attrs["team"], str)
+    assert _resolve_user_attribute("tenant_id", _auth(membership_tenant="t-1")) == "t-1"
 
-        # Step 2: attrs go into auth_context.preferences (as validate_session does)
-        auth_context = MagicMock()
-        auth_context.user = MagicMock()
-        auth_context.user.org = MagicMock(spec=[])  # not a scalar on UserRecord
-        auth_context.user.team = MagicMock(spec=[])
-        auth_context.preferences = attrs
 
-        # Step 3: _resolve_user_attribute must find them — not __RBAC_DENY__
-        org_result = _resolve_user_attribute("org", auth_context)
-        team_result = _resolve_user_attribute("team", auth_context)
+def test_current_user_attribute_denies_without_auth_context() -> None:
+    from dazzle.http.runtime.scope_filters import _resolve_user_attribute
 
-        assert org_result == str(org_uuid)
-        assert team_result == str(team_uuid)
-        assert org_result != "__RBAC_DENY__"
-        assert team_result != "__RBAC_DENY__"
-
-    def test_string_attrs_still_resolve(self) -> None:
-        """Non-UUID scalar attrs (str, int, bool) continue to work."""
-        from dazzle.http.runtime.route_generator import _resolve_user_attribute
-
-        auth_context = MagicMock()
-        auth_context.user = MagicMock()
-        auth_context.user.region = MagicMock(spec=[])
-        auth_context.preferences = {"region": "eu-west", "tier": "3"}
-
-        assert _resolve_user_attribute("region", auth_context) == "eu-west"
-        assert _resolve_user_attribute("tier", auth_context) == "3"
-
-    def test_missing_attr_returns_deny(self) -> None:
-        """When the user lacks the required attr, __RBAC_DENY__ is correct."""
-        from dazzle.http.runtime.route_generator import _resolve_user_attribute
-
-        auth_context = MagicMock()
-        auth_context.user = MagicMock()
-        auth_context.user.org = MagicMock(spec=[])
-        auth_context.preferences = {}  # no org set
-
-        assert _resolve_user_attribute("org", auth_context) == "__RBAC_DENY__"
+    assert _resolve_user_attribute("school", None) == _DENY

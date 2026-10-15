@@ -5,27 +5,26 @@ Two surfaces under test:
 1. `discover_route_overrides` populates `implements_entity` /
    `implements_op` / `implements_via` on the descriptor when the
    annotation is present.
-2. `_wrap_with_policy_gate` invokes `check_entity_op` against the
-   path-param row id BEFORE the underlying handler runs; on denial
-   the handler body is never reached.
+2. A route mounted by `build_override_router` runs the permit + scope
+   gate against the path-param row id BEFORE the override handler; on
+   denial the handler body is never reached.
 """
-
-from __future__ import annotations
 
 import textwrap
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from typing import Any
 
 import pytest
-from fastapi import HTTPException, Request
+from fastapi import FastAPI, Request
+from fastapi.testclient import TestClient
 
 from dazzle.http.runtime.policy import (
     EntityPolicyInfo,
     PolicyRegistry,
 )
 from dazzle.http.runtime.route_overrides import (
-    _wrap_with_policy_gate,
+    build_override_router,
     discover_route_overrides,
 )
 
@@ -99,118 +98,128 @@ def test_discover_ignores_invalid_op(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Wrapper — _wrap_with_policy_gate
+# Policy gate — through build_override_router on a live app
 # ---------------------------------------------------------------------------
 
 
-def _request_with_registry(
-    registry: PolicyRegistry,
-    auth_user_id: str = "u-1",
-    auth_roles: list[str] | None = None,
-    path_kwargs: dict | None = None,
-) -> Request:
-    """Build the minimal Request shape `check_entity_op` reads off."""
-    user = SimpleNamespace(id=auth_user_id, roles=auth_roles or ["role_admin"])
-    auth_ctx = SimpleNamespace(is_authenticated=True, user=user)
-    app_state = SimpleNamespace(policy_registry=registry)
-    return SimpleNamespace(
-        app=SimpleNamespace(state=app_state),
-        state=SimpleNamespace(auth_context=auth_ctx),
-    )  # type: ignore[return-value]
+class _TaskService:
+    async def execute(self, **kwargs: Any) -> Any:
+        return {"id": kwargs.get("id"), "title": "t"}
 
 
-def _registry_with_spec(spec: object, service: object | None = None) -> PolicyRegistry:
-    return PolicyRegistry(
+def _override_client(tmp_path: Path, route: str, signature: str, roles: list[str]) -> TestClient:
+    """Mount a discovered ``# dazzle:implements Task.update via task_id`` override.
+
+    The handler records every call on ``app.state.calls``; the request carries an
+    authenticated user holding ``roles``.
+    """
+    from dazzle.core.ir.domain import AccessSpec, PermissionKind, PermissionRule, PolicyEffect
+    from dazzle.core.ir.fk_graph import FKGraph
+
+    record = 'request.app.state.calls.append("ran")' if "request" in signature else "pass"
+    routes_dir = _write_override(
+        tmp_path,
+        f"""
+        # dazzle:route-override POST {route}
+        # dazzle:implements Task.update via task_id
+        from fastapi import Request
+
+        async def handler({signature}):
+            {record}
+            return {{"ok": True}}
+        """,
+    )
+    app = FastAPI()
+    app.state.calls = []
+    app.state.policy_registry = PolicyRegistry(
         entities={
             "Task": EntityPolicyInfo(
                 entity_name="Task",
-                cedar_access_spec=spec,  # type: ignore[arg-type]
-                fk_graph=MagicMock(),
-                service=service,  # type: ignore[arg-type]
+                cedar_access_spec=AccessSpec(
+                    permissions=[
+                        PermissionRule(
+                            operation=PermissionKind.UPDATE,
+                            effect=PolicyEffect.PERMIT,
+                            personas=["admin"],
+                        )
+                    ]
+                ),
+                fk_graph=FKGraph(),
+                service=_TaskService(),  # type: ignore[arg-type]
             )
         }
     )
 
+    @app.middleware("http")
+    async def _authenticate(request: Request, call_next: Any) -> Any:
+        user = SimpleNamespace(id="u-1", roles=roles)
+        request.state.auth_context = SimpleNamespace(is_authenticated=True, user=user)
+        return await call_next(request)
 
-def _permit_spec() -> object:
-    from dazzle.core.ir.domain import (
-        AccessSpec,
-        PermissionKind,
-        PermissionRule,
-        PolicyEffect,
-    )
-
-    return AccessSpec(
-        permissions=[
-            PermissionRule(
-                operation=PermissionKind.UPDATE,
-                effect=PolicyEffect.PERMIT,
-                personas=["admin"],
-            )
-        ]
-    )
+    router = build_override_router(routes_dir)
+    assert router is not None
+    app.include_router(router)
+    return TestClient(app, raise_server_exceptions=False)
 
 
-@pytest.mark.asyncio
-async def test_wrapper_invokes_underlying_handler_on_pass() -> None:
-    """Happy path — permit + scope pass → underlying handler runs and
-    its result is returned."""
-    service = MagicMock()
-    service.execute = AsyncMock(return_value={"id": "row-1"})
-    registry = _registry_with_spec(_permit_spec(), service=service)
+@pytest.mark.parametrize(
+    ("route", "signature", "roles", "status", "detail_error", "handler_ran"),
+    [
+        pytest.param(
+            "/api/task/{task_id}/touch",
+            "request: Request, task_id: str",
+            ["role_admin"],
+            200,
+            None,
+            True,
+            id="permit-passes-handler-runs",
+        ),
+        pytest.param(
+            "/api/task/{task_id}/touch",
+            "request: Request, task_id: str",
+            ["role_member"],
+            403,
+            None,
+            False,
+            id="permit-denies-before-handler-runs",
+        ),
+        pytest.param(
+            "/api/task/{task_id}/touch",
+            "task_id: str",
+            ["role_admin"],
+            500,
+            "policy_gate_missing_request",
+            False,
+            id="handler-without-request-is-500",
+        ),
+        pytest.param(
+            "/api/task/touch",
+            "request: Request",
+            ["role_admin"],
+            500,
+            "policy_gate_missing_path_param",
+            False,
+            id="route-without-via-param-is-500",
+        ),
+    ],
+)
+def test_implements_override_runs_the_policy_gate_first(
+    tmp_path: Path,
+    route: str,
+    signature: str,
+    roles: list[str],
+    status: int,
+    detail_error: str | None,
+    handler_ran: bool,
+) -> None:
+    client = _override_client(tmp_path, route, signature, roles)
 
-    inner = AsyncMock(return_value={"ok": True})
-    wrapped = _wrap_with_policy_gate(inner, entity="Task", op="update", via="task_id")
+    response = client.post(route.replace("{task_id}", "row-1"))
 
-    req = _request_with_registry(registry)
-    result = await wrapped(request=req, task_id="row-1")
-
-    assert result == {"ok": True}
-    inner.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_wrapper_short_circuits_when_check_denies() -> None:
-    """Permit denies (no admin role) → wrapper raises 403 BEFORE the
-    underlying handler runs."""
-    registry = _registry_with_spec(_permit_spec())
-
-    inner = AsyncMock(return_value={"ok": True})
-    wrapped = _wrap_with_policy_gate(inner, entity="Task", op="update", via="task_id")
-
-    req = _request_with_registry(registry, auth_roles=["role_member"])
-    with pytest.raises(HTTPException) as exc:
-        await wrapped(request=req, task_id="row-1")
-    assert exc.value.status_code == 403
-    inner.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_wrapper_raises_500_when_request_arg_missing() -> None:
-    """Wrapper can't reach app.state.policy_registry without a Request —
-    defensive 500 with diagnostic detail rather than silent skip."""
-    inner = AsyncMock(return_value={"ok": True})
-    wrapped = _wrap_with_policy_gate(inner, entity="Task", op="update", via="task_id")
-
-    with pytest.raises(HTTPException) as exc:
-        await wrapped(task_id="row-1")
-    assert exc.value.status_code == 500
-    assert "policy_gate_missing_request" in str(exc.value.detail)
-
-
-@pytest.mark.asyncio
-async def test_wrapper_raises_500_when_via_param_missing() -> None:
-    """The path-param named by `via` must appear in kwargs; if it
-    doesn't, the wrapper surfaces a 500 with diagnostic detail."""
-    registry = _registry_with_spec(_permit_spec())
-    inner = AsyncMock(return_value={"ok": True})
-    wrapped = _wrap_with_policy_gate(inner, entity="Task", op="update", via="task_id")
-
-    req = _request_with_registry(registry)
-    with pytest.raises(HTTPException) as exc:
-        await wrapped(request=req)  # no task_id kwarg
-    assert exc.value.status_code == 500
-    assert "policy_gate_missing_path_param" in str(exc.value.detail)
+    assert response.status_code == status
+    if detail_error is not None:
+        assert response.json()["detail"]["error"] == detail_error
+    assert client.app.state.calls == (["ran"] if handler_ran else [])
 
 
 def test_discover_populates_emits_paths(tmp_path: Path) -> None:

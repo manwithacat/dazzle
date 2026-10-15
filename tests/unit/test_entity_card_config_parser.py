@@ -8,69 +8,47 @@ optional source/filter/limit/fields/actions per section.
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
-from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.errors import ParseError
+from tests.unit.helpers.dsl import region_config
 
-
-def _parse(body: str) -> object:
-    src = f"""module ops
-app demo_app "Demo"
-
+_RECORD = """
 entity Record "Record":
   id: uuid pk
   name: str(100) required
   status: str(50)
   score: int
-
-workspace dash "Dash":
-  card_view:
-    source: Record
-    display: entity_card
-    entity_card_config:
-{body}
 """
-    result = parse_dsl(src, "test.dsl")
-    fragment = result[5]
-    region = fragment.workspaces[0].regions[0]
-    return region.entity_card_config
+
+
+def _parse(body: str) -> Any:
+    return region_config(entity=_RECORD, display="entity_card", body=body)
 
 
 def test_parses_minimal_config_with_one_section() -> None:
-    cfg = _parse(
-        """      sections:
-        - name: halo
-          mode: halo
-"""
-    )
-    assert cfg is not None
-    assert len(cfg.sections) == 1
-    assert cfg.sections[0].name == "halo"
-    assert cfg.sections[0].mode.value == "halo"
+    cfg = _parse("sections:\n  - name: halo\n    mode: halo\n")
+    assert [(s.name, s.mode.value) for s in cfg.sections] == [("halo", "halo")]
     assert cfg.scope_param == "id"  # default
 
 
 def test_parses_custom_scope_param() -> None:
-    cfg = _parse(
-        """      scope_param: pupil_id
-      sections:
-        - name: halo
-          mode: halo
-"""
-    )
+    cfg = _parse("scope_param: pupil_id\nsections:\n  - name: halo\n    mode: halo\n")
     assert cfg.scope_param == "pupil_id"
 
 
 def test_parses_section_with_source_filter_limit() -> None:
     cfg = _parse(
-        """      sections:
-        - name: history
-          mode: stamps
-          source: Record
-          filter: status = "active"
-          limit: 5
-"""
+        """
+        sections:
+          - name: history
+            mode: stamps
+            source: Record
+            filter: status = "active"
+            limit: 5
+        """
     )
     s = cfg.sections[0]
     assert s.source == "Record"
@@ -78,109 +56,55 @@ def test_parses_section_with_source_filter_limit() -> None:
     assert s.limit == 5
 
 
-def test_parses_section_with_fields_list() -> None:
-    cfg = _parse(
-        """      sections:
-        - name: meta
-          mode: flags
-          fields: [name, status, score]
-"""
-    )
-    assert cfg.sections[0].fields == ["name", "status", "score"]
-
-
-def test_parses_section_with_actions_list() -> None:
-    cfg = _parse(
-        """      sections:
-        - name: ops
-          mode: quick_actions
-          actions: [reload, archive]
-"""
-    )
-    assert cfg.sections[0].actions == ["reload", "archive"]
+@pytest.mark.parametrize(
+    ("section_keys", "attr", "expected"),
+    [
+        pytest.param(
+            "mode: flags\n    fields: [name, status, score]",
+            "fields",
+            ["name", "status", "score"],
+            id="fields-list",
+        ),
+        pytest.param(
+            "mode: quick_actions\n    actions: [reload, archive]",
+            "actions",
+            ["reload", "archive"],
+            id="actions-list",
+        ),
+    ],
+)
+def test_parses_section_list_key(section_keys: str, attr: str, expected: list[str]) -> None:
+    cfg = _parse(f"sections:\n  - name: s\n    {section_keys}\n")
+    assert getattr(cfg.sections[0], attr) == expected
 
 
 def test_parses_all_section_modes() -> None:
-    cfg = _parse(
-        """      sections:
-        - name: a
-          mode: halo
-        - name: b
-          mode: flags
-        - name: c
-          mode: mini_bars
-        - name: d
-          mode: stamps
-        - name: e
-          mode: thread_summary
-        - name: f
-          mode: quick_actions
-"""
-    )
-    modes = [s.mode.value for s in cfg.sections]
-    assert modes == [
-        "halo",
-        "flags",
-        "mini_bars",
-        "stamps",
-        "thread_summary",
-        "quick_actions",
-    ]
+    modes = ["halo", "flags", "mini_bars", "stamps", "thread_summary", "quick_actions"]
+    body = "sections:\n" + "".join(f"  - name: s{i}\n    mode: {m}\n" for i, m in enumerate(modes))
+    assert [s.mode.value for s in _parse(body).sections] == modes
 
 
-def test_rejects_missing_sections() -> None:
-    with pytest.raises(ParseError, match="at least one section"):
-        _parse(
-            """      scope_param: id
-"""
-        )
-
-
-def test_rejects_section_missing_mode() -> None:
-    with pytest.raises(ParseError, match="mode"):
-        _parse(
-            """      sections:
-        - name: x
-"""
-        )
-
-
-def test_rejects_unknown_mode() -> None:
-    with pytest.raises(ParseError, match="mode must be one of"):
-        _parse(
-            """      sections:
-        - name: x
-          mode: weirdo
-"""
-        )
-
-
-def test_rejects_unknown_top_level_key() -> None:
-    with pytest.raises(ParseError, match="Unknown entity_card_config key"):
-        _parse(
-            """      bogus: 1
-      sections:
-        - name: x
-          mode: halo
-"""
-        )
-
-
-def test_rejects_unknown_section_entry_key() -> None:
-    with pytest.raises(ParseError, match="Unknown sections entry key"):
-        _parse(
-            """      sections:
-        - name: x
-          mode: halo
-          weird: 1
-"""
-        )
-
-
-def test_rejects_section_entry_without_dash() -> None:
-    with pytest.raises(ParseError, match="must start with"):
-        _parse(
-            """      sections:
-        name: x
-"""
-        )
+@pytest.mark.parametrize(
+    ("body", "error"),
+    [
+        pytest.param("scope_param: id\n", "at least one section", id="missing-sections"),
+        pytest.param("sections:\n  - name: x\n", "mode", id="section-missing-mode"),
+        pytest.param(
+            "sections:\n  - name: x\n    mode: weirdo\n", "mode must be one of", id="unknown-mode"
+        ),
+        pytest.param(
+            "bogus: 1\nsections:\n  - name: x\n    mode: halo\n",
+            "Unknown entity_card_config key",
+            id="unknown-top-level-key",
+        ),
+        pytest.param(
+            "sections:\n  - name: x\n    mode: halo\n    weird: 1\n",
+            "Unknown sections entry key",
+            id="unknown-section-entry-key",
+        ),
+        pytest.param("sections:\n  name: x\n", "must start with", id="section-entry-without-dash"),
+    ],
+)
+def test_rejects_invalid_config(body: str, error: str) -> None:
+    with pytest.raises(ParseError, match=error):
+        _parse(body)

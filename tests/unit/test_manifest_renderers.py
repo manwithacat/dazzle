@@ -6,71 +6,15 @@ defaults via `default_renderer_names()` at 11 import sites. A project
 DSL with `render: my_custom` failed link-time validation with no
 manifest-aware override path. The `[renderers] extra = […]` table +
 `known_renderer_names(manifest)` together restore project-side
-extensibility.
+extensibility. The `[renderers]` parse rows live in test_manifest_sections.py.
 """
 
-import textwrap
-from pathlib import Path
-
-from dazzle.core.manifest import ProjectManifest, load_manifest
+from dazzle.core.manifest import ProjectManifest
 from dazzle.core.renderer_registry import (
     _DEFAULT_RENDERERS,
     default_renderer_names,
     known_renderer_names,
 )
-
-_MINIMAL_TOML = textwrap.dedent("""\
-    [project]
-    name = "test-app"
-    version = "0.1.0"
-
-    [modules]
-    paths = ["./dsl"]
-""")
-
-
-def _write_toml(tmp_path: Path, extra: str = "") -> Path:
-    p = tmp_path / "dazzle.toml"
-    p.write_text(_MINIMAL_TOML + extra, encoding="utf-8")
-    return p
-
-
-# ---------------------------------------------------------------------------
-# Manifest parse
-# ---------------------------------------------------------------------------
-
-
-def test_no_renderers_section_defaults_empty(tmp_path: Path) -> None:
-    manifest = load_manifest(_write_toml(tmp_path))
-    assert manifest.renderers.extra == []
-
-
-def test_parses_renderers_extra_list(tmp_path: Path) -> None:
-    extra = textwrap.dedent("""\
-        [renderers]
-        extra = ["branch_compare", "cytoscape_graph"]
-    """)
-    manifest = load_manifest(_write_toml(tmp_path, extra))
-    assert manifest.renderers.extra == ["branch_compare", "cytoscape_graph"]
-
-
-def test_renderers_extra_non_list_falls_back_to_empty(tmp_path: Path) -> None:
-    extra = textwrap.dedent("""\
-        [renderers]
-        extra = "branch_compare"
-    """)
-    manifest = load_manifest(_write_toml(tmp_path, extra))
-    assert manifest.renderers.extra == []
-
-
-def test_renderers_extra_filters_non_strings(tmp_path: Path) -> None:
-    extra = textwrap.dedent("""\
-        [renderers]
-        extra = ["ok_name", 42, true, "another_ok"]
-    """)
-    manifest = load_manifest(_write_toml(tmp_path, extra))
-    assert manifest.renderers.extra == ["ok_name", "another_ok"]
-
 
 # ---------------------------------------------------------------------------
 # known_renderer_names — merging framework defaults with project extras

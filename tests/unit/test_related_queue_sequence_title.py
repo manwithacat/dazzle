@@ -9,7 +9,6 @@ from dazzle.core.project import load_project
 from dazzle.http.converters.entity_converter import convert_entity
 from dazzle.http.runtime.workspace_columns import build_entity_columns
 from dazzle.http.runtime.workspace_region_render import (
-    _entity_text_identity_key,
     _pick_display_key,
     _set_display_key,
 )
@@ -116,13 +115,16 @@ def test_pick_display_key_skips_attempt_prefers_failure_reason() -> None:
     assert _pick_display_key(columns, preferred="failure_reason") == "failure_reason"
 
 
-def test_payment_attempt_text_identity_is_failure_reason() -> None:
+def test_payment_attempt_display_key_is_a_text_identity_not_the_sequence() -> None:
+    """PaymentAttempt's queue title is a text identity column, never the
+    ``attempt_number`` sequence counter."""
     spec = load_project(Path("examples/invoice_ops"))
     runtime = convert_entity(spec.get_entity("PaymentAttempt"))
     cols = build_entity_columns(runtime)
-    ctx = SimpleNamespace(entity_spec=runtime)
-    assert _entity_text_identity_key(ctx) == "failure_reason"
     adapter_ctx: dict[str, object] = {}
-    _set_display_key(adapter_ctx, SimpleNamespace(columns=cols), ctx)
-    assert adapter_ctx["display_key"] != "attempt_number"
-    assert adapter_ctx["display_key"] in {"failure_reason", "provider_reference"}
+
+    _set_display_key(
+        adapter_ctx, SimpleNamespace(columns=cols), SimpleNamespace(entity_spec=runtime)
+    )
+
+    assert adapter_ctx == {"display_key": "provider_reference"}

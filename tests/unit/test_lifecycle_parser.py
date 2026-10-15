@@ -1,8 +1,6 @@
 """Parser tests for lifecycle: blocks inside entity declarations (plan task 3)."""
 
-from pathlib import Path
-
-from dazzle.core.dsl_parser_impl import parse_dsl
+from tests.unit.helpers.dsl import entity_named
 
 LIFECYCLE_DSL = """
 module test_app
@@ -49,16 +47,8 @@ entity Note "Note":
 """
 
 
-def _first_entity(dsl: str, name: str):
-    _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-    for entity in fragment.entities:
-        if entity.name == name:
-            return entity
-    raise AssertionError(f"entity {name} not found in parsed fragment")
-
-
 def test_parse_lifecycle_block_happy_path() -> None:
-    ticket = _first_entity(LIFECYCLE_DSL, "Ticket")
+    ticket = entity_named(LIFECYCLE_DSL, "Ticket")
 
     assert ticket.lifecycle is not None
     lc = ticket.lifecycle
@@ -91,5 +81,5 @@ def test_parse_lifecycle_block_happy_path() -> None:
 
 
 def test_entity_without_lifecycle_has_none() -> None:
-    note = _first_entity(NO_LIFECYCLE_DSL, "Note")
+    note = entity_named(NO_LIFECYCLE_DSL, "Note")
     assert note.lifecycle is None

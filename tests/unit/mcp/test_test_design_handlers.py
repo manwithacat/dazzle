@@ -8,6 +8,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from tests.unit.mcp.conftest import install_handlers_common_real
+
 
 def _import_test_design():
     """Import test_design handlers directly to avoid MCP package init issues.
@@ -19,54 +21,7 @@ def _import_test_design():
     mock_state = MagicMock()
     sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
 
-    # Build a common mock with real implementations for DSL loading
-    from types import ModuleType
-
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
-
-    common_mock = ModuleType("dazzle.mcp.server.handlers.common")
-
-    def _extract_progress(args=None):
-        ctx = MagicMock()
-        ctx.log_sync = MagicMock()
-        return ctx
-
-    def _load_project_appspec(project_root):
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        return build_appspec(modules, manifest.project_root)
-
-    def _error_response(msg):
-        return json.dumps({"error": msg})
-
-    def _unknown_op_response(operation, tool):
-        return json.dumps({"error": f"Unknown {tool} operation: {operation}"})
-
-    common_mock.error_response = _error_response
-    common_mock.unknown_op_response = _unknown_op_response
-    common_mock.extract_progress = _extract_progress
-    common_mock.load_project_appspec = _load_project_appspec
-
-    def _handler_error_json(fn):
-        """Decorator that catches exceptions and returns JSON error."""
-        from functools import wraps
-
-        @wraps(fn)
-        def wrapper(*a, **kw):
-            try:
-                return fn(*a, **kw)
-            except Exception as exc:
-                return json.dumps({"error": str(exc)})
-
-        return wrapper
-
-    common_mock.handler_error_json = _handler_error_json
-    common_mock.wrap_handler_errors = _handler_error_json
-    sys.modules["dazzle.mcp.server.handlers.common"] = common_mock
+    install_handlers_common_real()
     sys.modules["dazzle.mcp.server.state"] = mock_state
 
     handlers_dir = (

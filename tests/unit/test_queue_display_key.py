@@ -50,9 +50,8 @@ def test_pick_display_key_skips_date_prefers_currency() -> None:
 
 
 def test_pick_display_key_skips_duration_prefers_notes() -> None:
-    """Duration minutes are measurement chrome, not identity (oral #137)."""
-    from dazzle.http.runtime.workspace_region_render import _is_measurement_title_key
-
+    """Duration minutes and temperature are measurement chrome, not identity
+    (oral #137): the first identity-like text column wins."""
     columns = [
         {"key": "device", "type": "ref"},
         {"key": "tester", "type": "ref"},
@@ -62,10 +61,6 @@ def test_pick_display_key_skips_duration_prefers_notes() -> None:
         {"key": "notes", "type": "text"},
         {"key": "logged_at", "type": "datetime"},
     ]
-    assert _is_measurement_title_key("duration_minutes")
-    assert _is_measurement_title_key("temperature")
-    assert not _is_measurement_title_key("notes")
-    assert not _is_measurement_title_key("zzz")
     assert _pick_display_key(columns) == "notes"
     assert _pick_display_key(columns, preferred="notes") == "notes"
     # Author display_field still wins even when it is measurement chrome.

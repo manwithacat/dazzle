@@ -105,28 +105,6 @@ def test_make_workspace_handler_returns_callable_with_only_request_param() -> No
     assert params == ["request"]
 
 
-def test_handler_factories_produce_async_callables() -> None:
-    """FastAPI requires `async def` handlers (or sync that get
-    auto-wrapped). The closure factories return `async def` directly."""
-    page_handler = _make_page_handler(_DummyDeps(), "/x", _DummyDeps(), None)
-    ws_handler = _make_workspace_handler(
-        deps=_DummyDeps(),
-        ws_ctx=_DummyDeps(),
-        ws_route="/x",
-        ws_allowed_personas=[],
-        ws_app_name="t",
-        primary_action_candidates=[],
-        authored_actions=[],
-    )
-    assert inspect.iscoroutinefunction(page_handler)
-    assert inspect.iscoroutinefunction(ws_handler)
-
-
-# ---------------------------------------------------------------------------
-# #1112 — experience + root-redirect factories
-# ---------------------------------------------------------------------------
-
-
 def test_make_experience_entry_handler_preserves_request_annotation() -> None:
     """GET /experiences/{name} — `request: Request` must survive the
     closure-factory pass. Pre-fix `partial(_experience_entry, deps)`

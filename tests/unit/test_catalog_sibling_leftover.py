@@ -11,10 +11,11 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from dazzle.http.runtime.page_routes import (
     _list_filter_enum_options,
-    _parse_list_filter_enum_values,
-    _parse_list_filters,
+    leftover_honest_list_filters,
 )
 from dazzle.http.runtime.workspace_region_computes import compute_filter_columns_and_active
 from dazzle.render.fragment.htmx import URL
@@ -90,7 +91,14 @@ def test_catalog_option_values_normalise_shapes() -> None:
     assert leftover_honest_catalog_option_values([("done", "Done")]) == ("done",)
 
 
-def test_list_filter_enum_leftover_drops_junk() -> None:
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        pytest.param("ghost", {"title": "Ada"}, id="leftover-enum-value-dropped"),
+        pytest.param("closed", {"status": "closed", "title": "Ada"}, id="declared-option-rides"),
+    ],
+)
+def test_list_filter_enum_leftover_drops_junk(status: str, expected: dict[str, str]) -> None:
     table = SimpleNamespace(
         columns=[
             SimpleNamespace(
@@ -99,17 +107,14 @@ def test_list_filter_enum_leftover_drops_junk() -> None:
             )
         ]
     )
-    parsed = _parse_list_filters(
-        {"filter[status]": "ghost", "filter[title]": "Ada"},
+
+    filters = leftover_honest_list_filters(
+        {"filter[status]": status, "filter[title]": "Ada"},
         allowed=frozenset({"status", "title"}),
+        enum_options=_list_filter_enum_options(table),
     )
-    honest = _parse_list_filter_enum_values(parsed, _list_filter_enum_options(table))
-    assert honest == {"title": "Ada"}
-    valid = _parse_list_filter_enum_values(
-        {"status": "closed", "title": "Ada"},
-        _list_filter_enum_options(table),
-    )
-    assert valid == {"status": "closed", "title": "Ada"}
+
+    assert filters == expected
 
 
 def test_workspace_filter_enum_leftover_drops_junk() -> None:

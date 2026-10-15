@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 786
-- **Tests inside those clusters**: 2,964
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,178 tests** (≈ 15.2% of the suite)
+- **Clusters of ≥3**: 749
+- **Tests inside those clusters**: 2,800
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,051 tests** (≈ 14.3% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -16,8 +16,8 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 |---|---:|
 | 20+ | 0 |
 | 10-19 | 3 |
-| 5-9 | 131 |
-| 3-4 | 652 |
+| 5-9 | 118 |
+| 3-4 | 628 |
 
 ## Top 30 largest clusters
 
@@ -29,8 +29,6 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_auth_views_password_reset.py` | `(module)` | 9 | test_forgot_password_view_posts_to_submit_endpoint, test_forgot_password_view_uses_product_name_in_brand, test_forgot_password_view_links_back_to_login… |
 | `tests/unit/test_entity_card_data_resolution.py` | `(module)` | 9 | test_halo_section_omitted_when_no_record, test_section_omitted_when_record_has_no_field_values, test_quick_actions_omits_section_when_no_actions_declared… |
 | `tests/unit/test_onboarding_renderer.py` | `(module)` | 9 | test_popover_cta_href_when_target_set, test_popover_placement_threads_into_data_attr, test_every_supported_kind_emits_htmx_complete… |
-| `tests/unit/test_python_audit_enum_dispatch_1274.py` | `(module)` | 9 | test_fires_on_four_branch_chain, test_fires_when_literal_on_left_side, test_does_not_fire_on_two_branch_chain… |
-| `tests/unit/test_python_audit_raw_sql_string_building.py` | `(module)` | 9 | test_fires_on_format_method_execute, test_fires_on_scripts_subdir, test_fires_on_session_execute_not_just_cursor… |
 | `tests/unit/test_schema_diff.py` | `(module)` | 9 | test_added_column, test_dropped_column, test_no_change_empty_delta… |
 | `tests/unit/test_scope_create_eval.py` | `(module)` | 9 | test_user_attr_check_passes_when_field_equals_user_id, test_user_attr_check_rejects_when_field_does_not_equal_user_id, test_user_attr_check_missing_attr_rejects… |
 | `tests/unit/test_session_manager.py` | `TestSessionTokenFromLoginResponse` | 9 | test_legacy_dazzle_session, test_host_cookie, test_apex_cookie… |
@@ -44,7 +42,6 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_org_activation.py` | `TestDeriveMembershipsRequired` | 8 | test_tenant_host_implies_required_without_auto_provision, test_auto_provision_still_implies_required, test_neither_is_not_required… |
 | `tests/unit/test_result.py` | `(module)` | 8 | test_ok_carries_value, test_err_carries_error, test_ok_unwrap_returns_value… |
 | `tests/unit/test_schema_diff.py` | `(module)` | 8 | test_new_table_is_add_table, test_dropped_table, test_add_fk… |
-| `tests/unit/test_site_section_simple_builders.py` | `(module)` | 8 | test_six_new_section_types_in_typed_set, test_cta_emits_section_class, test_generic_section_class_derives_from_type_with_dashes… |
 | `tests/unit/test_task_inbox_data_resolution.py` | `(module)` | 8 | test_returns_empty_when_no_items_and_no_chips, test_returns_empty_when_config_missing, test_chips_only_config_emits_chips_no_items… |
 | `tests/unit/test_tenant_host_validator.py` | `(module)` | 8 | test_validator_rejects_slug_field_pointing_at_non_slug_field, test_validator_rejects_unknown_history_entity, test_validator_requires_order_when_two_entities_share_domain… |
 | `tests/unit/test_tenant_middleware.py` | `(module)` | 8 | test_canonical_host_passes_through_with_no_tenant, test_demo_host_tenant_slug_binds_on_canonical_host, test_demo_host_tenant_slug_skips_test_seed_path… |
@@ -53,6 +50,9 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_audit_integrity_config_loading.py` | `(module)` | 7 | test_manifest_default_audit_integrity_is_none, test_manifest_parses_hash_chain, test_build_server_config_threads_audit_integrity… |
 | `tests/unit/test_auth_views_login_magic_link.py` | `(module)` | 7 | test_login_form_posts_to_magic_link_issuance_endpoint, test_login_emits_submit_button, test_login_threads_next_url_through_form_action… |
 | `tests/unit/test_auth_views_password_mode.py` | `(module)` | 7 | test_login_password_view_posts_to_password_endpoint, test_login_password_view_threads_next_param, test_login_password_view_links_forgot_password… |
+| `tests/unit/test_badge_wcag_icon_1493.py` | `TestSMTerminalInference` | 7 | test_unrecognised_terminal_inferred_success, test_name_guess_terminals_are_skipped, test_none_machine_is_empty… |
+| `tests/unit/test_cli_spec_strict_guard.py` | `(module)` | 7 | test_extract_domain_map_finds_entities_in_rows, test_extract_domain_map_ignores_placeholder_row, test_extract_domain_map_returns_empty_when_no_heading… |
+| `tests/unit/test_dispatch_ctx_list_row_links.py` | `(module)` | 7 | test_dispatch_ctx_threads_detail_url_template, test_dispatch_ctx_omits_detail_url_template_when_unset, test_resolve_row_links_substitutes_named_placeholders… |
 
 ## Top 10 files by collapse-saving potential
 
@@ -73,7 +73,7 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 
 Clusters whose subject is an input-boundary surface (parser/validator/crypto/…). Each is a candidate to collapse into ONE property test (input space → invariant) — which then becomes a fuzz target — rather than a fixed `@pytest.mark.parametrize` list. Path-based hint; confirm by reading the cluster. (#1342)
 
-- **Property/fuzz-candidate clusters**: 81
+- **Property/fuzz-candidate clusters**: 72
 
 | File | Class | Size | Form | Why |
 |---|---|---:|---|---|
@@ -90,10 +90,8 @@ Clusters whose subject is an input-boundary surface (parser/validator/crypto/…
 | `tests/unit/test_auth_identity_validation.py` | `TestAuthIdentityValidation` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_copy_parser.py` | `TestParseCopyFile` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_copy_parser.py` | `TestMergeCopyIntoSitespec` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
-| `tests/unit/test_day_timeline_config_parser.py` | `(module)` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_db_url.py` | `TestNormalisePostgresScheme` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_db_url.py` | `TestAddPsycopgDriver` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
-| `tests/unit/test_entity_card_config_parser.py` | `(module)` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_expression_lang.py` | `TestParserFieldRef` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_expression_lang.py` | `TestParserArithmetic` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_expression_lang.py` | `TestEvalFunctions` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
@@ -103,10 +101,12 @@ Clusters whose subject is an input-boundary surface (parser/validator/crypto/…
 | `tests/unit/test_parser.py` | `(module)` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_predicate_builder.py` | `(module)` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_predicate_policy_mode.py` | `TestCollectUserAttrRefs` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
-| `tests/unit/test_rhythm_parser.py` | `(module)` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_scope_rules.py` | `TestPermitFieldConditionRejection` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_validate_app_links.py` | `(module)` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_validate_scope_predicates.py` | `TestInvalidPredicates` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
+| `tests/unit/test_workspace_scope_enforcement.py` | `TestApplyWorkspaceScopeFilters` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
+| `tests/integration/test_scope_runtime_pg.py` | `(module)` | 3 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
+| `tests/unit/test_action_url_surface_resolution.py` | `(module)` | 3 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 
 ## How to act on this
 

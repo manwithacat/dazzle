@@ -1,17 +1,13 @@
-"""#1392 item 2 P1 — build_app_page_context + _resolve_chrome_assets (the reusable
-app-shell nav/chrome builder the route-override response-contract wrap consumes)."""
-
-from __future__ import annotations
+"""#1392 item 2 P1 — build_app_page_context (the reusable app-shell nav/chrome
+builder the route-override response-contract wrap consumes)."""
 
 import asyncio
 from types import SimpleNamespace
 from typing import Any
 
-from dazzle.http.runtime.page_routes import (
-    _ChromeAssets,
-    _resolve_chrome_assets,
-    build_app_page_context,
-)
+import pytest
+
+from dazzle.http.runtime.page_routes import build_app_page_context
 
 
 def _app_state(**over: Any) -> SimpleNamespace:
@@ -22,18 +18,6 @@ def _app_state(**over: Any) -> SimpleNamespace:
         fragment_chrome_font_preconnect=over.get("fonts", ()),
         fragment_chrome_favicon=over.get("favicon", "/f.svg"),
     )
-
-
-def test_resolve_chrome_assets_reads_app_state() -> None:
-    a = _resolve_chrome_assets(_app_state())
-    assert isinstance(a, _ChromeAssets)
-    assert a.css_links == ("/x.css",) and a.js_scripts == ("/x.js",) and a.favicon == "/f.svg"
-
-
-def test_resolve_chrome_assets_defaults_when_unset() -> None:
-    a = _resolve_chrome_assets(SimpleNamespace())
-    assert a.css_links == ("/static/dist/dazzle.min.css",)
-    assert a.favicon == "/static/assets/dazzle-favicon.svg"
 
 
 def _deps() -> Any:
@@ -47,16 +31,39 @@ def _deps() -> Any:
     )
 
 
-def test_build_app_page_context_anon() -> None:
+def _build(app_state: Any) -> Any:
     request = SimpleNamespace(
-        app=SimpleNamespace(state=_app_state()),
+        app=SimpleNamespace(state=app_state),
         state=SimpleNamespace(tenant_config={}),
     )
-    ctx, assets = asyncio.run(
-        build_app_page_context(request, deps=_deps(), current_route="/app/board")
-    )
+    return asyncio.run(build_app_page_context(request, deps=_deps(), current_route="/app/board"))
+
+
+def test_build_app_page_context_anon() -> None:
+    ctx, _assets = _build(_app_state())
+
     assert ctx.current_route == "/app/board"
     assert ctx.app_name == "My App"
     assert ctx.nav_model.groups == ()  # no auth context → explicit empty model
     assert ctx.nav_model.auto_discovered
-    assert assets.css_links == ("/x.css",)
+
+
+@pytest.mark.parametrize(
+    ("app_state", "css", "js", "favicon"),
+    [
+        pytest.param(_app_state(), ("/x.css",), ("/x.js",), "/f.svg", id="reads-app-state"),
+        pytest.param(
+            SimpleNamespace(),
+            ("/static/dist/dazzle.min.css",),
+            ("/static/dist/dazzle.min.js",),
+            "/static/assets/dazzle-favicon.svg",
+            id="framework-defaults-when-unset",
+        ),
+    ],
+)
+def test_build_app_page_context_chrome_assets(
+    app_state: Any, css: tuple, js: tuple, favicon: str
+) -> None:
+    _ctx, assets = _build(app_state)
+
+    assert (assets.css_links, assets.js_scripts, assets.favicon) == (css, js, favicon)

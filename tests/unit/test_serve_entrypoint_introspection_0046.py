@@ -16,7 +16,6 @@ from pathlib import Path
 import pytest
 
 from dazzle.cli.inspect import _boot_app, _boot_declared_entrypoint
-from dazzle.core.manifest import load_manifest
 
 _ENTRYPOINT_SRC = """\
 from types import SimpleNamespace
@@ -60,20 +59,6 @@ def project_with_entrypoint(tmp_path: Path):
         sys.modules.pop(module_name, None)
         if str(tmp_path) in sys.path:
             sys.path.remove(str(tmp_path))
-
-
-def test_serve_app_parsed_from_manifest(project_with_entrypoint):
-    project_root, module_name = project_with_entrypoint
-    manifest = load_manifest(project_root / "dazzle.toml")
-    assert manifest.serve.app == f"{module_name}:app"
-
-
-def test_serve_app_absent_is_none(tmp_path: Path):
-    (tmp_path / "dazzle.toml").write_text(
-        "[project]\nname = 't'\n[modules]\npaths = ['./dsl']\n[stack]\nname = 'dnr'\n"
-    )
-    manifest = load_manifest(tmp_path / "dazzle.toml")
-    assert manifest.serve.app is None
 
 
 def test_boot_declared_entrypoint_imports_the_real_app(project_with_entrypoint):

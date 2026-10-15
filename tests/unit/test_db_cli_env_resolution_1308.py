@@ -99,7 +99,7 @@ class TestDefaultDbEnv1308:
     def test_resolves_dev_db_not_hardcoded_default(self, tmp_path: Path) -> None:
         """End-to-end: the resolved URL is the dev profile's DB, NOT the
         hardcoded `postgresql://localhost:5432/dazzle` the bug fell through to."""
-        from dazzle.core.manifest import _DEFAULT_DATABASE_URL, load_manifest, resolve_database_url
+        from dazzle.core.manifest import load_manifest, resolve_database_url
 
         _write_toml(
             tmp_path,
@@ -112,8 +112,7 @@ class TestDefaultDbEnv1308:
         env_name = _default_db_env(tmp_path)
         manifest = load_manifest(tmp_path / "dazzle.toml")
         url = resolve_database_url(manifest, explicit_url="", env_name=env_name)
-        assert "myapp_dev" in url
-        assert url != _DEFAULT_DATABASE_URL
+        assert url == "postgresql://localhost:5432/myapp_dev"
 
 
 class TestDefaultDbEnv1329:

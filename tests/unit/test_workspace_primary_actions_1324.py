@@ -107,21 +107,15 @@ class TestResolveAuthoredActions:
         assert resolved == []
 
 
-class TestAuthoredAppendsAfterInferred:
-    """Authored actions append AFTER auto-inferred create-CTAs (#827)."""
+class TestInferredCreateCta:
+    """A workspace region over an entity with a create surface infers one
+    "New <Entity>" CTA (#827). Authored actions are resolved separately
+    (TestResolveAuthoredActions) and appended after these by the handler."""
 
-    def test_authored_action_follows_inferred_create_cta(self) -> None:
-        # A workspace region over Invoice → one inferred "New Invoice" CTA.
+    def test_region_source_infers_one_create_cta(self) -> None:
         ws = ir.WorkspaceSpec(
             name="reports",
-            regions=[
-                ir.WorkspaceRegion(name="metrics", source="Invoice"),
-            ],
-            primary_actions=[
-                ir.WorkspacePrimaryActionSpec(
-                    label="Go to Ops", target_kind="workspace", target="ops_dashboard"
-                )
-            ],
+            regions=[ir.WorkspaceRegion(name="metrics", source="Invoice")],
         )
         create = _surface("create_invoice", ir.SurfaceMode.CREATE, "Invoice")
         list_s = _surface("list_invoice", ir.SurfaceMode.LIST, "Invoice")
@@ -132,22 +126,9 @@ class TestAuthoredAppendsAfterInferred:
             create_surfaces_by_entity={"Invoice": create},
             list_surfaces_by_entity={"Invoice": list_s},
         )
-        authored = _resolve_workspace_authored_actions(
-            ws, app_prefix="/app", surfaces_by_name={"create_invoice": create}
-        )
 
-        # The handler builds `primary_actions` as: filtered(inferred) +
-        # gate_authored(authored). Inferred candidates carry a `surface` key;
-        # authored workspace targets are {label, route} (no mutation). Assert
-        # the inferred create-CTA is first and the authored action follows it.
-        assert len(inferred) == 1
-        assert inferred[0]["label"] == "New Invoice"
-        merged = [{"label": c["label"], "route": c["route"]} for c in inferred] + [
-            {"label": a["label"], "route": a["route"]} for a in authored
-        ]
-        assert merged == [
-            {"label": "New Invoice", "route": "/app/invoice/create"},
-            {"label": "Go to Ops", "route": "/app/workspaces/ops_dashboard"},
+        assert [(c["label"], c["route"]) for c in inferred] == [
+            ("New Invoice", "/app/invoice/create")
         ]
 
 

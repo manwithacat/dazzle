@@ -16,7 +16,6 @@ from pathlib import Path
 import pytest
 
 from dazzle.http.runtime.page_routes import (
-    _parse_list_as_of,
     _related_tab_as_of_raw,
 )
 
@@ -54,13 +53,6 @@ def test_related_tab_as_of_raw_leftover_does_not_invent(
     as_of: object, expected: str | None
 ) -> None:
     assert _related_tab_as_of_raw(as_of) == expected
-
-
-def test_related_tab_as_of_reuses_parent_leftover_honest_parse() -> None:
-    """Related leftover shares DETAIL parse; does not invent a second theater."""
-    assert _parse_list_as_of("zzz") is None
-    assert _related_tab_as_of_raw(None) is None
-    assert _related_tab_as_of_raw(date(2026, 6, 20)) == "2026-06-20"
 
 
 def test_related_tab_fetch_forwards_parent_as_of() -> None:

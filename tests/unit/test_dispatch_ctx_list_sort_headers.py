@@ -10,9 +10,6 @@ direction (▲/▼) and its next-click flips."""
 
 from __future__ import annotations
 
-from dazzle.core.ir.surfaces import SurfaceMode
-from dazzle.http.runtime.page_routes import _build_dispatch_ctx
-from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.render.context import ColumnContext, TableContext
 from dazzle.render.fragment import (
     URL,
@@ -20,20 +17,7 @@ from dazzle.render.fragment import (
     SortHeader,
     Table,
 )
-
-
-class _Surface:
-    name = "contact_list"
-    title = "Contacts"
-    mode = SurfaceMode.LIST
-    entity_ref = "Contact"
-
-
-class _RC:
-    def __init__(self, table: TableContext) -> None:
-        self.table = table
-        self.form = None
-        self.detail = None
+from tests.unit.helpers.list_surface import list_ctx, render_list
 
 
 def _table(**overrides) -> TableContext:
@@ -53,11 +37,6 @@ def _table(**overrides) -> TableContext:
     return TableContext(**base)
 
 
-def _render_list(ctx: dict) -> str:
-    adapter = FragmentSurfaceAdapter()
-    return FragmentRenderer().render(adapter._build_list(_Surface(), ctx))
-
-
 # ── Dispatch ctx threading ──
 
 
@@ -65,7 +44,7 @@ def test_dispatch_ctx_threads_sort_state() -> None:
     """`sort_field` + `sort_dir` reach the adapter so SortHeader can
     wire its current-direction indicator."""
     table = _table(sort_field="name", sort_dir="desc")
-    ctx = _build_dispatch_ctx(_RC(table), object())
+    ctx = list_ctx(table, object())
     assert ctx["sort_field"] == "name"
     assert ctx["sort_dir"] == "desc"
 
@@ -73,7 +52,7 @@ def test_dispatch_ctx_threads_sort_state() -> None:
 def test_dispatch_ctx_defaults_sort_dir_to_asc() -> None:
     """Unset `sort_dir` defaults to `"asc"` matching the framework
     convention."""
-    ctx = _build_dispatch_ctx(_RC(_table()), object())
+    ctx = list_ctx(_table(), object())
     assert ctx["sort_dir"] == "asc"
 
 
@@ -131,8 +110,8 @@ def test_list_sortable_column_is_grid_sort_button() -> None:
     button header with static `aria-sort="none"` (dz-grid.js cycles it);
     sortable=False → a plain canonical `dz-table-th`. No Alpine bindings."""
     table = _table()
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
+    ctx = list_ctx(table, object())
+    html = render_list(ctx)
     assert 'data-dz-grid-sort="name"' in html
     assert '<th data-dz-col="name" aria-sort="none" scope="col" class="dz-table-th">' in html
     assert 'aria-label="Sort by Name"' in html
@@ -155,8 +134,8 @@ def test_list_active_sort_threads_into_headers_and_hydrate() -> None:
     # production resolves sort_field from default_sort_field at request time
     # (page_routes.py:1522); the dispatch ctx reads the resolved sort_field.
     table = _table(sort_field="name", sort_dir="desc")
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
+    ctx = list_ctx(table, object())
+    html = render_list(ctx)
     assert 'aria-sort="descending"' in html
     assert "sortField" not in html
     # the hydrate endpoint fetches the current sort
@@ -169,8 +148,8 @@ def test_list_with_no_sortable_columns_emits_plain_headers() -> None:
     table = _table(
         columns=[ColumnContext(key="name", label="Name", sortable=False)],
     )
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
+    ctx = list_ctx(table, object())
+    html = render_list(ctx)
     assert (
         '<th data-dz-col="name" scope="col" class="dz-table-th">'
         # C2.2: canonical headers carry the resize-handle span

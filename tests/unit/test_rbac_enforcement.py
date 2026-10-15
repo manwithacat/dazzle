@@ -8,6 +8,8 @@ role checking, including:
 - Workspace access filtering
 """
 
+from typing import Any
+
 import pytest
 
 from dazzle.core.ir.surfaces import SurfaceAccessSpec, SurfaceMode, SurfaceSpec
@@ -15,7 +17,18 @@ from dazzle.http.converters.surface_converter import (
     convert_surface_to_endpoint,
     convert_surfaces_to_services,
 )
+from dazzle.http.runtime.handlers.list_handlers import create_list_handler
+from dazzle.http.specs.auth import (
+    AccessComparisonKind,
+    AccessConditionSpec,
+    AccessLogicalKind,
+    AccessOperationKind,
+    EntityAccessSpec,
+    PermissionRuleSpec,
+    ScopeRuleSpec,
+)
 from dazzle.http.specs.endpoint import EndpointSpec, HttpMethod
+from tests.unit.helpers.crud_routes import RecordingService, crud_route_client, signed_in
 
 # =============================================================================
 # Surface Converter: require_roles propagation
@@ -588,433 +601,114 @@ class TestBuildAccessContext:
 
 
 # =============================================================================
-# LIST permission gate in _list_handler_body
+# LIST route: Cedar permit gate and scope filters, through the generated route
 # =============================================================================
 
+_SCHOOL_EQ_CURRENT_USER = AccessConditionSpec(
+    kind="comparison",
+    field="school",
+    comparison_op=AccessComparisonKind.EQUALS,
+    value="current_user.school",
+)
+_ROLE_TEACHER = AccessConditionSpec(kind="role_check", role_name="teacher")
 
-class TestListPermissionGate:
-    """Tests for Cedar LIST permission check in _list_handler_body."""
 
-    @pytest.mark.asyncio
-    async def test_list_returns_403_when_role_denied(self) -> None:
-        """User without required role gets 403 on list endpoint."""
-        from unittest.mock import AsyncMock, MagicMock
+def _list_permit(**rule: Any) -> EntityAccessSpec:
+    return EntityAccessSpec(
+        permissions=[PermissionRuleSpec(operation=AccessOperationKind.LIST, **rule)]
+    )
 
-        from fastapi import HTTPException
 
-        from dazzle.http.runtime.route_generator import _list_handler_body
-        from dazzle.http.specs.auth import (
-            AccessOperationKind,
-            EntityAccessSpec,
-            PermissionRuleSpec,
-        )
-
-        # Cedar spec: only school_admin can LIST
-        cedar_spec = EntityAccessSpec(
-            permissions=[
-                PermissionRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    personas=["school_admin"],
-                ),
-            ],
-        )
-
-        mock_service = AsyncMock()
-        mock_request = MagicMock()
-        mock_request.query_params = {}
-
-        # Auth context: user has role "student" (not school_admin)
-        auth_ctx = MagicMock()
-        auth_ctx.is_authenticated = True
-        user = MagicMock()
-        user.id = "user-1"
-        user.roles = ["student"]
-        user.is_superuser = False
-        auth_ctx.user = user
-
-        with pytest.raises(HTTPException) as exc_info:
-            await _list_handler_body(
-                service=mock_service,
-                is_authenticated=True,
-                user_id="user-1",
-                request=mock_request,
-                page=1,
-                page_size=20,
-                sort=None,
-                dir="asc",
-                search=None,
-                cedar_access_spec=cedar_spec,
-                auth_context=auth_ctx,
-                entity_name="Task",
+# (permit rule, caller roles, expected status). Each deny row is its own id.
+_LIST_GATE_CASES = [
+    pytest.param({"personas": ["school_admin"]}, ["student"], 403, id="deny-persona-not-permitted"),
+    pytest.param(
+        {"personas": ["school_admin"]}, ["school_admin"], 200, id="allow-persona-permitted"
+    ),
+    pytest.param(
+        {"condition": _ROLE_TEACHER}, ["student"], 403, id="deny-role-check-not-held-#520"
+    ),
+    pytest.param({"condition": _ROLE_TEACHER}, ["teacher"], 200, id="allow-role-check-held-#520"),
+    pytest.param(
+        {"condition": _SCHOOL_EQ_CURRENT_USER},
+        ["teacher"],
+        200,
+        id="field-condition-passes-gate-to-row-filter-#503",
+    ),
+    pytest.param(
+        {
+            "condition": AccessConditionSpec(
+                kind="logical",
+                logical_op=AccessLogicalKind.OR,
+                logical_left=_ROLE_TEACHER,
+                logical_right=_SCHOOL_EQ_CURRENT_USER,
             )
-        assert exc_info.value.status_code == 403
-
-    @pytest.mark.asyncio
-    async def test_list_allowed_when_role_matches(self) -> None:
-        """User with required role gets a successful list response."""
-        from unittest.mock import AsyncMock, MagicMock
-
-        from dazzle.http.runtime.route_generator import _list_handler_body
-        from dazzle.http.specs.auth import (
-            AccessOperationKind,
-            EntityAccessSpec,
-            PermissionRuleSpec,
-        )
-
-        cedar_spec = EntityAccessSpec(
-            permissions=[
-                PermissionRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    personas=["school_admin"],
-                ),
-            ],
-        )
-
-        mock_service = AsyncMock()
-        mock_service.execute.return_value = {"items": [], "total": 0, "page": 1, "page_size": 20}
-
-        mock_request = MagicMock()
-        mock_request.query_params = {}
-
-        auth_ctx = MagicMock()
-        auth_ctx.is_authenticated = True
-        user = MagicMock()
-        user.id = "user-1"
-        user.roles = ["school_admin"]
-        user.is_superuser = False
-        auth_ctx.user = user
-
-        result = await _list_handler_body(
-            service=mock_service,
-            is_authenticated=True,
-            user_id="user-1",
-            request=mock_request,
-            page=1,
-            page_size=20,
-            sort=None,
-            dir="asc",
-            search=None,
-            cedar_access_spec=cedar_spec,
-            auth_context=auth_ctx,
-            entity_name="Task",
-        )
-        assert result is not None
-
-    @pytest.mark.asyncio
-    async def test_list_passes_gate_for_field_condition_rules(self) -> None:
-        """Rules with field conditions (e.g. current_user.school) bypass the
-        gate and are enforced as row-level filters at query time (#503)."""
-        from unittest.mock import AsyncMock, MagicMock
-
-        from dazzle.http.runtime.route_generator import _list_handler_body
-        from dazzle.http.specs.auth import (
-            AccessComparisonKind,
-            AccessConditionSpec,
-            AccessOperationKind,
-            EntityAccessSpec,
-            PermissionRuleSpec,
-        )
-
-        # Rule: list: school = current_user.school (field condition, not pure role)
-        cedar_spec = EntityAccessSpec(
-            permissions=[
-                PermissionRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    condition=AccessConditionSpec(
-                        kind="comparison",
-                        field="school",
-                        comparison_op=AccessComparisonKind.EQUALS,
-                        value="current_user.school",
-                    ),
-                ),
-            ],
-        )
-
-        mock_service = AsyncMock()
-        mock_service.execute.return_value = {"items": [], "total": 0, "page": 1, "page_size": 20}
-
-        mock_request = MagicMock()
-        mock_request.query_params = {}
-
-        auth_ctx = MagicMock()
-        auth_ctx.is_authenticated = True
-        user = MagicMock()
-        user.id = "user-1"
-        user.roles = ["teacher"]
-        user.is_superuser = False
-        auth_ctx.user = user
-
-        # Should NOT raise 403 — field conditions pass the gate
-        result = await _list_handler_body(
-            service=mock_service,
-            is_authenticated=True,
-            user_id="user-1",
-            request=mock_request,
-            page=1,
-            page_size=20,
-            sort=None,
-            dir="asc",
-            search=None,
-            cedar_access_spec=cedar_spec,
-            auth_context=auth_ctx,
-            entity_name="Manuscript",
-        )
-        assert result is not None
+        },
+        ["student"],
+        200,
+        id="role-or-field-condition-passes-gate-#520",
+    ),
+]
 
 
-# =============================================================================
-# LIST gate: role-check conditions (#520)
-# =============================================================================
+@pytest.mark.parametrize(("rule", "roles", "status"), _LIST_GATE_CASES)
+def test_list_route_permit_gate(rule: dict[str, Any], roles: list[str], status: int) -> None:
+    service = RecordingService()
+    client = crud_route_client(
+        create_list_handler, auth=signed_in(*roles), service=service, access=_list_permit(**rule)
+    )
+
+    response = client.get("/items")
+
+    assert response.status_code == status
+    # A denied caller never reaches the data layer.
+    assert len(service.calls) == (1 if status == 200 else 0)
 
 
-class TestListGateRoleCheckCondition:
-    """Tests that role-check conditions in LIST rules are evaluated at the gate.
+def test_list_route_scope_default_denies_a_permitted_role_without_a_scope_rule() -> None:
+    """``permit:`` admits teacher and viewer, ``scope:`` covers only teacher: the
+    viewer passes the gate and gets an empty page without a query."""
+    access = EntityAccessSpec(
+        permissions=[
+            PermissionRuleSpec(operation=AccessOperationKind.LIST, personas=["teacher", "viewer"])
+        ],
+        scopes=[
+            ScopeRuleSpec(operation=AccessOperationKind.LIST, condition=None, personas=["teacher"])
+        ],
+    )
+    service = RecordingService()
+    client = crud_route_client(
+        create_list_handler, auth=signed_in("viewer"), service=service, access=access
+    )
 
-    Prior to the fix, the gate was skipped for any rule with a non-None
-    condition — including role_check conditions — causing the gate to never
-    fire for DSL-style rules like ``list: role(teacher)``.
-    """
+    response = client.get("/items")
 
-    @pytest.mark.asyncio
-    async def test_list_returns_403_for_role_check_condition_when_role_not_matched(
-        self,
-    ) -> None:
-        """DSL rule with role_check condition raises 403 when user lacks the role."""
-        from unittest.mock import AsyncMock, MagicMock
+    assert response.status_code == 200
+    assert response.json() == {"items": [], "total": 0, "page": 1, "page_size": 20}
+    assert service.calls == []
 
-        from fastapi import HTTPException
 
-        from dazzle.http.runtime.route_generator import _list_handler_body
-        from dazzle.http.specs.auth import (
-            AccessConditionSpec,
-            AccessOperationKind,
-            EntityAccessSpec,
-            PermissionRuleSpec,
-        )
-
-        # DSL-style rule: list: role(teacher) — condition=role_check, personas=[]
-        cedar_spec = EntityAccessSpec(
-            permissions=[
-                PermissionRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    personas=[],
-                    condition=AccessConditionSpec(
-                        kind="role_check",
-                        role_name="teacher",
-                    ),
-                ),
-            ],
-        )
-
-        mock_service = MagicMock()
-        mock_service.execute = AsyncMock(return_value=[])
-
-        mock_request = MagicMock()
-        mock_request.query_params = {}
-
-        auth_ctx = MagicMock()
-        auth_ctx.is_authenticated = True
-        user = MagicMock()
-        user.id = "user-1"
-        user.roles = ["student"]
-        user.is_superuser = False
-        auth_ctx.user = user
-
-        with pytest.raises(HTTPException) as exc_info:
-            await _list_handler_body(
-                service=mock_service,
-                is_authenticated=True,
-                user_id="user-1",
-                request=mock_request,
-                page=1,
-                page_size=20,
-                sort=None,
-                dir="asc",
-                search=None,
-                cedar_access_spec=cedar_spec,
-                auth_context=auth_ctx,
-                entity_name="Course",
+def test_list_route_scope_filters_rows_by_the_resolved_current_user_attribute() -> None:
+    access = EntityAccessSpec(
+        permissions=[PermissionRuleSpec(operation=AccessOperationKind.LIST, personas=["teacher"])],
+        scopes=[
+            ScopeRuleSpec(
+                operation=AccessOperationKind.LIST,
+                condition=_SCHOOL_EQ_CURRENT_USER,
+                personas=["teacher"],
             )
-        assert exc_info.value.status_code == 403
+        ],
+    )
+    service = RecordingService()
+    client = crud_route_client(
+        create_list_handler,
+        auth=signed_in("teacher", prefs={"school": "school-99"}),
+        service=service,
+        access=access,
+    )
 
-    @pytest.mark.asyncio
-    async def test_list_returns_200_for_role_check_condition_when_role_matches(
-        self,
-    ) -> None:
-        """DSL rule with role_check condition allows access when user has the role."""
-        from unittest.mock import AsyncMock, MagicMock
-
-        from dazzle.http.runtime.route_generator import _list_handler_body
-        from dazzle.http.specs.auth import (
-            AccessConditionSpec,
-            AccessOperationKind,
-            EntityAccessSpec,
-            PermissionRuleSpec,
-        )
-
-        cedar_spec = EntityAccessSpec(
-            permissions=[
-                PermissionRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    personas=[],
-                    condition=AccessConditionSpec(
-                        kind="role_check",
-                        role_name="teacher",
-                    ),
-                ),
-            ],
-        )
-
-        mock_service = MagicMock()
-        mock_service.execute = AsyncMock(return_value=[])
-
-        mock_request = MagicMock()
-        mock_request.query_params = {}
-
-        auth_ctx = MagicMock()
-        auth_ctx.is_authenticated = True
-        user = MagicMock()
-        user.id = "user-2"
-        user.roles = ["teacher"]
-        user.is_superuser = False
-        auth_ctx.user = user
-
-        # Should not raise
-        result = await _list_handler_body(
-            service=mock_service,
-            is_authenticated=True,
-            user_id="user-2",
-            request=mock_request,
-            page=1,
-            page_size=20,
-            sort=None,
-            dir="asc",
-            search=None,
-            cedar_access_spec=cedar_spec,
-            auth_context=auth_ctx,
-            entity_name="Course",
-        )
-        assert result is not None
-
-    @pytest.mark.asyncio
-    async def test_list_gate_skips_for_field_condition_with_role_check_in_or(
-        self,
-    ) -> None:
-        """Mixed OR condition (role_check | comparison) skips gate — field condition present."""
-        from unittest.mock import AsyncMock, MagicMock
-
-        from dazzle.http.runtime.route_generator import _list_handler_body
-        from dazzle.http.specs.auth import (
-            AccessComparisonKind,
-            AccessConditionSpec,
-            AccessLogicalKind,
-            AccessOperationKind,
-            EntityAccessSpec,
-            PermissionRuleSpec,
-        )
-
-        # Logical OR: role(teacher) OR school = current_user.school
-        cedar_spec = EntityAccessSpec(
-            permissions=[
-                PermissionRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    personas=[],
-                    condition=AccessConditionSpec(
-                        kind="logical",
-                        logical_op=AccessLogicalKind.OR,
-                        logical_left=AccessConditionSpec(
-                            kind="role_check",
-                            role_name="teacher",
-                        ),
-                        logical_right=AccessConditionSpec(
-                            kind="comparison",
-                            field="school",
-                            comparison_op=AccessComparisonKind.EQUALS,
-                            value="current_user.school",
-                        ),
-                    ),
-                ),
-            ],
-        )
-
-        mock_service = MagicMock()
-        mock_service.execute = AsyncMock(return_value=[])
-
-        mock_request = MagicMock()
-        mock_request.query_params = {}
-
-        auth_ctx = MagicMock()
-        auth_ctx.is_authenticated = True
-        user = MagicMock()
-        user.id = "user-3"
-        user.roles = ["student"]  # would fail pure role check
-        user.is_superuser = False
-        auth_ctx.user = user
-
-        # Gate skips because field condition is present — no 403
-        result = await _list_handler_body(
-            service=mock_service,
-            is_authenticated=True,
-            user_id="user-3",
-            request=mock_request,
-            page=1,
-            page_size=20,
-            sort=None,
-            dir="asc",
-            search=None,
-            cedar_access_spec=cedar_spec,
-            auth_context=auth_ctx,
-            entity_name="Course",
-        )
-        assert result is not None
-
-
-# =============================================================================
-# _resolve_user_attribute: dotted current_user.<attr> resolution (#526)
-# =============================================================================
-
-
-class TestResolveUserAttribute:
-    """Tests for _resolve_user_attribute — the helper that resolves
-    ``current_user.<attr>`` dotted paths to a concrete filter value."""
-
-    def test_resolve_user_attribute_variants(self) -> None:
-        """All variants of _resolve_user_attribute resolution.
-
-        Combined: resolves_builtin_field, resolves_from_preferences,
-        resolves_id_variant_from_preferences, returns_deny_sentinel_when_attribute_missing,
-        returns_deny_sentinel_when_auth_context_is_none.
-        """
-        from unittest.mock import MagicMock
-
-        from dazzle.http.runtime.route_generator import _resolve_user_attribute
-
-        # Built-in UserRecord field resolved directly
-        ctx_builtin = MagicMock()
-        ctx_builtin.user.email = "alice@school.edu"
-        ctx_builtin.preferences = {}
-        assert _resolve_user_attribute("email", ctx_builtin) == "alice@school.edu"
-
-        # Domain-specific attribute from preferences
-        ctx_pref = MagicMock()
-        ctx_pref.preferences = {"school": "school-uuid-42"}
-        type(ctx_pref.user).school = property(lambda self: None)
-        assert _resolve_user_attribute("school", ctx_pref) == "school-uuid-42"
-
-        # _id variant from preferences when bare key absent
-        ctx_id_variant = MagicMock()
-        ctx_id_variant.preferences = {"school_id": "school-uuid-99"}
-        type(ctx_id_variant.user).school = property(lambda self: None)
-        assert _resolve_user_attribute("school", ctx_id_variant) == "school-uuid-99"
-
-        # Missing attribute → deny sentinel
-        ctx_missing = MagicMock()
-        ctx_missing.preferences = {}
-        type(ctx_missing.user).school = property(lambda self: None)
-        assert _resolve_user_attribute("school", ctx_missing) == "__RBAC_DENY__"
-
-        # None auth_context → deny sentinel
-        assert _resolve_user_attribute("school", None) == "__RBAC_DENY__"
+    assert client.get("/items").status_code == 200
+    assert [call["filters"] for call in service.calls] == [{"school": "school-99"}]
 
 
 # =============================================================================
@@ -1219,147 +913,3 @@ class TestScopeEnforcement:
         assert (
             _resolve_scope_filters(EntityAccessSpec(scopes=[]), "list", {"admin"}, "user-1") == {}
         )
-
-    @pytest.mark.asyncio
-    async def test_list_handler_returns_empty_when_no_scope_matches(self) -> None:
-        """_list_handler_body returns empty result when no scope rule matches the user's role.
-
-        The permit: block grants access to both 'teacher' and 'viewer' (via personas),
-        but the scope: block only defines a rule for 'teacher'. A 'viewer' user passes
-        the permit gate but gets default-deny from the scope layer.
-        """
-        from unittest.mock import AsyncMock, MagicMock
-
-        from dazzle.http.runtime.route_generator import _list_handler_body
-        from dazzle.http.specs.auth import (
-            AccessOperationKind,
-            EntityAccessSpec,
-            PermissionRuleSpec,
-            ScopeRuleSpec,
-        )
-
-        # permit: list allows both teacher and viewer (no condition = any authenticated)
-        # scope: list only covers teacher → viewer gets default-deny
-        cedar_spec = EntityAccessSpec(
-            permissions=[
-                PermissionRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    personas=["teacher", "viewer"],
-                ),
-            ],
-            scopes=[
-                ScopeRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    condition=None,
-                    personas=["teacher"],
-                )
-            ],
-        )
-
-        mock_service = AsyncMock()
-        mock_request = MagicMock()
-        mock_request.query_params = {}
-
-        # viewer passes the permit gate but has no matching scope rule → default-deny
-        auth_ctx = MagicMock()
-        auth_ctx.is_authenticated = True
-        user = MagicMock()
-        user.id = "user-1"
-        user.roles = ["viewer"]
-        user.is_superuser = False
-        auth_ctx.user = user
-
-        result = await _list_handler_body(
-            service=mock_service,
-            is_authenticated=True,
-            user_id="user-1",
-            request=mock_request,
-            page=1,
-            page_size=20,
-            sort=None,
-            dir="asc",
-            search=None,
-            cedar_access_spec=cedar_spec,
-            auth_context=auth_ctx,
-            entity_name="Resource",
-        )
-
-        # Scope default-deny: empty result, service.execute NOT called
-        assert result == {"items": [], "total": 0, "page": 1, "page_size": 20}
-        mock_service.execute.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_list_handler_applies_scope_filter_for_matching_role(self) -> None:
-        """_list_handler_body applies SQL filter from scope rule for matching role."""
-        from unittest.mock import AsyncMock, MagicMock
-
-        from dazzle.http.runtime.route_generator import _list_handler_body
-        from dazzle.http.specs.auth import (
-            AccessComparisonKind,
-            AccessConditionSpec,
-            AccessOperationKind,
-            EntityAccessSpec,
-            PermissionRuleSpec,
-            ScopeRuleSpec,
-        )
-
-        cedar_spec = EntityAccessSpec(
-            permissions=[
-                PermissionRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    personas=["teacher"],
-                ),
-            ],
-            scopes=[
-                ScopeRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    condition=AccessConditionSpec(
-                        kind="comparison",
-                        field="school",
-                        comparison_op=AccessComparisonKind.EQUALS,
-                        value="current_user.school",
-                    ),
-                    personas=["teacher"],
-                )
-            ],
-        )
-
-        mock_service = AsyncMock()
-        mock_service.execute.return_value = {
-            "items": [],
-            "total": 0,
-            "page": 1,
-            "page_size": 20,
-        }
-        mock_request = MagicMock()
-        mock_request.query_params = {}
-
-        auth_ctx = MagicMock()
-        auth_ctx.is_authenticated = True
-        auth_ctx.preferences = {"school": "school-99"}
-        user = MagicMock()
-        user.id = "user-2"
-        user.roles = ["teacher"]
-        user.is_superuser = False
-        type(user).school = property(lambda self: None)
-        auth_ctx.user = user
-
-        result = await _list_handler_body(
-            service=mock_service,
-            is_authenticated=True,
-            user_id="user-2",
-            request=mock_request,
-            page=1,
-            page_size=20,
-            sort=None,
-            dir="asc",
-            search=None,
-            cedar_access_spec=cedar_spec,
-            auth_context=auth_ctx,
-            entity_name="Resource",
-        )
-
-        assert result is not None
-        # The service should have been called with the school filter
-        call_kwargs = mock_service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"school": "school-99"}

@@ -19,29 +19,13 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.core.ir.surfaces import SurfaceMode
-from dazzle.http.runtime.page_routes import _build_dispatch_ctx
-from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.render.context import ColumnContext, TableContext
 from dazzle.render.fragment import (
     BulkActionToolbar,
     FragmentRenderer,
     Table,
 )
-
-
-class _Surface:
-    name = "contact_list"
-    title = "Contacts"
-    mode = SurfaceMode.LIST
-    entity_ref = "Contact"
-
-
-class _RC:
-    def __init__(self, table: TableContext) -> None:
-        self.table = table
-        self.form = None
-        self.detail = None
+from tests.unit.helpers.list_surface import list_ctx, render_list
 
 
 def _table(**overrides) -> TableContext:
@@ -61,25 +45,20 @@ def _table(**overrides) -> TableContext:
     return TableContext(**base)
 
 
-def _render_list(ctx: dict) -> str:
-    adapter = FragmentSurfaceAdapter()
-    return FragmentRenderer().render(adapter._build_list(_Surface(), ctx))
-
-
 # ── Dispatch ctx threading ──
 
 
 def test_dispatch_ctx_threads_bulk_actions_flag() -> None:
     """`bulk_actions` boolean reaches the adapter."""
     table = _table(bulk_actions=True)
-    ctx = _build_dispatch_ctx(_RC(table), object())
+    ctx = list_ctx(table, object())
     assert ctx["bulk_actions"] is True
 
 
 def test_dispatch_ctx_defaults_bulk_actions_to_false() -> None:
     """Unset `bulk_actions` defaults to False — list pages stay
     clean unless the DSL opts in."""
-    ctx = _build_dispatch_ctx(_RC(_table()), object())
+    ctx = list_ctx(_table(), object())
     assert ctx["bulk_actions"] is False
 
 
@@ -155,7 +134,7 @@ def test_dispatch_ctx_threads_bulk_action_names() -> None:
         bulk_action_names=["mark_sensitive", "mark_public"],
         bulk_include_delete=False,
     )
-    ctx = _build_dispatch_ctx(_RC(table), object())
+    ctx = list_ctx(table, object())
     assert ctx["bulk_action_names"] == ["mark_sensitive", "mark_public"]
     assert ctx["bulk_include_delete"] is False
 
@@ -166,7 +145,7 @@ def test_list_adapter_emits_named_bulk_actions_in_shell() -> None:
     Adapter takes entity_ref from the surface (Contact in this suite's
     fixture), so the bulk POST path is /api/contacts/bulk.
     """
-    html = _render_list(
+    html = render_list(
         {
             "title": "Contacts",
             "entity_name": "Contact",
@@ -256,8 +235,8 @@ def test_list_renders_bulk_toolbar_and_select_all_when_bulk_actions_on() -> None
     emitted by render_data_row on the /api hydrate (covered by the data_row
     characterization 'bulk' case), not inline at first paint."""
     table = _table(bulk_actions=True)
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
+    ctx = list_ctx(table, object())
+    html = render_list(ctx)
     assert "dz-bulk-actions" in html
     # Convergence C1.1: Delete is the grid controller's bulk seam posting to
     # the entity API base (`{endpoint}/bulk`), not an Alpine @click.
@@ -273,8 +252,8 @@ def test_list_omits_bulk_toolbar_when_bulk_actions_off() -> None:
     """`bulk_actions: false` (or unset) → no toolbar, no checkboxes,
     no row ids. List stays clean."""
     table = _table(bulk_actions=False)
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
+    ctx = list_ctx(table, object())
+    html = render_list(ctx)
     assert "dz-bulk-actions" not in html
     assert "dz-tr-checkbox" not in html
     assert "data-dz-row-id" not in html
@@ -286,7 +265,7 @@ def test_list_keeps_bulk_toolbar_for_empty_list_css_gated() -> None:
     `[data-dz-bulk-count] > 0`, not gated on the first-paint item count (the
     list hydrates rows from /api, so item count is unknown at first paint)."""
     table = _table(bulk_actions=True, rows=[], total=0)
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
+    ctx = list_ctx(table, object())
+    html = render_list(ctx)
     assert "dz-bulk-actions" in html
     assert "dz-table-th-select" in html

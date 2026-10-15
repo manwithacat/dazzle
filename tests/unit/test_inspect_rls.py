@@ -1,5 +1,8 @@
 """Unit tests for ``dazzle inspect rls`` (RLS tenancy Phase D, Task 3).
 
+That ``rls`` is listed in ``dazzle inspect --help`` is a row of
+``test_cli_inspect.py::test_inspect_manifest_only_output``.
+
 Manifest-only paths only — the default mode derives the expected RLS policy
 set from the linked AppSpec with no DB. The ``--runtime`` path needs a live
 PostgreSQL connection (covered by the Phase D integration tests), so it is not
@@ -20,33 +23,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-from typer.testing import CliRunner
-
-from dazzle.cli import app
+from tests.unit.helpers.cli import run_cli
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TENANT_RLS = REPO_ROOT / "fixtures" / "tenant_rls"
 SIMPLE_TASK = REPO_ROOT / "examples" / "simple_task"
 
 
-@pytest.fixture
-def runner() -> CliRunner:
-    return CliRunner()
-
-
-def test_inspect_rls_in_help(runner: CliRunner) -> None:
-    """`dazzle inspect --help` must list the new `rls` subcommand."""
-    result = runner.invoke(app, ["inspect", "--help"])
-    assert result.exit_code == 0, result.stdout
-    assert "rls" in result.stdout
-
-
-def test_inspect_rls_lists_expected_policies_per_scoped_entity(runner: CliRunner) -> None:
+def test_inspect_rls_lists_expected_policies_per_scoped_entity() -> None:
     """Manifest mode lists fence + baseline / scope_* per tenant-scoped entity."""
-    result = runner.invoke(app, ["inspect", "rls", "--project", str(TENANT_RLS), "--json"])
-    assert result.exit_code == 0, result.stdout
-    payload = json.loads(result.stdout)
+    payload = json.loads(run_cli(["inspect", "rls", "--project", TENANT_RLS, "--json"]))
     assert payload["ext_point"] == "rls"
 
     # Build (entity, name) -> entry index.
@@ -92,20 +78,16 @@ def test_inspect_rls_lists_expected_policies_per_scoped_entity(runner: CliRunner
     assert any("shared_schema" in n and "topology" in n for n in payload["notes"]), payload["notes"]
 
 
-def test_inspect_rls_human_output(runner: CliRunner) -> None:
+def test_inspect_rls_human_output() -> None:
     """Human output names the scoped entity + its policies."""
-    result = runner.invoke(app, ["inspect", "rls", "--project", str(TENANT_RLS)])
-    assert result.exit_code == 0, result.stdout
-    assert "tenant_fence" in result.stdout
-    assert "scope_select" in result.stdout
-    assert "tenant_baseline" in result.stdout
+    out = run_cli(["inspect", "rls", "--project", TENANT_RLS])
+    for policy in ("tenant_fence", "scope_select", "tenant_baseline"):
+        assert policy in out
 
 
-def test_inspect_rls_non_tenant_app_is_empty_with_note(runner: CliRunner) -> None:
+def test_inspect_rls_non_tenant_app_is_empty_with_note() -> None:
     """A non-tenant app yields an empty result + the no-row-level-tenancy note."""
-    result = runner.invoke(app, ["inspect", "rls", "--project", str(SIMPLE_TASK), "--json"])
-    assert result.exit_code == 0, result.stdout
-    payload = json.loads(result.stdout)
+    payload = json.loads(run_cli(["inspect", "rls", "--project", SIMPLE_TASK, "--json"]))
     assert payload["entries"] == []
     assert payload["mismatches"] == []
     assert any("no row-level tenancy" in n.lower() for n in payload["notes"])

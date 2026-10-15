@@ -4,220 +4,137 @@
 The parser pilot for the discriminated typed-config blocks in the
 #1015–#1018 region-primitive quartet. Establishes the syntax shape
 and the required-field / lens-validation contracts that #1015,
-#1016, #1017's config-block parsers will mirror.
+#1016, #1017's config-block parsers mirror.
 """
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
-from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.errors import ParseError
+from tests.unit.helpers.dsl import region_config
 
-
-def _parse(body: str) -> object:
-    """Wrap a region body in module/app/entity/workspace boilerplate
-    and return the parsed CohortStripConfig (or raise ParseError).
-    """
-    src = f"""module ops
-app demo_app "Demo"
-
+_MEMBER = """
 entity Member "Member":
   id: uuid pk
   name: str(100) required
   status: str(50)
   score: int
-
-workspace dash "Dash":
-  members:
-    source: Member
-    display: cohort_strip
-    cohort_strip_config:
-{body}
 """
-    result = parse_dsl(src, "test.dsl")
-    fragment = result[5]  # ModuleFragment is the last tuple element
-    ws = fragment.workspaces[0]
-    region = ws.regions[0]
-    return region.cohort_strip_config
+
+
+def _parse(body: str) -> Any:
+    return region_config(entity=_MEMBER, display="cohort_strip", body=body)
 
 
 def test_parses_minimal_config() -> None:
     cfg = _parse(
-        """      member_via: id
-      lenses:
-        - id: status
-          label: Status
-          primary: status
-"""
+        """
+        member_via: id
+        lenses:
+          - id: status
+            label: Status
+            primary: status
+        """
     )
-    assert cfg is not None
     assert cfg.member_via == "id"
     assert cfg.default_lens == ""  # optional, defaults empty
-    assert len(cfg.lenses) == 1
-    assert cfg.lenses[0].id == "status"
-    assert cfg.lenses[0].label == "Status"
-    assert cfg.lenses[0].primary == "status"
+    assert [(lens.id, lens.label, lens.primary) for lens in cfg.lenses] == [
+        ("status", "Status", "status")
+    ]
     assert cfg.lenses[0].threshold is None
 
 
 def test_parses_default_lens_and_multiple_lenses() -> None:
+    """Also pins the integer threshold → float coercion."""
     cfg = _parse(
-        """      member_via: id
-      default_lens: score
-      lenses:
-        - id: status
-          label: Status
-          primary: status
-        - id: score
-          label: "Score"
-          primary: score
-          threshold: 80
-"""
+        """
+        member_via: id
+        default_lens: score
+        lenses:
+          - id: status
+            label: Status
+            primary: status
+          - id: score
+            label: "Score"
+            primary: score
+            threshold: 80
+        """
     )
     assert cfg.default_lens == "score"
-    assert len(cfg.lenses) == 2
-    assert cfg.lenses[1].id == "score"
+    assert [lens.id for lens in cfg.lenses] == ["status", "score"]
     assert cfg.lenses[1].threshold == 80.0
 
 
-def test_parses_quoted_label_with_spaces_and_punctuation() -> None:
+@pytest.mark.parametrize(
+    ("label_src", "expected"),
+    [
+        pytest.param('"Response time (P95)"', "Response time (P95)", id="quoted-with-punctuation"),
+        pytest.param("Status", "Status", id="bare-identifier"),
+    ],
+)
+def test_parses_lens_label(label_src: str, expected: str) -> None:
     cfg = _parse(
-        """      member_via: id
-      lenses:
-        - id: rt
-          label: "Response time (P95)"
-          primary: score
-"""
+        f"""
+        member_via: id
+        lenses:
+          - id: x
+            label: {label_src}
+            primary: score
+        """
     )
-    assert cfg.lenses[0].label == "Response time (P95)"
+    assert cfg.lenses[0].label == expected
 
 
-def test_parses_label_as_bare_identifier_when_no_spaces() -> None:
-    cfg = _parse(
-        """      member_via: id
-      lenses:
-        - id: x
-          label: Status
-          primary: status
-"""
-    )
-    assert cfg.lenses[0].label == "Status"
-
-
-def test_parses_threshold_as_integer() -> None:
-    cfg = _parse(
-        """      member_via: id
-      lenses:
-        - id: x
-          label: X
-          primary: score
-          threshold: 80
-"""
-    )
-    assert cfg.lenses[0].threshold == 80.0
-
-
-# ── Validation errors ──
-
-
-def test_rejects_missing_member_via() -> None:
-    with pytest.raises(ParseError, match="member_via"):
-        _parse(
-            """      lenses:
-        - id: x
-          label: X
-          primary: score
-"""
-        )
-
-
-def test_rejects_empty_lenses_list() -> None:
-    with pytest.raises(ParseError, match="at least one lens"):
-        _parse(
-            """      member_via: id
-"""
-        )
-
-
-def test_rejects_default_lens_not_in_declared_lenses() -> None:
-    with pytest.raises(ParseError, match="default_lens"):
-        _parse(
-            """      member_via: id
-      default_lens: ghost
-      lenses:
-        - id: status
-          label: Status
-          primary: status
-"""
-        )
-
-
-def test_rejects_lens_missing_label() -> None:
-    with pytest.raises(ParseError, match="label"):
-        _parse(
-            """      member_via: id
-      lenses:
-        - id: x
-          primary: score
-"""
-        )
-
-
-def test_rejects_lens_missing_primary() -> None:
-    with pytest.raises(ParseError, match="primary"):
-        _parse(
-            """      member_via: id
-      lenses:
-        - id: x
-          label: X
-"""
-        )
-
-
-def test_rejects_unknown_top_level_key() -> None:
-    with pytest.raises(ParseError, match="Unknown cohort_strip_config key"):
-        _parse(
-            """      member_via: id
-      bogus: 1
-      lenses:
-        - id: x
-          label: X
-          primary: score
-"""
-        )
-
-
-def test_rejects_unknown_lens_key() -> None:
-    with pytest.raises(ParseError, match="Unknown lenses key"):
-        _parse(
-            """      member_via: id
-      lenses:
-        - id: x
-          label: X
-          primary: score
-          weird: 1
-"""
-        )
-
-
-def test_rejects_lens_entry_without_dash() -> None:
-    with pytest.raises(ParseError, match="must start with `- id:"):
-        _parse(
-            """      member_via: id
-      lenses:
-        id: x
-"""
-        )
-
-
-def test_rejects_lens_entry_starting_with_non_id_key() -> None:
-    with pytest.raises(ParseError, match="must start with `id:`"):
-        _parse(
-            """      member_via: id
-      lenses:
-        - label: X
-          id: x
-          primary: score
-"""
-        )
+@pytest.mark.parametrize(
+    ("body", "error"),
+    [
+        pytest.param(
+            "lenses:\n  - id: x\n    label: X\n    primary: score\n",
+            "member_via",
+            id="missing-member-via",
+        ),
+        pytest.param("member_via: id\n", "at least one lens", id="empty-lenses"),
+        pytest.param(
+            "member_via: id\ndefault_lens: ghost\n"
+            "lenses:\n  - id: status\n    label: Status\n    primary: status\n",
+            "default_lens",
+            id="default-lens-not-declared",
+        ),
+        pytest.param(
+            "member_via: id\nlenses:\n  - id: x\n    primary: score\n",
+            "label",
+            id="lens-missing-label",
+        ),
+        pytest.param(
+            "member_via: id\nlenses:\n  - id: x\n    label: X\n",
+            "primary",
+            id="lens-missing-primary",
+        ),
+        pytest.param(
+            "member_via: id\nbogus: 1\nlenses:\n  - id: x\n    label: X\n    primary: score\n",
+            "Unknown cohort_strip_config key",
+            id="unknown-top-level-key",
+        ),
+        pytest.param(
+            "member_via: id\nlenses:\n  - id: x\n    label: X\n    primary: score\n    weird: 1\n",
+            "Unknown lenses key",
+            id="unknown-lens-key",
+        ),
+        pytest.param(
+            "member_via: id\nlenses:\n  id: x\n",
+            "must start with `- id:",
+            id="lens-entry-without-dash",
+        ),
+        pytest.param(
+            "member_via: id\nlenses:\n  - label: X\n    id: x\n    primary: score\n",
+            "must start with `id:`",
+            id="lens-entry-starting-with-non-id-key",
+        ),
+    ],
+)
+def test_rejects_invalid_config(body: str, error: str) -> None:
+    with pytest.raises(ParseError, match=error):
+        _parse(body)

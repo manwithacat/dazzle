@@ -224,13 +224,20 @@ def test_open_signing_link_matches_seeded_doc(tmp_path: Path) -> None:
     assert sink["invoked"][-1] == "open_signing_link"
 
 
-def test_open_signing_link_marks_truncation_explicitly(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("html", "truncated"),
+    [
+        pytest.param("<p>" + "waiver term x " * 600 + "</p>", True, id="long-page-marked"),
+        pytest.param("<p>short waiver</p>", False, id="short-page-unmarked"),
+    ],
+)
+def test_open_signing_link_marks_truncation_explicitly_1378(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, html: str, truncated: bool
+) -> None:
     """#1378: a silent [:800] cut made personas file false high-severity
-    "document truncated mid-sentence" bugs. Long pages must carry an
-    explicit excerpt marker; short pages must carry none."""
-    from unittest.mock import MagicMock, patch
-
-    from dazzle.qa.signing_tools import _PAGE_TEXT_CAP
+    "document truncated mid-sentence" bugs. Long pages carry an explicit
+    excerpt marker (and well over 800 chars of text); short pages carry none."""
+    import httpx
 
     inbox = tmp_path / "inbox.json"
     inbox.write_text("[]")
@@ -241,31 +248,27 @@ def test_open_signing_link_marks_truncation_explicitly(tmp_path: Path) -> None:
         signing_url="http://localhost:3000/sign/Contract/doc-1?token=mytoken",
         signatory_email="signer@example.com",
     )
-    sink: dict = {}
     tools = build_signing_tools(
         base_url="http://localhost:3000",
         inbox_path=inbox,
         seeded_docs=[doc],
-        action_sink=sink,
+        action_sink={},
     )
     open_link = next(t for t in tools if t.name == "open_signing_link")
-    args = {"entity": "Contract", "id": "doc-1", "token": "mytoken"}
+    monkeypatch.setattr(
+        httpx,
+        "get",
+        lambda url, **_kw: httpx.Response(200, text=html, request=httpx.Request("GET", url)),
+    )
 
-    long_page = MagicMock(status_code=200, text="<p>" + "waiver term x " * 600 + "</p>")
-    long_page.content = long_page.text.encode()
-    with patch("dazzle.qa.signing_tools.httpx.get", return_value=long_page):
-        result = _invoke(open_link, args)
-    assert "tool excerpt truncated" in result
-    # The persona must see substantially more than the old 800-char cap.
-    assert len(result) > 800
+    result = _invoke(open_link, {"entity": "Contract", "id": "doc-1", "token": "mytoken"})
 
-    short_page = MagicMock(status_code=200, text="<p>short waiver</p>")
-    short_page.content = short_page.text.encode()
-    with patch("dazzle.qa.signing_tools.httpx.get", return_value=short_page):
-        result = _invoke(open_link, args)
-    assert "tool excerpt truncated" not in result
-    assert "short waiver" in result
-    assert _PAGE_TEXT_CAP >= 4000
+    assert ("tool excerpt truncated" in result) is truncated
+    if truncated:
+        # The persona sees at least 4000 chars, far past the old 800-char cut.
+        assert len(result) >= 4000
+    else:
+        assert "short waiver" in result
 
 
 def test_read_inbox_machine_readable_format(tmp_path: Path) -> None:

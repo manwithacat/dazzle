@@ -13,6 +13,7 @@ where clause.
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -787,20 +788,28 @@ class TestPivotBuckets:
         from dazzle.http.runtime.aggregate import AggregateBucket
         from dazzle.http.runtime.workspace_aggregation import _compute_pivot_buckets
 
+        class _Repo:
+            def __init__(self, entity_spec: Any, buckets: list[Any] | None = None) -> None:
+                self.entity_spec = entity_spec
+                self.buckets = buckets or []
+                self.aggregate_calls: list[dict[str, Any]] = []
+
+            async def aggregate(self, **kwargs: Any) -> list[Any]:
+                self.aggregate_calls.append(kwargs)
+                return self.buckets
+
         # Source repo with one FK field (system → System) + one scalar (severity).
-        source_repo = MagicMock()
-        source_repo.entity_spec = SimpleNamespace(
-            name="Alert",
-            fields=[
-                SimpleNamespace(
-                    name="system",
-                    type=SimpleNamespace(kind="ref", ref_entity="System"),
-                ),
-                SimpleNamespace(name="severity", type=SimpleNamespace(kind="scalar")),
-            ],
-        )
-        source_repo.aggregate = AsyncMock(
-            return_value=[
+        source_repo = _Repo(
+            SimpleNamespace(
+                name="Alert",
+                fields=[
+                    SimpleNamespace(
+                        name="system", type=SimpleNamespace(kind="ref", ref_entity="System")
+                    ),
+                    SimpleNamespace(name="severity", type=SimpleNamespace(kind="scalar")),
+                ],
+            ),
+            [
                 AggregateBucket(
                     dimensions={"system": "sys-1", "system_label": "DB", "severity": "high"},
                     measures={"count": 7},
@@ -809,17 +818,13 @@ class TestPivotBuckets:
                     dimensions={"system": "sys-1", "system_label": "DB", "severity": "low"},
                     measures={"count": 3},
                 ),
-            ]
-        )
-
-        # Target repo for the FK display-field probe.
-        target_repo = MagicMock()
-        target_repo.entity_spec = SimpleNamespace(
-            name="System",
-            fields=[
-                SimpleNamespace(name="id"),
-                SimpleNamespace(name="name"),
             ],
+        )
+        # Target repo for the FK display-field probe.
+        target_repo = _Repo(
+            SimpleNamespace(
+                name="System", fields=[SimpleNamespace(name="id"), SimpleNamespace(name="name")]
+            )
         )
 
         rows, dim_specs = await _compute_pivot_buckets(
@@ -830,27 +835,22 @@ class TestPivotBuckets:
             source_entity_spec=source_repo.entity_spec,
             scope_filters=None,
         )
-        assert len(rows) == 2
-        assert rows[0]["system"] == "sys-1"
-        assert rows[0]["system_label"] == "DB"
-        assert rows[0]["severity"] == "high"
-        assert rows[0]["count"] == 7
+        assert [(r["system"], r["system_label"], r["severity"], r["count"]) for r in rows] == [
+            ("sys-1", "DB", "high", 7),
+            ("sys-1", "DB", "low", 3),
+        ]
 
         # dim_specs carry header metadata for the template.
-        assert [d["name"] for d in dim_specs] == ["system", "severity"]
-        assert dim_specs[0]["is_fk"] is True
-        assert dim_specs[1]["is_fk"] is False
+        assert [(d["name"], d["is_fk"]) for d in dim_specs] == [
+            ("system", True),
+            ("severity", False),
+        ]
 
-        # The aggregate call must use a list of two Dimension objects with
-        # the FK target wired on the first.
-        agg_kwargs = source_repo.aggregate.call_args.kwargs
+        # One multi-dim GROUP BY query, the FK target wired on the first dimension.
+        [agg_kwargs] = source_repo.aggregate_calls
         dims = agg_kwargs["dimensions"]
-        assert len(dims) == 2
-        assert dims[0].name == "system"
-        assert dims[0].fk_table == "System"
+        assert [(d.name, d.fk_table) for d in dims] == [("system", "System"), ("severity", None)]
         assert dims[0].fk_display_field == "name"
-        assert dims[1].name == "severity"
-        assert dims[1].fk_table is None
 
     @pytest.mark.asyncio()
     async def test_no_aggregates_returns_empty(self) -> None:

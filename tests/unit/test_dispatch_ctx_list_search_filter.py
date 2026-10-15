@@ -11,289 +11,138 @@ list region body."""
 
 from __future__ import annotations
 
-from dazzle.core.ir.surfaces import SurfaceMode
-from dazzle.http.runtime.page_routes import _build_dispatch_ctx
-from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
-from dazzle.render.context import ColumnContext, TableContext
-from dazzle.render.fragment import FragmentRenderer
+from typing import Any
 
+import pytest
 
-class _Surface:
-    name = "contact_list"
-    title = "Contacts"
-    mode = SurfaceMode.LIST
-    entity_ref = "Contact"
+from dazzle.render.context import ColumnContext
+from tests.unit.helpers.list_surface import contact_table, list_ctx, render_list
 
-
-class _RC:
-    def __init__(self, table: TableContext) -> None:
-        self.table = table
-        self.form = None
-        self.detail = None
-
-
-def _table(**overrides) -> TableContext:
-    base: dict = {
-        "entity_name": "Contact",
-        "title": "Contacts",
-        "columns": [ColumnContext(key="name", label="Name")],
-        "api_endpoint": "/api/contacts",
-        "rows": [{"id": "1", "name": "Alice"}],
-        "total": 1,
-        "table_id": "contact_table",
-    }
-    base.update(overrides)
-    return TableContext(**base)
-
-
-def _render_list(ctx: dict) -> str:
-    adapter = FragmentSurfaceAdapter()
-    return FragmentRenderer().render(adapter._build_list(_Surface(), ctx))
-
-
-# ── Dispatch ctx threading ──
+_NAME = ColumnContext(key="name", label="Name")
+_STATUS = ColumnContext(
+    key="status",
+    label="Status",
+    filterable=True,
+    filter_type="select",
+    filter_options=[
+        {"value": "active", "label": "Active"},
+        {"value": "archived", "label": "Archived"},
+    ],
+)
+_ROWS = {"rows": [{"id": "1", "name": "Alice"}], "total": 1}
 
 
 def test_dispatch_ctx_threads_search_and_filter_state() -> None:
-    """`search_enabled`, `search_fields`, `filter_values` all reach
-    the adapter. Pre-fix only `search_enabled` (default True) was
-    accidentally available; everything else was dropped."""
-    table = _table(
-        search_enabled=True,
-        search_fields=["first_name", "last_name", "email"],
-        filter_values={"status": "active"},
+    """`search_enabled`, `search_fields`, `filter_values` all reach the
+    adapter; per-column `filter_options` flatten to (value, label) pairs."""
+    ctx = list_ctx(
+        contact_table(
+            **_ROWS,
+            columns=[_NAME, _STATUS],
+            search_enabled=True,
+            search_fields=["first_name", "last_name", "email"],
+            filter_values={"status": "active"},
+        )
     )
-    ctx = _build_dispatch_ctx(_RC(table), object())
     assert ctx["search_enabled"] is True
     assert ctx["search_fields"] == ["first_name", "last_name", "email"]
     assert ctx["filter_values"] == {"status": "active"}
+    assert ctx["columns"][1]["filterable"] is True
+    assert ctx["columns"][1]["filter_options"] == [("active", "Active"), ("archived", "Archived")]
 
 
-def test_dispatch_ctx_threads_filterable_column_options() -> None:
-    """Per-column `filter_options` flatten from list[dict] to a
-    tuple-of-tuples ready for `FilterColumn.options`."""
-    table = _table(
-        columns=[
-            ColumnContext(key="name", label="Name"),
-            ColumnContext(
-                key="status",
-                label="Status",
-                filterable=True,
-                filter_type="select",
-                filter_options=[
-                    {"value": "active", "label": "Active"},
-                    {"value": "inactive", "label": "Inactive"},
-                ],
-            ),
-        ],
+@pytest.mark.parametrize(
+    ("surface", "expected"),
+    [
+        pytest.param(None, "contact_list", id="surface_name_not_dt_table_id_1205"),
+        pytest.param(object(), "dt-device_list", id="falls_back_to_table_id_without_surface_name"),
+    ],
+)
+def test_dispatch_ctx_region_name(surface: Any, expected: str) -> None:
+    """#1205: `region_name` must match the workspace region container id
+    (`region-<surface.name>`), not the renderer's `dt-`-prefixed `table_id`
+    (the one-prefix mismatch fired htmx:targetError on every filter change).
+    Without a surface name it falls back to `table_id` rather than an empty suffix."""
+    ctx = list_ctx(contact_table(**_ROWS, table_id="dt-device_list"), surface)
+    assert ctx["region_name"] == expected
+
+
+@pytest.mark.parametrize(
+    ("table", "present", "absent"),
+    [
+        pytest.param(
+            {"search_enabled": True, "search_fields": ["first_name", "email"]},
+            ["/_dazzle/fts/Contact", "dz-search-results-contact_list_search"],
+            [],
+            id="search_box_when_search_configured",
+        ),
+        pytest.param(
+            {"search_enabled": False, "search_fields": []},
+            [],
+            ["/_dazzle/fts/"],
+            id="no_search_box_when_search_disabled",
+        ),
+        pytest.param(
+            {"search_enabled": True, "search_fields": []},
+            [],
+            ["/_dazzle/fts/"],
+            id="no_search_box_when_search_fields_empty",
+        ),
+        pytest.param(
+            {"columns": [_NAME, _STATUS]},
+            ["dz-filter-bar", ">Active<", ">Archived<"],
+            [],
+            id="filter_bar_when_any_column_filterable",
+        ),
+        pytest.param(
+            {"columns": [_NAME, _STATUS], "filter_values": {"status": "archived"}},
+            ['value="archived" selected'],
+            ['value="active" selected'],
+            id="filter_bar_preselects_active_value",
+        ),
+        pytest.param(
+            {"columns": [_NAME]},
+            [],
+            ["filter-bar"],
+            id="no_filter_bar_without_filterable_columns",
+        ),
+        pytest.param(
+            {"columns": [_STATUS], "api_endpoint": ""},
+            [],
+            ["filter-bar"],
+            id="no_filter_bar_without_endpoint",
+        ),
+        pytest.param(
+            {"columns": [_NAME, _STATUS], "table_id": "dt-contact_list"},
+            ['name="filter[status]"', 'data-dz-grid-filter="filter[status]"'],
+            ['hx-target="#contact_list-body"', "#region-"],
+            id="filter_select_uses_grid_controller_seam_not_htmx_target",
+        ),
+    ],
+)
+def test_list_toolbar_render(table: dict[str, Any], present: list[str], absent: list[str]) -> None:
+    """Convergence C1.1: filter controls carry the HM grid seam
+    (`data-dz-grid-filter="filter[<key>]"`), never a per-control hx-target."""
+    html = render_list(list_ctx(contact_table(**{**_ROWS, **table})))
+    for fragment in present:
+        assert fragment in html
+    for fragment in absent:
+        assert fragment not in html
+
+
+def test_list_search_box_precedes_filter_bar() -> None:
+    """Search and filter coexist; SearchBox renders before FilterBar."""
+    html = render_list(
+        list_ctx(
+            contact_table(
+                **_ROWS,
+                search_enabled=True,
+                search_fields=["name"],
+                columns=[_STATUS],
+                filter_values={},
+            )
+        )
     )
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    status_col = ctx["columns"][1]
-    assert status_col["filterable"] is True
-    assert status_col["filter_options"] == [
-        ("active", "Active"),
-        ("inactive", "Inactive"),
-    ]
-
-
-# ── End-to-end render ──
-
-
-def test_list_emits_search_box_when_search_configured() -> None:
-    """Search-enabled surface with `search_fields` → SearchBox in
-    the toolbar pointing at the FTS endpoint."""
-    table = _table(
-        search_enabled=True,
-        search_fields=["first_name", "last_name", "email"],
-    )
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
-    assert "/_dazzle/fts/Contact" in html
-    assert "contact_table_search" in html
-
-
-def test_list_omits_search_box_when_search_disabled() -> None:
-    """Search-disabled surface → no SearchBox emitted (pure data list)."""
-    table = _table(search_enabled=False, search_fields=[])
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
-    assert "/_dazzle/fts/" not in html
-
-
-def test_list_omits_search_box_when_search_fields_empty() -> None:
-    """`search_enabled=True` but no `search_fields` → no SearchBox.
-    Defensive — DSL author forgot to declare which fields to search."""
-    table = _table(search_enabled=True, search_fields=[])
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
-    assert "/_dazzle/fts/" not in html
-
-
-def test_list_emits_filter_bar_when_any_column_filterable() -> None:
-    """At least one filterable column → FilterBar emitted with that
-    column as a select/dropdown. The FilterBar's hx-target hits the
-    region's body so changes refresh the list in place."""
-    table = _table(
-        columns=[
-            ColumnContext(key="name", label="Name"),
-            ColumnContext(
-                key="status",
-                label="Status",
-                filterable=True,
-                filter_type="select",
-                filter_options=[
-                    {"value": "active", "label": "Active"},
-                    {"value": "archived", "label": "Archived"},
-                ],
-            ),
-        ],
-    )
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
-    assert "filter-bar" in html or "dz-filter-bar" in html
-    # Filter options round-trip into the rendered <select>.
-    assert "Active" in html
-
-
-def test_list_filter_bar_preselects_active_filter_values() -> None:
-    """When `filter_values` carries an active value for a column,
-    that option is the `selected` one in the rendered <select>."""
-    table = _table(
-        columns=[
-            ColumnContext(key="name", label="Name"),
-            ColumnContext(
-                key="status",
-                label="Status",
-                filterable=True,
-                filter_type="select",
-                filter_options=[
-                    {"value": "active", "label": "Active"},
-                    {"value": "archived", "label": "Archived"},
-                ],
-            ),
-        ],
-        filter_values={"status": "archived"},
-    )
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
-    # The active value reaches the selected attribute.
-    assert 'value="archived"' in html
-
-
-def test_list_omits_filter_bar_when_no_filterable_columns() -> None:
-    """No `filterable=True` columns → no FilterBar (avoids empty
-    toolbar shell)."""
-    table = _table(
-        columns=[ColumnContext(key="name", label="Name")],
-    )
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
-    assert "filter-bar" not in html
-    assert "dz-filter-bar" not in html
-
-
-def test_list_search_and_filter_can_coexist() -> None:
-    """Surface with both search AND filterable columns emits both
-    primitives; SearchBox first, then FilterBar (the legacy template's
-    visual order)."""
-    table = _table(
-        search_enabled=True,
-        search_fields=["name"],
-        columns=[
-            ColumnContext(
-                key="status",
-                label="Status",
-                filterable=True,
-                filter_type="select",
-                filter_options=[{"value": "active", "label": "Active"}],
-            ),
-        ],
-        filter_values={},
-    )
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
     search_pos = html.find("/_dazzle/fts/")
-    filter_pos = html.find("filter-bar") if "filter-bar" in html else html.find("dz-filter-bar")
-    assert search_pos > -1
-    assert filter_pos > -1
-    assert search_pos < filter_pos
-
-
-# ── Issue #1205 regression ──
-
-
-def test_dispatch_ctx_region_name_uses_surface_name_not_table_id() -> None:
-    """Issue #1205: `region_name` must match the workspace region
-    container id (`region-<surface.name>`), not the renderer's `table_id`
-    (which gets a `dt-` prefix). Pre-fix the FilterBar emitted
-    `hx-target="#region-dt-device_list"` while the container was
-    `#region-device_list` — one-prefix mismatch fired htmx:targetError
-    on every filter change."""
-    table = _table(table_id="dt-device_list")
-    ctx = _build_dispatch_ctx(_RC(table), _Surface())
-    # Must prefer the surface name (no `dt-` prefix), not table_id.
-    assert ctx["region_name"] == "contact_list"
-    assert ctx["region_name"] != "dt-device_list"
-
-
-def test_dispatch_ctx_region_name_falls_back_to_table_id_without_surface_name() -> None:
-    """Defensive: if surface has no name (shouldn't happen in practice),
-    we fall back to table_id to preserve pre-fix behaviour rather than
-    emitting `region-` with an empty suffix."""
-    table = _table(table_id="dt-device_list")
-    # object() has no `.name` attribute — fall back to table_id.
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    assert ctx["region_name"] == "dt-device_list"
-
-
-def test_list_filter_bar_uses_grid_filter_seam() -> None:
-    """Convergence C1.1: list filters are the HM grid controller's seam —
-    each control carries `data-dz-grid-filter="filter[<key>]"` (the wire key
-    the /api list handler parses) and NO per-control hx-get/hx-target; the
-    controller composes one query from all DOM state on change. The dead
-    `#region-*` workspace target stays gone."""
-    table = _table(
-        table_id="dt-contact_list",
-        columns=[
-            ColumnContext(key="name", label="Name"),
-            ColumnContext(
-                key="status",
-                label="Status",
-                filterable=True,
-                filter_type="select",
-                filter_options=[
-                    {"value": "active", "label": "Active"},
-                    {"value": "archived", "label": "Archived"},
-                ],
-            ),
-        ],
-    )
-    ctx = _build_dispatch_ctx(_RC(table), _Surface())
-    html = _render_list(ctx)
-    # The filter select is grid-controller-driven: filter[<key>] wire name +
-    # data-dz-grid-filter seam, no per-control htmx target.
-    assert 'name="filter[status]"' in html
-    assert 'data-dz-grid-filter="filter[status]"' in html
-    assert 'hx-target="#contact_list-body"' not in html
-    assert "#region-" not in html
-
-
-def test_list_omits_filter_bar_when_endpoint_missing() -> None:
-    """Without `endpoint` we can't build hx-get URLs for the filter
-    selects — omit the FilterBar rather than emit broken bindings."""
-    table = _table(
-        columns=[
-            ColumnContext(
-                key="status",
-                label="Status",
-                filterable=True,
-                filter_type="select",
-                filter_options=[{"value": "active", "label": "Active"}],
-            ),
-        ],
-        api_endpoint="",
-    )
-    ctx = _build_dispatch_ctx(_RC(table), object())
-    html = _render_list(ctx)
-    assert "filter-bar" not in html
-    assert "dz-filter-bar" not in html
+    filter_pos = html.find("dz-filter-bar")
+    assert -1 < search_pos < filter_pos

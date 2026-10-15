@@ -3,19 +3,9 @@
 Part of Agent-Led Fitness v1 Task 2.
 """
 
-from pathlib import Path
-
 import pytest
 
-from dazzle.core.dsl_parser_impl import parse_dsl
-
-
-def _entity(dsl: str, name: str):
-    _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-    for entity in fragment.entities:
-        if entity.name == name:
-            return entity
-    raise AssertionError(f"entity {name} not found in parsed fragment")
+from tests.unit.helpers.dsl import entity_named, parse_fragment
 
 
 def test_entity_with_fitness_repr_fields_parses() -> None:
@@ -37,8 +27,7 @@ entity User "User":
   id: uuid pk
   email: str(200) required
 """
-    ticket = _entity(source, "Ticket")
-    assert ticket.fitness is not None
+    ticket = entity_named(source, "Ticket")
     assert ticket.fitness.repr_fields == ["title", "status", "assignee_id"]
 
 
@@ -52,8 +41,7 @@ entity Note "Note":
   id: uuid pk
   body: text
 """
-    note = _entity(source, "Note")
-    assert note.fitness is None
+    assert entity_named(source, "Note").fitness is None
 
 
 def test_fitness_repr_fields_must_reference_declared_fields() -> None:
@@ -70,4 +58,4 @@ entity Ticket "Ticket":
     repr_fields: [title, nonexistent]
 """
     with pytest.raises(Exception, match="nonexistent"):
-        parse_dsl(source, Path("test.dsl"))
+        parse_fragment(source)

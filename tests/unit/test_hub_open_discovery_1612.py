@@ -45,14 +45,3 @@ def test_timeline_drill_stamps_open_discovery() -> None:
     assert "data-dz-timeline-drill" in html
     assert 'data-dz-open-entity="Person"' in html
     assert 'data-dz-open-chain="/app/person/p-1"' in html
-
-
-def test_queue_open_alias_still_works() -> None:
-    from dazzle.render.fragment.ingest.emit import (
-        _hub_open_discovery_attrs,
-        _queue_open_discovery_attrs,
-    )
-
-    a, b = _hub_open_discovery_attrs("/app/task/1")
-    c, d = _queue_open_discovery_attrs("/app/task/1")
-    assert a == c and b == d

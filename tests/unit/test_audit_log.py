@@ -5,15 +5,31 @@ All database tests use mocked psycopg connections (PostgreSQL only).
 """
 
 import asyncio
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import pytest
+from pydantic import BaseModel
 
+from dazzle.core.ir.fk_graph import FKGraph
 from dazzle.http.runtime.audit_log import (
     AuditLogger,
     create_audit_context_from_request,
     measure_evaluation_time,
 )
+from dazzle.http.runtime.handlers.list_handlers import create_list_handler
+from dazzle.http.runtime.handlers.write_handlers import (
+    create_delete_handler,
+    create_update_handler,
+)
+from dazzle.http.specs.auth import (
+    AccessOperationKind,
+    EntityAccessSpec,
+    PermissionRuleSpec,
+    ScopeRuleSpec,
+)
+from tests.unit.helpers.crud_routes import RecordingService, crud_route_client, signed_in
 
 # =============================================================================
 # Fixtures
@@ -399,34 +415,6 @@ class TestHelpers:
         # evaluation_time_us is at index 15
         assert params[15] == 1234
 
-    @pytest.mark.asyncio
-    async def test_log_audit_decision_passes_evaluation_time(self) -> None:
-        """_log_audit_decision should forward evaluation_time_us to log_decision."""
-        from dazzle.http.runtime.route_generator import _log_audit_decision
-
-        mock_logger = AsyncMock()
-        mock_request = MagicMock()
-        mock_request.client.host = "10.0.0.1"
-        mock_request.url.path = "/_dazzle/tasks/1"
-        mock_request.method = "GET"
-
-        await _log_audit_decision(
-            mock_logger,
-            mock_request,
-            operation="read",
-            entity_name="Task",
-            entity_id="t-1",
-            decision="allow",
-            matched_policy="permit read",
-            policy_effect="permit",
-            user=None,
-            evaluation_time_us=567,
-        )
-
-        mock_logger.log_decision.assert_called_once()
-        call_kwargs = mock_logger.log_decision.call_args.kwargs
-        assert call_kwargs["evaluation_time_us"] == 567
-
 
 # =============================================================================
 # Per-Entity Audit Filtering
@@ -535,174 +523,117 @@ class TestPerEntityAuditFiltering:
         assert len(_audit_ops) == 0  # empty = no filter = all ops
 
 
-class TestListAuditLogging:
-    """Tests for LIST operation audit logging (#351)."""
+class TestRouteAuditDecisions:
+    """What the generated CRUD routes hand the audit logger (#351, #1179).
 
-    @pytest.mark.asyncio
-    async def test_list_handler_calls_audit_logger(self) -> None:
-        """create_list_handler should log list access when audit_logger is provided."""
-        from dazzle.http.runtime.route_generator import _list_handler_body
-
-        mock_logger = AsyncMock()
-        mock_service = AsyncMock()
-        mock_service.execute.return_value = {"items": [], "total": 0, "page": 1, "page_size": 20}
-
-        mock_request = MagicMock()
-        mock_request.client.host = "10.0.0.1"
-        mock_request.url.path = "/_dazzle/tasks"
-        mock_request.method = "GET"
-        mock_request.query_params = {}
-
-        await _list_handler_body(
-            service=mock_service,
-            is_authenticated=True,
-            user_id="user-1",
-            request=mock_request,
-            page=1,
-            page_size=20,
-            sort=None,
-            dir="asc",
-            search=None,
-            audit_logger=mock_logger,
-            entity_name="Task",
-            user=None,
-        )
-
-        mock_logger.log_decision.assert_called_once()
-        call_kwargs = mock_logger.log_decision.call_args.kwargs
-        assert call_kwargs["operation"] == "list"
-        assert call_kwargs["entity_name"] == "Task"
-        assert call_kwargs["decision"] == "allow"
-
-    @pytest.mark.asyncio
-    async def test_list_handler_no_audit_when_logger_none(self) -> None:
-        """create_list_handler should not crash when audit_logger is None."""
-        from dazzle.http.runtime.route_generator import _list_handler_body
-
-        mock_service = AsyncMock()
-        mock_service.execute.return_value = {"items": [], "total": 0}
-
-        mock_request = MagicMock()
-        mock_request.client.host = "10.0.0.1"
-        mock_request.url.path = "/_dazzle/tasks"
-        mock_request.method = "GET"
-        mock_request.query_params = {}
-
-        # Should not raise
-        result = await _list_handler_body(
-            service=mock_service,
-            is_authenticated=False,
-            user_id=None,
-            request=mock_request,
-            page=1,
-            page_size=20,
-            sort=None,
-            dir="asc",
-            search=None,
-            audit_logger=None,
-            entity_name="Task",
-        )
-        assert result is not None
-
-
-class TestScopeDenyAuditLogging:
-    """Tests for scope-denied UPDATE/DELETE audit logging (#1179).
-
-    A `scope: <op>:` row-filter that hides the target row makes
-    `_scoped_pre_read` return None. The handler then 404s. That 404 is an
-    access-control decision and `audit: all` entities must capture it as a
-    deny — same as the scope-denied READ path. Before #1179 the
-    UPDATE/DELETE path raised the 404 without logging.
+    Driven through the public ``create_*_handler`` factories with a recording
+    service, so each test pins the decision a real request produces.
     """
 
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize("operation", ["update", "delete"])
-    async def test_scope_denied_write_logs_deny(self, operation: str) -> None:
-        from types import SimpleNamespace
-        from uuid import uuid4
+    def test_list_route_logs_an_allow_decision_with_the_request(self) -> None:
+        logger = AsyncMock()
+        client = crud_route_client(
+            create_list_handler,
+            auth=signed_in("staff"),
+            service=RecordingService(),
+            audit_logger=logger,
+        )
 
-        from fastapi import HTTPException
+        assert client.get("/items").status_code == 200
+        logger.log_decision.assert_called_once()
+        decision = logger.log_decision.call_args.kwargs
+        assert (decision["operation"], decision["entity_name"], decision["decision"]) == (
+            "list",
+            "Task",
+            "allow",
+        )
+        assert (decision["request_path"], decision["request_method"]) == ("/items", "GET")
 
-        from dazzle.http.runtime import audit_wrap
-        from dazzle.http.runtime.audit_wrap import _build_cedar_handler
+    def test_update_route_logs_field_changes_and_evaluation_time(self) -> None:
+        class StatusBody(BaseModel):
+            status: str
 
-        mock_logger = AsyncMock()
+        class TaskService(RecordingService):
+            async def execute(self, **kwargs: Any) -> Any:
+                self.calls.append(kwargs)
+                status = "todo" if kwargs["operation"] == "read" else "done"
+                return {"id": "1", "status": status}
+
+        logger = AsyncMock()
+        client = crud_route_client(
+            create_update_handler,
+            auth=signed_in("intern"),
+            service=TaskService(),
+            access=EntityAccessSpec(
+                permissions=[
+                    PermissionRuleSpec(operation=AccessOperationKind.UPDATE, personas=["intern"])
+                ]
+            ),
+            audit_logger=logger,
+            input_schema=StatusBody,
+            include_field_changes=True,
+            method="PUT",
+            path="/items/{id}",
+        )
+
+        assert client.put(f"/items/{uuid4()}", json={"status": "done"}).status_code == 200
+        decision = logger.log_decision.call_args.kwargs
+        assert decision["decision"] == "allow"
+        assert decision["field_changes"] == '{"status": {"old": "todo", "new": "done"}}'
+        assert isinstance(decision["evaluation_time_us"], int)
+
+    @pytest.mark.parametrize(
+        ("operation", "factory", "method"),
+        [
+            pytest.param("update", create_update_handler, "PUT", id="update"),
+            pytest.param("delete", create_delete_handler, "DELETE", id="delete"),
+        ],
+    )
+    @pytest.mark.parametrize("audited", [True, False], ids=["audited", "no-audit-logger"])
+    def test_scope_denied_write_404s_and_logs_a_deny_1179(
+        self, operation: str, factory: Any, method: str, audited: bool
+    ) -> None:
+        """``permit:`` admits the intern, ``scope: <op>:`` covers only managers:
+        the write 404s (row existence stays opaque), never touches the data
+        layer, and an audited entity records the deny."""
+
+        class AnyBody(BaseModel):
+            note: str = ""
+
+        kind = AccessOperationKind(operation)
+        logger = AsyncMock() if audited else None
+        service = RecordingService(row={"id": "x"})
+        client = crud_route_client(
+            factory,
+            auth=signed_in("intern"),
+            service=service,
+            access=EntityAccessSpec(
+                permissions=[PermissionRuleSpec(operation=kind, personas=["intern", "manager"])],
+                scopes=[ScopeRuleSpec(operation=kind, condition=None, personas=["manager"])],
+            ),
+            entity_name="Invoice",
+            audit_logger=logger,
+            fk_graph=FKGraph(),
+            input_schema=AnyBody,
+            method=method,
+            path="/items/{id}",
+        )
         row_id = uuid4()
 
-        mock_request = MagicMock()
-        mock_request.client.host = "10.0.0.1"
-        mock_request.url.path = f"/_dazzle/invoices/{row_id}"
-        mock_request.method = "POST"
+        response = client.request(method, f"/items/{row_id}", json={})
 
-        auth_context = SimpleNamespace(
-            is_authenticated=True,
-            user=SimpleNamespace(id=uuid4(), roles=["intern"], is_superuser=False),
-        )
-
-        handler = _build_cedar_handler(
-            AsyncMock(),
-            service=AsyncMock(),
-            cedar_access_spec=MagicMock(),
-            optional_auth_dep=lambda: None,
-            operation=operation,
-            entity_name="Invoice",
-            audit_logger=mock_logger,
-            include_field_changes=False,
-            needs_pre_read=True,
-            is_create=False,
-        )
-
-        # Scope filter hides the row: `_scoped_pre_read` returns None.
-        # #1361 slice 3: the cedar handler lives in audit_wrap and resolves
-        # _scoped_pre_read through audit_wrap's namespace — patch it there.
-        with patch.object(audit_wrap, "_scoped_pre_read", AsyncMock(return_value=None)):
-            with pytest.raises(HTTPException) as exc_info:
-                await handler(row_id, mock_request, auth_context)
-
-        assert exc_info.value.status_code == 404
-        mock_logger.log_decision.assert_called_once()
-        call_kwargs = mock_logger.log_decision.call_args.kwargs
-        assert call_kwargs["operation"] == operation
-        assert call_kwargs["entity_name"] == "Invoice"
-        assert call_kwargs["entity_id"] == str(row_id)
-        assert call_kwargs["decision"] == "deny"
-
-    @pytest.mark.asyncio
-    async def test_scope_denied_write_no_audit_when_logger_none(self) -> None:
-        """No audit_logger → scope-denied write still 404s without crashing."""
-        from types import SimpleNamespace
-        from uuid import uuid4
-
-        from fastapi import HTTPException
-
-        from dazzle.http.runtime import audit_wrap
-        from dazzle.http.runtime.audit_wrap import _build_cedar_handler
-
-        row_id = uuid4()
-        mock_request = MagicMock()
-        auth_context = SimpleNamespace(
-            is_authenticated=True,
-            user=SimpleNamespace(id=uuid4(), roles=["intern"], is_superuser=False),
-        )
-
-        handler = _build_cedar_handler(
-            AsyncMock(),
-            service=AsyncMock(),
-            cedar_access_spec=MagicMock(),
-            optional_auth_dep=lambda: None,
-            operation="delete",
-            entity_name="Invoice",
-            audit_logger=None,
-            include_field_changes=False,
-            needs_pre_read=True,
-            is_create=False,
-        )
-
-        # #1361 slice 3: patch audit_wrap — see the note in the test above.
-        with patch.object(audit_wrap, "_scoped_pre_read", AsyncMock(return_value=None)):
-            with pytest.raises(HTTPException) as exc_info:
-                await handler(row_id, mock_request, auth_context)
-        assert exc_info.value.status_code == 404
+        assert response.status_code == 404
+        assert service.calls == []
+        if logger is not None:
+            logger.log_decision.assert_called_once()
+            decision = logger.log_decision.call_args.kwargs
+            assert (
+                decision["operation"],
+                decision["entity_name"],
+                decision["entity_id"],
+                decision["decision"],
+                decision["policy_effect"],
+            ) == (operation, "Invoice", str(row_id), "deny", "scope")
 
 
 class TestAuditTrailGlobalSwitch:
@@ -900,38 +831,6 @@ class TestFieldChanges:
         params = insert_calls[0][1]
         assert params is not None
         assert params[16] is None
-
-    @pytest.mark.asyncio
-    async def test_log_audit_decision_forwards_field_changes(self):
-        """_log_audit_decision should forward field_changes to log_decision."""
-        from dazzle.http.runtime.route_generator import _log_audit_decision
-
-        mock_logger = MagicMock()
-        mock_logger.log_decision = AsyncMock()
-        mock_request = MagicMock()
-        mock_request.client = None
-        mock_request.url = MagicMock()
-        mock_request.url.path = "/api/task/1"
-        mock_request.method = "PUT"
-
-        await _log_audit_decision(
-            mock_logger,
-            mock_request,
-            operation="update",
-            entity_name="Task",
-            entity_id="1",
-            decision="allow",
-            matched_policy="test",
-            policy_effect="permit",
-            user=None,
-            field_changes='{"status": {"old": "todo", "new": "done"}}',
-        )
-
-        mock_logger.log_decision.assert_called_once()
-        call_kwargs = mock_logger.log_decision.call_args
-        assert (
-            call_kwargs.kwargs.get("field_changes") == '{"status": {"old": "todo", "new": "done"}}'
-        )
 
     def test_include_field_changes_resolves_from_audit_config(self):
         """generate_route should resolve include_field_changes from AuditConfig."""

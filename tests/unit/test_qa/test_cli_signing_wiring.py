@@ -1,9 +1,11 @@
 """Unit tests for the signing-env provisioning helpers wired into qa_trial."""
 
-import os
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 from dazzle.cli.qa import (
@@ -14,6 +16,7 @@ from dazzle.cli.qa import (
     _seed_signable_rows,
 )
 from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
+from dazzle.signing.tokens import InvalidTokenError, verify_token
 
 
 def _make_field(name: str, kind: FieldTypeKind, *modifiers: FieldModifier) -> MagicMock:
@@ -35,78 +38,66 @@ def _make_entity(name: str, *fields: MagicMock) -> MagicMock:
     return entity
 
 
-def test_provision_returns_context_when_signable(tmp_path: Path):
-    app_spec = MagicMock()
-    app_spec.has_signable_entity.return_value = True
-    with (
-        patch("dazzle.cli.qa._missing_signing_server_deps", return_value=[]),
-        patch("dazzle.cli.qa.mint_ephemeral_cert_env") as mint,
-    ):
-        mint.return_value = {
-            "SIGNING_CERT_PFX_B64": "x",
-            "SIGNING_CERT_PASSWORD": "y",
-            "SIGNING_TOKEN_SECRET": "z",
-        }
-        ctx = _provision_signing_env(app_spec, tmp_path, project_name="Test")
-    assert ctx is not None
-    assert ctx.env["SIGNING_TOKEN_SECRET"] == "z"
-
-
-def _signable_app_spec(*names: str) -> MagicMock:
+def _signable_app_spec(*names: str) -> SimpleNamespace:
     """An app_spec whose domain.entities are signable entities with the given names."""
-    entities = []
-    for n in names:
-        ent = MagicMock(signable=True)
-        ent.name = n
-        ent.fields = []
-        entities.append(ent)
-    app_spec = MagicMock()
-    app_spec.has_signable_entity.return_value = bool(entities)
-    app_spec.domain.entities = entities
-    return app_spec
+    entities = [SimpleNamespace(name=n, signable=True, fields=[]) for n in names]
+    return SimpleNamespace(
+        domain=SimpleNamespace(entities=entities),
+        has_signable_entity=lambda: bool(entities),
+    )
 
 
-def test_provision_arms_reject_env_with_pregenerated_ids(tmp_path: Path):
-    """#1382: validator_reject pre-generates a UUID per signable entity, arms
-    DAZZLE_QA_SIGNING_REJECT_IDS with them, and records them in signable_ids
-    so the seed can insert the row under the armed id."""
-    app_spec = _signable_app_spec("SlaWaiver")
-    with (
-        patch("dazzle.cli.qa._missing_signing_server_deps", return_value=[]),
-        patch("dazzle.cli.qa.mint_ephemeral_cert_env", return_value={"SIGNING_TOKEN_SECRET": "z"}),
-    ):
-        ctx = _provision_signing_env(app_spec, tmp_path, project_name="Test", validator_reject=True)
+# ---------------------------------------------------------------------------
+# _provision_signing_env — real cert minting, real dependency preflight
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("validator_reject", [False, True], ids=["default", "validator-reject"])
+def test_provision_mints_signing_env_and_pregenerates_ids(
+    tmp_path: Path, validator_reject: bool
+) -> None:
+    """The env carries a cert + token secret; one UUID is pre-generated per
+    signable entity and, with ``validator_reject`` (#1382), armed in
+    ``DAZZLE_QA_SIGNING_REJECT_IDS`` before boot."""
+    pytest.importorskip("pyhanko")
+    pytest.importorskip("fpdf")
+
+    ctx = _provision_signing_env(
+        _signable_app_spec("SlaWaiver"),
+        tmp_path,
+        project_name="Test",
+        validator_reject=validator_reject,
+    )
+
     assert ctx is not None
-    assert ctx.validator_reject is True
+    assert {"SIGNING_CERT_PFX_B64", "SIGNING_CERT_PASSWORD", "SIGNING_TOKEN_SECRET"} <= set(ctx.env)
     assert set(ctx.signable_ids) == {"SlaWaiver"}
-    armed = ctx.env["DAZZLE_QA_SIGNING_REJECT_IDS"].split(",")
-    assert armed == [ctx.signable_ids["SlaWaiver"]]
+    assert ctx.validator_reject is validator_reject
+    armed = ctx.env.get("DAZZLE_QA_SIGNING_REJECT_IDS")
+    assert armed == (ctx.signable_ids["SlaWaiver"] if validator_reject else None)
 
 
-def test_provision_does_not_arm_reject_env_by_default(tmp_path: Path):
-    """Without validator_reject the env var is never set — fresh scenarios and
-    the existing token-state scenarios are unaffected."""
-    app_spec = _signable_app_spec("SlaWaiver")
-    with (
-        patch("dazzle.cli.qa._missing_signing_server_deps", return_value=[]),
-        patch("dazzle.cli.qa.mint_ephemeral_cert_env", return_value={"SIGNING_TOKEN_SECRET": "z"}),
-    ):
-        ctx = _provision_signing_env(app_spec, tmp_path, project_name="Test")
-    assert ctx is not None
-    assert ctx.validator_reject is False
-    assert "DAZZLE_QA_SIGNING_REJECT_IDS" not in ctx.env
-    # ids are still pre-generated (harmless), just not armed.
-    assert set(ctx.signable_ids) == {"SlaWaiver"}
+def test_provision_returns_none_when_no_signable(tmp_path: Path) -> None:
+    assert _provision_signing_env(_signable_app_spec(), tmp_path, project_name="Test") is None
 
 
-def test_build_batch_pins_signable_id_when_given():
+def test_provision_aborts_when_signing_server_deps_missing(tmp_path: Path) -> None:
+    """#1377: provisioning the signing rig without fpdf2/pyhanko burned a
+    full persona run into a guaranteed sign_document HTTP 500. The
+    preflight must exit 2 with the install hint instead."""
+    import typer
+
+    with patch("dazzle.cli.qa._missing_signing_server_deps", return_value=["fpdf", "pyhanko"]):
+        with pytest.raises(typer.Exit) as exc:
+            _provision_signing_env(_signable_app_spec("SlaWaiver"), tmp_path, project_name="Test")
+    assert exc.value.exit_code == 2
+
+
+def test_build_batch_pins_signable_id_when_given() -> None:
     """#1382: an explicit signable_id is written into the signable row's
     data['id'] so the inserted row carries the armed UUID."""
-    entity = MagicMock(signable=True)
-    entity.name = "SlaWaiver"
-    entity.fields = []
-    app_spec = MagicMock()
-    app_spec.domain.entities = [entity]
+    app_spec = _signable_app_spec("SlaWaiver")
+    [entity] = app_spec.domain.entities
 
     batch = _build_signing_seed_batch(
         entity, app_spec, "a@b.com", signable_id="11111111-1111-1111-1111-111111111111"
@@ -115,212 +106,121 @@ def test_build_batch_pins_signable_id_when_given():
     assert signable_fixture["data"]["id"] == "11111111-1111-1111-1111-111111111111"
 
 
-def test_seed_uses_pregenerated_id_and_stamps_validator_reject():
-    """#1382: _seed_signable_rows posts the pre-generated id and stamps the
-    SeededDoc so the verifier expects a validator rejection."""
-    entity = MagicMock(signable=True)
-    entity.name = "SlaWaiver"
-    entity.fields = []
-    app_spec = MagicMock()
-    app_spec.domain.entities = [entity]
-    pre_id = "22222222-2222-2222-2222-222222222222"
-
-    mock_response = MagicMock()
-    mock_response.raise_for_status = MagicMock()
-    mock_response.json.return_value = {"created": {"signable_row": {"id": pre_id}}}
-
-    with (
-        patch("dazzle.cli.qa.mint_token", return_value="tok-abc"),
-        patch("httpx.post", return_value=mock_response) as mock_post,
-        patch.dict(os.environ, {"SIGNING_TOKEN_SECRET": "s"}),
-    ):
-        docs = _seed_signable_rows(
-            app_spec=app_spec,
-            base_url="http://localhost:3000",
-            signatory_email="a@b.com",
-            signable_ids={"SlaWaiver": pre_id},
-            validator_reject=True,
-        )
-    # The posted fixture carried the pre-generated id.
-    posted = mock_post.call_args.kwargs["json"]["fixtures"]
-    signable_fixture = next(f for f in posted if f["id"] == "signable_row")
-    assert signable_fixture["data"]["id"] == pre_id
-    # The SeededDoc is stamped so the verifier fixes the expectation.
-    assert len(docs) == 1
-    assert docs[0].id == pre_id
-    assert docs[0].validator_reject is True
+# ---------------------------------------------------------------------------
+# _seed_signable_rows against a recording stand-in for the running app.
+# Tokens are minted for real and checked with verify_token.
+# ---------------------------------------------------------------------------
 
 
-def test_provision_returns_none_when_no_signable(tmp_path: Path):
-    app_spec = MagicMock()
-    app_spec.has_signable_entity.return_value = False
-    assert _provision_signing_env(app_spec, tmp_path, project_name="Test") is None
+class _FakeApp:
+    """Answers the three endpoints the seeder calls and records each request."""
+
+    def __init__(self, row_id: str, reopen_html: str) -> None:
+        self.row_id = row_id
+        self.reopen_html = reopen_html
+        self.requests: list[tuple[str, str, Any]] = []
+
+    def post(self, url: str, *, json: Any, **_kw: Any) -> httpx.Response:
+        self.requests.append(("POST", url, json))
+        body = {"created": {"signable_row": {"id": self.row_id}}} if "/__test__/seed" in url else {}
+        return httpx.Response(200, json=body, request=httpx.Request("POST", url))
+
+    def get(self, url: str, *, params: Any, **_kw: Any) -> httpx.Response:
+        self.requests.append(("GET", url, params))
+        return httpx.Response(200, text=self.reopen_html, request=httpx.Request("GET", url))
 
 
-def test_provision_aborts_when_signing_server_deps_missing(tmp_path: Path):
-    """#1377: provisioning the signing rig without fpdf2/pyhanko burned a
-    full persona run into a guaranteed sign_document HTTP 500. The
-    preflight must exit 2 with the install hint instead."""
-    import pytest
-    import typer
-
-    app_spec = MagicMock()
-    app_spec.has_signable_entity.return_value = True
-    with patch("dazzle.cli.qa._missing_signing_server_deps", return_value=["fpdf", "pyhanko"]):
-        with pytest.raises(typer.Exit) as exc:
-            _provision_signing_env(app_spec, tmp_path, project_name="Test")
-    assert exc.value.exit_code == 2
+_SIGNED_COPY_HTML = (
+    '<html><a href="/sign/SlaWaiver/row-1/signed-copy?token=t">Download your signed copy</a>'
+)
 
 
-def test_seed_creates_one_doc_per_signable_entity():
-    entity_a = MagicMock(signable=True)
-    entity_a.name = "EngagementLetter"
-    # No required REF fields on the mock entity (fields list is empty).
-    entity_a.fields = []
-    entity_b = MagicMock(signable=False)
-    app_spec = MagicMock()
-    app_spec.domain.entities = [entity_a, entity_b]
-
-    mock_response = MagicMock()
-    mock_response.raise_for_status = MagicMock()
-    mock_response.json.return_value = {"created": {"signable_row": {"id": "row-id-1"}}}
-
-    with (
-        patch("dazzle.cli.qa.mint_token", return_value="tok-abc"),
-        patch("httpx.post", return_value=mock_response) as mock_post,
-        patch.dict(os.environ, {"SIGNING_TOKEN_SECRET": "s"}),
-    ):
-        docs = _seed_signable_rows(
-            app_spec=app_spec,
-            base_url="http://localhost:3000",
-            signatory_email="a@b.com",
-            test_secret="dummy",
-        )
-    assert len(docs) == 1
-    assert docs[0].entity == "EngagementLetter"
-    assert docs[0].token == "tok-abc"
-    assert docs[0].token_state == "fresh"
-    # Verify that /__test__/seed was used (not Cedar-gated /api/{entity})
-    call_url = mock_post.call_args[0][0]
-    assert "/__test__/seed" in call_url, f"Expected /__test__/seed but got: {call_url}"
+@pytest.fixture
+def fake_app(monkeypatch: pytest.MonkeyPatch) -> _FakeApp:
+    app = _FakeApp("row-1", _SIGNED_COPY_HTML)
+    monkeypatch.setattr(httpx, "post", app.post)
+    monkeypatch.setattr(httpx, "get", app.get)
+    monkeypatch.setenv("SIGNING_TOKEN_SECRET", "test-secret")
+    return app
 
 
-def test_seed_expired_token_state_mints_already_expired(tmp_path: Path):
-    """TR-51: token_state='expired' must mint a token whose expiry is in
-    the past (negative expires_hours) and stamp the SeededDoc so the
-    verifier expects the row to stay untouched."""
-    entity = MagicMock(signable=True)
-    entity.name = "SlaWaiver"
-    entity.fields = []
-    app_spec = MagicMock()
-    app_spec.domain.entities = [entity]
-
-    mock_response = MagicMock()
-    mock_response.raise_for_status = MagicMock()
-    mock_response.json.return_value = {"created": {"signable_row": {"id": "row-id-2"}}}
-
-    with (
-        patch("dazzle.cli.qa.mint_token", return_value="tok-expired") as mint,
-        patch("httpx.post", return_value=mock_response),
-        patch.dict(os.environ, {"SIGNING_TOKEN_SECRET": "s"}),
-    ):
-        docs = _seed_signable_rows(
-            app_spec=app_spec,
-            base_url="http://localhost:3000",
-            signatory_email="a@b.com",
-            token_state="expired",
-        )
-    assert docs[0].token_state == "expired"
-    assert mint.call_args.kwargs["expires_hours"] < 0
-
-
-def test_seed_already_signed_posts_production_sign(tmp_path: Path):
-    """TR-49/50: already_signed seeds, POSTs /api/sign, asserts Download on re-open."""
-    entity = MagicMock(signable=True)
-    entity.name = "SlaWaiver"
-    entity.fields = []
-    app_spec = MagicMock()
-    app_spec.domain.entities = [entity]
-
-    seed_resp = MagicMock()
-    seed_resp.raise_for_status = MagicMock()
-    seed_resp.json.return_value = {"created": {"signable_row": {"id": "row-id-3"}}}
-    sign_resp = MagicMock()
-    sign_resp.raise_for_status = MagicMock()
-    sign_resp.status_code = 200
-    open_resp = MagicMock()
-    open_resp.status_code = 200
-    open_resp.text = (
-        '<html><a href="/sign/SlaWaiver/row-id-3/signed-copy?token=tok">'
-        "Download your signed copy</a></html>"
+def _seed(app_spec: Any, **kwargs: Any) -> list[Any]:
+    return _seed_signable_rows(
+        app_spec=app_spec,
+        base_url="http://app.test",
+        signatory_email="a@b.com",
+        **kwargs,
     )
 
-    with (
-        patch("dazzle.cli.qa.mint_token", return_value="tok-fresh") as mint,
-        patch("httpx.post", side_effect=[seed_resp, sign_resp]) as mock_post,
-        patch("httpx.get", return_value=open_resp) as mock_get,
-        patch.dict(os.environ, {"SIGNING_TOKEN_SECRET": "s"}),
-    ):
-        docs = _seed_signable_rows(
-            app_spec=app_spec,
-            base_url="http://localhost:3000",
-            signatory_email="a@b.com",
-            token_state="already_signed",
-        )
-    assert docs[0].token_state == "already_signed"
-    assert mint.call_args.kwargs["expires_hours"] == 72
-    assert mock_post.call_count == 2
-    sign_call = mock_post.call_args_list[1]
-    assert "/api/sign/SlaWaiver/row-id-3" in sign_call[0][0]
-    assert sign_call[1]["json"]["token"] == "tok-fresh"
-    assert "signature_png_b64" in sign_call[1]["json"]
-    mock_get.assert_called_once()
-    assert "/sign/SlaWaiver/row-id-3" in mock_get.call_args[0][0]
+
+def test_seed_inserts_one_row_per_signable_entity_via_test_seed(fake_app: _FakeApp) -> None:
+    """Only signable entities are seeded, through the Cedar-bypass
+    ``/__test__/seed`` endpoint, with a fresh token that verifies."""
+    app_spec = _signable_app_spec("EngagementLetter")
+    app_spec.domain.entities.append(SimpleNamespace(name="Note", signable=False, fields=[]))
+
+    [doc] = _seed(app_spec, test_secret="dummy")
+
+    assert [(method, url) for method, url, _ in fake_app.requests] == [
+        ("POST", "http://app.test/__test__/seed")
+    ]
+    assert (doc.entity, doc.id, doc.token_state) == ("EngagementLetter", "row-1", "fresh")
+    assert verify_token(doc.token)[0] == "row-1"
 
 
-def test_seed_already_signed_raises_without_download_cta(tmp_path: Path):
+def test_seed_expired_token_state_mints_a_token_that_fails_verification(
+    fake_app: _FakeApp,
+) -> None:
+    """TR-51: ``token_state="expired"`` mints an already-expired token, so the
+    scenario reaches the real "Invalid or expired link" page."""
+    [doc] = _seed(_signable_app_spec("SlaWaiver"), token_state="expired")
+
+    assert doc.token_state == "expired"
+    with pytest.raises(InvalidTokenError, match="expired"):
+        verify_token(doc.token)
+
+
+def test_seed_uses_pregenerated_id_and_stamps_validator_reject(fake_app: _FakeApp) -> None:
+    """#1382: the seed posts the pre-generated id and stamps the SeededDoc so
+    the verifier expects a validator rejection."""
+    pre_id = "22222222-2222-2222-2222-222222222222"
+    fake_app.row_id = pre_id
+
+    [doc] = _seed(
+        _signable_app_spec("SlaWaiver"),
+        signable_ids={"SlaWaiver": pre_id},
+        validator_reject=True,
+    )
+
+    [(_, _, posted)] = fake_app.requests
+    signable_fixture = next(f for f in posted["fixtures"] if f["id"] == "signable_row")
+    assert signable_fixture["data"]["id"] == pre_id
+    assert (doc.id, doc.validator_reject) == (pre_id, True)
+
+
+def test_seed_already_signed_signs_through_the_production_api(fake_app: _FakeApp) -> None:
+    """TR-49/50: already_signed seeds, POSTs ``/api/sign`` with the minted
+    token and a signature, then re-opens the link expecting a Download."""
+    [doc] = _seed(_signable_app_spec("SlaWaiver"), token_state="already_signed")
+
+    assert doc.token_state == "already_signed"
+    assert [(method, url) for method, url, _ in fake_app.requests] == [
+        ("POST", "http://app.test/__test__/seed"),
+        ("POST", "http://app.test/api/sign/SlaWaiver/row-1"),
+        ("GET", "http://app.test/sign/SlaWaiver/row-1"),
+    ]
+    sign_body = fake_app.requests[1][2]
+    assert sign_body["token"] == doc.token
+    assert sign_body["signature_png_b64"]
+    assert verify_token(doc.token)[0] == "row-1"
+
+
+def test_seed_already_signed_raises_without_download_cta(fake_app: _FakeApp) -> None:
     """TR-49: pre-sign must fail loud if re-open has no Download path."""
-    entity = MagicMock(signable=True)
-    entity.name = "SlaWaiver"
-    entity.fields = []
-    app_spec = MagicMock()
-    app_spec.domain.entities = [entity]
+    fake_app.reopen_html = "<html>Document unavailable</html>"
 
-    seed_resp = MagicMock()
-    seed_resp.raise_for_status = MagicMock()
-    seed_resp.json.return_value = {"created": {"signable_row": {"id": "row-id-4"}}}
-    sign_resp = MagicMock()
-    sign_resp.raise_for_status = MagicMock()
-    open_resp = MagicMock()
-    open_resp.status_code = 200
-    open_resp.text = "<html>Document unavailable</html>"
-
-    with (
-        patch("dazzle.cli.qa.mint_token", return_value="tok-fresh"),
-        patch("httpx.post", side_effect=[seed_resp, sign_resp]),
-        patch("httpx.get", return_value=open_resp),
-        patch.dict(os.environ, {"SIGNING_TOKEN_SECRET": "s"}),
-        pytest.raises(RuntimeError, match="TR-49 already_signed"),
-    ):
-        _seed_signable_rows(
-            app_spec=app_spec,
-            base_url="http://localhost:3000",
-            signatory_email="a@b.com",
-            token_state="already_signed",
-        )
-
-
-def test_expired_token_actually_fails_verification(tmp_path: Path):
-    """End-to-end at the token layer: a token minted with negative
-    expires_hours must be rejected by verify_token as expired."""
-    import pytest
-
-    from dazzle.signing.tokens import InvalidTokenError, mint_token, verify_token
-
-    with patch.dict(os.environ, {"SIGNING_TOKEN_SECRET": "test-secret"}):
-        token = mint_token("row-1", "a@b.com", expires_hours=-1)
-        with pytest.raises(InvalidTokenError, match="expired"):
-            verify_token(token)
+    with pytest.raises(RuntimeError, match="TR-49 already_signed"):
+        _seed(_signable_app_spec("SlaWaiver"), token_state="already_signed")
 
 
 # ---------------------------------------------------------------------------

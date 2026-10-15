@@ -13,7 +13,6 @@ from pathlib import Path
 import pytest
 
 from dazzle.sentinel.agents.python_audit import (
-    PythonAuditAgent,
     _detect_n_plus_one,
 )
 
@@ -164,85 +163,3 @@ def test_n_plus_one_shape_fires(src: str, expected_shape: str | None) -> None:
 )
 def test_n_plus_one_negative_no_fire(src: str) -> None:
     assert _detect_n_plus_one(_parse(src), Path("app/x.py")) == []
-
-
-# ---------------------------------------------------------------------------
-# Suppression
-# ---------------------------------------------------------------------------
-
-
-def test_noqa_suppression_on_for_line(tmp_path: Path) -> None:
-    """`# noqa: PA-LLM-08` on the `for:` line suppresses every hit in the loop body."""
-    app_dir = tmp_path / "app"
-    app_dir.mkdir()
-    (app_dir / "x.py").write_text(
-        "def f():\n"
-        "    for order in orders:  # noqa: PA-LLM-08 - prefetched\n"
-        "        x = order.lines.all()\n"
-    )
-    agent = PythonAuditAgent(project_path=tmp_path)
-    assert agent.check_n_plus_one_in_user_code(appspec=None) == []  # type: ignore[arg-type]
-
-
-def test_noqa_suppression_on_call_line(tmp_path: Path) -> None:
-    """`# noqa: PA-LLM-08` on the offending call line suppresses just that hit."""
-    app_dir = tmp_path / "app"
-    app_dir.mkdir()
-    (app_dir / "x.py").write_text(
-        "def f():\n    for order in orders:\n        x = order.lines.all()  # noqa: PA-LLM-08\n"
-    )
-    agent = PythonAuditAgent(project_path=tmp_path)
-    assert agent.check_n_plus_one_in_user_code(appspec=None) == []  # type: ignore[arg-type]
-
-
-def test_listcomp_noqa_suppression(tmp_path: Path) -> None:
-    """`# noqa: PA-LLM-08` on the comprehension's line suppresses the finding."""
-    app_dir = tmp_path / "app"
-    app_dir.mkdir()
-    (app_dir / "x.py").write_text(
-        "def f(orders):\n"
-        "    return [order.lines.all() for order in orders]  # noqa: PA-LLM-08 - prefetched\n"
-    )
-    agent = PythonAuditAgent(project_path=tmp_path)
-    assert agent.check_n_plus_one_in_user_code(appspec=None) == []  # type: ignore[arg-type]
-
-
-# ---------------------------------------------------------------------------
-# Integration: heuristic populates Finding correctly
-# ---------------------------------------------------------------------------
-
-
-def test_heuristic_yields_finding_with_catalogue_entry(tmp_path: Path) -> None:
-    """End-to-end: a real PA-LLM-08 finding carries catalogue_entry + URL."""
-    app_dir = tmp_path / "app"
-    app_dir.mkdir()
-    (app_dir / "render.py").write_text(
-        "def render(orders):\n"
-        "    out = []\n"
-        "    for order in orders:\n"
-        "        out.append(order.lines.all())\n"
-        "    return out\n"
-    )
-
-    agent = PythonAuditAgent(project_path=tmp_path)
-    findings = agent.check_n_plus_one_in_user_code(appspec=None)  # type: ignore[arg-type]
-
-    assert len(findings) == 1
-    f = findings[0]
-    assert f.heuristic_id == "PA-LLM-08"
-    assert f.catalogue_entry == "n-plus-one-in-user-code"
-    assert f.remediation is not None
-    assert any(
-        "docs/counter-priors/n-plus-one-in-user-code.md" in ref for ref in f.remediation.references
-    )
-
-
-def test_heuristic_skips_tests_and_scripts(tmp_path: Path) -> None:
-    """tests/ and scripts/ files are out of scope."""
-    for sub in ("tests", "scripts"):
-        d = tmp_path / sub
-        d.mkdir()
-        (d / "f.py").write_text("for x in xs:\n    y = x.lines.all()\n")
-
-    agent = PythonAuditAgent(project_path=tmp_path)
-    assert agent.check_n_plus_one_in_user_code(appspec=None) == []  # type: ignore[arg-type]

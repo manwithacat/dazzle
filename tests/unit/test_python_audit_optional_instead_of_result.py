@@ -12,8 +12,10 @@ from pathlib import Path
 import pytest
 
 from dazzle.sentinel.agents.python_audit import (
-    PythonAuditAgent,
     _detect_optional_instead_of_result,
+)
+from tests.unit.helpers.python_audit import (
+    scan,
 )
 
 
@@ -158,107 +160,40 @@ def test_optional_negative_no_fire(src: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Suppression
+# Through the agent (noqa, catalogue wiring and tests/scripts scope are
+# shared-contract rows in test_python_audit_agent.py)
 # ---------------------------------------------------------------------------
-
-
-def test_noqa_suppression_on_def(tmp_path: Path) -> None:
-    """`# noqa: PA-LLM-09` on the def line suppresses the finding."""
-    app_dir = tmp_path / "app"
-    app_dir.mkdir()
-    (app_dir / "x.py").write_text(
-        "def lookup(k) -> int | None:  # noqa: PA-LLM-09 - both Nones mean 'miss'\n"
-        "    if not k: return None\n"
-        "    if k not in cache: return None\n"
-        "    return cache[k]\n"
-    )
-    agent = PythonAuditAgent(project_path=tmp_path)
-    assert agent.check_optional_instead_of_result(appspec=None) == []  # type: ignore[arg-type]
-
-
-# ---------------------------------------------------------------------------
-# Integration
-# ---------------------------------------------------------------------------
-
-
-def test_heuristic_yields_finding_with_catalogue_entry(tmp_path: Path) -> None:
-    app_dir = tmp_path / "app"
-    app_dir.mkdir()
-    (app_dir / "parse.py").write_text(
-        "def parse(text: str) -> int | None:\n"
-        "    if not text: return None\n"
-        "    if text.isspace(): return None\n"
-        "    return int(text)\n"
-    )
-    agent = PythonAuditAgent(project_path=tmp_path)
-    findings = agent.check_optional_instead_of_result(appspec=None)  # type: ignore[arg-type]
-    assert len(findings) == 1
-    f = findings[0]
-    assert f.heuristic_id == "PA-LLM-09"
-    assert f.catalogue_entry == "optional-instead-of-result"
-    assert f.remediation is not None
-    assert any(
-        "docs/counter-priors/optional-instead-of-result.md" in ref
-        for ref in f.remediation.references
-    )
-
-
-def test_heuristic_skips_tests_and_scripts(tmp_path: Path) -> None:
-    for sub in ("tests", "scripts"):
-        d = tmp_path / sub
-        d.mkdir()
-        (d / "f.py").write_text(
-            "def f(x) -> int | None:\n"
-            "    if not x: return None\n"
-            "    if x < 0: return None\n"
-            "    return x\n"
-        )
-    agent = PythonAuditAgent(project_path=tmp_path)
-    assert agent.check_optional_instead_of_result(appspec=None) == []  # type: ignore[arg-type]
 
 
 def test_nested_helper_inside_except_does_not_trip_outer_1273(tmp_path: Path) -> None:
-    """#1273: `_has_multi_exception_catch_returning_none` previously used a
-    naive `ast.walk` for its inner search, which descended into nested
-    function bodies inside an except clause. A helper whose own body
-    contained `return None` would then count as the outer function's
-    failure-merging behaviour, fully fabricating PA-LLM-09 against
-    well-formed code.
-
-    This fixture: outer `fetch_user` returns `User | None` with a single
-    `return None` in the main body (so the `>=2 return None` arm doesn't
-    fire). Inside the except block it defines a helper that itself
-    contains a `return None`. Pre-fix: the nested helper's return is
-    discovered by `ast.walk`, the except is a 2-type tuple catch, so
-    the `try/except (X, Y, ...): return None` arm fires. Post-fix: the
-    walk skips nested FunctionDef so only the outer's body counts.
-    """
-    app_dir = tmp_path / "app"
-    app_dir.mkdir()
-    (app_dir / "fetcher.py").write_text(
-        "from typing import Optional\n"
-        "\n"
-        "class User: pass\n"
-        "\n"
-        "def fetch_user(uid: str) -> Optional[User]:\n"
-        "    try:\n"
-        "        return load(uid)\n"
-        "    except (ValueError, KeyError):\n"
-        "        def _format_log(err: object) -> object | None:\n"
-        "            if not err:\n"
-        "                return None\n"
-        "            return repr(err)\n"
-        "        _format_log(None)\n"
-        "        return load_fallback(uid)\n"
-        "\n"
-        "def load(uid): return User()\n"
-        "def load_fallback(uid): return User()\n"
+    """#1273: the multi-exception-catch arm used a naive `ast.walk` that
+    descended into nested function bodies inside an except clause, so a
+    helper's own `return None` was attributed to the outer function and
+    PA-LLM-09 fired against well-formed code. The walk now skips nested
+    FunctionDef; only the outer body counts."""
+    findings = scan(
+        tmp_path,
+        "PA-LLM-09",
+        {
+            "app/fetcher.py": "from typing import Optional\n"
+            "\n"
+            "class User: pass\n"
+            "\n"
+            "def fetch_user(uid: str) -> Optional[User]:\n"
+            "    try:\n"
+            "        return load(uid)\n"
+            "    except (ValueError, KeyError):\n"
+            "        def _format_log(err: object) -> object | None:\n"
+            "            if not err:\n"
+            "                return None\n"
+            "            return repr(err)\n"
+            "        _format_log(None)\n"
+            "        return load_fallback(uid)\n"
+            "\n"
+            "def load(uid): return User()\n"
+            "def load_fallback(uid): return User()\n"
+        },
     )
-    agent = PythonAuditAgent(project_path=tmp_path)
-    findings = agent.check_optional_instead_of_result(appspec=None)  # type: ignore[arg-type]
-    fetcher_findings = [f for f in findings if "fetcher.py" in str(f.location.file_path)]
-    assert fetcher_findings == [], (
-        f"PA-LLM-09 false-positive on fetcher.fetch_user: nested helper's "
-        f"`return None` was incorrectly attributed to the outer function. "
-        f"Got: {fetcher_findings} (#1273)"
+    assert findings == [], (
+        f"nested helper's `return None` attributed to fetch_user (#1273): {findings}"
     )

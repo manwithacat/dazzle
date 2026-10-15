@@ -1,10 +1,14 @@
 """Tests for the PythonAuditAgent (PA)."""
 
+import re
 import textwrap
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from dazzle.sentinel.models import AgentId, Severity
+from tests.unit.helpers.python_audit import scan
 
 
 class TestPythonAuditAgentRegistration:
@@ -336,3 +340,127 @@ class TestFullRun:
         assert result.agent == AgentId.PA
         assert result.heuristics_run >= 0
         assert result.duration_ms >= 0
+
+
+# ---------------------------------------------------------------------------
+# Contracts every source-scanning LLM heuristic (PA-LLM-07..11) shares.
+# The per-heuristic files own the shape tables; these three tables own the
+# wiring: catalogue entry, scan scope and noqa suppression.
+# ---------------------------------------------------------------------------
+
+_PA07_KEYERROR = "def sync():\n    try:\n        v = d[k]\n    except KeyError:\n        v = None\n"
+_PA08_LOOP = "def render(orders):\n    for order in orders:\n        order.lines.all()\n"
+_PA09_TWO_NONES = (
+    "def parse(text: str) -> int | None:\n"
+    "    if not text: return None\n"
+    "    if text.isspace(): return None\n"
+    "    return int(text)\n"
+)
+_PA10_ID_PARAM = "def get(user_id: str) -> None: ...\n"
+_PA11_FSTRING = "def overdue(tid):\n    cur.execute(f\"SELECT * FROM invoice WHERE t = '{tid}'\")\n"
+
+
+@pytest.mark.parametrize(
+    ("heuristic_id", "source", "catalogue_entry"),
+    [
+        pytest.param("PA-LLM-07", _PA07_KEYERROR, "exceptions-as-control-flow", id="PA-LLM-07"),
+        pytest.param("PA-LLM-08", _PA08_LOOP, "n-plus-one-in-user-code", id="PA-LLM-08"),
+        pytest.param("PA-LLM-09", _PA09_TWO_NONES, "optional-instead-of-result", id="PA-LLM-09"),
+        pytest.param("PA-LLM-10", _PA10_ID_PARAM, "magic-string-typing", id="PA-LLM-10"),
+        pytest.param("PA-LLM-11", _PA11_FSTRING, "raw-sql-string-building", id="PA-LLM-11"),
+    ],
+)
+def test_finding_links_its_counter_prior(
+    tmp_path: Path, heuristic_id: str, source: str, catalogue_entry: str
+) -> None:
+    """One finding per canonical shape, carrying the catalogue entry and a
+    remediation reference to ``docs/counter-priors/<entry>.md``."""
+    findings = scan(tmp_path, heuristic_id, {"app/x.py": source})
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.heuristic_id == heuristic_id
+    assert finding.catalogue_entry == catalogue_entry
+    assert finding.remediation is not None
+    assert f"docs/counter-priors/{catalogue_entry}.md" in " ".join(finding.remediation.references)
+
+
+@pytest.mark.parametrize(
+    ("heuristic_id", "source"),
+    [
+        pytest.param("PA-LLM-07", _PA07_KEYERROR, id="PA-LLM-07"),
+        pytest.param("PA-LLM-08", _PA08_LOOP, id="PA-LLM-08"),
+        pytest.param("PA-LLM-09", _PA09_TWO_NONES, id="PA-LLM-09"),
+        pytest.param("PA-LLM-10", _PA10_ID_PARAM, id="PA-LLM-10"),
+    ],
+)
+def test_tests_and_scripts_dirs_are_out_of_scope(
+    tmp_path: Path, heuristic_id: str, source: str
+) -> None:
+    """``tests/`` and ``scripts/`` are not user app code for these heuristics.
+    (PA-LLM-11 deliberately scans ``scripts/`` — pinned in its own file.)"""
+    files = {"tests/f.py": source, "scripts/f.py": source}
+    assert scan(tmp_path, heuristic_id, files) == []
+
+
+@pytest.mark.parametrize(
+    ("heuristic_id", "source"),
+    [
+        pytest.param(
+            "PA-LLM-07",
+            "def f():\n    try:  # noqa: PA-LLM-07 - boundary\n"
+            "        v = d[k]\n    except KeyError:\n        v = None\n",
+            id="PA-LLM-07-on-try-line",
+        ),
+        pytest.param(
+            "PA-LLM-08",
+            "def f():\n    for order in orders:  # noqa: PA-LLM-08 - prefetched\n"
+            "        x = order.lines.all()\n",
+            id="PA-LLM-08-on-for-line",
+        ),
+        pytest.param(
+            "PA-LLM-08",
+            "def f():\n    for order in orders:\n        x = order.lines.all()  # noqa: PA-LLM-08\n",
+            id="PA-LLM-08-on-call-line",
+        ),
+        pytest.param(
+            "PA-LLM-08",
+            "def f(orders):\n"
+            "    return [order.lines.all() for order in orders]  # noqa: PA-LLM-08 - prefetched\n",
+            id="PA-LLM-08-on-comprehension-line",
+        ),
+        pytest.param(
+            "PA-LLM-09",
+            "def lookup(k) -> int | None:  # noqa: PA-LLM-09 - both Nones mean 'miss'\n"
+            "    if not k: return None\n"
+            "    if k not in cache: return None\n"
+            "    return cache[k]\n",
+            id="PA-LLM-09-on-def-line",
+        ),
+        pytest.param(
+            "PA-LLM-10",
+            "def f(user_id: str, tenant_id: str) -> None:  # noqa: PA-LLM-10 - opaque\n    pass\n",
+            id="PA-LLM-10-on-def-line-covers-every-param",
+        ),
+        pytest.param(
+            "PA-LLM-10",
+            "def handle(action: str) -> str:\n"
+            "    if action == 'create': return 'A'  # noqa: PA-LLM-10 — user input\n"
+            "    elif action == 'update': return 'B'\n"
+            "    elif action == 'delete': return 'C'\n"
+            "    return 'X'\n",
+            id="PA-LLM-10-enum-dispatch-on-opening-if",
+        ),
+        pytest.param(
+            "PA-LLM-11",
+            "def fetch(table):\n"
+            "    cur.execute(f'SELECT * FROM {table}')  # noqa: PA-LLM-11 — whitelisted\n",
+            id="PA-LLM-11-on-execute-line",
+        ),
+    ],
+)
+def test_noqa_comment_suppresses_finding(tmp_path: Path, heuristic_id: str, source: str) -> None:
+    """The comment silences the finding, and only the comment: the same
+    source without it fires."""
+    unsuppressed = re.sub(r"  # noqa: PA-LLM-\d+[^\n]*", "", source)
+    assert scan(tmp_path / "bare", heuristic_id, {"app/x.py": unsuppressed}) != []
+    assert scan(tmp_path / "noqa", heuristic_id, {"app/x.py": source}) == []

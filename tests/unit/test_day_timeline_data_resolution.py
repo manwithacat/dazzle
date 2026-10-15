@@ -4,7 +4,9 @@ data resolution layer.
 Covers `_build_day_timeline_slots` — the helper that shapes
 already-scoped source rows into day_timeline slot dicts. The active
 slot is determined by comparing `now` against each row's [starts_at,
-ends_at] window. At most one slot may be marked "active".
+ends_at] window. At most one slot may be marked "active". Also owns the
+#1146 tables: `card:` body interpolation (part 1) and the `as_of:`
+date anchor for HH:MM timetables (part 2).
 """
 
 from __future__ import annotations
@@ -283,3 +285,134 @@ def test_unresolvable_detail_url_template_yields_empty_drill() -> None:
         detail_url_template="/app/alert/{missing_key}",
     )
     assert slots[0]["drill_url"] == ""
+
+
+# ── #1146 part 1: `card:` body interpolation ──
+# Each slot body is the `{{ field }}` expansion of `DayTimelineConfig.card`
+# against the row dict (same grammar as profile_card / task_inbox).
+
+
+@pytest.mark.parametrize(
+    ("card", "rows", "expected_bodies"),
+    [
+        pytest.param("{{ subject }}", [{"subject": "Maths"}], ["Maths"], id="single-field-1146"),
+        pytest.param(
+            "{{ subject }} — {{ teacher }}",
+            [{"subject": "Physics", "teacher": "Mr Khan"}],
+            ["Physics — Mr Khan"],
+            id="multiple-fields-1146",
+        ),
+        pytest.param(
+            # Dotted paths walk nested dicts (an FK hydrated as a sub-dict).
+            "{{ subject.name }}",
+            [{"subject": {"name": "Chemistry", "code": "CHM"}}],
+            ["Chemistry"],
+            id="dotted-path-1146",
+        ),
+        pytest.param(
+            # Unresolved paths render empty; the rest of the template survives.
+            "{{ subject }} — {{ teacher }}",
+            [{"subject": "History"}],
+            ["History — "],
+            id="missing-field-renders-empty-1146",
+        ),
+        pytest.param(
+            # No `card:` → empty body, as before #1146 part 1.
+            "",
+            [{"subject": "Maths"}],
+            [""],
+            id="card-unset-body-empty-1146",
+        ),
+        pytest.param(
+            # No cross-row state leakage.
+            "{{ subject }}",
+            [{"subject": "Maths"}, {"subject": "French"}],
+            ["Maths", "French"],
+            id="per-row-independent-1146",
+        ),
+    ],
+)
+def test_card_body_interpolation(card: str, rows: list[dict], expected_bodies: list[str]) -> None:
+    items = [
+        _item(f"p{i}", _NOW + _dt.timedelta(hours=i), _NOW + _dt.timedelta(hours=i), **row)
+        for i, row in enumerate(rows)
+    ]
+    config = DayTimelineConfig(starts_at="starts_at", ends_at="ends_at", card=card)
+    slots = _build_day_timeline_slots(items=items, config=config, now=_NOW)
+    assert [s["body"] for s in slots] == expected_bodies
+
+
+# ── #1146 part 2: `as_of:` date anchor for HH:MM timetables ──
+# Timetable rows that store TIME (`15:30`) and DATE in separate fields were
+# silently dropped; `as_of` names the date anchor (`today` or a row field)
+# and the runtime composes `date + time → datetime`.
+
+
+@pytest.mark.parametrize(
+    ("as_of", "items", "expected_ids"),
+    [
+        pytest.param(
+            "today",
+            [{"id": "p1", "start_time": "10:30", "end_time": "11:30"}],
+            ["p1"],
+            id="as-of-today-composes-hhmm-1146",
+        ),
+        pytest.param(
+            "schedule_date",
+            [
+                {
+                    "id": "p1",
+                    "start_time": "09:00",
+                    "end_time": "10:00",
+                    "schedule_date": "2026-05-10",
+                },
+                {
+                    "id": "p2",
+                    "start_time": "11:00",
+                    "end_time": "12:00",
+                    "schedule_date": "2026-05-11",
+                },
+            ],
+            ["p1", "p2"],
+            id="as-of-field-per-row-date-1146",
+        ),
+        pytest.param(
+            # Postgres TIME columns arrive as `datetime.time`.
+            "today",
+            [{"id": "p1", "start_time": _dt.time(14, 0), "end_time": _dt.time(15, 0)}],
+            ["p1"],
+            id="as-of-accepts-time-objects-1146",
+        ),
+        pytest.param(
+            # Without `as_of:` HH:MM strings still fail to parse (pre-#1146 behaviour).
+            "",
+            [{"id": "p1", "start_time": "10:30", "end_time": "11:30"}],
+            [],
+            id="no-as-of-drops-hhmm-rows-1146",
+        ),
+        pytest.param(
+            # Unparseable row date → the row drops, no exception.
+            "schedule_date",
+            [{"id": "p1", "start_time": "10:30", "end_time": "11:30", "schedule_date": "garbage"}],
+            [],
+            id="as-of-unparseable-date-drops-row-1146",
+        ),
+        pytest.param(
+            # A full datetime wins; `as_of` is consulted only for TIME / HH:MM.
+            "today",
+            [
+                {
+                    "id": "p1",
+                    "start_time": "2026-05-10T10:30:00+00:00",
+                    "end_time": "2026-05-10T11:30:00+00:00",
+                }
+            ],
+            ["p1"],
+            id="full-datetime-wins-with-as-of-set-1146",
+        ),
+    ],
+)
+def test_as_of_date_anchor(as_of: str, items: list[dict], expected_ids: list[str]) -> None:
+    config = DayTimelineConfig(starts_at="start_time", ends_at="end_time", as_of=as_of)
+    slots = _build_day_timeline_slots(items=items, config=config, now=_NOW)
+    assert [s["slot_id"] for s in slots] == expected_ids

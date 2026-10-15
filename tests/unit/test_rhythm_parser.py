@@ -1,75 +1,76 @@
 """Tests for rhythm DSL parser."""
 
-from pathlib import Path
+from __future__ import annotations
 
 import pytest
 
-from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.errors import ParseError
+from tests.unit.helpers.dsl import parse_fragment
+
+_HEAD = 'module test_app\napp test "Test"\n\n'
 
 
-def test_parse_minimal_rhythm():
-    dsl = """\
-module test_app
-app test "Test"
+def _rhythm(body: str):  # noqa: ANN202
+    """Parse a module holding one rhythm and return it."""
+    return parse_fragment(_HEAD + body).rhythms[0]
 
-rhythm onboarding "New User Onboarding":
-  persona: new_user
 
-  phase discovery:
-    scene browse "Browse Courses":
-      on: course_list
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+def _phase(phase_keys: str):  # noqa: ANN202
+    """Parse a one-phase, one-scene rhythm whose phase carries ``phase_keys``."""
+    return _rhythm(
+        'rhythm r "R":\n  persona: user\n\n  phase p:\n'
+        f"{phase_keys}"
+        '    scene s "S":\n      on: surf\n'
+    ).phases[0]
+
+
+def _scene(scene_keys: str):  # noqa: ANN202
+    """Parse a one-scene rhythm whose scene carries ``scene_keys``."""
+    return (
+        _rhythm(
+            'rhythm onboarding "Onboarding":\n  persona: new_user\n\n'
+            '  phase engagement:\n    scene enroll "Enroll":\n'
+            f"{scene_keys}"
+        )
+        .phases[0]
+        .scenes[0]
+    )
+
+
+def test_parse_minimal_rhythm() -> None:
+    fragment = parse_fragment(
+        _HEAD + 'rhythm onboarding "New User Onboarding":\n  persona: new_user\n\n'
+        '  phase discovery:\n    scene browse "Browse Courses":\n      on: course_list\n'
+    )
     assert len(fragment.rhythms) == 1
     rhythm = fragment.rhythms[0]
-    assert rhythm.name == "onboarding"
-    assert rhythm.title == "New User Onboarding"
-    assert rhythm.persona == "new_user"
-    assert len(rhythm.phases) == 1
-    assert rhythm.phases[0].name == "discovery"
-    assert len(rhythm.phases[0].scenes) == 1
+    assert (rhythm.name, rhythm.title, rhythm.persona) == (
+        "onboarding",
+        "New User Onboarding",
+        "new_user",
+    )
+    assert [p.name for p in rhythm.phases] == ["discovery"]
     scene = rhythm.phases[0].scenes[0]
-    assert scene.name == "browse"
-    assert scene.title == "Browse Courses"
-    assert scene.surface == "course_list"
+    assert (scene.name, scene.title, scene.surface) == ("browse", "Browse Courses", "course_list")
+    assert len(rhythm.phases[0].scenes) == 1
 
 
-def test_parse_rhythm_with_cadence():
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm onboarding "Onboarding":
-  persona: new_user
-  cadence: "quarterly"
-
-  phase discovery:
-    scene browse "Browse":
-      on: course_list
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    rhythm = fragment.rhythms[0]
+def test_parse_rhythm_with_cadence() -> None:
+    rhythm = _rhythm(
+        'rhythm onboarding "Onboarding":\n  persona: new_user\n  cadence: "quarterly"\n\n'
+        '  phase discovery:\n    scene browse "Browse":\n      on: course_list\n'
+    )
     assert rhythm.cadence == "quarterly"
 
 
-def test_parse_scene_with_all_fields():
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm onboarding "Onboarding":
-  persona: new_user
-
-  phase engagement:
-    scene enroll "Enroll in Course":
-      on: course_detail
-      action: submit, browse
-      entity: Enrollment
-      expects: "enrollment_confirmed"
-      story: enroll_story
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    scene = fragment.rhythms[0].phases[0].scenes[0]
+def test_parse_scene_with_all_fields() -> None:
+    scene = _scene(
+        "      on: course_detail\n"
+        "      action: submit, browse\n"
+        "      entity: Enrollment\n"
+        '      expects: "enrollment_confirmed"\n'
+        "      story: enroll_story\n"
+    )
     assert scene.surface == "course_detail"
     assert scene.actions == ["submit", "browse"]
     assert scene.entity == "Enrollment"
@@ -77,324 +78,100 @@ rhythm onboarding "Onboarding":
     assert scene.story == "enroll_story"
 
 
-def test_parse_scene_compound_story_id_unquoted():
-    """`story: ST-019` must capture the whole compound ID, not just `ST`.
-
-    Regression: the lexer splits `ST-019` into IDENTIFIER '-' NUMBER, and the
-    scene parser previously read only the leading identifier — so every
-    `story: ST-nnn` reference silently resolved to `ST` and then failed
-    link-time validation as an unknown story. Compound IDs are how stories
-    declare their own IDs, so an unquoted ref must parse the same shape.
-    """
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm daily "Daily":
-  persona: agent
-
-  phase work:
-    scene resolve "Resolve":
-      on: ticket_detail
-      story: ST-019
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    scene = fragment.rhythms[0].phases[0].scenes[0]
-    assert scene.story == "ST-019"
+@pytest.mark.parametrize(
+    ("story_src", "expected"),
+    [
+        # Regression: the lexer splits `ST-019` into IDENTIFIER '-' NUMBER and
+        # the scene parser read only the leading identifier, so every
+        # `story: ST-nnn` resolved to `ST` and failed link-time validation.
+        pytest.param("ST-019", "ST-019", id="compound-id-unquoted"),
+        pytest.param('"ST-020"', "ST-020", id="compound-id-quoted"),
+        pytest.param("enroll_story", "enroll_story", id="bare-identifier"),
+    ],
+)
+def test_parse_scene_story_reference(story_src: str, expected: str) -> None:
+    scene = _scene(f"      on: course_detail\n      story: {story_src}\n")
+    assert scene.story == expected
 
 
-def test_parse_multiple_phases():
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm onboarding "Onboarding":
-  persona: new_user
-
-  phase discovery:
-    scene browse "Browse":
-      on: course_list
-
-  phase engagement:
-    scene enroll "Enroll":
-      on: course_detail
-    scene study "Study":
-      on: module_view
-
-  phase mastery:
-    scene progress "Check Progress":
-      on: dashboard
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    rhythm = fragment.rhythms[0]
-    assert len(rhythm.phases) == 3
-    assert rhythm.phases[0].name == "discovery"
-    assert len(rhythm.phases[0].scenes) == 1
-    assert rhythm.phases[1].name == "engagement"
-    assert len(rhythm.phases[1].scenes) == 2
-    assert rhythm.phases[2].name == "mastery"
-    assert len(rhythm.phases[2].scenes) == 1
-
-
-def test_parse_rhythm_missing_persona_raises():
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm onboarding "Onboarding":
-  phase discovery:
-    scene browse "Browse":
-      on: course_list
-"""
-    with pytest.raises(Exception, match="persona"):
-        parse_dsl(dsl, Path("test.dsl"))
-
-
-def test_parse_phase_with_kind():
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm onboarding "Onboarding":
-  persona: new_user
-
-  phase setup:
-    kind: onboarding
-    scene browse "Browse":
-      on: course_list
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    phase = fragment.rhythms[0].phases[0]
-    assert phase.kind is not None
-    assert phase.kind.value == "onboarding"
-
-
-def test_parse_phase_kind_all_values():
-    for kind_val in ["onboarding", "active", "periodic", "ambient", "offboarding"]:
-        dsl = f"""\
-module test_app
-app test "Test"
-
-rhythm r "R":
-  persona: user
-
-  phase p:
-    kind: {kind_val}
-    scene s "S":
-      on: surf
-"""
-        _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-        assert fragment.rhythms[0].phases[0].kind is not None
-        assert fragment.rhythms[0].phases[0].kind.value == kind_val
-
-
-def test_parse_phase_without_kind_is_none():
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm onboarding "Onboarding":
-  persona: new_user
-
-  phase discovery:
-    scene browse "Browse":
-      on: course_list
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    assert fragment.rhythms[0].phases[0].kind is None
-
-
-def test_parse_phase_invalid_kind_ignored():
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm r "R":
-  persona: user
-
-  phase p:
-    kind: nonexistent
-    scene s "S":
-      on: surf
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    assert fragment.rhythms[0].phases[0].kind is None
-
-
-def test_parse_phase_cadence():
-    """Phase-level cadence is parsed from string."""
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm fiscal "Fiscal Year":
-  persona: director
-
-  phase ongoing:
-    kind: ambient
-    cadence: "ad-hoc, between deadlines"
-    scene check "Check Dashboard":
-      on: dashboard
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    phase = fragment.rhythms[0].phases[0]
-    assert phase.cadence == "ad-hoc, between deadlines"
-    assert phase.kind is not None
-    assert phase.kind.value == "ambient"
-
-
-def test_parse_phase_cadence_without_kind():
-    """Phase cadence works without kind."""
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm fiscal "Fiscal Year":
-  persona: director
-
-  phase q1:
-    cadence: "January-March"
-    scene review "Q1 Review":
-      on: dashboard
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    phase = fragment.rhythms[0].phases[0]
-    assert phase.cadence == "January-March"
-    assert phase.kind is None
-
-
-def test_parse_phase_depends_on():
-    """Phase depends_on is parsed from identifier."""
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm fiscal "Fiscal Year":
-  persona: director
-
-  phase onboarding:
-    kind: gate
-    scene welcome "Welcome":
-      on: welcome_page
-
-  phase q1:
-    kind: periodic
-    depends_on: onboarding
-    scene review "Q1 Review":
-      on: dashboard
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    phases = fragment.rhythms[0].phases
-    assert phases[0].depends_on is None
-    assert phases[1].depends_on == "onboarding"
-
-
-def test_parse_phase_kind_gate():
-    """Phase kind 'gate' is parsed correctly."""
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm r "R":
-  persona: user
-
-  phase setup:
-    kind: gate
-    scene s "S":
-      on: surf
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    phase = fragment.rhythms[0].phases[0]
-    assert phase.kind is not None
-    assert phase.kind.value == "gate"
-
-
-def test_parse_phase_cadence_none_by_default():
-    """Phase cadence is None when not specified."""
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm r "R":
-  persona: user
-
-  phase p:
-    scene s "S":
-      on: surf
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    assert fragment.rhythms[0].phases[0].cadence is None
-
-
-def test_parse_scene_story_as_string():
-    """story: field accepts quoted strings for hyphenated IDs like ST-020."""
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm onboarding "Onboarding":
-  persona: new_user
-
-  phase engagement:
-    scene enroll "Enroll":
-      on: course_detail
-      story: "ST-020"
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    scene = fragment.rhythms[0].phases[0].scenes[0]
-    assert scene.story == "ST-020"
-
-
-def test_parse_scene_story_as_identifier():
-    """story: field still accepts bare identifiers for backward compat."""
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm onboarding "Onboarding":
-  persona: new_user
-
-  phase engagement:
-    scene enroll "Enroll":
-      on: course_detail
-      story: enroll_story
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    scene = fragment.rhythms[0].phases[0].scenes[0]
-    assert scene.story == "enroll_story"
-
-
-def test_parse_scene_missing_on_raises():
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm onboarding "Onboarding":
-  persona: new_user
-
-  phase discovery:
-    scene browse "Browse":
-      action: browse
-"""
-    with pytest.raises(Exception, match="on"):
-        parse_dsl(dsl, Path("test.dsl"))
-
-
-def test_parse_scene_thin_form_omits_on_when_story_cited():
+def test_parse_scene_thin_form_omits_on_when_story_cited() -> None:
     """A scene citing a story may omit `on:` — the surface is derived at link
     time (#1559 slice 3), so parsing leaves it None rather than raising."""
-    dsl = """\
-module test_app
-app test "Test"
-
-rhythm onboarding "Onboarding":
-  persona: new_user
-
-  phase discovery:
-    scene enroll "Enroll":
-      story: ST-001
-"""
-    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-    scene = fragment.rhythms[0].phases[0].scenes[0]
+    scene = _scene("      story: ST-001\n")
     assert scene.surface is None
     assert scene.story == "ST-001"
+
+
+def test_parse_multiple_phases() -> None:
+    rhythm = _rhythm(
+        'rhythm onboarding "Onboarding":\n  persona: new_user\n\n'
+        '  phase discovery:\n    scene browse "Browse":\n      on: course_list\n\n'
+        '  phase engagement:\n    scene enroll "Enroll":\n      on: course_detail\n'
+        '    scene study "Study":\n      on: module_view\n\n'
+        '  phase mastery:\n    scene progress "Check Progress":\n      on: dashboard\n'
+    )
+    assert [(p.name, len(p.scenes)) for p in rhythm.phases] == [
+        ("discovery", 1),
+        ("engagement", 2),
+        ("mastery", 1),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("phase_keys", "expected_kind", "expected_cadence"),
+    [
+        *(
+            pytest.param(f"    kind: {kind}\n", kind, None, id=f"kind-{kind}")
+            for kind in ("onboarding", "active", "periodic", "ambient", "offboarding", "gate")
+        ),
+        pytest.param("", None, None, id="no-kind-no-cadence"),
+        pytest.param("    kind: nonexistent\n", None, None, id="invalid-kind-ignored"),
+        pytest.param(
+            '    kind: ambient\n    cadence: "ad-hoc, between deadlines"\n',
+            "ambient",
+            "ad-hoc, between deadlines",
+            id="kind-and-cadence",
+        ),
+        pytest.param(
+            '    cadence: "January-March"\n', None, "January-March", id="cadence-without-kind"
+        ),
+    ],
+)
+def test_parse_phase_kind_and_cadence(
+    phase_keys: str, expected_kind: str | None, expected_cadence: str | None
+) -> None:
+    phase = _phase(phase_keys)
+    assert (phase.kind.value if phase.kind else None) == expected_kind
+    assert phase.cadence == expected_cadence
+
+
+def test_parse_phase_depends_on() -> None:
+    rhythm = _rhythm(
+        'rhythm fiscal "Fiscal Year":\n  persona: director\n\n'
+        '  phase onboarding:\n    kind: gate\n    scene welcome "Welcome":\n      on: welcome_page\n\n'
+        "  phase q1:\n    kind: periodic\n    depends_on: onboarding\n"
+        '    scene review "Q1 Review":\n      on: dashboard\n'
+    )
+    assert [p.depends_on for p in rhythm.phases] == [None, "onboarding"]
+
+
+@pytest.mark.parametrize(
+    ("body", "error"),
+    [
+        pytest.param(
+            'rhythm onboarding "Onboarding":\n  phase discovery:\n'
+            '    scene browse "Browse":\n      on: course_list\n',
+            "Rhythm missing required 'persona' field",
+            id="missing-persona",
+        ),
+        pytest.param(
+            'rhythm onboarding "Onboarding":\n  persona: new_user\n\n  phase discovery:\n'
+            '    scene browse "Browse":\n      action: browse\n',
+            "Scene missing required 'on' field",
+            id="scene-missing-on-without-story",
+        ),
+    ],
+)
+def test_parse_rhythm_rejects(body: str, error: str) -> None:
+    with pytest.raises(ParseError, match=error):
+        parse_fragment(_HEAD + body)

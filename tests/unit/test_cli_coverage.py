@@ -85,12 +85,6 @@ class TestDslConstructCoverage:
         for required in ("entity", "surface", "workspace", "persona", "app"):
             assert cat.coverage[required], f"DSL construct '{required}' uncovered"
 
-    def test_tracks_all_curated_constructs(self) -> None:
-        from dazzle.cli.coverage import _DSL_CONSTRUCTS
-
-        cat = _dsl_construct_coverage(_repo_root())
-        assert set(cat.coverage.keys()) == set(_DSL_CONSTRUCTS)
-
 
 class TestFragmentTemplateCoverage:
     def test_empty_state_is_included_somewhere(self) -> None:
@@ -152,10 +146,9 @@ class TestParkingLotFragmentExclusion:
     """
 
     def test_parking_lot_fragments_are_excluded_from_coverage(self) -> None:
-        from dazzle.cli.coverage import _find_repo_root, _fragment_template_coverage
         from dazzle.page.runtime.fragment_registry import PARKING_LOT_FRAGMENTS
 
-        cat = _fragment_template_coverage(_find_repo_root())
+        cat = _fragment_template_coverage(_repo_root())
         # None of the parking-lot names should appear in the coverage map.
         for name in PARKING_LOT_FRAGMENTS:
             assert name not in cat.coverage, (
@@ -165,9 +158,8 @@ class TestParkingLotFragmentExclusion:
             )
 
     def test_every_counted_fragment_has_a_real_caller(self) -> None:
-        from dazzle.cli.coverage import _find_repo_root, _fragment_template_coverage
 
-        cat = _fragment_template_coverage(_find_repo_root())
+        cat = _fragment_template_coverage(_repo_root())
         # Every fragment that IS counted must have at least one call site
         # outside the registry (we excluded the registry from the scan).
         uncovered = cat.uncovered
@@ -228,14 +220,9 @@ class TestExtraApps:
 
 def test_admin_workspace_counts_as_a_consumer_of_its_display_modes() -> None:
     """The generated admin workspace renders timeline/diagram in every app (ship G)."""
-    from dazzle.cli.coverage import (
-        ADMIN_WORKSPACE,
-        _admin_workspace_display_modes,
-        _display_mode_coverage,
-    )
+    from dazzle.cli.coverage import ADMIN_WORKSPACE
 
-    repo = Path(__file__).resolve().parents[2]
-    modes = _admin_workspace_display_modes(repo)
-    assert {"timeline", "diagram"} <= modes
-    cat = _display_mode_coverage(repo, apps=[])
-    assert all(ADMIN_WORKSPACE in cat.coverage[m] for m in modes if m in cat.coverage)
+    result = runner.invoke(app, ["coverage", "--json"])
+    covered = json.loads(result.output)["display_modes"]["covered"]
+
+    assert {"timeline", "diagram"} <= {m for m, apps in covered.items() if ADMIN_WORKSPACE in apps}

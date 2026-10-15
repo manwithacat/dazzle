@@ -3,15 +3,8 @@
 from pathlib import Path
 
 import pytest
-from typer.testing import CliRunner
 
-from dazzle.cli import app
-
-
-@pytest.fixture
-def cli_runner():
-    """Return a CLI test runner."""
-    return CliRunner()
+from tests.unit.helpers.cli import invoke, run_cli
 
 
 @pytest.fixture
@@ -75,21 +68,16 @@ paths = ["dsl/"]
     return tmp_path
 
 
-def test_validate_command_success(cli_runner: CliRunner, test_project: Path):
-    """Test validate command with valid DSL."""
-    result = cli_runner.invoke(app, ["validate", "--manifest", str(test_project / "dazzle.toml")])
-    assert result.exit_code == 0
-    assert "Spec is valid" in result.stdout
+def test_validate_command_success(test_project: Path) -> None:
+    out = run_cli(["validate", "--manifest", test_project / "dazzle.toml"])
+    assert "Spec is valid" in out
 
 
-def test_validate_command_with_errors(cli_runner: CliRunner, tmp_path: Path):
-    """Test validate command with invalid DSL."""
-    # Create project with invalid DSL (surface references non-existent field)
+def test_validate_command_reports_unknown_surface_field(tmp_path: Path) -> None:
+    """A surface naming a field the entity lacks fails validation with exit 1."""
     dsl_dir = tmp_path / "dsl"
     dsl_dir.mkdir()
-
-    dsl_file = dsl_dir / "test.dsl"
-    dsl_file.write_text(
+    (dsl_dir / "test.dsl").write_text(
         """
 module testapp
 
@@ -107,7 +95,6 @@ surface task_list:
     field nonexistent "Nonexistent Field"
 """
     )
-
     manifest = tmp_path / "dazzle.toml"
     manifest.write_text(
         """
@@ -121,33 +108,21 @@ paths = ["./dsl"]
 """
     )
 
-    result = cli_runner.invoke(app, ["validate", "--manifest", str(manifest)])
+    result = invoke(["validate", "--manifest", manifest])
     assert result.exit_code == 1
-    # Error messages go to stderr
-    assert "ERROR" in result.stderr or "Error" in result.stderr
+    assert "nonexistent" in result.stderr
 
 
-def test_lint_command(cli_runner: CliRunner, test_project: Path):
-    """Test lint command."""
-    result = cli_runner.invoke(app, ["lint", "--manifest", str(test_project / "dazzle.toml")])
-    # Should pass (may have warnings but no errors)
-    assert result.exit_code == 0 or "WARNING" in result.stdout
+def test_lint_command_passes_on_valid_project(test_project: Path) -> None:
+    run_cli(["lint", "--manifest", test_project / "dazzle.toml"])
 
 
-def test_inspect_command_default(cli_runner: CliRunner, test_project: Path):
-    """Test inspect command with default options.
-
-    Pre-v0.71.23 this was at `dazzle inspect`; v0.71.23 moved it
-    under the new inspect group as `dazzle inspect project`
-    alongside the other introspection subcommands (#1120).
-    """
-    result = cli_runner.invoke(
-        app, ["inspect", "project", "--manifest", str(test_project / "dazzle.toml")]
-    )
-
-    assert result.exit_code == 0
-    # Should show project structure with entities and surfaces
-    assert "Entities" in result.stdout or "test_app" in result.stdout
+def test_inspect_project_lists_entities_and_surfaces(test_project: Path) -> None:
+    """`dazzle inspect project` (moved under the inspect group in #1120)."""
+    out = run_cli(["inspect", "project", "--manifest", test_project / "dazzle.toml"])
+    assert "Entities" in out
+    assert "Task" in out
+    assert "task_list" in out
 
 
 # ===========================================================================
@@ -155,27 +130,15 @@ def test_inspect_command_default(cli_runner: CliRunner, test_project: Path):
 # ===========================================================================
 
 
-class TestSearchCommand:
-    """Tests for `dazzle search` — keyword search over commands."""
-
-    def test_search_finds_serve(self, cli_runner: CliRunner) -> None:
-        result = cli_runner.invoke(app, ["search", "serve"])
-        assert result.exit_code == 0
-        assert "serve" in result.output
-
-    def test_search_finds_validate(self, cli_runner: CliRunner) -> None:
-        result = cli_runner.invoke(app, ["search", "validate"])
-        assert result.exit_code == 0
-
-    def test_search_no_results_exits_1(self, cli_runner: CliRunner) -> None:
-        result = cli_runner.invoke(app, ["search", "xyznonexistent999"])
-        assert result.exit_code == 1
-
-    def test_search_no_results_prints_message(self, cli_runner: CliRunner) -> None:
-        result = cli_runner.invoke(app, ["search", "xyznonexistent999"])
-        assert "No commands found" in result.output
-
-    def test_search_output_contains_dazzle_prefix(self, cli_runner: CliRunner) -> None:
-        result = cli_runner.invoke(app, ["search", "serve"])
-        assert result.exit_code == 0
-        assert "dazzle" in result.output
+@pytest.mark.parametrize(
+    ("keyword", "exit_code", "fragments"),
+    [
+        pytest.param("serve", 0, ["dazzle serve"], id="finds_serve"),
+        pytest.param("validate", 0, ["dazzle validate"], id="finds_validate"),
+        pytest.param("xyznonexistent999", 1, ["No commands found"], id="no_match_exits_1"),
+    ],
+)
+def test_search_command(keyword: str, exit_code: int, fragments: list[str]) -> None:
+    out = run_cli(["search", keyword], exit_code=exit_code)
+    for fragment in fragments:
+        assert fragment in out

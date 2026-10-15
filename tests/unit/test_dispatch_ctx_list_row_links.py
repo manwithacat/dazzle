@@ -12,26 +12,10 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.core.ir.surfaces import SurfaceMode
-from dazzle.http.runtime.page_routes import _build_dispatch_ctx
-from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.render.context import ColumnContext, TableContext
-from dazzle.render.fragment import FragmentRenderer, Table
+from dazzle.render.fragment import Table
 from dazzle.render.fragment.region._row_links import _resolve_row_links
-
-
-class _Surface:
-    name = "contact_list"
-    title = "Contacts"
-    mode = SurfaceMode.LIST
-    entity_ref = "Contact"
-
-
-class _RC:
-    def __init__(self, table: TableContext) -> None:
-        self.table = table
-        self.form = None
-        self.detail = None
+from tests.unit.helpers.list_surface import list_ctx, render_list
 
 
 def _table(detail_url_template: str = "") -> TableContext:
@@ -52,22 +36,17 @@ def _table(detail_url_template: str = "") -> TableContext:
     )
 
 
-def _render(ctx: dict) -> str:
-    adapter = FragmentSurfaceAdapter()
-    return FragmentRenderer().render(adapter._build_list(_Surface(), ctx))
-
-
 def test_dispatch_ctx_threads_detail_url_template() -> None:
     """`_build_dispatch_ctx` exposes `detail_url_template` to the
     adapter — pre-fix it was silently dropped."""
-    ctx = _build_dispatch_ctx(_RC(_table(detail_url_template="/contacts/{id}")), object())
+    ctx = list_ctx(_table(detail_url_template="/contacts/{id}"), object())
     assert ctx["detail_url_template"] == "/contacts/{id}"
 
 
 def test_dispatch_ctx_omits_detail_url_template_when_unset() -> None:
     """No template on TableContext → empty string (falsy) in ctx so
     the adapter knows to skip row-link wiring."""
-    ctx = _build_dispatch_ctx(_RC(_table()), object())
+    ctx = list_ctx(_table(), object())
     assert ctx["detail_url_template"] == ""
 
 
@@ -131,8 +110,8 @@ def test_list_skeleton_hydrates_rows_from_api_not_inline() -> None:
     """Rows come from /api (render_data_row), not inline — so the first paint
     is a skeleton tbody pointing at the row-data endpoint, with no inline
     `<tr>` drill rows and no row data inlined."""
-    ctx = _build_dispatch_ctx(_RC(_table(detail_url_template="/contacts/{id}")), object())
-    html = _render(ctx)
+    ctx = list_ctx(_table(detail_url_template="/contacts/{id}"), object())
+    html = render_list(ctx)
     # the empty hydrating tbody points at the row-data endpoint
     assert 'class="dz-table-body"' in html
     assert 'hx-get="/api/contacts' in html
@@ -148,7 +127,7 @@ def test_list_skeleton_hydrates_rows_from_api_not_inline() -> None:
 def test_dispatch_ctx_preserves_existing_table_keys() -> None:
     """Phase 1 doesn't break Phase 0 — all the existing ctx keys
     (`items`, `columns`, `endpoint`, `total`, etc.) remain populated."""
-    ctx = _build_dispatch_ctx(_RC(_table(detail_url_template="/contacts/{id}")), object())
+    ctx = list_ctx(_table(detail_url_template="/contacts/{id}"), object())
     assert "items" in ctx
     assert "columns" in ctx
     assert "endpoint" in ctx

@@ -226,26 +226,44 @@ def test_bind_noop_when_no_registered_attrs(monkeypatch) -> None:
     assert get_current_rls_user_attrs() == {}
 
 
-def test_compute_app_wide_user_attr_names_union() -> None:
-    """The app-wide set is the union of collect_user_attr_refs over every scope rule."""
-    from dazzle.core.ir.predicates import ColumnCheck, ValueRef
+def test_app_wide_user_attr_names_are_the_union_over_linked_scope_rules(tmp_path) -> None:
+    """The app-wide GUC set is the union of the ``current_user`` refs in every
+    linked scope rule: ``current_user.school_id`` → ``school_id``; a bare
+    ``current_user`` against a ``ref User`` binds the DSL User entity id
+    (``entity_id``); an entity without access rules contributes nothing."""
+    from dazzle.core.linker import build_appspec
+    from dazzle.core.parser import parse_modules
     from dazzle.http.runtime.server import _compute_rls_user_attr_names
 
-    # Two entities, each with one scope rule referencing a different attr.
-    rule_a = MagicMock()
-    rule_a.predicate = ColumnCheck(field="school_id", op="=", value=ValueRef(user_attr="school_id"))
-    rule_b = MagicMock()
-    rule_b.predicate = ColumnCheck(field="owner", op="=", value=ValueRef(current_user=True))
+    dsl = tmp_path / "app.dsl"
+    dsl.write_text(
+        "module t\n"
+        'app a "A"\n\n'
+        'persona teacher "Teacher":\n'
+        '  description: "t"\n\n'
+        'entity User "User":\n'
+        "  id: uuid pk\n"
+        "  email: str(200) required\n"
+        "  school_id: uuid\n\n"
+        'entity Pupil "Pupil":\n'
+        "  id: uuid pk\n"
+        "  school_id: uuid\n"
+        "  permit:\n"
+        "    list: role(teacher)\n"
+        "  scope:\n"
+        "    list: school_id = current_user.school_id\n"
+        "      as: teacher\n\n"
+        'entity Note "Note":\n'
+        "  id: uuid pk\n"
+        "  owner: ref User\n"
+        "  permit:\n"
+        "    list: role(teacher)\n"
+        "  scope:\n"
+        "    list: owner = current_user\n"
+        "      as: teacher\n\n"
+        'entity Flat "Flat":\n'
+        "  id: uuid pk\n"
+    )
+    appspec = build_appspec(parse_modules([dsl]), "t")
 
-    ent_a = MagicMock()
-    ent_a.access = MagicMock()
-    ent_a.access.scopes = [rule_a]
-    ent_b = MagicMock()
-    ent_b.access = MagicMock()
-    ent_b.access.scopes = [rule_b]
-    ent_flat = MagicMock()
-    ent_flat.access = None
-
-    names = _compute_rls_user_attr_names([ent_a, ent_b, ent_flat])
-    # current_user → "id"; current_user.school_id → "school_id"
-    assert names == {"school_id", "id"}
+    assert _compute_rls_user_attr_names(appspec.domain.entities) == {"school_id", "entity_id"}

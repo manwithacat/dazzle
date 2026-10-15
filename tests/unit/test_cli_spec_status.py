@@ -5,7 +5,6 @@ from types import SimpleNamespace
 from dazzle.cli.spec import (
     _compute_drift,
     _extract_entity_candidates,
-    _format_report,
     _spec_mentions_entity,
 )
 
@@ -109,59 +108,48 @@ def test_compute_drift_includes_framework_entities_when_opt_in() -> None:
     assert "AIJob" in report.missing_from_spec
 
 
-def test_format_report_friendly_when_no_drift() -> None:
-    appspec = _fake_appspec("Order")
-    report = _compute_drift(appspec, "Orders are placed.", spec_present=True)  # type: ignore[arg-type]
-    out = _format_report(report)
+def _run_spec_status(tmp_path, spec_text: str) -> str:  # noqa: ANN001
+    """Run ``dazzle spec status`` on a one-entity (``Order``) project with ``spec_text``."""
+    from typer.testing import CliRunner
+
+    from dazzle.cli import app
+
+    (tmp_path / "dazzle.toml").write_text(
+        '[project]\nname = "shop"\nversion = "0.1.0"\nroot = "shop"\n\n[modules]\npaths = ["./dsl"]\n'
+    )
+    (tmp_path / "dsl").mkdir()
+    (tmp_path / "dsl" / "app.dsl").write_text(
+        'module shop\napp shop "Shop"\n\nentity Order "Order":\n  id: uuid pk\n  ref: str(20)\n'
+    )
+    (tmp_path / "SPEC.md").write_text(spec_text)
+
+    result = CliRunner().invoke(app, ["spec", "status", "-p", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    return result.output
+
+
+def test_spec_status_reports_no_drift_in_friendly_words(tmp_path) -> None:  # noqa: ANN001
+    out = _run_spec_status(tmp_path, "Orders are placed.")
+
     assert "DSL entities: 1" in out
     assert "Missing from spec (0)" in out
     assert "(none — every DSL entity is mentioned in the spec)" in out
 
 
-def test_format_report_caps_missing_from_dsl_at_30() -> None:
-    """Heuristic candidate list is capped to keep the report scannable."""
-    appspec = _fake_appspec("Order")
-    # Use 35 distinct CamelCase nouns so each survives the regex
-    # (`[A-Z][a-z]+(?:[A-Z][a-z]+)*`) and the false-positive filter.
-    bases = [
-        "Alpha",
-        "Bravo",
-        "Charlie",
-        "Delta",
-        "Echo",
-        "Foxtrot",
-        "Golf",
-        "Hotel",
-        "India",
-        "Juliet",
-        "Kilo",
-        "Lima",
-        "Mike",
-        "November",
-        "Oscar",
-        "Papa",
-        "Quebec",
-        "Romeo",
-        "Sierra",
-        "Tango",
-        "Uniform",
-        "Victor",
-        "Whiskey",
-        "Xray",
-        "Yankee",
-        "Zulu",
-        "Alfa",
-        "Beta",
-        "Gamma",
-        "Epsilon",
-        "Zeta",
-        "Eta",
-        "Theta",
-        "Iota",
-        "Kappa",
-    ]
-    spec = "Orders. " + " ".join(f"the {b}Widget" for b in bases)
-    report = _compute_drift(appspec, spec, spec_present=True)  # type: ignore[arg-type]
-    out = _format_report(report)
-    assert len(report.missing_from_dsl) > 30
+def test_spec_status_caps_missing_from_dsl_candidates_at_30(tmp_path) -> None:  # noqa: ANN001
+    """The heuristic candidate list is capped to keep the report scannable."""
+    bases = (
+        "Alpha Bravo Charlie Delta Echo Foxtrot Golf Hotel India Juliet Kilo Lima Mike "
+        "November Oscar Papa Quebec Romeo Sierra Tango Uniform Victor Whiskey Xray Yankee "
+        "Zulu Alfa Beta Gamma Epsilon Zeta Eta Theta Iota Kappa"
+    ).split()
+
+    out = _run_spec_status(tmp_path, "Orders. " + " ".join(f"the {b}Widget" for b in bases))
+
+    section = out.split("Missing from DSL — review candidates (")[1].split("Domain map")[0]
+    total = int(section.split(")")[0])
+    previewed = [line for line in section.splitlines() if line.startswith("  - ")]
+    assert total > 30
+    assert len(previewed) == 30
+    assert f"  ... +{total - 30} more" in section
     assert "more (extend the skip list" in out
