@@ -628,14 +628,6 @@
       "overlap_ratio": 0.87
     },
     {
-      "file_a": "tests/unit/http_runtime/test_query_builder.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 44,
-      "tests_b": 130,
-      "shared_shape_count": 31,
-      "overlap_ratio": 0.7
-    },
-    {
       "file_a": "tests/unit/test_fidelity_scorer.py",
       "file_b": "tests/unit/test_rbac_verifier.py",
       "tests_a": 39,
@@ -652,14 +644,6 @@
       "overlap_ratio": 0.94
     },
     {
-      "file_a": "tests/unit/test_datatable_handler.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 30,
-      "tests_b": 130,
-      "shared_shape_count": 28,
-      "overlap_ratio": 0.93
-    },
-    {
       "file_a": "tests/unit/test_parser.py",
       "file_b": "tests/unit/test_structured_content.py",
       "tests_a": 130,
@@ -674,14 +658,6 @@
       "tests_b": 55,
       "shared_shape_count": 26,
       "overlap_ratio": 0.79
-    },
-    {
-      "file_a": "tests/unit/test_datatable_handler.py",
-      "file_b": "tests/unit/test_mapping_executor.py",
-      "tests_a": 30,
-      "tests_b": 53,
-      "shared_shape_count": 26,
-      "overlap_ratio": 0.87
     },
     {
       "file_a": "tests/unit/test_events.py",
@@ -740,44 +716,12 @@
       "overlap_ratio": 0.76
     },
     {
-      "file_a": "tests/unit/test_datatable_handler.py",
-      "file_b": "tests/unit/test_expression_lang.py",
-      "tests_a": 30,
-      "tests_b": 82,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.83
-    },
-    {
-      "file_a": "tests/unit/test_datatable_handler.py",
-      "file_b": "tests/unit/test_rbac_verifier.py",
-      "tests_a": 30,
-      "tests_b": 43,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.83
-    },
-    {
       "file_a": "tests/unit/test_parser.py",
       "file_b": "tests/unit/test_rbac_ui_fixes.py",
       "tests_a": 130,
       "tests_b": 30,
       "shared_shape_count": 25,
       "overlap_ratio": 0.83
-    },
-    {
-      "file_a": "tests/unit/http_runtime/test_auth.py",
-      "file_b": "tests/unit/test_rbac_ui_fixes.py",
-      "tests_a": 73,
-      "tests_b": 30,
-      "shared_shape_count": 24,
-      "overlap_ratio": 0.8
-    },
-    {
-      "file_a": "tests/unit/http_runtime/test_auth.py",
-      "file_b": "tests/unit/test_structured_content.py",
-      "tests_a": 73,
-      "tests_b": 32,
-      "shared_shape_count": 24,
-      "overlap_ratio": 0.75
     },
     {
       "file_a": "tests/unit/sentinel/test_agent_auth.py",
@@ -844,14 +788,6 @@
       "overlap_ratio": 0.75
     },
     {
-      "file_a": "tests/unit/http_runtime/test_auth.py",
-      "file_b": "tests/unit/test_otp_store.py",
-      "tests_a": 73,
-      "tests_b": 28,
-      "shared_shape_count": 23,
-      "overlap_ratio": 0.82
-    },
-    {
       "file_a": "tests/unit/sentinel/test_agent_auth.py",
       "file_b": "tests/unit/test_expression_lang.py",
       "tests_a": 26,
@@ -868,22 +804,6 @@
       "overlap_ratio": 0.88
     },
     {
-      "file_a": "tests/unit/test_datatable_handler.py",
-      "file_b": "tests/unit/test_fidelity_scorer.py",
-      "tests_a": 30,
-      "tests_b": 39,
-      "shared_shape_count": 23,
-      "overlap_ratio": 0.77
-    },
-    {
-      "file_a": "tests/unit/test_datatable_handler.py",
-      "file_b": "tests/unit/test_persona_journey.py",
-      "tests_a": 30,
-      "tests_b": 55,
-      "shared_shape_count": 23,
-      "overlap_ratio": 0.77
-    },
-    {
       "file_a": "tests/unit/test_expression_lang.py",
       "file_b": "tests/unit/test_sla_manager.py",
       "tests_a": 82,
@@ -898,14 +818,6 @@
       "tests_b": 46,
       "shared_shape_count": 23,
       "overlap_ratio": 0.74
-    },
-    {
-      "file_a": "tests/unit/http_runtime/test_auth.py",
-      "file_b": "tests/unit/test_session_manager.py",
-      "tests_a": 73,
-      "tests_b": 26,
-      "shared_shape_count": 22,
-      "overlap_ratio": 0.85
     },
     {
       "file_a": "tests/unit/sentinel/test_agent_auth.py",
@@ -948,28 +860,12 @@
       "overlap_ratio": 0.88
     },
     {
-      "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
-      "file_b": "tests/unit/test_datatable_handler.py",
-      "tests_a": 33,
-      "tests_b": 30,
-      "shared_shape_count": 22,
-      "overlap_ratio": 0.73
-    },
-    {
       "file_a": "tests/unit/test_curl_test_generator.py",
       "file_b": "tests/unit/test_pdf_viewer_component.py",
       "tests_a": 28,
       "tests_b": 52,
       "shared_shape_count": 22,
       "overlap_ratio": 0.79
-    },
-    {
-      "file_a": "tests/unit/test_datatable_handler.py",
-      "file_b": "tests/unit/test_ux_contract_checker.py",
-      "tests_a": 30,
-      "tests_b": 36,
-      "shared_shape_count": 22,
-      "overlap_ratio": 0.73
     },
     {
       "file_a": "tests/unit/test_expression_lang.py",
@@ -1010,6 +906,110 @@
       "tests_b": 27,
       "shared_shape_count": 22,
       "overlap_ratio": 0.81
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_auth.py",
+      "file_b": "tests/unit/sentinel/test_agent_business_logic.py",
+      "tests_a": 26,
+      "tests_b": 22,
+      "shared_shape_count": 21,
+      "overlap_ratio": 0.95
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_auth.py",
+      "file_b": "tests/unit/sentinel/test_agent_data_integrity.py",
+      "tests_a": 26,
+      "tests_b": 26,
+      "shared_shape_count": 21,
+      "overlap_ratio": 0.81
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_auth.py",
+      "file_b": "tests/unit/test_fidelity_scorer.py",
+      "tests_a": 26,
+      "tests_b": 39,
+      "shared_shape_count": 21,
+      "overlap_ratio": 0.81
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_auth.py",
+      "file_b": "tests/unit/test_mapping_executor.py",
+      "tests_a": 26,
+      "tests_b": 53,
+      "shared_shape_count": 21,
+      "overlap_ratio": 0.81
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_auth.py",
+      "file_b": "tests/unit/test_rbac_verifier.py",
+      "tests_a": 26,
+      "tests_b": 43,
+      "shared_shape_count": 21,
+      "overlap_ratio": 0.81
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_business_logic.py",
+      "file_b": "tests/unit/test_expression_lang.py",
+      "tests_a": 22,
+      "tests_b": 82,
+      "shared_shape_count": 21,
+      "overlap_ratio": 0.95
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_business_logic.py",
+      "file_b": "tests/unit/test_parser.py",
+      "tests_a": 22,
+      "tests_b": 130,
+      "shared_shape_count": 21,
+      "overlap_ratio": 0.95
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_business_logic.py",
+      "file_b": "tests/unit/test_signing/test_routes.py",
+      "tests_a": 22,
+      "tests_b": 58,
+      "shared_shape_count": 21,
+      "overlap_ratio": 0.95
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_data_integrity.py",
+      "file_b": "tests/unit/test_fidelity_scorer.py",
+      "tests_a": 26,
+      "tests_b": 39,
+      "shared_shape_count": 21,
+      "overlap_ratio": 0.81
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_data_integrity.py",
+      "file_b": "tests/unit/test_mapping_executor.py",
+      "tests_a": 26,
+      "tests_b": 53,
+      "shared_shape_count": 21,
+      "overlap_ratio": 0.81
+    },
+    {
+      "file_a": "tests/unit/sentinel/test_agent_data_integrity.py",
+      "file_b": "tests/unit/test_ux_contract_checker.py",
+      "tests_a": 26,
+      "tests_b": 36,
+      "shared_shape_count": 21,
+      "overlap_ratio": 0.81
+    },
+    {
+      "file_a": "tests/unit/test_demo_data_loader.py",
+      "file_b": "tests/unit/test_persona_journey.py",
+      "tests_a": 27,
+      "tests_b": 55,
+      "shared_shape_count": 21,
+      "overlap_ratio": 0.78
+    },
+    {
+      "file_a": "tests/unit/test_demo_data_loader.py",
+      "file_b": "tests/unit/test_schema_diff.py",
+      "tests_a": 27,
+      "tests_b": 40,
+      "shared_shape_count": 21,
+      "overlap_ratio": 0.78
     }
   ]
 }

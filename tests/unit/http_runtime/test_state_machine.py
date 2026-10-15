@@ -1,5 +1,7 @@
 """Tests for state machine runtime validation."""
 
+import pytest
+
 from dazzle.http.runtime.state_machine import (
     GuardNotSatisfiedError,
     InvalidTransitionError,
@@ -16,694 +18,405 @@ from dazzle.http.specs.entity import (
 )
 
 
-class TestTransitionValidator:
-    """Tests for TransitionValidator."""
-
-    def test_valid_transition(self) -> None:
-        """Test that valid transitions pass validation."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["open", "assigned", "resolved", "closed"],
-            transitions=[
-                StateTransitionSpec(from_state="open", to_state="assigned"),
-                StateTransitionSpec(from_state="assigned", to_state="resolved"),
-                StateTransitionSpec(from_state="resolved", to_state="closed"),
-            ],
-        )
-
-        validator = TransitionValidator(sm)
-        result = validator.validate_transition("open", "assigned", {})
-
-        assert result.is_valid
-        assert result.error is None
-        assert result.transition is not None
-        assert result.transition.from_state == "open"
-        assert result.transition.to_state == "assigned"
-
-    def test_invalid_transition(self) -> None:
-        """Test that invalid transitions fail validation."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["open", "assigned", "resolved", "closed"],
-            transitions=[
-                StateTransitionSpec(from_state="open", to_state="assigned"),
-                StateTransitionSpec(from_state="assigned", to_state="resolved"),
-            ],
-        )
-
-        validator = TransitionValidator(sm)
-        result = validator.validate_transition("open", "resolved", {})
-
-        assert not result.is_valid
-        assert isinstance(result.error, InvalidTransitionError)
-        assert result.error.from_state == "open"
-        assert result.error.to_state == "resolved"
-        assert "assigned" in result.error.allowed_states
-
-    def test_wildcard_transition(self) -> None:
-        """Test that wildcard transitions work from any state."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["draft", "published", "archived"],
-            transitions=[
-                StateTransitionSpec(from_state="draft", to_state="published"),
-                StateTransitionSpec(from_state="*", to_state="draft"),  # Reset from any state
-            ],
-        )
-
-        validator = TransitionValidator(sm)
-
-        # Wildcard allows draft from published
-        result = validator.validate_transition("published", "draft", {})
-        assert result.is_valid
-
-        # Wildcard allows draft from archived
-        result = validator.validate_transition("archived", "draft", {})
-        assert result.is_valid
-
-    def test_requires_field_guard_satisfied(self) -> None:
-        """Test that field guard passes when field has value."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["open", "assigned"],
-            transitions=[
-                StateTransitionSpec(
-                    from_state="open",
-                    to_state="assigned",
-                    guards=[TransitionGuardSpec(requires_field="assignee")],
-                ),
-            ],
-        )
-
-        validator = TransitionValidator(sm)
-        result = validator.validate_transition("open", "assigned", {"assignee": "john@example.com"})
-
-        assert result.is_valid
-
-    def test_requires_field_guard_not_satisfied(self) -> None:
-        """Test that field guard fails when field is empty."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["open", "assigned"],
-            transitions=[
-                StateTransitionSpec(
-                    from_state="open",
-                    to_state="assigned",
-                    guards=[TransitionGuardSpec(requires_field="assignee")],
-                ),
-            ],
-        )
-
-        validator = TransitionValidator(sm)
-        result = validator.validate_transition("open", "assigned", {"assignee": None})
-
-        assert not result.is_valid
-        assert isinstance(result.error, GuardNotSatisfiedError)
-        assert result.error.guard_type == "requires"
-        assert result.error.guard_value == "assignee"
-
-    def test_requires_field_guard_empty_string(self) -> None:
-        """Test that field guard fails when field is empty string."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["open", "assigned"],
-            transitions=[
-                StateTransitionSpec(
-                    from_state="open",
-                    to_state="assigned",
-                    guards=[TransitionGuardSpec(requires_field="assignee")],
-                ),
-            ],
-        )
-
-        validator = TransitionValidator(sm)
-        result = validator.validate_transition("open", "assigned", {"assignee": ""})
-
-        assert not result.is_valid
-        assert isinstance(result.error, GuardNotSatisfiedError)
-
-    def test_role_guard_satisfied(self) -> None:
-        """Test that role guard passes when user has role."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["draft", "published"],
-            transitions=[
-                StateTransitionSpec(
-                    from_state="draft",
-                    to_state="published",
-                    guards=[TransitionGuardSpec(requires_role="editor")],
-                ),
-            ],
-        )
-
-        validator = TransitionValidator(sm)
-        result = validator.validate_transition("draft", "published", {}, user_roles=["editor"])
-
-        assert result.is_valid
-
-    def test_role_guard_not_satisfied(self) -> None:
-        """Test that role guard fails when user lacks role."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["draft", "published"],
-            transitions=[
-                StateTransitionSpec(
-                    from_state="draft",
-                    to_state="published",
-                    guards=[TransitionGuardSpec(requires_role="editor")],
-                ),
-            ],
-        )
-
-        validator = TransitionValidator(sm)
-        result = validator.validate_transition("draft", "published", {}, user_roles=["viewer"])
-
-        assert not result.is_valid
-        assert isinstance(result.error, GuardNotSatisfiedError)
-        assert result.error.guard_type == "role"
-        assert result.error.guard_value == "editor"
-
-    def test_no_transition_when_state_unchanged(self) -> None:
-        """Test that same state is allowed (no-op)."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["open", "closed"],
-            transitions=[StateTransitionSpec(from_state="open", to_state="closed")],
-        )
-
-        validator = TransitionValidator(sm)
-        result = validator.validate_transition("open", "open", {})
-
-        # Same state should be valid (no actual transition)
-        assert result.is_valid
-
-
-class TestValidateStatusUpdate:
-    """Tests for validate_status_update helper function."""
-
-    def test_no_state_machine(self) -> None:
-        """Test that None is returned when entity has no state machine."""
-        result = validate_status_update(
-            state_machine=None,
-            current_data={"status": "open"},
-            update_data={"status": "closed"},
-        )
-        assert result is None
-
-    def test_no_status_in_update(self) -> None:
-        """Test that None is returned when status is not being updated."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["open", "closed"],
-            transitions=[StateTransitionSpec(from_state="open", to_state="closed")],
-        )
-
-        result = validate_status_update(
-            state_machine=sm,
-            current_data={"status": "open", "title": "Test"},
-            update_data={"title": "Updated Test"},  # No status change
-        )
-        assert result is None
-
-    def test_valid_status_change(self) -> None:
-        """Test valid status change validation."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["open", "closed"],
-            transitions=[StateTransitionSpec(from_state="open", to_state="closed")],
-        )
-
-        result = validate_status_update(
-            state_machine=sm,
-            current_data={"status": "open"},
-            update_data={"status": "closed"},
-        )
-
-        assert result is not None
-        assert result.is_valid
-
-    def test_invalid_status_change(self) -> None:
-        """Test invalid status change validation."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["open", "assigned", "closed"],
-            transitions=[
-                StateTransitionSpec(from_state="open", to_state="assigned"),
-                StateTransitionSpec(from_state="assigned", to_state="closed"),
-            ],
-        )
-
-        result = validate_status_update(
-            state_machine=sm,
-            current_data={"status": "open"},
-            update_data={"status": "closed"},  # Can't skip assigned
-        )
-
-        assert result is not None
-        assert not result.is_valid
-        assert isinstance(result.error, InvalidTransitionError)
-
-    def test_initial_status_valid(self) -> None:
-        """Test setting initial status when current is None."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["draft", "published"],
-            transitions=[StateTransitionSpec(from_state="draft", to_state="published")],
-        )
-
-        result = validate_status_update(
-            state_machine=sm,
-            current_data={"status": None},
-            update_data={"status": "draft"},
-        )
-
-        assert result is not None
-        assert result.is_valid
-
-    def test_initial_status_invalid(self) -> None:
-        """Test setting invalid initial status."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["draft", "published"],
-            transitions=[StateTransitionSpec(from_state="draft", to_state="published")],
-        )
-
-        result = validate_status_update(
-            state_machine=sm,
-            current_data={"status": None},
-            update_data={"status": "invalid_state"},
-        )
-
-        assert result is not None
-        assert not result.is_valid
-        assert isinstance(result.error, InvalidTransitionError)
-
-    def test_merged_data_for_guards(self) -> None:
-        """Test that update data is merged with current for guard checks."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["open", "assigned"],
-            transitions=[
-                StateTransitionSpec(
-                    from_state="open",
-                    to_state="assigned",
-                    guards=[TransitionGuardSpec(requires_field="assignee")],
-                ),
-            ],
-        )
-
-        # Assignee is in update_data, not current_data
-        result = validate_status_update(
-            state_machine=sm,
-            current_data={"status": "open"},
-            update_data={"status": "assigned", "assignee": "john@example.com"},
-        )
-
-        assert result is not None
-        assert result.is_valid
-
-
-class TestStateMachineSpec:
-    """Tests for StateMachineSpec helper methods."""
-
-    def test_get_transitions_from(self) -> None:
-        """Test getting transitions from a state."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["a", "b", "c"],
-            transitions=[
-                StateTransitionSpec(from_state="a", to_state="b"),
-                StateTransitionSpec(from_state="a", to_state="c"),
-                StateTransitionSpec(from_state="b", to_state="c"),
-            ],
-        )
-
-        from_a = sm.get_transitions_from("a")
-        assert len(from_a) == 2
-        assert {t.to_state for t in from_a} == {"b", "c"}
-
-    def test_get_allowed_targets(self) -> None:
-        """Test getting allowed target states."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["a", "b", "c"],
-            transitions=[
-                StateTransitionSpec(from_state="a", to_state="b"),
-                StateTransitionSpec(from_state="a", to_state="c"),
-            ],
-        )
-
-        targets = sm.get_allowed_targets("a")
-        assert targets == {"b", "c"}
-
-    def test_is_transition_allowed(self) -> None:
-        """Test checking if transition is allowed."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["a", "b", "c"],
-            transitions=[
-                StateTransitionSpec(from_state="a", to_state="b"),
-            ],
-        )
-
-        assert sm.is_transition_allowed("a", "b") is True
-        assert sm.is_transition_allowed("a", "c") is False
-
-    def test_get_transition(self) -> None:
-        """Test getting specific transition."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["a", "b"],
-            transitions=[
-                StateTransitionSpec(from_state="a", to_state="b"),
-            ],
-        )
-
-        t = sm.get_transition("a", "b")
-        assert t is not None
-        assert t.from_state == "a"
-        assert t.to_state == "b"
-
-        t_none = sm.get_transition("b", "a")
-        assert t_none is None
-
-
-class TestAutoTransitionSpec:
-    """Tests for AutoTransitionSpec."""
-
-    def test_delay_seconds_minutes(self) -> None:
-        """Test delay calculation for minutes."""
-        auto = AutoTransitionSpec(delay_value=5, delay_unit=TimeUnit.MINUTES)
-        assert auto.delay_seconds == 5 * 60
-
-    def test_delay_seconds_hours(self) -> None:
-        """Test delay calculation for hours."""
-        auto = AutoTransitionSpec(delay_value=2, delay_unit=TimeUnit.HOURS)
-        assert auto.delay_seconds == 2 * 3600
-
-    def test_delay_seconds_days(self) -> None:
-        """Test delay calculation for days."""
-        auto = AutoTransitionSpec(delay_value=7, delay_unit=TimeUnit.DAYS)
-        assert auto.delay_seconds == 7 * 86400
-
+def _sm(
+    states: list[str], *edges: tuple[str, str], guards: list[TransitionGuardSpec] | None = None
+) -> StateMachineSpec:
+    """A status state machine; ``guards`` attach to every edge."""
+    return StateMachineSpec(
+        status_field="status",
+        states=states,
+        transitions=[
+            StateTransitionSpec(from_state=a, to_state=b, guards=list(guards or []))
+            for a, b in edges
+        ],
+    )
+
+
+_REQUIRES_ASSIGNEE = [TransitionGuardSpec(requires_field="assignee")]
+_REQUIRES_EDITOR = [TransitionGuardSpec(requires_role="editor")]
+_FOUR_EYE = TransitionGuardSpec(
+    guard_expr={"op": "!=", "left": {"path": ["reviewer"]}, "right": {"path": ["preparer"]}},
+    guard_message="Reviewer must differ from the preparer (four-eye rule)",
+)
 
 # =============================================================================
-# Expression Guard Tests
+# TransitionValidator
 # =============================================================================
 
 
-class TestEvaluateGuardExpr:
-    """Tests for evaluate_guard_expr — typed expression evaluation."""
-
-    def test_simple_field_equality(self) -> None:
-        """reviewer != preparer (four-eye rule)."""
-        expr = {
-            "op": "!=",
-            "left": {"path": ["reviewer"]},
-            "right": {"path": ["preparer"]},
-        }
-        assert evaluate_guard_expr(expr, {"reviewer": "alice", "preparer": "bob"}) is True
-        assert evaluate_guard_expr(expr, {"reviewer": "alice", "preparer": "alice"}) is False
-
-    def test_field_equals_literal(self) -> None:
-        """status == 'completed'."""
-        expr = {
-            "op": "==",
-            "left": {"path": ["status"]},
-            "right": {"value": "completed"},
-        }
-        assert evaluate_guard_expr(expr, {"status": "completed"}) is True
-        assert evaluate_guard_expr(expr, {"status": "pending"}) is False
-
-    def test_self_prefix_stripped(self) -> None:
-        """self->reviewer != self->preparer — 'self' prefix ignored."""
-        expr = {
-            "op": "!=",
-            "left": {"path": ["self", "reviewer"]},
-            "right": {"path": ["self", "preparer"]},
-        }
-        assert evaluate_guard_expr(expr, {"reviewer": "alice", "preparer": "bob"}) is True
-
-    def test_nested_field_ref(self) -> None:
-        """self->contact->aml_status == 'completed'."""
-        expr = {
-            "op": "==",
-            "left": {"path": ["self", "contact", "aml_status"]},
-            "right": {"value": "completed"},
-        }
-        data = {"contact": {"aml_status": "completed"}}
-        assert evaluate_guard_expr(expr, data) is True
-        data = {"contact": {"aml_status": "pending"}}
-        assert evaluate_guard_expr(expr, data) is False
-
-    def test_and_expression(self) -> None:
-        """reviewer != preparer and status == 'review'."""
-        expr = {
-            "op": "and",
-            "left": {
-                "op": "!=",
-                "left": {"path": ["reviewer"]},
-                "right": {"path": ["preparer"]},
-            },
-            "right": {
-                "op": "==",
-                "left": {"path": ["status"]},
-                "right": {"value": "review"},
-            },
-        }
-        data = {"reviewer": "alice", "preparer": "bob", "status": "review"}
-        assert evaluate_guard_expr(expr, data) is True
-        data = {"reviewer": "alice", "preparer": "alice", "status": "review"}
-        assert evaluate_guard_expr(expr, data) is False
-
-    def test_or_expression(self) -> None:
-        """role == 'admin' or role == 'manager'."""
-        expr = {
-            "op": "or",
-            "left": {"op": "==", "left": {"path": ["role"]}, "right": {"value": "admin"}},
-            "right": {"op": "==", "left": {"path": ["role"]}, "right": {"value": "manager"}},
-        }
-        assert evaluate_guard_expr(expr, {"role": "admin"}) is True
-        assert evaluate_guard_expr(expr, {"role": "manager"}) is True
-        assert evaluate_guard_expr(expr, {"role": "viewer"}) is False
-
-    def test_not_expression(self) -> None:
-        """not is_locked."""
-        expr = {"op": "not", "operand": {"path": ["is_locked"]}}
-        assert evaluate_guard_expr(expr, {"is_locked": False}) is True
-        assert evaluate_guard_expr(expr, {"is_locked": True}) is False
-
-    def test_numeric_comparison(self) -> None:
-        """amount > 0."""
-        expr = {
-            "op": ">",
-            "left": {"path": ["amount"]},
-            "right": {"value": 0},
-        }
-        assert evaluate_guard_expr(expr, {"amount": 100}) is True
-        assert evaluate_guard_expr(expr, {"amount": 0}) is False
-        assert evaluate_guard_expr(expr, {"amount": -5}) is False
-
-    def test_null_field_handling(self) -> None:
-        """reviewer != null (field must be set)."""
-        expr = {
-            "op": "!=",
-            "left": {"path": ["reviewer"]},
-            "right": {"value": None},
-        }
-        assert evaluate_guard_expr(expr, {"reviewer": "alice"}) is True
-        assert evaluate_guard_expr(expr, {"reviewer": None}) is False
-        assert evaluate_guard_expr(expr, {}) is False
-
-    def test_in_expression(self) -> None:
-        """status in ['approved', 'verified']."""
-        expr = {
-            "value": {"path": ["status"]},
-            "items": [{"value": "approved"}, {"value": "verified"}],
-            "negated": False,
-        }
-        assert evaluate_guard_expr(expr, {"status": "approved"}) is True
-        assert evaluate_guard_expr(expr, {"status": "pending"}) is False
-
-    def test_not_in_expression(self) -> None:
-        """status not in ['draft', 'cancelled']."""
-        expr = {
-            "value": {"path": ["status"]},
-            "items": [{"value": "draft"}, {"value": "cancelled"}],
-            "negated": True,
-        }
-        assert evaluate_guard_expr(expr, {"status": "active"}) is True
-        assert evaluate_guard_expr(expr, {"status": "draft"}) is False
-
-    def test_literal_true(self) -> None:
-        """Literal true always passes."""
-        assert evaluate_guard_expr({"value": True}, {}) is True
-
-    def test_literal_false(self) -> None:
-        """Literal false always fails."""
-        assert evaluate_guard_expr({"value": False}, {}) is False
+@pytest.mark.parametrize(
+    ("sm", "from_state", "to_state", "data", "roles"),
+    [
+        pytest.param(
+            _sm(["open", "assigned"], ("open", "assigned")),
+            "open",
+            "assigned",
+            {},
+            None,
+            id="declared-edge",
+        ),
+        pytest.param(
+            _sm(["draft", "published", "archived"], ("draft", "published"), ("*", "draft")),
+            "published",
+            "draft",
+            {},
+            None,
+            id="wildcard-from-published",
+        ),
+        pytest.param(
+            _sm(["draft", "published", "archived"], ("draft", "published"), ("*", "draft")),
+            "archived",
+            "draft",
+            {},
+            None,
+            id="wildcard-from-archived",
+        ),
+        pytest.param(
+            _sm(["open", "assigned"], ("open", "assigned"), guards=_REQUIRES_ASSIGNEE),
+            "open",
+            "assigned",
+            {"assignee": "john@example.com"},
+            None,
+            id="requires-field-present",
+        ),
+        pytest.param(
+            _sm(["draft", "published"], ("draft", "published"), guards=_REQUIRES_EDITOR),
+            "draft",
+            "published",
+            {},
+            ["editor"],
+            id="requires-role-held",
+        ),
+        pytest.param(
+            _sm(["open", "closed"], ("open", "closed")),
+            "open",
+            "open",
+            {},
+            None,
+            id="unchanged-state-is-a-no-op",
+        ),
+    ],
+)
+def test_transition_accepted(sm, from_state, to_state, data, roles) -> None:
+    result = TransitionValidator(sm).validate_transition(
+        from_state, to_state, data, user_roles=roles
+    )
+    assert result.is_valid
+    assert result.error is None
 
 
-class TestExpressionGuardInValidator:
-    """Tests for expression guards integrated into TransitionValidator."""
+def test_declared_edge_returns_its_transition() -> None:
+    sm = _sm(["open", "assigned"], ("open", "assigned"), ("assigned", "open"))
+    result = TransitionValidator(sm).validate_transition("open", "assigned", {})
+    assert result.transition is not None
+    assert (result.transition.from_state, result.transition.to_state) == ("open", "assigned")
 
-    def _four_eye_guard(self) -> TransitionGuardSpec:
-        """Create a 'reviewer != preparer' expression guard."""
-        return TransitionGuardSpec(
-            guard_expr={
-                "op": "!=",
-                "left": {"path": ["reviewer"]},
-                "right": {"path": ["preparer"]},
-            },
-            guard_message="Reviewer must differ from the preparer (four-eye rule)",
-        )
 
-    def test_expr_guard_passes(self) -> None:
-        """Expression guard passes when condition is true."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["review", "closed"],
-            transitions=[
-                StateTransitionSpec(
-                    from_state="review",
-                    to_state="closed",
-                    guards=[self._four_eye_guard()],
-                ),
-            ],
-        )
-        validator = TransitionValidator(sm)
-        result = validator.validate_transition(
-            "review", "closed", {"reviewer": "alice", "preparer": "bob"}
-        )
-        assert result.is_valid
+def test_undeclared_edge_is_invalid_transition() -> None:
+    sm = _sm(["open", "assigned", "resolved"], ("open", "assigned"), ("assigned", "resolved"))
+    result = TransitionValidator(sm).validate_transition("open", "resolved", {})
+    assert not result.is_valid
+    assert isinstance(result.error, InvalidTransitionError)
+    assert (result.error.from_state, result.error.to_state) == ("open", "resolved")
+    assert "assigned" in result.error.allowed_states
 
-    def test_expr_guard_fails(self) -> None:
-        """Expression guard fails when condition is false."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["review", "closed"],
-            transitions=[
-                StateTransitionSpec(
-                    from_state="review",
-                    to_state="closed",
-                    guards=[self._four_eye_guard()],
-                ),
-            ],
-        )
-        validator = TransitionValidator(sm)
-        result = validator.validate_transition(
-            "review", "closed", {"reviewer": "alice", "preparer": "alice"}
-        )
-        assert not result.is_valid
-        assert isinstance(result.error, GuardNotSatisfiedError)
-        assert result.error.guard_type == "expression"
-        assert "four-eye" in str(result.error)
 
-    def test_expr_guard_uses_custom_message(self) -> None:
-        """Guard message is the custom message from DSL."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["review", "closed"],
-            transitions=[
-                StateTransitionSpec(
-                    from_state="review",
-                    to_state="closed",
-                    guards=[self._four_eye_guard()],
-                ),
-            ],
-        )
-        validator = TransitionValidator(sm)
-        result = validator.validate_transition(
-            "review", "closed", {"reviewer": "alice", "preparer": "alice"}
-        )
-        assert not result.is_valid
-        assert "Reviewer must differ from the preparer" in str(result.error)
+@pytest.mark.parametrize(
+    ("guards", "data", "roles", "guard_type", "guard_value"),
+    [
+        pytest.param(
+            _REQUIRES_ASSIGNEE, {"assignee": None}, None, "requires", "assignee", id="field-none"
+        ),
+        pytest.param(
+            _REQUIRES_ASSIGNEE,
+            {"assignee": ""},
+            None,
+            "requires",
+            "assignee",
+            id="field-empty-string",
+        ),
+        pytest.param(_REQUIRES_EDITOR, {}, ["viewer"], "role", "editor", id="role-missing"),
+    ],
+)
+def test_guard_rejects(guards, data, roles, guard_type, guard_value) -> None:
+    sm = _sm(["a", "b"], ("a", "b"), guards=guards)
+    result = TransitionValidator(sm).validate_transition("a", "b", data, user_roles=roles)
+    assert not result.is_valid
+    assert isinstance(result.error, GuardNotSatisfiedError)
+    assert (result.error.guard_type, result.error.guard_value) == (guard_type, guard_value)
 
-    def test_expr_guard_combined_with_field_guard(self) -> None:
-        """Expression + field guards both checked."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["review", "closed"],
-            transitions=[
-                StateTransitionSpec(
-                    from_state="review",
-                    to_state="closed",
-                    guards=[
-                        TransitionGuardSpec(requires_field="reviewer"),
-                        self._four_eye_guard(),
-                    ],
-                ),
-            ],
-        )
-        validator = TransitionValidator(sm)
 
-        # Field guard fails (no reviewer)
-        result = validator.validate_transition("review", "closed", {"preparer": "bob"})
-        assert not result.is_valid
-        assert result.error.guard_type == "requires"  # type: ignore[union-attr]
+# =============================================================================
+# validate_status_update
+# =============================================================================
 
-        # Field guard passes but expr guard fails (same person)
-        result = validator.validate_transition(
-            "review", "closed", {"reviewer": "alice", "preparer": "alice"}
-        )
-        assert not result.is_valid
-        assert result.error.guard_type == "expression"  # type: ignore[union-attr]
 
-        # Both pass
-        result = validator.validate_transition(
-            "review", "closed", {"reviewer": "alice", "preparer": "bob"}
-        )
-        assert result.is_valid
+@pytest.mark.parametrize(
+    ("sm", "current", "update"),
+    [
+        pytest.param(None, {"status": "open"}, {"status": "closed"}, id="no-state-machine"),
+        pytest.param(
+            _sm(["open", "closed"], ("open", "closed")),
+            {"status": "open", "title": "Test"},
+            {"title": "Updated Test"},
+            id="status-not-in-update",
+        ),
+    ],
+)
+def test_status_update_not_checked(sm, current, update) -> None:
+    assert (
+        validate_status_update(state_machine=sm, current_data=current, update_data=update) is None
+    )
 
-    def test_expr_guard_default_message(self) -> None:
-        """Without custom message, a default is used."""
-        guard = TransitionGuardSpec(
-            guard_expr={
-                "op": ">",
-                "left": {"path": ["amount"]},
-                "right": {"value": 0},
-            },
-            # No guard_message
-        )
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["pending", "approved"],
-            transitions=[
-                StateTransitionSpec(from_state="pending", to_state="approved", guards=[guard]),
-            ],
-        )
-        validator = TransitionValidator(sm)
-        result = validator.validate_transition("pending", "approved", {"amount": 0})
-        assert not result.is_valid
-        assert "Guard condition not met" in str(result.error)
 
-    def test_validate_status_update_with_expr_guard(self) -> None:
-        """Expression guards work through the validate_status_update entry point."""
-        sm = StateMachineSpec(
-            status_field="status",
-            states=["review", "closed"],
-            transitions=[
-                StateTransitionSpec(
-                    from_state="review",
-                    to_state="closed",
-                    guards=[self._four_eye_guard()],
-                ),
-            ],
-        )
-        # Different people — should pass
-        result = validate_status_update(
-            sm,
-            current_data={"status": "review", "reviewer": "alice", "preparer": "bob"},
-            update_data={"status": "closed"},
-        )
-        assert result is not None
-        assert result.is_valid
+@pytest.mark.parametrize(
+    ("sm", "current", "update", "error_type"),
+    [
+        pytest.param(
+            _sm(["open", "closed"], ("open", "closed")),
+            {"status": "open"},
+            {"status": "closed"},
+            None,
+            id="declared-edge",
+        ),
+        pytest.param(
+            _sm(["open", "assigned", "closed"], ("open", "assigned"), ("assigned", "closed")),
+            {"status": "open"},
+            {"status": "closed"},
+            InvalidTransitionError,
+            id="skipping-a-state-is-invalid",
+        ),
+        pytest.param(
+            _sm(["draft", "published"], ("draft", "published")),
+            {"status": None},
+            {"status": "draft"},
+            None,
+            id="initial-status-declared",
+        ),
+        pytest.param(
+            _sm(["draft", "published"], ("draft", "published")),
+            {"status": None},
+            {"status": "invalid_state"},
+            InvalidTransitionError,
+            id="initial-status-undeclared",
+        ),
+        pytest.param(
+            _sm(["open", "assigned"], ("open", "assigned"), guards=_REQUIRES_ASSIGNEE),
+            {"status": "open"},
+            {"status": "assigned", "assignee": "john@example.com"},
+            None,
+            id="guard-sees-update-merged-over-current",
+        ),
+        pytest.param(
+            _sm(["review", "closed"], ("review", "closed"), guards=[_FOUR_EYE]),
+            {"status": "review", "reviewer": "alice", "preparer": "bob"},
+            {"status": "closed"},
+            None,
+            id="expr-guard-passes",
+        ),
+        pytest.param(
+            _sm(["review", "closed"], ("review", "closed"), guards=[_FOUR_EYE]),
+            {"status": "review", "reviewer": "alice", "preparer": "alice"},
+            {"status": "closed"},
+            GuardNotSatisfiedError,
+            id="expr-guard-fails",
+        ),
+    ],
+)
+def test_status_update(sm, current, update, error_type) -> None:
+    result = validate_status_update(state_machine=sm, current_data=current, update_data=update)
+    assert result is not None
+    assert result.is_valid is (error_type is None)
+    if error_type is not None:
+        assert isinstance(result.error, error_type)
 
-        # Same person — should fail
-        result = validate_status_update(
-            sm,
-            current_data={"status": "review", "reviewer": "alice", "preparer": "alice"},
-            update_data={"status": "closed"},
-        )
-        assert result is not None
-        assert not result.is_valid
+
+# =============================================================================
+# StateMachineSpec helpers
+# =============================================================================
+
+
+def test_spec_transition_queries() -> None:
+    sm = _sm(["a", "b", "c"], ("a", "b"), ("a", "c"), ("b", "c"))
+    assert {t.to_state for t in sm.get_transitions_from("a")} == {"b", "c"}
+    assert len(sm.get_transitions_from("a")) == 2
+    assert sm.get_allowed_targets("a") == {"b", "c"}
+    assert sm.is_transition_allowed("a", "b") is True
+    assert sm.is_transition_allowed("c", "a") is False
+    t = sm.get_transition("a", "b")
+    assert t is not None and (t.from_state, t.to_state) == ("a", "b")
+    assert sm.get_transition("b", "a") is None
+
+
+@pytest.mark.parametrize(
+    ("value", "unit", "seconds"),
+    [
+        pytest.param(5, TimeUnit.MINUTES, 300, id="minutes"),
+        pytest.param(2, TimeUnit.HOURS, 7200, id="hours"),
+        pytest.param(7, TimeUnit.DAYS, 604800, id="days"),
+    ],
+)
+def test_auto_transition_delay_seconds(value, unit, seconds) -> None:
+    assert AutoTransitionSpec(delay_value=value, delay_unit=unit).delay_seconds == seconds
+
+
+# =============================================================================
+# evaluate_guard_expr
+# =============================================================================
+
+
+def _path(*p: str) -> dict:
+    return {"path": list(p)}
+
+
+def _lit(v: object) -> dict:
+    return {"value": v}
+
+
+def _bin(op: str, left: dict, right: dict) -> dict:
+    return {"op": op, "left": left, "right": right}
+
+
+_REVIEWER_NE_PREPARER = _bin("!=", _path("reviewer"), _path("preparer"))
+_STATUS_IS_COMPLETED = _bin("==", _path("status"), _lit("completed"))
+_AML_COMPLETED = _bin("==", _path("self", "contact", "aml_status"), _lit("completed"))
+_FOUR_EYE_AND_REVIEW = _bin(
+    "and", _REVIEWER_NE_PREPARER, _bin("==", _path("status"), _lit("review"))
+)
+_ADMIN_OR_MANAGER = _bin(
+    "or", _bin("==", _path("role"), _lit("admin")), _bin("==", _path("role"), _lit("manager"))
+)
+_NOT_LOCKED = {"op": "not", "operand": _path("is_locked")}
+_AMOUNT_POSITIVE = _bin(">", _path("amount"), _lit(0))
+_REVIEWER_SET = _bin("!=", _path("reviewer"), _lit(None))
+_STATUS_IN = {
+    "value": _path("status"),
+    "items": [_lit("approved"), _lit("verified")],
+    "negated": False,
+}
+_STATUS_NOT_IN = {
+    "value": _path("status"),
+    "items": [_lit("draft"), _lit("cancelled")],
+    "negated": True,
+}
+
+
+@pytest.mark.parametrize(
+    ("expr", "data", "expected"),
+    [
+        pytest.param(
+            _REVIEWER_NE_PREPARER,
+            {"reviewer": "alice", "preparer": "bob"},
+            True,
+            id="field-ne-field.differ",
+        ),
+        pytest.param(
+            _REVIEWER_NE_PREPARER,
+            {"reviewer": "alice", "preparer": "alice"},
+            False,
+            id="field-ne-field.same",
+        ),
+        pytest.param(
+            _bin("!=", _path("self", "reviewer"), _path("self", "preparer")),
+            {"reviewer": "alice", "preparer": "bob"},
+            True,
+            id="self-prefix-stripped",
+        ),
+        pytest.param(
+            _STATUS_IS_COMPLETED, {"status": "completed"}, True, id="field-eq-literal.match"
+        ),
+        pytest.param(
+            _STATUS_IS_COMPLETED, {"status": "pending"}, False, id="field-eq-literal.miss"
+        ),
+        pytest.param(
+            _AML_COMPLETED, {"contact": {"aml_status": "completed"}}, True, id="nested-path.match"
+        ),
+        pytest.param(
+            _AML_COMPLETED, {"contact": {"aml_status": "pending"}}, False, id="nested-path.miss"
+        ),
+        pytest.param(
+            _FOUR_EYE_AND_REVIEW,
+            {"reviewer": "alice", "preparer": "bob", "status": "review"},
+            True,
+            id="and.both-true",
+        ),
+        pytest.param(
+            _FOUR_EYE_AND_REVIEW,
+            {"reviewer": "alice", "preparer": "alice", "status": "review"},
+            False,
+            id="and.left-false",
+        ),
+        pytest.param(_ADMIN_OR_MANAGER, {"role": "admin"}, True, id="or.left-true"),
+        pytest.param(_ADMIN_OR_MANAGER, {"role": "manager"}, True, id="or.right-true"),
+        pytest.param(_ADMIN_OR_MANAGER, {"role": "viewer"}, False, id="or.neither"),
+        pytest.param(_NOT_LOCKED, {"is_locked": False}, True, id="not.false-operand"),
+        pytest.param(_NOT_LOCKED, {"is_locked": True}, False, id="not.true-operand"),
+        pytest.param(_AMOUNT_POSITIVE, {"amount": 100}, True, id="gt.above"),
+        pytest.param(_AMOUNT_POSITIVE, {"amount": 0}, False, id="gt.equal"),
+        pytest.param(_AMOUNT_POSITIVE, {"amount": -5}, False, id="gt.below"),
+        pytest.param(_REVIEWER_SET, {"reviewer": "alice"}, True, id="ne-null.set"),
+        pytest.param(_REVIEWER_SET, {"reviewer": None}, False, id="ne-null.none"),
+        pytest.param(_REVIEWER_SET, {}, False, id="ne-null.missing-key"),
+        pytest.param(_STATUS_IN, {"status": "approved"}, True, id="in.member"),
+        pytest.param(_STATUS_IN, {"status": "pending"}, False, id="in.non-member"),
+        pytest.param(_STATUS_NOT_IN, {"status": "active"}, True, id="not-in.non-member"),
+        pytest.param(_STATUS_NOT_IN, {"status": "draft"}, False, id="not-in.member"),
+        pytest.param(_lit(True), {}, True, id="literal-true"),
+        pytest.param(_lit(False), {}, False, id="literal-false"),
+    ],
+)
+def test_evaluate_guard_expr(expr, data, expected) -> None:
+    assert evaluate_guard_expr(expr, data) is expected
+
+
+# =============================================================================
+# Expression guards inside TransitionValidator
+# =============================================================================
+
+
+def test_four_eye_expr_guard_rejects_same_person_with_custom_message() -> None:
+    validator = TransitionValidator(
+        _sm(["review", "closed"], ("review", "closed"), guards=[_FOUR_EYE])
+    )
+    assert validator.validate_transition(
+        "review", "closed", {"reviewer": "alice", "preparer": "bob"}
+    ).is_valid
+    result = validator.validate_transition(
+        "review", "closed", {"reviewer": "alice", "preparer": "alice"}
+    )
+    assert not result.is_valid
+    assert isinstance(result.error, GuardNotSatisfiedError)
+    assert result.error.guard_type == "expression"
+    assert "Reviewer must differ from the preparer (four-eye rule)" in str(result.error)
+
+
+def test_expr_guard_combined_with_field_guard() -> None:
+    """Guards are checked in order: the field guard first, then the expression."""
+    sm = _sm(
+        ["review", "closed"],
+        ("review", "closed"),
+        guards=[TransitionGuardSpec(requires_field="reviewer"), _FOUR_EYE],
+    )
+    validator = TransitionValidator(sm)
+
+    result = validator.validate_transition("review", "closed", {"preparer": "bob"})
+    assert not result.is_valid
+    assert result.error.guard_type == "requires"  # type: ignore[union-attr]
+
+    result = validator.validate_transition(
+        "review", "closed", {"reviewer": "alice", "preparer": "alice"}
+    )
+    assert not result.is_valid
+    assert result.error.guard_type == "expression"  # type: ignore[union-attr]
+
+    assert validator.validate_transition(
+        "review", "closed", {"reviewer": "alice", "preparer": "bob"}
+    ).is_valid
+
+
+def test_expr_guard_default_message() -> None:
+    guard = TransitionGuardSpec(guard_expr=_AMOUNT_POSITIVE)
+    sm = _sm(["pending", "approved"], ("pending", "approved"), guards=[guard])
+    result = TransitionValidator(sm).validate_transition("pending", "approved", {"amount": 0})
+    assert not result.is_valid
+    assert "Guard condition not met" in str(result.error)

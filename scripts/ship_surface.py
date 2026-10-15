@@ -66,26 +66,27 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_form_widget_search_select_phase3.py::test_no_empty_form_attribute_in_search_select_emit_sources",
     "tests/unit/test_form_widget_search_select_phase3.py::test_endpoint_and_typeahead_wiring",
     # cycle 2144: time leftover ISO must not invent a clock
-    "tests/unit/test_form_widget_showcase_phase3.py::test_time_controller_leftover_iso_does_not_invent",
+    "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[dz-time-leftover-iso-2144]",
     "tests/unit/test_form_field_parity_phase3b.py::test_time_field_emits_iso_companion",
     "tests/unit/test_form_field_parity_phase3b.py::test_datetime_local_field_emits_iso_companion",
     # cycle 2145: standalone date leftover ISO must not invent a date
-    "tests/unit/test_form_widget_showcase_phase3.py::test_date_controller_leftover_iso_does_not_invent",
+    "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[dz-date-leftover-iso-2145]",
     # cycle 2148: search-box leftover q must not invent Aurora
-    "tests/unit/test_form_widget_showcase_phase3.py::test_search_box_mock_leftover_query_does_not_invent",
+    "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[gallery-mock-search-filters-leftover-q-2148]",
     "tests/unit/test_form_field_parity_phase3b.py::test_date_field_emits_iso_companion",
     # cycle 2149: standalone number leftover junk must not invent a value
-    "tests/unit/test_form_widget_showcase_phase3.py::test_number_controller_leftover_does_not_invent",
+    "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[dz-number-leftover-2149]",
     "tests/unit/test_form_field_parity_phase3b.py::test_number_field_emits_companion",
     # cycle 2150: grid-edit leftover ISO must not invent a date commit
-    "tests/unit/test_form_widget_showcase_phase3.py::test_grid_edit_controller_leftover_iso_does_not_invent",
+    "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[dz-grid-edit-leftover-date-2150]",
     # cycle 2153: grid-edit leftover time ISO must not invent a clock
-    "tests/unit/test_form_widget_showcase_phase3.py::test_grid_edit_controller_leftover_time_iso_does_not_invent",
+    "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[dz-grid-edit-leftover-time-2153]",
     "tests/unit/test_list_fragment_rows_present_gate.py::test_datetime_column_humanises_and_is_inline_editable",
     # cycle 2155: grid-edit leftover number junk must not invent a value
-    "tests/unit/test_form_widget_showcase_phase3.py::test_grid_edit_controller_leftover_number_does_not_invent",
+    "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[dz-grid-edit-leftover-number-2155]",
     # cycle 2157: grid leftover page / page_size must not invent a window
-    "tests/unit/test_form_widget_showcase_phase3.py::test_grid_controller_leftover_page_does_not_invent",
+    "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[dz-grid-leftover-page-2157]",
+    "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[gallery-mock-grid-leftover-page-2157]",
     # cycle 2162: list leftover page / page_size must not invent an empty window
     "tests/unit/test_list_window_leftover.py",
     # cycle 2164: list leftover sort / filter / q must not invent a fetch
@@ -369,10 +370,10 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_region_sort_leftover.py",
     # cycle 2192: REST list leftover-honest sort must still ride known fields
     # (2191 pack missed TestListHandlerSort mocks without entity_spec)
-    "tests/unit/test_datatable_handler.py::TestListHandlerSort",
+    "tests/unit/test_datatable_handler.py::test_sort",
     # cycle 2193: leftover REST ?filter[zzz]= must not invent empty via fail-closed
     "tests/unit/test_rest_list_filter_leftover.py",
-    "tests/unit/test_datatable_handler.py::TestListHandlerFilter",
+    "tests/unit/test_datatable_handler.py::test_filters",
     # cycle 2194: leftover REST ?filter[status]=zzz (known key, leftover VALUE)
     "tests/unit/test_rest_list_filter_value_leftover.py",
     # cycle 2195: leftover REST ?filter[id]=zzz (known key, leftover UUID VALUE)
@@ -485,11 +486,11 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_list_fragment_rows_present_gate.py::test_number_column_is_inline_editable_kind_number",
     "tests/unit/test_grid_edit_ingest.py::test_number_kind_is_a_first_class_seam",
     # cycle 2151: PDF leftover page junk must not invent a page
-    "tests/unit/test_form_widget_showcase_phase3.py::test_pdf_controller_leftover_page_does_not_invent",
+    "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[dz-pdf-leftover-page-2151]",
     # cycle 2152: PDF leftover zoom junk must not invent a scale
-    "tests/unit/test_form_widget_showcase_phase3.py::test_pdf_controller_leftover_zoom_does_not_invent",
+    "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[dz-pdf-leftover-zoom-2152]",
     # cycle 2156: leftover-zoom prove must not use 1.25 (fit collision)
-    "tests/unit/test_form_widget_showcase_phase3.py::test_pdf_leftover_zoom_behaviour_does_not_use_fit_colliding_scale",
+    "tests/unit/test_form_widget_showcase_phase3.py::test_controller_source_pin[hm-behaviour-pdf-zoom-avoids-fit-collision-2156]",
     # cycle 2171: setup-uv v8.2.0 still fetched uv.ndjson (GUIDE_WALK flake)
     "tests/unit/test_setup_dazzle_action.py",
     # cycle 2142/2147: stale-red hunt + wait-reset + CI --wait floor

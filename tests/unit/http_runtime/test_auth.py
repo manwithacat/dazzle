@@ -7,7 +7,7 @@ Tests user management, sessions, and auth endpoints.
 import os
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -64,73 +64,35 @@ def _clean_auth_tables() -> Any:
 # =============================================================================
 
 
-class TestPasswordHashing:
-    """Tests for password hashing functions."""
+def test_hash_password_is_salted() -> None:
+    hashed = hash_password("test_password_123")
+    assert hashed != "test_password_123"
+    assert "$" in hashed  # salt$hash format
+    assert len(hashed) > 50
+    assert hash_password("password1") != hash_password("password2")
+    # An explicit salt makes the hash deterministic and leads the stored value.
+    salted = hash_password("test_password", "fixed_salt_value")
+    assert salted == hash_password("test_password", "fixed_salt_value")
+    assert salted.startswith("fixed_salt_value$")
 
-    def test_hash_password_creates_hash(self) -> None:
-        """Test password hashing creates a hash."""
-        password = "test_password_123"
-        hashed = hash_password(password)
 
-        assert hashed != password
-        assert "$" in hashed  # salt$hash format
-        assert len(hashed) > 50  # reasonable length
-
-    def test_hash_password_with_salt(self) -> None:
-        """Test password hashing with explicit salt."""
-        password = "test_password"
-        salt = "fixed_salt_value"
-
-        hash1 = hash_password(password, salt)
-        hash2 = hash_password(password, salt)
-
-        assert hash1 == hash2
-        assert hash1.startswith(f"{salt}$")
-
-    def test_verify_password_correct(self) -> None:
-        """Test verifying correct password."""
-        password = "correct_password"
-        hashed = hash_password(password)
-
-        assert verify_password(password, hashed) is True
-
-    def test_verify_password_incorrect(self) -> None:
-        """Test verifying incorrect password."""
-        password = "correct_password"
-        hashed = hash_password(password)
-
-        assert verify_password("wrong_password", hashed) is False
-
-    def test_verify_password_invalid_hash(self) -> None:
-        """Test verifying with invalid hash format."""
-        assert verify_password("any", "invalid_hash_format") is False
-
-    def test_different_passwords_different_hashes(self) -> None:
-        """Test different passwords produce different hashes."""
-        hash1 = hash_password("password1")
-        hash2 = hash_password("password2")
-
-        assert hash1 != hash2
+@pytest.mark.parametrize(
+    ("candidate", "stored", "expected"),
+    [
+        pytest.param("correct_password", None, True, id="correct-password"),
+        pytest.param("wrong_password", None, False, id="wrong-password-rejected"),
+        pytest.param("any", "invalid_hash_format", False, id="malformed-hash-rejected"),
+    ],
+)
+def test_verify_password(candidate: str, stored: str | None, expected: bool) -> None:
+    """``stored=None`` means the real hash of ``correct_password``."""
+    stored = stored if stored is not None else hash_password("correct_password")
+    assert verify_password(candidate, stored) is expected
 
 
 # =============================================================================
 # AuthStore Tests
 # =============================================================================
-
-
-def test_scim_group_record_fields() -> None:
-    from dazzle.http.runtime.auth.models import ScimGroupRecord
-
-    g = ScimGroupRecord(
-        id="g1",
-        connection_id="c1",
-        display_name="Engineering",
-        created_at="2026-06-06T00:00:00",
-        updated_at="2026-06-06T00:00:00",
-    )
-    assert g.id == "g1"
-    assert g.connection_id == "c1"
-    assert g.display_name == "Engineering"
 
 
 @pytest.mark.postgres
@@ -171,19 +133,43 @@ class TestAuthStore:
         assert user.is_superuser is True
         assert user.roles == ["admin", "moderator"]
 
-    def test_get_user_by_email(self, auth_store: Any) -> None:
-        """Test getting user by email."""
-        auth_store.create_user(email="find@example.com", password="pass")
-
-        user = auth_store.get_user_by_email("find@example.com")
-
+    @pytest.mark.parametrize(
+        "lookup",
+        [
+            pytest.param(lambda s, u: s.get_user_by_email("find@example.com"), id="get-by-email"),
+            pytest.param(lambda s, u: s.get_user_by_id(u.id), id="get-by-id"),
+            pytest.param(
+                lambda s, u: s.authenticate("find@example.com", "correct_pass"),
+                id="authenticate-correct-password",
+            ),
+        ],
+    )
+    def test_lookup_hit_returns_the_user(self, auth_store: Any, lookup: Any) -> None:
+        created = auth_store.create_user(email="find@example.com", password="correct_pass")
+        user = lookup(auth_store, created)
         assert user is not None
-        assert user.email == "find@example.com"
+        assert (user.id, user.email) == (created.id, "find@example.com")
 
-    def test_get_user_by_email_not_found(self, auth_store: Any) -> None:
-        """Test getting non-existent user by email."""
-        user = auth_store.get_user_by_email("nonexistent@example.com")
-        assert user is None
+    @pytest.mark.parametrize(
+        "lookup",
+        [
+            pytest.param(
+                lambda s: s.get_user_by_email("nonexistent@example.com"), id="get-by-unknown-email"
+            ),
+            pytest.param(lambda s: s.get_user_by_id(uuid4()), id="get-by-unknown-id"),
+            pytest.param(
+                lambda s: s.authenticate("find@example.com", "wrong_pass"),
+                id="authenticate-wrong-password-rejected",
+            ),
+            pytest.param(
+                lambda s: s.authenticate("nonexistent@example.com", "any_pass"),
+                id="authenticate-unknown-user-rejected",
+            ),
+        ],
+    )
+    def test_lookup_miss_returns_none(self, auth_store: Any, lookup: Any) -> None:
+        auth_store.create_user(email="find@example.com", password="correct_pass")
+        assert lookup(auth_store) is None
 
     def test_email_normalized_on_create_and_lookup(self, auth_store: Any) -> None:
         """The store is the normalization chokepoint (#1342 M2): create_user stores the
@@ -255,44 +241,6 @@ class TestAuthStore:
         assert "collide on LOWER(email)" in str(exc.value)
         assert "dup@example.com" in str(exc.value)
 
-    def test_get_user_by_id(self, auth_store: Any) -> None:
-        """Test getting user by ID."""
-        created = auth_store.create_user(email="byid@example.com", password="pass")
-
-        user = auth_store.get_user_by_id(created.id)
-
-        assert user is not None
-        assert user.id == created.id
-
-    def test_get_user_by_id_not_found(self, auth_store: Any) -> None:
-        """Test getting non-existent user by ID."""
-        from uuid import uuid4
-
-        user = auth_store.get_user_by_id(uuid4())
-        assert user is None
-
-    def test_authenticate_success(self, auth_store: Any) -> None:
-        """Test successful authentication."""
-        auth_store.create_user(email="auth@example.com", password="correct_pass")
-
-        user = auth_store.authenticate("auth@example.com", "correct_pass")
-
-        assert user is not None
-        assert user.email == "auth@example.com"
-
-    def test_authenticate_wrong_password(self, auth_store: Any) -> None:
-        """Test authentication with wrong password."""
-        auth_store.create_user(email="wrong@example.com", password="correct_pass")
-
-        user = auth_store.authenticate("wrong@example.com", "wrong_pass")
-
-        assert user is None
-
-    def test_authenticate_nonexistent_user(self, auth_store: Any) -> None:
-        """Test authentication with non-existent user."""
-        user = auth_store.authenticate("nonexistent@example.com", "any_pass")
-        assert user is None
-
     def test_update_password(self, auth_store: Any) -> None:
         """Test updating user password."""
         user = auth_store.create_user(email="update@example.com", password="old_pass")
@@ -311,6 +259,12 @@ class TestAuthStore:
 # =============================================================================
 # Session Tests
 # =============================================================================
+
+
+def _deleted_session_id(store: Any, user: Any) -> str:
+    session = store.create_session(user)
+    assert store.delete_session(session.id) is True
+    return session.id
 
 
 @pytest.mark.postgres
@@ -373,35 +327,22 @@ class TestSessions:
         assert context.user.id == test_user.id
         assert context.session is not None
 
-    def test_validate_session_expired(self, auth_store: Any, test_user: Any) -> None:
-        """Test validating an expired session."""
-        session = auth_store.create_session(
-            test_user,
-            expires_in=timedelta(seconds=-1),  # Already expired
-        )
-
-        context = auth_store.validate_session(session.id)
-
-        assert context.is_authenticated is False
-        assert context.user is None
-
-    def test_validate_session_not_found(self, auth_store: Any) -> None:
-        """Test validating non-existent session."""
-        context = auth_store.validate_session("nonexistent")
-
-        assert context.is_authenticated is False
-        assert context.user is None
-
-    def test_delete_session(self, auth_store: Any, test_user: Any) -> None:
-        """Test deleting a session."""
-        session = auth_store.create_session(test_user)
-
-        result = auth_store.delete_session(session.id)
-
-        assert result is True
-        # Verify session is deleted
-        context = auth_store.validate_session(session.id)
-        assert context.is_authenticated is False
+    @pytest.mark.parametrize(
+        "session_id",
+        [
+            pytest.param(
+                lambda s, u: s.create_session(u, expires_in=timedelta(seconds=-1)).id,
+                id="expired-session-rejected",
+            ),
+            pytest.param(lambda s, u: "nonexistent", id="unknown-session-rejected"),
+            pytest.param(_deleted_session_id, id="deleted-session-rejected"),
+        ],
+    )
+    def test_validate_session_rejects(
+        self, auth_store: Any, test_user: Any, session_id: Any
+    ) -> None:
+        context = auth_store.validate_session(session_id(auth_store, test_user))
+        assert (context.is_authenticated, context.user) == (False, None)
 
     def test_delete_user_sessions(self, auth_store: Any, test_user: Any) -> None:
         """Test deleting all sessions for a user."""
@@ -511,11 +452,6 @@ class TestAuthContext:
 
 
 # =============================================================================
-# AuthMiddleware Tests
-# =============================================================================
-
-
-# =============================================================================
 # Auth Routes Integration Tests
 # =============================================================================
 
@@ -577,19 +513,58 @@ class TestAuthRoutes:
         assert response.status_code == 400
         assert "already registered" in response.json()["detail"]
 
-    def test_register_missing_fields(self, app: Any) -> None:
-        """Test registration with missing fields."""
-        _, client, _ = app
+    @pytest.mark.parametrize(
+        ("login_first", "path", "body", "status"),
+        [
+            # FastAPI returns 422 for validation errors (missing required fields).
+            pytest.param(
+                False,
+                "/auth/register",
+                {"email": "only@email.com"},
+                422,
+                id="register-missing-password-422",
+            ),
+            pytest.param(
+                False,
+                "/auth/login",
+                {"email": "user@example.com", "password": "wrong_pass"},
+                401,
+                id="login-wrong-password-401",
+            ),
+            pytest.param(
+                False,
+                "/auth/login",
+                {"email": "nonexistent@example.com", "password": "any_pass"},
+                401,
+                id="login-unknown-user-401",
+            ),
+            pytest.param(False, "/auth/me", None, 401, id="me-anonymous-401"),
+            pytest.param(
+                True,
+                "/auth/change-password",
+                {"current_password": "wrong_pass", "new_password": "new_pass"},
+                400,
+                id="change-password-wrong-current-400",
+            ),
+        ],
+    )
+    def test_route_refuses(
+        self, app: Any, login_first: bool, path: str, body: Any, status: int
+    ) -> None:
+        _, client, auth_store = app
+        auth_store.create_user(email="user@example.com", password="correct_pass")
+        cookies = None
+        if login_first:
+            cookies = client.post(
+                "/auth/login", json={"email": "user@example.com", "password": "correct_pass"}
+            ).cookies
 
-        response = client.post(
-            "/auth/register",
-            json={
-                "email": "only@email.com",
-            },
-        )
+        if body is None:
+            response = client.get(path, cookies=cookies)
+        else:
+            response = client.post(path, json=body, cookies=cookies)
 
-        # FastAPI returns 422 for validation errors (missing required fields)
-        assert response.status_code == 422
+        assert response.status_code == status
 
     def test_login_success(self, app: Any) -> None:
         """Test successful login."""
@@ -610,97 +585,45 @@ class TestAuthRoutes:
         assert data["user"]["email"] == "login@example.com"
         assert "dazzle_session" in response.cookies
 
-    def test_login_wrong_password(self, app: Any) -> None:
-        """Test login with wrong password."""
+    def test_logout_ends_the_session(self, app: Any) -> None:
         _, client, auth_store = app
-
-        auth_store.create_user(email="wrong@example.com", password="correct_pass")
-
-        response = client.post(
-            "/auth/login",
-            json={
-                "email": "wrong@example.com",
-                "password": "wrong_pass",
-            },
-        )
-
-        assert response.status_code == 401
-
-    def test_login_nonexistent_user(self, app: Any) -> None:
-        """Test login with non-existent user."""
-        _, client, _ = app
-
-        response = client.post(
-            "/auth/login",
-            json={
-                "email": "nonexistent@example.com",
-                "password": "any_pass",
-            },
-        )
-
-        assert response.status_code == 401
-
-    def test_logout(self, app: Any) -> None:
-        """Test logout."""
-        _, client, auth_store = app
-
-        # First login
         auth_store.create_user(email="logout@example.com", password="pass")
-        login_response = client.post(
-            "/auth/login",
-            json={
-                "email": "logout@example.com",
-                "password": "pass",
-            },
-        )
+        login = client.post("/auth/login", json={"email": "logout@example.com", "password": "pass"})
+        session_id = login.cookies["dazzle_session"]
 
-        # Then logout
-        response = client.post(
-            "/auth/logout",
-            cookies=login_response.cookies,
-        )
+        assert client.post("/auth/logout", cookies=login.cookies).status_code == 200
+        assert auth_store.validate_session(session_id).is_authenticated is False
 
-        assert response.status_code == 200
-
-    def test_login_includes_redirect_url(self, app: Any) -> None:
-        """Login response includes redirect_url for post-login navigation."""
-        _, client, auth_store = app
-
-        auth_store.create_user(email="redirect@example.com", password="pass")
-        response = client.post(
-            "/auth/login",
-            json={"email": "redirect@example.com", "password": "pass"},
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert "redirect_url" in data
-        # Default is /app when no persona routes configured
-        assert data["redirect_url"] == "/app"
-
-    def test_login_redirect_url_with_persona_routes(self) -> None:
-        """Login resolves redirect_url from user roles when persona_routes given."""
-        try:
-            from fastapi import FastAPI
-            from fastapi.testclient import TestClient
-        except ImportError:
-            pytest.skip("FastAPI not installed")
+    @pytest.mark.parametrize(
+        ("persona_routes", "roles", "redirect_url"),
+        [
+            pytest.param(None, [], "/app", id="default-app"),
+            pytest.param(
+                {"admin": "/app/workspaces/admin_dashboard"},
+                ["admin"],
+                "/app/workspaces/admin_dashboard",
+                id="persona-route-for-role",
+            ),
+        ],
+    )
+    def test_login_redirect_url(
+        self, persona_routes: Any, roles: list[str], redirect_url: str
+    ) -> None:
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
 
         auth_store = AuthStore(os.environ["DATABASE_URL"])
-        persona_routes = {"admin": "/app/workspaces/admin_dashboard"}
         app = FastAPI()
-        router = create_auth_routes(auth_store, persona_routes=persona_routes)
-        app.include_router(router)
+        app.include_router(create_auth_routes(auth_store, persona_routes=persona_routes))
         client = TestClient(app)
+        auth_store.create_user(email="redirect@example.com", password="pass", roles=roles)
 
-        auth_store.create_user(email="admin@example.com", password="pass", roles=["admin"])
         response = client.post(
-            "/auth/login",
-            json={"email": "admin@example.com", "password": "pass"},
+            "/auth/login", json={"email": "redirect@example.com", "password": "pass"}
         )
 
         assert response.status_code == 200
-        assert response.json()["redirect_url"] == "/app/workspaces/admin_dashboard"
+        assert response.json()["redirect_url"] == redirect_url
 
     def test_get_me_authenticated(self, app: Any) -> None:
         """Test getting current user when authenticated."""
@@ -722,14 +645,6 @@ class TestAuthRoutes:
         assert response.status_code == 200
         data = response.json()
         assert data["email"] == "me@example.com"
-
-    def test_get_me_unauthenticated(self, app: Any) -> None:
-        """Test getting current user when not authenticated."""
-        _, client, _ = app
-
-        response = client.get("/auth/me")
-
-        assert response.status_code == 401
 
     def test_change_password_success(self, app: Any) -> None:
         """Test successful password change."""
@@ -757,41 +672,10 @@ class TestAuthRoutes:
 
         assert response.status_code == 200
 
-        # Verify new password works
-        login_response = client.post(
-            "/auth/login",
-            json={
-                "email": "change@example.com",
-                "password": "new_pass",
-            },
-        )
-        assert login_response.status_code == 200
-
-    def test_change_password_wrong_current(self, app: Any) -> None:
-        """Test password change with wrong current password."""
-        _, client, auth_store = app
-
-        # Login
-        auth_store.create_user(email="wrongcur@example.com", password="correct_pass")
-        login_response = client.post(
-            "/auth/login",
-            json={
-                "email": "wrongcur@example.com",
-                "password": "correct_pass",
-            },
-        )
-
-        # Try to change with wrong current password
-        response = client.post(
-            "/auth/change-password",
-            json={
-                "current_password": "wrong_pass",
-                "new_password": "new_pass",
-            },
-            cookies=login_response.cookies,
-        )
-
-        assert response.status_code == 400
+        new = {"email": "change@example.com", "password": "new_pass"}
+        old = {"email": "change@example.com", "password": "old_pass"}
+        assert client.post("/auth/login", json=new).status_code == 200
+        assert client.post("/auth/login", json=old).status_code == 401
 
 
 # =============================================================================
@@ -923,224 +807,84 @@ class TestServerAuthIntegration:
 # =============================================================================
 
 
-class TestUserEntityDetection:
-    """Tests for automatic user entity detection."""
+def _backend(*entities: tuple[str, list[tuple[str, str]]]) -> Any:
+    """A BackendSpec from ``(entity_name, [(field_name, scalar_type_name), ...])``."""
+    from dazzle.http.specs import BackendSpec, EntitySpec, FieldSpec
+    from dazzle.http.specs.entity import FieldType, ScalarType
 
-    @pytest.fixture
-    def spec_with_user(self) -> Any:
-        """Create a spec with User entity."""
-        from dazzle.http.specs import BackendSpec, EntitySpec, FieldSpec
-        from dazzle.http.specs.entity import FieldType, ScalarType
-
-        return BackendSpec(
-            name="test_app",
-            version="1.0.0",
-            entities=[
-                EntitySpec(
-                    name="User",
-                    fields=[
-                        FieldSpec(
-                            name="id",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                        ),
-                        FieldSpec(
-                            name="email",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.EMAIL),
-                        ),
-                        FieldSpec(
-                            name="password",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
-                        ),
-                        FieldSpec(
-                            name="username",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
-                        ),
-                    ],
-                ),
-                EntitySpec(
-                    name="Task",
-                    fields=[
-                        FieldSpec(
-                            name="id",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                        ),
-                        FieldSpec(
-                            name="title",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
-                        ),
-                    ],
-                ),
-            ],
-        )
-
-    @pytest.fixture
-    def spec_without_user(self) -> Any:
-        """Create a spec without User entity."""
-        from dazzle.http.specs import BackendSpec, EntitySpec, FieldSpec
-        from dazzle.http.specs.entity import FieldType, ScalarType
-
-        return BackendSpec(
-            name="test_app",
-            version="1.0.0",
-            entities=[
-                EntitySpec(
-                    name="Task",
-                    fields=[
-                        FieldSpec(
-                            name="id",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                        ),
-                        FieldSpec(
-                            name="title",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
-                        ),
-                    ],
-                ),
-            ],
-        )
-
-    @pytest.fixture
-    def spec_with_account(self) -> Any:
-        """Create a spec with Account entity (alternative user entity name)."""
-        from dazzle.http.specs import BackendSpec, EntitySpec, FieldSpec
-        from dazzle.http.specs.entity import FieldType, ScalarType
-
-        return BackendSpec(
-            name="test_app",
-            version="1.0.0",
-            entities=[
-                EntitySpec(
-                    name="Account",
-                    fields=[
-                        FieldSpec(
-                            name="id",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                        ),
-                        FieldSpec(
-                            name="email_address",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.EMAIL),
-                        ),
-                    ],
-                ),
-            ],
-        )
-
-    def test_find_user_entity(self, spec_with_user: Any) -> None:
-        """Test finding User entity."""
-        entity = find_user_entity(spec_with_user)
-
-        assert entity is not None
-        assert entity.name == "User"
-
-    def test_find_user_entity_not_found(self, spec_without_user: Any) -> None:
-        """Test no User entity found."""
-        entity = find_user_entity(spec_without_user)
-
-        assert entity is None
-
-    def test_find_user_entity_account(self, spec_with_account: Any) -> None:
-        """Test finding Account entity as user."""
-        entity = find_user_entity(spec_with_account)
-
-        assert entity is not None
-        assert entity.name == "Account"
-
-    def test_has_auth_fields_with_email(self, spec_with_user: Any) -> None:
-        """Test detecting auth fields."""
-        user_entity = spec_with_user.entities[0]
-
-        assert has_auth_fields(user_entity) is True
-
-    def test_has_auth_fields_without_email(self, spec_without_user: Any) -> None:
-        """Test entity without email field."""
-        task_entity = spec_without_user.entities[0]
-
-        assert has_auth_fields(task_entity) is False
-
-    def test_get_auth_field_mapping(self, spec_with_user: Any) -> None:
-        """Test field mapping detection."""
-        user_entity = spec_with_user.entities[0]
-        mapping = get_auth_field_mapping(user_entity)
-
-        assert mapping["email"] == "email"
-        assert mapping["password"] == "password"
-        assert mapping["username"] == "username"
-
-    def test_get_auth_field_mapping_alternate_names(self, spec_with_account: Any) -> None:
-        """Test field mapping with alternate names."""
-        account_entity = spec_with_account.entities[0]
-        mapping = get_auth_field_mapping(account_entity)
-
-        assert mapping["email"] == "email_address"
-        assert mapping["password"] is None
-        assert mapping["username"] is None
+    return BackendSpec(
+        name="test_app",
+        version="1.0.0",
+        entities=[
+            EntitySpec(
+                name=name,
+                fields=[
+                    FieldSpec(
+                        name=field,
+                        type=FieldType(kind="scalar", scalar_type=ScalarType[scalar]),
+                    )
+                    for field, scalar in fields
+                ],
+            )
+            for name, fields in entities
+        ],
+    )
 
 
-class TestAuthConfig:
-    """Tests for AuthConfig."""
+_USER = (
+    "User",
+    [("id", "UUID"), ("email", "EMAIL"), ("password", "STR"), ("username", "STR")],
+)
+_TASK = ("Task", [("id", "UUID"), ("title", "STR")])
+_ACCOUNT = ("Account", [("id", "UUID"), ("email_address", "EMAIL")])
 
-    @pytest.fixture
-    def spec_with_user(self) -> Any:
-        """Create a spec with User entity."""
-        from dazzle.http.specs import BackendSpec, EntitySpec, FieldSpec
-        from dazzle.http.specs.entity import FieldType, ScalarType
 
-        return BackendSpec(
-            name="test_app",
-            version="1.0.0",
-            entities=[
-                EntitySpec(
-                    name="User",
-                    fields=[
-                        FieldSpec(
-                            name="id",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                        ),
-                        FieldSpec(
-                            name="email",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.EMAIL),
-                        ),
-                    ],
-                ),
-            ],
-        )
-
-    @pytest.fixture
-    def spec_without_user(self) -> Any:
-        """Create a spec without User entity."""
-        from dazzle.http.specs import BackendSpec, EntitySpec, FieldSpec
-        from dazzle.http.specs.entity import FieldType, ScalarType
-
-        return BackendSpec(
-            name="test_app",
-            version="1.0.0",
-            entities=[
-                EntitySpec(
-                    name="Task",
-                    fields=[
-                        FieldSpec(
-                            name="id",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                        ),
-                    ],
-                ),
-            ],
-        )
-
-    def test_auth_config_from_spec_with_user(self, spec_with_user: Any) -> None:
-        """Test creating auth config from spec with user."""
-        config = AuthConfig.from_spec(spec_with_user)
-
-        assert config.enabled is True
-        assert config.user_entity_name == "User"
-        assert config.field_mapping["email"] == "email"
-
-    def test_auth_config_from_spec_without_user(self, spec_without_user: Any) -> None:
-        """Test creating auth config from spec without user."""
-        config = AuthConfig.from_spec(spec_without_user)
-
-        assert config.enabled is False
+@pytest.mark.parametrize(
+    ("entities", "user_entity"),
+    [
+        pytest.param([_USER, _TASK], "User", id="user"),
+        pytest.param([_ACCOUNT], "Account", id="account-alias"),
+        pytest.param([_TASK], None, id="none"),
+    ],
+)
+def test_find_user_entity_and_auth_config(entities: list, user_entity: str | None) -> None:
+    spec = _backend(*entities)
+    found = find_user_entity(spec)
+    assert (found.name if found else None) == user_entity
+    config = AuthConfig.from_spec(spec)
+    assert config.enabled is (user_entity is not None)
+    assert config.user_entity_name == user_entity
+    if user_entity is None:
         assert config.user_entity is None
+
+
+@pytest.mark.parametrize(
+    ("entity", "has_auth", "mapping"),
+    [
+        pytest.param(
+            _USER,
+            True,
+            {"email": "email", "password": "password", "username": "username"},
+            id="user-conventional-names",
+        ),
+        pytest.param(
+            _ACCOUNT,
+            True,
+            {"email": "email_address", "password": None, "username": None},
+            id="account-alternate-email-name",
+        ),
+        pytest.param(
+            _TASK,
+            False,
+            {"email": None, "password": None, "username": None},
+            id="task-no-email",
+        ),
+    ],
+)
+def test_auth_field_detection(entity: tuple, has_auth: bool, mapping: dict) -> None:
+    detected = _backend(entity).entities[0]
+    assert has_auth_fields(detected) is has_auth
+    assert get_auth_field_mapping(detected) == mapping
 
 
 # =============================================================================
@@ -1150,25 +894,17 @@ class TestAuthConfig:
 
 @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestAuthDependencies:
-    """Tests for auth dependency injection."""
+    """Required, optional and role-gated auth dependencies over real sessions."""
 
     @pytest.fixture
-    def app_with_protected_routes(self) -> Any:
-        """Create an app with protected routes."""
-        try:
-            from fastapi import Depends, FastAPI
-            from fastapi.testclient import TestClient
-        except ImportError:
-            pytest.skip("FastAPI not installed")
+    def client_and_store(self) -> Any:
+        from fastapi import Depends, FastAPI
+        from fastapi.testclient import TestClient
 
         auth_store = AuthStore(os.environ["DATABASE_URL"])
         app = FastAPI()
+        app.include_router(create_auth_routes(auth_store))
 
-        # Create auth routes
-        auth_router = create_auth_routes(auth_store)
-        app.include_router(auth_router)
-
-        # Create auth dependency
         get_current_user = create_auth_dependency(auth_store)
         get_optional_user = create_optional_auth_dependency(auth_store)
         get_admin_user = create_auth_dependency(auth_store, require_roles=["admin"])
@@ -1193,110 +929,55 @@ class TestAuthDependencies:
         ) -> Any:
             return {"admin": True, "email": auth.user.email}  # type: ignore[union-attr]
 
-        return app, TestClient(app), auth_store
+        return TestClient(app), auth_store
 
-    def test_protected_route_unauthorized(self, app_with_protected_routes: Any) -> None:
-        """Test accessing protected route without auth."""
-        _, client, _ = app_with_protected_routes
+    @pytest.mark.parametrize(
+        ("roles", "path", "status", "body"),
+        [
+            pytest.param(None, "/protected", 401, None, id="required-anonymous-401"),
+            pytest.param(
+                [], "/protected", 200, {"email": "u@example.com"}, id="required-signed-in-200"
+            ),
+            pytest.param(
+                None, "/optional", 200, {"authenticated": False}, id="optional-anonymous-200"
+            ),
+            pytest.param(
+                [],
+                "/optional",
+                200,
+                {"authenticated": True, "email": "u@example.com"},
+                id="optional-signed-in-200",
+            ),
+            pytest.param(None, "/admin-only", 401, None, id="role-gated-anonymous-401"),
+            pytest.param([], "/admin-only", 403, None, id="role-gated-without-role-403"),
+            pytest.param(
+                ["admin"],
+                "/admin-only",
+                200,
+                {"admin": True, "email": "u@example.com"},
+                id="role-gated-with-role-200",
+            ),
+        ],
+    )
+    def test_dependency_gate(
+        self, client_and_store: Any, roles: list[str] | None, path: str, status: int, body: Any
+    ) -> None:
+        """``roles=None`` = anonymous; otherwise sign in a user holding ``roles``."""
+        client, auth_store = client_and_store
+        cookies = None
+        if roles is not None:
+            auth_store.create_user(email="u@example.com", password="pass", roles=roles)
+            cookies = client.post(
+                "/auth/login", json={"email": "u@example.com", "password": "pass"}
+            ).cookies
 
-        response = client.get("/protected")
+        response = client.get(path, cookies=cookies)
 
-        assert response.status_code == 401
-
-    def test_protected_route_authorized(self, app_with_protected_routes: Any) -> None:
-        """Test accessing protected route with auth."""
-        _, client, auth_store = app_with_protected_routes
-
-        # Create user and login
-        auth_store.create_user(email="test@example.com", password="pass")
-        login_response = client.post(
-            "/auth/login",
-            json={
-                "email": "test@example.com",
-                "password": "pass",
-            },
-        )
-
-        # Access protected route
-        response = client.get("/protected", cookies=login_response.cookies)
-
-        assert response.status_code == 200
-        assert response.json()["email"] == "test@example.com"
-
-    def test_optional_route_unauthorized(self, app_with_protected_routes: Any) -> None:
-        """Test accessing optional route without auth."""
-        _, client, _ = app_with_protected_routes
-
-        response = client.get("/optional")
-
-        assert response.status_code == 200
-        assert response.json()["authenticated"] is False
-
-    def test_optional_route_authorized(self, app_with_protected_routes: Any) -> None:
-        """Test accessing optional route with auth."""
-        _, client, auth_store = app_with_protected_routes
-
-        # Create user and login
-        auth_store.create_user(email="opt@example.com", password="pass")
-        login_response = client.post(
-            "/auth/login",
-            json={
-                "email": "opt@example.com",
-                "password": "pass",
-            },
-        )
-
-        # Access optional route
-        response = client.get("/optional", cookies=login_response.cookies)
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["authenticated"] is True
-        assert data["email"] == "opt@example.com"
-
-    def test_admin_route_no_role(self, app_with_protected_routes: Any) -> None:
-        """Test accessing admin route without admin role."""
-        _, client, auth_store = app_with_protected_routes
-
-        # Create regular user and login
-        auth_store.create_user(email="regular@example.com", password="pass")
-        login_response = client.post(
-            "/auth/login",
-            json={
-                "email": "regular@example.com",
-                "password": "pass",
-            },
-        )
-
-        # Access admin route
-        response = client.get("/admin-only", cookies=login_response.cookies)
-
-        assert response.status_code == 403
-        assert "admin" in response.json()["detail"]
-
-    def test_admin_route_with_role(self, app_with_protected_routes: Any) -> None:
-        """Test accessing admin route with admin role."""
-        _, client, auth_store = app_with_protected_routes
-
-        # Create admin user and login
-        auth_store.create_user(
-            email="admin@example.com",
-            password="pass",
-            roles=["admin"],
-        )
-        login_response = client.post(
-            "/auth/login",
-            json={
-                "email": "admin@example.com",
-                "password": "pass",
-            },
-        )
-
-        # Access admin route
-        response = client.get("/admin-only", cookies=login_response.cookies)
-
-        assert response.status_code == 200
-        assert response.json()["admin"] is True
+        assert response.status_code == status
+        if body is not None:
+            assert response.json() == body
+        if status == 403:
+            assert "admin" in response.json()["detail"]
 
 
 @pytest.mark.postgres

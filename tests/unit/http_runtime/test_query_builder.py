@@ -15,432 +15,260 @@ from dazzle.http.runtime.query_builder import (
     SortField,
 )
 
-# =============================================================================
-# FilterCondition Tests
-# =============================================================================
-
-
-class TestFilterCondition:
-    """Tests for FilterCondition parsing and SQL generation."""
-
-    def test_parse_simple_equality(self) -> None:
-        """Test parsing simple equality filter."""
-        cond = FilterCondition.parse("status", "active")
-
-        assert cond.field == "status"
-        assert cond.operator == FilterOperator.EQ
-        assert cond.value == "active"
-        assert cond.relation_path == []
-
-    def test_parse_gt_operator(self) -> None:
-        """Test parsing greater than operator."""
-        cond = FilterCondition.parse("priority__gt", 5)
-
-        assert cond.field == "priority"
-        assert cond.operator == FilterOperator.GT
-        assert cond.value == 5
-
-    def test_parse_gte_operator(self) -> None:
-        """Test parsing greater than or equal operator."""
-        cond = FilterCondition.parse("count__gte", 10)
-
-        assert cond.field == "count"
-        assert cond.operator == FilterOperator.GTE
-        assert cond.value == 10
-
-    def test_parse_lt_operator(self) -> None:
-        """Test parsing less than operator."""
-        cond = FilterCondition.parse("age__lt", 30)
-
-        assert cond.field == "age"
-        assert cond.operator == FilterOperator.LT
-        assert cond.value == 30
-
-    def test_parse_lte_operator(self) -> None:
-        """Test parsing less than or equal operator."""
-        cond = FilterCondition.parse("score__lte", 100)
-
-        assert cond.field == "score"
-        assert cond.operator == FilterOperator.LTE
-        assert cond.value == 100
-
-    def test_parse_ne_operator(self) -> None:
-        """Test parsing not equal operator."""
-        cond = FilterCondition.parse("status__ne", "deleted")
-
-        assert cond.field == "status"
-        assert cond.operator == FilterOperator.NE
-        assert cond.value == "deleted"
-
-    def test_parse_contains_operator(self) -> None:
-        """Test parsing contains operator."""
-        cond = FilterCondition.parse("title__contains", "urgent")
-
-        assert cond.field == "title"
-        assert cond.operator == FilterOperator.CONTAINS
-        assert cond.value == "urgent"
-
-    def test_parse_icontains_operator(self) -> None:
-        """Test parsing case-insensitive contains operator."""
-        cond = FilterCondition.parse("title__icontains", "URGENT")
-
-        assert cond.field == "title"
-        assert cond.operator == FilterOperator.ICONTAINS
-        assert cond.value == "URGENT"
-
-    def test_parse_startswith_operator(self) -> None:
-        """Test parsing starts with operator."""
-        cond = FilterCondition.parse("name__startswith", "Bug:")
-
-        assert cond.field == "name"
-        assert cond.operator == FilterOperator.STARTSWITH
-        assert cond.value == "Bug:"
-
-    def test_parse_endswith_operator(self) -> None:
-        """Test parsing ends with operator."""
-        cond = FilterCondition.parse("email__endswith", "@example.com")
-
-        assert cond.field == "email"
-        assert cond.operator == FilterOperator.ENDSWITH
-        assert cond.value == "@example.com"
-
-    def test_parse_in_operator(self) -> None:
-        """Test parsing in operator."""
-        cond = FilterCondition.parse("status__in", ["active", "pending"])
-
-        assert cond.field == "status"
-        assert cond.operator == FilterOperator.IN
-        assert cond.value == ["active", "pending"]
-
-    def test_parse_not_in_operator(self) -> None:
-        """Test parsing not in operator."""
-        cond = FilterCondition.parse("status__not_in", ["deleted", "archived"])
-
-        assert cond.field == "status"
-        assert cond.operator == FilterOperator.NOT_IN
-        assert cond.value == ["deleted", "archived"]
-
-    def test_parse_isnull_operator(self) -> None:
-        """Test parsing is null operator."""
-        cond = FilterCondition.parse("deleted_at__isnull", True)
-
-        assert cond.field == "deleted_at"
-        assert cond.operator == FilterOperator.ISNULL
-        assert cond.value is True
-
-    def test_parse_relation_filter(self) -> None:
-        """Test parsing relation filter."""
-        cond = FilterCondition.parse("owner__name", "John")
-
-        assert cond.field == "name"
-        assert cond.operator == FilterOperator.EQ
-        assert cond.value == "John"
-        assert cond.relation_path == ["owner"]
-
-    def test_parse_deep_relation_filter(self) -> None:
-        """Test parsing deep relation filter."""
-        cond = FilterCondition.parse("owner__department__name__contains", "Sales")
-
-        assert cond.field == "name"
-        assert cond.operator == FilterOperator.CONTAINS
-        assert cond.value == "Sales"
-        assert cond.relation_path == ["owner", "department"]
-
-    def test_to_sql_equality(self) -> None:
-        """Test SQL generation for equality."""
-        cond = FilterCondition(field="status", operator=FilterOperator.EQ, value="active")
-        sql, params = cond.to_sql()
-
-        assert sql == '"status" = %s'
-        assert params == ["active"]
-
-    def test_to_sql_contains(self) -> None:
-        """Test SQL generation for contains."""
-        cond = FilterCondition(field="title", operator=FilterOperator.CONTAINS, value="urgent")
-        sql, params = cond.to_sql()
-
-        assert sql == '"title" LIKE %s'
-        assert params == ["%urgent%"]
-
-    def test_to_sql_startswith(self) -> None:
-        """Test SQL generation for starts with."""
-        cond = FilterCondition(field="name", operator=FilterOperator.STARTSWITH, value="Bug:")
-        sql, params = cond.to_sql()
-
-        assert sql == '"name" LIKE %s'
-        assert params == ["Bug:%"]
-
-    def test_to_sql_endswith(self) -> None:
-        """Test SQL generation for ends with."""
-        cond = FilterCondition(field="email", operator=FilterOperator.ENDSWITH, value="@test.com")
-        sql, params = cond.to_sql()
-
-        assert sql == '"email" LIKE %s'
-        assert params == ["%@test.com"]
-
-    def test_to_sql_in(self) -> None:
-        """Test SQL generation for in."""
-        cond = FilterCondition(field="status", operator=FilterOperator.IN, value=["a", "b", "c"])
-        sql, params = cond.to_sql()
-
-        assert sql == '"status" IN (%s, %s, %s)'
-        assert params == ["a", "b", "c"]
-
-    def test_to_sql_isnull_true(self) -> None:
-        """Test SQL generation for is null."""
-        cond = FilterCondition(field="deleted_at", operator=FilterOperator.ISNULL, value=True)
-        sql, params = cond.to_sql()
-
-        assert sql == '"deleted_at" IS NULL'
-        assert params == []
-
-    def test_to_sql_isnull_false(self) -> None:
-        """Test SQL generation for is not null."""
-        cond = FilterCondition(field="deleted_at", operator=FilterOperator.ISNULL, value=False)
-        sql, params = cond.to_sql()
-
-        assert sql == '"deleted_at" IS NOT NULL'
-        assert params == []
-
-    def test_to_sql_with_table_alias(self) -> None:
-        """Test SQL generation with table alias."""
-        cond = FilterCondition(field="status", operator=FilterOperator.EQ, value="active")
-        sql, params = cond.to_sql(table_alias="t")
-
-        assert sql == 't."status" = %s'
-        assert params == ["active"]
-
-    def test_to_sql_uuid_conversion(self) -> None:
-        """Test UUID value conversion."""
-        uuid_val = UUID("12345678-1234-5678-1234-567812345678")
-        cond = FilterCondition(field="user_id", operator=FilterOperator.EQ, value=uuid_val)
-        sql, params = cond.to_sql()
-
-        assert sql == '"user_id" = %s'
-        assert params == [str(uuid_val)]
-
+Op = FilterOperator
 
 # =============================================================================
-# SortField Tests
+# FilterCondition
 # =============================================================================
 
 
-class TestSortField:
-    """Tests for SortField parsing and SQL generation."""
-
-    def test_parse_ascending(self) -> None:
-        """Test parsing ascending sort."""
-        sort = SortField.parse("created_at")
-
-        assert sort.field == "created_at"
-        assert sort.descending is False
-        assert sort.relation_path == []
-
-    def test_parse_descending(self) -> None:
-        """Test parsing descending sort."""
-        sort = SortField.parse("-created_at")
-
-        assert sort.field == "created_at"
-        assert sort.descending is True
-        assert sort.relation_path == []
-
-    def test_parse_relation_sort(self) -> None:
-        """Test parsing relation sort."""
-        sort = SortField.parse("owner__name")
-
-        assert sort.field == "name"
-        assert sort.descending is False
-        assert sort.relation_path == ["owner"]
-
-    def test_parse_relation_descending(self) -> None:
-        """Test parsing descending relation sort."""
-        sort = SortField.parse("-owner__name")
-
-        assert sort.field == "name"
-        assert sort.descending is True
-        assert sort.relation_path == ["owner"]
-
-    def test_to_sql_ascending(self) -> None:
-        """Test SQL generation for ascending sort."""
-        sort = SortField(field="created_at", descending=False)
-        sql = sort.to_sql()
-
-        assert sql == '"created_at" ASC'
-
-    def test_to_sql_descending(self) -> None:
-        """Test SQL generation for descending sort."""
-        sort = SortField(field="created_at", descending=True)
-        sql = sort.to_sql()
-
-        assert sql == '"created_at" DESC'
-
-    def test_to_sql_with_alias(self) -> None:
-        """Test SQL generation with table alias."""
-        sort = SortField(field="name", descending=True)
-        sql = sort.to_sql(table_alias="t")
-
-        assert sql == 't."name" DESC'
+@pytest.mark.parametrize(
+    ("key", "value", "field", "operator", "relation_path"),
+    [
+        pytest.param("status", "active", "status", Op.EQ, [], id="bare-field-is-eq"),
+        pytest.param("priority__gt", 5, "priority", Op.GT, [], id="gt"),
+        pytest.param("count__gte", 10, "count", Op.GTE, [], id="gte"),
+        pytest.param("age__lt", 30, "age", Op.LT, [], id="lt"),
+        pytest.param("score__lte", 100, "score", Op.LTE, [], id="lte"),
+        pytest.param("status__ne", "deleted", "status", Op.NE, [], id="ne"),
+        pytest.param("title__contains", "urgent", "title", Op.CONTAINS, [], id="contains"),
+        pytest.param("title__icontains", "URGENT", "title", Op.ICONTAINS, [], id="icontains"),
+        pytest.param("name__startswith", "Bug:", "name", Op.STARTSWITH, [], id="startswith"),
+        pytest.param("email__endswith", "@example.com", "email", Op.ENDSWITH, [], id="endswith"),
+        pytest.param("status__in", ["active", "pending"], "status", Op.IN, [], id="in"),
+        pytest.param(
+            "status__not_in", ["deleted", "archived"], "status", Op.NOT_IN, [], id="not-in"
+        ),
+        pytest.param("deleted_at__isnull", True, "deleted_at", Op.ISNULL, [], id="isnull"),
+        pytest.param("owner__name", "John", "name", Op.EQ, ["owner"], id="relation-eq"),
+        pytest.param(
+            "owner__department__name__contains",
+            "Sales",
+            "name",
+            Op.CONTAINS,
+            ["owner", "department"],
+            id="deep-relation-with-operator",
+        ),
+        # "unknown_field" is not an operator, so it is the field and the
+        # condition falls back to equality.
+        pytest.param(
+            "owner__unknown_field",
+            "value",
+            "unknown_field",
+            Op.EQ,
+            ["owner"],
+            id="unknown-suffix-is-a-field-not-an-operator",
+        ),
+    ],
+)
+def test_filter_parse(key, value, field, operator, relation_path) -> None:
+    cond = FilterCondition.parse(key, value)
+    assert (cond.field, cond.operator, cond.value, cond.relation_path) == (
+        field,
+        operator,
+        value,
+        relation_path,
+    )
 
 
-# =============================================================================
-# QueryBuilder Tests
-# =============================================================================
+_UUID = UUID("12345678-1234-5678-1234-567812345678")
 
 
-class TestQueryBuilder:
-    """Tests for QueryBuilder."""
+@pytest.mark.parametrize(
+    ("field", "operator", "value", "alias", "sql", "params"),
+    [
+        pytest.param("status", Op.EQ, "active", None, '"status" = %s', ["active"], id="eq"),
+        pytest.param(
+            "title", Op.CONTAINS, "urgent", None, '"title" LIKE %s', ["%urgent%"], id="contains"
+        ),
+        pytest.param(
+            "name", Op.STARTSWITH, "Bug:", None, '"name" LIKE %s', ["Bug:%"], id="startswith"
+        ),
+        pytest.param(
+            "email",
+            Op.ENDSWITH,
+            "@test.com",
+            None,
+            '"email" LIKE %s',
+            ["%@test.com"],
+            id="endswith",
+        ),
+        pytest.param(
+            "status",
+            Op.IN,
+            ["a", "b", "c"],
+            None,
+            '"status" IN (%s, %s, %s)',
+            ["a", "b", "c"],
+            id="in-one-placeholder-per-item",
+        ),
+        pytest.param(
+            "deleted_at", Op.ISNULL, True, None, '"deleted_at" IS NULL', [], id="isnull-true"
+        ),
+        pytest.param(
+            "deleted_at",
+            Op.ISNULL,
+            False,
+            None,
+            '"deleted_at" IS NOT NULL',
+            [],
+            id="isnull-false",
+        ),
+        pytest.param(
+            "created_at",
+            Op.BETWEEN,
+            ["2024-01-01", "2024-12-31"],
+            None,
+            '"created_at" BETWEEN %s AND %s',
+            ["2024-01-01", "2024-12-31"],
+            id="between",
+        ),
+        pytest.param("status", Op.EQ, "active", "t", 't."status" = %s', ["active"], id="alias"),
+        pytest.param(
+            "user_id", Op.EQ, _UUID, None, '"user_id" = %s', [str(_UUID)], id="uuid-param-is-str"
+        ),
+    ],
+)
+def test_filter_to_sql(field, operator, value, alias, sql, params) -> None:
+    cond = FilterCondition(field=field, operator=operator, value=value)
+    assert cond.to_sql(table_alias=alias) == (sql, params)
 
-    def test_simple_select(self) -> None:
-        """Test simple select without filters."""
-        builder = QueryBuilder(table_name="Task")
-        sql, params = builder.build_select()
 
-        assert 'SELECT * FROM "Task"' in sql
-        assert "LIMIT" in sql
-        assert "OFFSET" in sql
-
-    def test_with_filters(self) -> None:
-        """Test select with filters."""
-        builder = QueryBuilder(table_name="Task")
-        builder.add_filter("status", "active")
-        builder.add_filter("priority__gte", 5)
-
-        sql, params = builder.build_select()
-
-        assert "WHERE" in sql
-        assert '"status" = %s' in sql
-        assert '"priority" >= %s' in sql
-        assert "active" in params
-        assert 5 in params
-
-    def test_with_sorting(self) -> None:
-        """Test select with sorting."""
-        builder = QueryBuilder(table_name="Task")
-        builder.add_sort("-created_at")
-        builder.add_sort("priority")
-
-        sql, params = builder.build_select()
-
-        assert "ORDER BY" in sql
-        assert '"created_at" DESC' in sql
-        assert '"priority" ASC' in sql
-
-    def test_with_pagination(self) -> None:
-        """Test pagination."""
-        builder = QueryBuilder(table_name="Task")
-        builder.set_pagination(page=3, page_size=10)
-
-        sql, params = builder.build_select()
-
-        assert "LIMIT %s OFFSET %s" in sql
-        assert 10 in params  # page_size
-        assert 20 in params  # offset = (3-1) * 10
-
-    def test_count_query(self) -> None:
-        """Test count query generation."""
-        builder = QueryBuilder(table_name="Task")
-        builder.add_filter("status", "active")
-
-        sql, params = builder.build_count()
-
-        assert 'SELECT COUNT(*) FROM "Task"' in sql
-        assert "WHERE" in sql
-        assert "LIMIT" not in sql
-        assert "ORDER BY" not in sql
-
-    def test_add_filters_dict(self) -> None:
-        """Test adding multiple filters from dict."""
-        builder = QueryBuilder(table_name="Task")
-        builder.add_filters(
-            {
-                "status": "active",
-                "priority__gte": 5,
-                "title__contains": "bug",
-            }
-        )
-
-        assert len(builder.conditions) == 3
-
-    def test_add_sorts_string(self) -> None:
-        """Test adding sorts from string."""
-        builder = QueryBuilder(table_name="Task")
-        builder.add_sorts("-created_at")
-
-        assert len(builder.sorts) == 1
-        assert builder.sorts[0].descending is True
-
-    def test_add_sorts_list(self) -> None:
-        """Test adding sorts from list."""
-        builder = QueryBuilder(table_name="Task")
-        builder.add_sorts(["priority", "-created_at"])
-
-        assert len(builder.sorts) == 2
-
-    def test_pagination_bounds(self) -> None:
-        """Test pagination bounds enforcement."""
-        builder = QueryBuilder(table_name="Task")
-        builder.set_pagination(page=-1, page_size=10000)
-
-        assert builder.page == 1  # Min page is 1
-        assert builder.page_size == 1000  # Max is 1000
+def test_between_requires_two_values() -> None:
+    cond = FilterCondition(field="created_at", operator=Op.BETWEEN, value="single_value")
+    with pytest.raises(ValueError, match="BETWEEN operator requires"):
+        cond.to_sql()
 
 
 # =============================================================================
-# Parse Functions Tests
+# SortField
 # =============================================================================
 
 
+@pytest.mark.parametrize(
+    ("raw", "field", "descending", "relation_path"),
+    [
+        pytest.param("created_at", "created_at", False, [], id="ascending"),
+        pytest.param("-created_at", "created_at", True, [], id="minus-is-descending"),
+        pytest.param("owner__name", "name", False, ["owner"], id="relation"),
+        pytest.param("-owner__name", "name", True, ["owner"], id="relation-descending"),
+    ],
+)
+def test_sort_parse(raw, field, descending, relation_path) -> None:
+    sort = SortField.parse(raw)
+    assert (sort.field, sort.descending, sort.relation_path) == (field, descending, relation_path)
+
+
+@pytest.mark.parametrize(
+    ("field", "descending", "alias", "sql"),
+    [
+        pytest.param("created_at", False, None, '"created_at" ASC', id="asc"),
+        pytest.param("created_at", True, None, '"created_at" DESC', id="desc"),
+        pytest.param("name", True, "t", 't."name" DESC', id="alias"),
+    ],
+)
+def test_sort_to_sql(field, descending, alias, sql) -> None:
+    assert SortField(field=field, descending=descending).to_sql(table_alias=alias) == sql
+
+
 # =============================================================================
-# Edge Cases
+# QueryBuilder
 # =============================================================================
 
 
-class TestEdgeCases:
-    """Tests for edge cases and error handling."""
+def _no_setup(b: QueryBuilder) -> None:
+    pass
 
-    def test_unknown_operator_treated_as_field(self) -> None:
-        """Test unknown operator is treated as field path."""
-        cond = FilterCondition.parse("owner__unknown_field", "value")
 
-        # "unknown_field" is not an operator, so it's treated as a field
-        assert cond.field == "unknown_field"
-        assert cond.relation_path == ["owner"]
-        assert cond.operator == FilterOperator.EQ
+def _two_filters(b: QueryBuilder) -> None:
+    b.add_filter("status", "active")
+    b.add_filter("priority__gte", 5)
 
-    def test_empty_filters(self) -> None:
-        """Test builder with no filters."""
-        builder = QueryBuilder(table_name="Task")
-        where, params = builder.build_where_clause()
 
-        assert where == ""
-        assert params == []
+def _two_sorts(b: QueryBuilder) -> None:
+    b.add_sort("-created_at")
+    b.add_sort("priority")
 
-    def test_empty_sorts(self) -> None:
-        """Test builder with no sorts."""
-        builder = QueryBuilder(table_name="Task")
-        order = builder.build_order_clause()
 
-        assert order == ""
+def _page_three(b: QueryBuilder) -> None:
+    b.set_pagination(page=3, page_size=10)
 
-    def test_between_operator(self) -> None:
-        """Test between operator with two values."""
-        cond = FilterCondition(
-            field="created_at",
-            operator=FilterOperator.BETWEEN,
-            value=["2024-01-01", "2024-12-31"],
-        )
-        sql, params = cond.to_sql()
 
-        assert sql == '"created_at" BETWEEN %s AND %s'
-        assert params == ["2024-01-01", "2024-12-31"]
+def _filters_dict(b: QueryBuilder) -> None:
+    b.add_filters({"status": "active", "priority__gte": 5, "title__contains": "bug"})
 
-    def test_between_operator_invalid_value(self) -> None:
-        """Test between operator with invalid value."""
-        cond = FilterCondition(
-            field="created_at",
-            operator=FilterOperator.BETWEEN,
-            value="single_value",
-        )
 
-        with pytest.raises(ValueError, match="BETWEEN operator requires"):
-            cond.to_sql()
+@pytest.mark.parametrize(
+    ("setup", "sql", "params"),
+    [
+        pytest.param(
+            _no_setup,
+            'SELECT * FROM "Task" LIMIT %s OFFSET %s',
+            [20, 0],
+            id="bare-select-default-page",
+        ),
+        pytest.param(
+            _two_filters,
+            'SELECT * FROM "Task" WHERE "status" = %s AND "priority" >= %s LIMIT %s OFFSET %s',
+            ["active", 5, 20, 0],
+            id="filters-anded-in-order",
+        ),
+        pytest.param(
+            _two_sorts,
+            'SELECT * FROM "Task" ORDER BY "created_at" DESC, "priority" ASC LIMIT %s OFFSET %s',
+            [20, 0],
+            id="sorts-in-order",
+        ),
+        pytest.param(
+            _page_three,
+            'SELECT * FROM "Task" LIMIT %s OFFSET %s',
+            [10, 20],
+            id="page-3-offset-20",
+        ),
+        pytest.param(
+            _filters_dict,
+            'SELECT * FROM "Task" WHERE "status" = %s AND "priority" >= %s AND "title" LIKE %s'
+            " LIMIT %s OFFSET %s",
+            ["active", 5, "%bug%", 20, 0],
+            id="add-filters-dict-in-order",
+        ),
+    ],
+)
+def test_build_select(setup, sql, params) -> None:
+    builder = QueryBuilder(table_name="Task")
+    setup(builder)
+    assert builder.build_select() == (sql, params)
+
+
+def test_build_count_has_where_but_no_order_or_limit() -> None:
+    builder = QueryBuilder(table_name="Task")
+    builder.add_filter("status", "active")
+    builder.add_sort("-created_at")
+    assert builder.build_count() == ('SELECT COUNT(*) FROM "Task" WHERE "status" = %s', ["active"])
+
+
+@pytest.mark.parametrize(
+    ("sorts", "order"),
+    [
+        pytest.param("-created_at", 'ORDER BY "created_at" DESC', id="string"),
+        pytest.param(
+            ["priority", "-created_at"], 'ORDER BY "priority" ASC, "created_at" DESC', id="list"
+        ),
+    ],
+)
+def test_add_sorts(sorts, order) -> None:
+    builder = QueryBuilder(table_name="Task")
+    builder.add_sorts(sorts)
+    assert builder.build_order_clause() == order
+
+
+def test_empty_builder_emits_no_where_or_order() -> None:
+    builder = QueryBuilder(table_name="Task")
+    assert builder.build_where_clause() == ("", [])
+    assert builder.build_order_clause() == ""
+
+
+def test_pagination_bounds() -> None:
+    builder = QueryBuilder(table_name="Task")
+    builder.set_pagination(page=-1, page_size=10000)
+    assert (builder.page, builder.page_size) == (1, 1000)

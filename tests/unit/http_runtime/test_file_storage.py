@@ -124,37 +124,21 @@ def sample_pdf() -> Any:
 # =============================================================================
 
 
-class TestSecureFilename:
-    """Tests for secure_filename function."""
-
-    def test_basic_filename(self) -> None:
-        """Test basic filename passes through."""
-        assert secure_filename("document.pdf") == "document.pdf"
-
-    def test_removes_path(self) -> None:
-        """Test path components are removed."""
-        assert secure_filename("/path/to/document.pdf") == "document.pdf"
-        # Path.name returns only the final component
-        assert secure_filename("../../../etc/passwd") == "passwd"
-
-    def test_replaces_special_chars(self) -> None:
-        """Test special characters are replaced."""
-        assert secure_filename("my file (1).pdf") == "my_file__1_.pdf"
-
-    def test_removes_leading_dot(self) -> None:
-        """Test leading dots are removed."""
-        assert secure_filename(".htaccess") == "htaccess"
-
-    def test_limits_length(self) -> None:
-        """Test filename length is limited."""
-        long_name = "a" * 200 + ".pdf"
-        result = secure_filename(long_name)
-        assert len(result) <= 114  # 100 + "." + 10 (extension limit)
-
-    def test_empty_becomes_unnamed(self) -> None:
-        """Test empty filename becomes unnamed."""
-        assert secure_filename("") == "unnamed_file"
-        assert secure_filename("...") == "unnamed_file"
+@pytest.mark.parametrize(
+    ("raw", "safe"),
+    [
+        pytest.param("document.pdf", "document.pdf", id="plain-name-unchanged"),
+        pytest.param("/path/to/document.pdf", "document.pdf", id="absolute-path-stripped"),
+        pytest.param("../../../etc/passwd", "passwd", id="path-traversal-stripped"),
+        pytest.param("my file (1).pdf", "my_file__1_.pdf", id="special-chars-replaced"),
+        pytest.param(".htaccess", "htaccess", id="leading-dot-removed"),
+        pytest.param("a" * 200 + ".pdf", "a" * 100 + ".pdf", id="stem-truncated-to-100"),
+        pytest.param("", "unnamed_file", id="empty-becomes-unnamed"),
+        pytest.param("...", "unnamed_file", id="dots-only-becomes-unnamed"),
+    ],
+)
+def test_secure_filename(raw: str, safe: str) -> None:
+    assert secure_filename(raw) == safe
 
 
 # =============================================================================
@@ -162,54 +146,58 @@ class TestSecureFilename:
 # =============================================================================
 
 
-class TestFileValidator:
-    """Tests for FileValidator."""
+@pytest.mark.parametrize(
+    ("validator", "data", "filename", "error"),
+    [
+        pytest.param(
+            FileValidator(max_size=10),
+            b"x" * 100,
+            "large.txt",
+            "exceeds maximum size",
+            id="too-large",
+        ),
+        pytest.param(FileValidator(), b"", "empty.txt", "File is empty", id="empty"),
+        pytest.param(
+            FileValidator(allowed_types=["image/*"]),
+            b"Hello, World!",
+            "test.txt",
+            "not allowed",
+            id="type-outside-allowlist",
+        ),
+    ],
+)
+def test_validator_rejects(validator: Any, data: bytes, filename: str, error: str) -> None:
+    is_valid, message, _ = validator.validate(BytesIO(data), filename)
+    assert is_valid is False
+    assert message is not None and error in message
 
-    def test_validate_valid_file(self, sample_file: Any) -> None:
-        """Test validation passes for valid file."""
-        validator = FileValidator(max_size=1024 * 1024)
-        is_valid, error, content_type = validator.validate(sample_file, "test.txt")
 
-        assert is_valid is True
-        assert error is None
-
-    def test_validate_file_too_large(self) -> None:
-        """Test validation fails for oversized file."""
-        validator = FileValidator(max_size=10)
-        large_file = BytesIO(b"x" * 100)
-
-        is_valid, error, _ = validator.validate(large_file, "large.txt")
-
-        assert is_valid is False
-        assert error is not None and "exceeds maximum size" in error
-
-    def test_validate_empty_file(self) -> None:
-        """Test validation fails for empty file."""
-        validator = FileValidator()
-        empty_file = BytesIO(b"")
-
-        is_valid, error, _ = validator.validate(empty_file, "empty.txt")
-
-        assert is_valid is False
-        assert error is not None and "empty" in error.lower()
-
-    def test_validate_allowed_types(self, sample_image: Any) -> None:
-        """Test validation with allowed types."""
-        validator = FileValidator(allowed_types=["image/*"])
-
-        is_valid, error, content_type = validator.validate(sample_image, "image.png")
-
-        assert is_valid is True
-        assert "image" in content_type
-
-    def test_validate_disallowed_type(self, sample_file: Any) -> None:
-        """Test validation fails for disallowed type."""
-        validator = FileValidator(allowed_types=["image/*"])
-
-        is_valid, error, _ = validator.validate(sample_file, "test.txt")
-
-        assert is_valid is False
-        assert error is not None and "not allowed" in error
+@pytest.mark.parametrize(
+    ("validator", "fixture", "filename", "content_type"),
+    [
+        pytest.param(
+            FileValidator(max_size=1024 * 1024),
+            "sample_file",
+            "test.txt",
+            None,  # text sniffing differs with/without python-magic
+            id="under-size-limit",
+        ),
+        pytest.param(
+            FileValidator(allowed_types=["image/*"]),
+            "sample_image",
+            "image.png",
+            "image/png",
+            id="type-inside-wildcard-allowlist",
+        ),
+    ],
+)
+def test_validator_accepts(
+    validator: Any, fixture: str, filename: str, content_type: str | None, request: Any
+) -> None:
+    is_valid, error, detected = validator.validate(request.getfixturevalue(fixture), filename)
+    assert (is_valid, error) == (True, None)
+    if content_type is not None:
+        assert detected == content_type
 
 
 # =============================================================================
@@ -279,17 +267,16 @@ class TestLocalStorageBackend:
             resolve_under_base(temp_storage_path, "")
 
     @pytest.mark.asyncio
-    async def test_retrieve_file(self, local_storage: Any, sample_file: Any) -> None:
-        """Test retrieving a stored file."""
-        # Store first
-        metadata = await local_storage.store(
-            sample_file,
-            "test.txt",
-            "text/plain",
-        )
+    @pytest.mark.parametrize("read", ["retrieve", "stream"])
+    async def test_store_then_read_round_trips(
+        self, local_storage: Any, sample_file: Any, read: str
+    ) -> None:
+        metadata = await local_storage.store(sample_file, "test.txt", "text/plain")
 
-        # Retrieve
-        content = await local_storage.retrieve(metadata.storage_key)
+        if read == "retrieve":
+            content = await local_storage.retrieve(metadata.storage_key)
+        else:
+            content = b"".join([c async for c in local_storage.stream(metadata.storage_key)])
 
         assert content == b"Hello, World! This is a test file."
 
@@ -326,24 +313,6 @@ class TestLocalStorageBackend:
         """Test deleting non-existent file."""
         deleted = await local_storage.delete("nonexistent/file.txt")
         assert deleted is False
-
-    @pytest.mark.asyncio
-    async def test_stream_file(self, local_storage: Any, sample_file: Any) -> None:
-        """Test streaming a file."""
-        # Store first
-        metadata = await local_storage.store(
-            sample_file,
-            "test.txt",
-            "text/plain",
-        )
-
-        # Stream
-        chunks = []
-        async for chunk in local_storage.stream(metadata.storage_key):
-            chunks.append(chunk)
-
-        content = b"".join(chunks)
-        assert content == b"Hello, World! This is a test file."
 
     def test_get_url(self, local_storage: Any) -> None:
         """Test URL generation."""

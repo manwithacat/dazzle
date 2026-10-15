@@ -11,8 +11,6 @@ clean page). Live simple_task ``/login``. Oral #95 — not leftover
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -23,29 +21,6 @@ from dazzle.http.runtime.auth.auth_views import (
 )
 from dazzle.http.runtime.auth.org_context_routes import create_org_context_routes
 from dazzle.http.runtime.site_routes import create_auth_page_routes
-
-_VIEWS = (
-    Path(__file__).resolve().parents[2]
-    / "src"
-    / "dazzle"
-    / "http"
-    / "runtime"
-    / "auth"
-    / "auth_views.py"
-)
-_SITE = (
-    Path(__file__).resolve().parents[2] / "src" / "dazzle" / "http" / "runtime" / "site_routes.py"
-)
-_ORG = (
-    Path(__file__).resolve().parents[2]
-    / "src"
-    / "dazzle"
-    / "http"
-    / "runtime"
-    / "auth"
-    / "org_context_routes.py"
-)
-_LIVE = Path(__file__).resolve().parents[2] / "examples" / "simple_task" / "dazzle.toml"
 
 
 @pytest.mark.parametrize(
@@ -85,87 +60,6 @@ def _site_client() -> TestClient:
     return TestClient(app)
 
 
-def test_leftover_login_error_does_not_invent_clean_page() -> None:
-    resp = _site_client().get("/login?error=zzz")
-    assert resp.status_code == 400
-    assert "Unknown login error" in resp.text
-    assert "Sign in" not in resp.text or "Unknown login error" in resp.text
-    assert "didn't match" not in resp.text
-
-
-def test_leftover_login_error_ghost_does_not_invent_banner() -> None:
-    resp = _site_client().get("/login?error=ghost")
-    assert resp.status_code == 400
-    assert "We couldn't complete the sign-in" not in resp.text
-
-
-def test_absent_login_error_still_renders_form() -> None:
-    resp = _site_client().get("/login")
-    assert resp.status_code == 200
-    assert "Send sign-in link" in resp.text or "Sign in" in resp.text
-    assert "Unknown login error" not in resp.text
-
-
-def test_valid_login_error_still_renders_banner() -> None:
-    resp = _site_client().get("/login?error=invalid_credentials")
-    assert resp.status_code == 200
-    assert "That email and password didn't match. Try again." in resp.text
-
-
-def test_declared_sso_no_connection_rides() -> None:
-    resp = _site_client().get("/login?error=sso_no_connection")
-    assert resp.status_code == 200
-    assert LOGIN_ERROR_MESSAGES["sso_no_connection"] in resp.text
-
-
-def test_declared_sso_unavailable_rides() -> None:
-    resp = _site_client().get("/login?error=sso_unavailable")
-    assert resp.status_code == 200
-    assert LOGIN_ERROR_MESSAGES["sso_unavailable"] in resp.text
-
-
-def test_declared_sso_domain_not_verified_rides() -> None:
-    resp = _site_client().get("/login?error=sso_domain_not_verified")
-    assert resp.status_code == 200
-    assert LOGIN_ERROR_MESSAGES["sso_domain_not_verified"] in resp.text
-
-
-def test_leftover_signup_error_stays_put() -> None:
-    resp = _site_client().get("/signup?error=zzz")
-    assert resp.status_code == 400
-    assert "Unknown signup error" in resp.text
-
-
-def test_valid_signup_error_rides() -> None:
-    resp = _site_client().get("/signup?error=already_registered")
-    assert resp.status_code == 200
-    assert "already exists" in resp.text
-
-
-def test_leftover_reset_error_stays_put() -> None:
-    resp = _site_client().get("/reset-password?error=zzz")
-    assert resp.status_code == 400
-    assert "Unknown reset error" in resp.text
-
-
-def test_valid_reset_error_rides() -> None:
-    resp = _site_client().get("/reset-password?error=invalid")
-    assert resp.status_code == 200
-    assert "invalid or expired" in resp.text
-
-
-def test_leftover_2fa_error_stays_put() -> None:
-    resp = _site_client().get(f"/2fa/challenge?session={'A' * 43}&mode=totp&error=zzz")
-    assert resp.status_code == 400
-    assert "Unknown 2FA error" in resp.text
-
-
-def test_valid_2fa_error_rides() -> None:
-    resp = _site_client().get(f"/2fa/challenge?session={'A' * 43}&mode=totp&error=invalid_code")
-    assert resp.status_code == 200
-    assert "That code didn't match. Try again." in resp.text
-
-
 def _org_client() -> TestClient:
     app = FastAPI()
 
@@ -178,33 +72,130 @@ def _org_client() -> TestClient:
     return TestClient(app)
 
 
-def test_leftover_select_org_error_stays_put() -> None:
-    resp = _org_client().get("/auth/select-org?error=zzz")
-    assert resp.status_code == 400
-    assert "Unknown org error" in resp.text
+_SESSION = "A" * 43
+_LOGIN_FORM = "Sign in"
+
+# (client, url, status, present, absent). A leftover token answers 400 with an
+# "Unknown … error" page and never the clean form; a declared token rides (200)
+# with its own message; no token renders the plain form.
+_CASES = [
+    pytest.param(
+        _site_client,
+        "/login",
+        200,
+        ("Send sign-in link", _LOGIN_FORM),
+        ("Unknown login error",),
+        id="login-no-error-renders-form",
+    ),
+    pytest.param(
+        _site_client,
+        "/login?error=zzz",
+        400,
+        ("Unknown login error",),
+        (_LOGIN_FORM, "didn't match"),
+        id="login-leftover-zzz-400-no-clean-form",
+    ),
+    pytest.param(
+        _site_client,
+        "/login?error=ghost",
+        400,
+        ("Unknown login error",),
+        (_LOGIN_FORM, "We couldn't complete the sign-in"),
+        id="login-leftover-ghost-400-no-invented-banner",
+    ),
+    pytest.param(
+        _site_client,
+        "/login?error=invalid_credentials",
+        200,
+        ("That email and password didn't match. Try again.",),
+        (),
+        id="login-invalid-credentials-rides",
+    ),
+    *[
+        pytest.param(
+            _site_client,
+            f"/login?error={token}",
+            200,
+            (LOGIN_ERROR_MESSAGES[token],),
+            (),
+            id=f"login-{token.replace('_', '-')}-rides",
+        )
+        for token in ("sso_no_connection", "sso_unavailable", "sso_domain_not_verified")
+    ],
+    pytest.param(
+        _site_client,
+        "/signup?error=zzz",
+        400,
+        ("Unknown signup error",),
+        (),
+        id="signup-leftover-400",
+    ),
+    pytest.param(
+        _site_client,
+        "/signup?error=already_registered",
+        200,
+        ("already exists",),
+        (),
+        id="signup-already-registered-rides",
+    ),
+    pytest.param(
+        _site_client,
+        "/reset-password?error=zzz",
+        400,
+        ("Unknown reset error",),
+        (),
+        id="reset-leftover-400",
+    ),
+    pytest.param(
+        _site_client,
+        "/reset-password?error=invalid",
+        200,
+        ("invalid or expired",),
+        (),
+        id="reset-invalid-rides",
+    ),
+    pytest.param(
+        _site_client,
+        f"/2fa/challenge?session={_SESSION}&mode=totp&error=zzz",
+        400,
+        ("Unknown 2FA error",),
+        (),
+        id="2fa-leftover-400",
+    ),
+    pytest.param(
+        _site_client,
+        f"/2fa/challenge?session={_SESSION}&mode=totp&error=invalid_code",
+        200,
+        ("That code didn't match. Try again.",),
+        (),
+        id="2fa-invalid-code-rides",
+    ),
+    pytest.param(
+        _org_client,
+        "/auth/select-org?error=zzz",
+        400,
+        ("Unknown org error",),
+        (),
+        id="select-org-leftover-400",
+    ),
+    pytest.param(
+        _org_client,
+        "/auth/select-org?error=invalid_org",
+        200,
+        ("That organization isn't available",),
+        (),
+        id="select-org-invalid-org-rides",
+    ),
+]
 
 
-def test_valid_select_org_error_rides() -> None:
-    resp = _org_client().get("/auth/select-org?error=invalid_org")
-    assert resp.status_code == 200
-    assert "That organization isn't available" in resp.text
-
-
-def test_helper_source_pins_auth_error_leftover() -> None:
-    views = _VIEWS.read_text()
-    assert "def leftover_honest_auth_error" in views
-    assert "leftover_honest_catalog_id" in views
-    assert "sso_no_connection" in views
-    site = _SITE.read_text()
-    assert "leftover_honest_auth_error" in site
-    assert "Unknown login error" in site
-    assert "HTMLResponse" in site
-    assert 'error == "sso_failed"' not in site
-    org = _ORG.read_text()
-    assert "leftover_honest_auth_error" in org
-    assert "Unknown org error" in org
-
-
-def test_live_simple_task_declares_auth_login() -> None:
-    src = _LIVE.read_text()
-    assert "[auth]" in src
+@pytest.mark.parametrize(("client", "url", "status", "present", "absent"), _CASES)
+def test_error_token_page(
+    client: object, url: str, status: int, present: tuple[str, ...], absent: tuple[str, ...]
+) -> None:
+    resp = client().get(url)  # type: ignore[operator]
+    assert resp.status_code == status
+    for text in present:
+        assert text in resp.text, text
+    for text in absent:
+        assert text not in resp.text, text

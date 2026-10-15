@@ -1,337 +1,168 @@
 """
 Tests for image processor.
 
-Tests thumbnail generation, optimization, and format conversion.
+Tests thumbnail generation, optimization, and format conversion. Sizes are
+pinned exactly: Pillow's ``thumbnail`` fits inside the box, keeps the aspect
+ratio and never upscales.
 """
 
 from io import BytesIO
-from typing import Any
 
 import pytest
 
-# Check if Pillow is available
-try:
-    from PIL import Image
+# Pillow ships with the `signing` / `viewport` extras, not core.
+Image = pytest.importorskip("PIL.Image", reason="Pillow not installed")
 
-    PILLOW_AVAILABLE = True
-except ImportError:
-    PILLOW_AVAILABLE = False
-
-from dazzle.http.runtime.image_processor import (
+from dazzle.http.runtime.image_processor import (  # noqa: E402
     ImageProcessingError,
     ImageProcessor,
     ThumbnailService,
 )
 
-# =============================================================================
-# Fixtures
-# =============================================================================
 
-
-@pytest.fixture
-def sample_image() -> Any:
-    """Create a sample image."""
-    if not PILLOW_AVAILABLE:
-        pytest.skip("Pillow not installed")
-
-    img = Image.new("RGB", (800, 600), color="blue")
+def _png(width: int, height: int, mode: str = "RGB", color: object = "blue") -> bytes:
     buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    buffer.seek(0)
+    if mode == "P":
+        Image.new(mode, (width, height)).save(buffer, format="PNG")
+    else:
+        Image.new(mode, (width, height), color=color).save(buffer, format="PNG")
     return buffer.getvalue()
 
 
-@pytest.fixture
-def rgba_image() -> Any:
-    """Create an RGBA image with transparency."""
-    if not PILLOW_AVAILABLE:
-        pytest.skip("Pillow not installed")
-
-    img = Image.new("RGBA", (200, 200), color=(255, 0, 0, 128))
-    buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    buffer.seek(0)
-    return buffer.getvalue()
+def _open(data: bytes) -> tuple[tuple[int, int], str, str]:
+    img = Image.open(BytesIO(data))
+    return img.size, img.format, img.mode
 
 
-@pytest.fixture
-def large_image() -> Any:
-    """Create a large image for optimization testing."""
-    if not PILLOW_AVAILABLE:
-        pytest.skip("Pillow not installed")
-
-    img = Image.new("RGB", (4000, 3000), color="green")
-    buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    buffer.seek(0)
-    return buffer.getvalue()
+LANDSCAPE = (800, 600, "RGB")
+RGBA = (200, 200, "RGBA")
 
 
 # =============================================================================
-# ImageProcessor Tests
+# ImageProcessor
 # =============================================================================
 
 
-@pytest.mark.skipif(not PILLOW_AVAILABLE, reason="Pillow not installed")
-class TestImageProcessor:
-    """Tests for ImageProcessor."""
+def test_is_available() -> None:
+    assert ImageProcessor.is_available() is True
 
-    def test_is_available(self) -> None:
-        """Test availability check."""
-        assert ImageProcessor.is_available() is True
 
-    def test_generate_thumbnail(self, sample_image: Any) -> None:
-        """Test thumbnail generation."""
-        thumbnail = ImageProcessor.generate_thumbnail(sample_image, width=200, height=200)
+@pytest.mark.parametrize(
+    ("source", "box", "fmt", "expected"),
+    [
+        pytest.param(
+            LANDSCAPE, 200, None, ((200, 150), "JPEG", "RGB"), id="default-jpeg-keeps-4x3"
+        ),
+        pytest.param(LANDSCAPE, 100, "PNG", ((100, 75), "PNG", "RGB"), id="png"),
+        pytest.param(LANDSCAPE, 100, "WEBP", ((100, 75), "WEBP", "RGB"), id="webp"),
+        pytest.param(LANDSCAPE, 10, "JPEG", ((10, 8), "JPEG", "RGB"), id="tiny-box"),
+        pytest.param(LANDSCAPE, 2000, "JPEG", ((800, 600), "JPEG", "RGB"), id="no-upscale"),
+        pytest.param((1, 1, "RGB"), 100, None, ((1, 1), "JPEG", "RGB"), id="single-pixel"),
+        pytest.param(RGBA, 100, "JPEG", ((100, 100), "JPEG", "RGB"), id="rgba-to-jpeg-drops-alpha"),
+        pytest.param((100, 100, "P"), 50, "JPEG", ((50, 50), "JPEG", "RGB"), id="palette-to-rgb"),
+    ],
+)
+def test_generate_thumbnail(source, box, fmt, expected) -> None:
+    kwargs = {"format": fmt} if fmt else {}
+    thumbnail = ImageProcessor.generate_thumbnail(_png(*source), width=box, height=box, **kwargs)
+    assert _open(thumbnail) == expected
 
-        # Verify it's a valid image
-        img = Image.open(BytesIO(thumbnail))
-        assert img.size[0] <= 200
-        assert img.size[1] <= 200
 
-    def test_thumbnail_preserves_aspect_ratio(self, sample_image: Any) -> None:
-        """Test thumbnail preserves aspect ratio."""
-        thumbnail = ImageProcessor.generate_thumbnail(sample_image, width=200, height=200)
+def test_invalid_image_data_raises() -> None:
+    with pytest.raises(ImageProcessingError):
+        ImageProcessor.generate_thumbnail(b"not an image", 100, 100)
 
-        img = Image.open(BytesIO(thumbnail))
-        # Original is 800x600 (4:3), so thumbnail should be ~200x150 or ~267x200
-        assert img.size[0] <= 200
-        assert img.size[1] <= 200
-        # Check aspect ratio is approximately preserved
-        ratio = img.size[0] / img.size[1]
-        assert 1.2 < ratio < 1.5  # Should be ~1.33 (4:3)
 
-    def test_thumbnail_with_rgba(self, rgba_image: Any) -> None:
-        """Test thumbnail with transparent image."""
-        thumbnail = ImageProcessor.generate_thumbnail(
-            rgba_image, width=100, height=100, format="JPEG"
-        )
+@pytest.mark.parametrize(
+    ("source", "max_dimension", "size"),
+    [
+        pytest.param((4000, 3000, "RGB"), 1024, (1024, 768), id="downscale-to-max-1024"),
+        pytest.param((4000, 3000, "RGB"), 1000, (1000, 750), id="downscale-keeps-4x3"),
+        pytest.param(LANDSCAPE, 2048, (800, 600), id="small-image-not-resized"),
+    ],
+)
+def test_optimize_image(source, max_dimension, size) -> None:
+    original = _png(*source)
+    optimized = ImageProcessor.optimize_image(original, max_dimension=max_dimension)
+    assert _open(optimized)[0] == size
+    if size != source[:2]:
+        assert len(optimized) < len(original)
 
-        img = Image.open(BytesIO(thumbnail))
-        # JPEG should be RGB, not RGBA
-        assert img.mode == "RGB"
 
-    def test_thumbnail_png_format(self, sample_image: Any) -> None:
-        """Test thumbnail in PNG format."""
-        thumbnail = ImageProcessor.generate_thumbnail(
-            sample_image, width=100, height=100, format="PNG"
-        )
+def test_get_dimensions_and_format() -> None:
+    data = _png(*LANDSCAPE)
+    assert ImageProcessor.get_dimensions(data) == (800, 600)
+    assert ImageProcessor.get_format(data) == "PNG"
 
-        img = Image.open(BytesIO(thumbnail))
-        assert img.format == "PNG"
 
-    def test_thumbnail_webp_format(self, sample_image: Any) -> None:
-        """Test thumbnail in WebP format."""
-        thumbnail = ImageProcessor.generate_thumbnail(
-            sample_image, width=100, height=100, format="WEBP"
-        )
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        pytest.param(LANDSCAPE, ((800, 600), "JPEG", "RGB"), id="png-to-jpeg"),
+        pytest.param(RGBA, ((200, 200), "JPEG", "RGB"), id="rgba-to-jpeg-drops-alpha"),
+    ],
+)
+def test_convert_format(source, expected) -> None:
+    assert _open(ImageProcessor.convert_format(_png(*source), "JPEG")) == expected
 
-        img = Image.open(BytesIO(thumbnail))
-        assert img.format == "WEBP"
 
-    def test_optimize_image(self, large_image: Any) -> None:
-        """Test image optimization."""
-        optimized = ImageProcessor.optimize_image(large_image, max_dimension=1024)
-
-        img = Image.open(BytesIO(optimized))
-        assert max(img.size) <= 1024
-        assert len(optimized) < len(large_image)
-
-    def test_optimize_preserves_aspect_ratio(self, large_image: Any) -> None:
-        """Test optimization preserves aspect ratio."""
-        optimized = ImageProcessor.optimize_image(large_image, max_dimension=1000)
-
-        img = Image.open(BytesIO(optimized))
-        # Original was 4000x3000 (4:3)
-        ratio = img.size[0] / img.size[1]
-        assert 1.3 < ratio < 1.4  # Should be ~1.33
-
-    def test_optimize_small_image_unchanged(self, sample_image: Any) -> None:
-        """Test small image not resized during optimization."""
-        optimized = ImageProcessor.optimize_image(sample_image, max_dimension=2048)
-
-        img = Image.open(BytesIO(optimized))
-        # Should not be larger than original dimensions
-        assert img.size[0] <= 800
-        assert img.size[1] <= 600
-
-    def test_get_dimensions(self, sample_image: Any) -> None:
-        """Test getting image dimensions."""
-        width, height = ImageProcessor.get_dimensions(sample_image)
-
-        assert width == 800
-        assert height == 600
-
-    def test_get_format(self, sample_image: Any) -> None:
-        """Test format detection."""
-        format_name = ImageProcessor.get_format(sample_image)
-
-        assert format_name == "PNG"
-
-    def test_convert_format_png_to_jpeg(self, sample_image: Any) -> None:
-        """Test converting PNG to JPEG."""
-        converted = ImageProcessor.convert_format(sample_image, "JPEG")
-
-        img = Image.open(BytesIO(converted))
-        assert img.format == "JPEG"
-
-    def test_convert_format_with_transparency(self, rgba_image: Any) -> None:
-        """Test converting transparent image to JPEG."""
-        converted = ImageProcessor.convert_format(rgba_image, "JPEG")
-
-        img = Image.open(BytesIO(converted))
-        assert img.format == "JPEG"
-        assert img.mode == "RGB"  # No alpha
-
-    def test_crop_to_square(self, sample_image: Any) -> None:
-        """Test square crop."""
-        cropped = ImageProcessor.crop_to_square(sample_image, size=150)
-
-        img = Image.open(BytesIO(cropped))
-        assert img.size == (150, 150)
-
-    def test_crop_to_square_from_portrait(self) -> None:
-        """Test square crop from portrait image."""
-        if not PILLOW_AVAILABLE:
-            pytest.skip("Pillow not installed")
-
-        # Create portrait image
-        img = Image.new("RGB", (300, 500), color="red")
-        buffer = BytesIO()
-        img.save(buffer, format="PNG")
-        buffer.seek(0)
-
-        cropped = ImageProcessor.crop_to_square(buffer.getvalue(), size=100)
-
-        result = Image.open(BytesIO(cropped))
-        assert result.size == (100, 100)
-
-    def test_invalid_image_data(self) -> None:
-        """Test handling invalid image data."""
-        with pytest.raises(ImageProcessingError):
-            ImageProcessor.generate_thumbnail(b"not an image", 100, 100)
+@pytest.mark.parametrize(
+    ("source", "size"),
+    [
+        pytest.param(LANDSCAPE, 150, id="from-landscape"),
+        pytest.param((300, 500, "RGB"), 100, id="from-portrait"),
+    ],
+)
+def test_crop_to_square(source, size) -> None:
+    assert _open(ImageProcessor.crop_to_square(_png(*source), size=size))[0] == (size, size)
 
 
 # =============================================================================
-# ThumbnailService Tests
+# ThumbnailService
 # =============================================================================
 
 
-@pytest.mark.skipif(not PILLOW_AVAILABLE, reason="Pillow not installed")
-class TestThumbnailService:
-    """Tests for ThumbnailService."""
-
-    def test_default_settings(self) -> None:
-        """Test default thumbnail settings."""
-        service = ThumbnailService()
-
-        assert service.width == 200
-        assert service.height == 200
-        assert service.format == "JPEG"
-        assert service.quality == 85
-
-    def test_custom_settings(self) -> None:
-        """Test custom thumbnail settings."""
-        service = ThumbnailService(width=300, height=300, format="PNG", quality=90)
-
-        assert service.width == 300
-        assert service.height == 300
-        assert service.format == "PNG"
-        assert service.quality == 90
-
-    def test_generate(self, sample_image: Any) -> None:
-        """Test thumbnail generation via service."""
-        service = ThumbnailService(width=100, height=100)
-        thumbnail = service.generate(sample_image)
-
-        img = Image.open(BytesIO(thumbnail))
-        assert img.size[0] <= 100
-        assert img.size[1] <= 100
-
-    def test_generate_custom_size(self, sample_image: Any) -> None:
-        """Test generation with custom size override."""
-        service = ThumbnailService(width=200, height=200)
-        thumbnail = service.generate(sample_image, width=50, height=50)
-
-        img = Image.open(BytesIO(thumbnail))
-        assert img.size[0] <= 50
-        assert img.size[1] <= 50
-
-    def test_should_generate_image_types(self) -> None:
-        """Test supported image types."""
-        service = ThumbnailService()
-
-        assert service.should_generate("image/jpeg") is True
-        assert service.should_generate("image/png") is True
-        assert service.should_generate("image/gif") is True
-        assert service.should_generate("image/webp") is True
-        assert service.should_generate("IMAGE/JPEG") is True  # Case insensitive
-
-    def test_should_not_generate_non_images(self) -> None:
-        """Test non-image types are rejected."""
-        service = ThumbnailService()
-
-        assert service.should_generate("application/pdf") is False
-        assert service.should_generate("text/plain") is False
-        assert service.should_generate("video/mp4") is False
+@pytest.mark.parametrize(
+    ("kwargs", "settings"),
+    [
+        pytest.param({}, (200, 200, "JPEG", 85), id="defaults"),
+        pytest.param(
+            {"width": 300, "height": 300, "format": "PNG", "quality": 90},
+            (300, 300, "PNG", 90),
+            id="custom",
+        ),
+    ],
+)
+def test_thumbnail_service_settings(kwargs, settings) -> None:
+    service = ThumbnailService(**kwargs)
+    assert (service.width, service.height, service.format, service.quality) == settings
 
 
-# =============================================================================
-# Edge Cases
-# =============================================================================
+@pytest.mark.parametrize(
+    ("service_box", "call_box", "size"),
+    [
+        pytest.param(100, None, (100, 75), id="service-size"),
+        pytest.param(200, 50, (50, 38), id="per-call-override"),
+    ],
+)
+def test_thumbnail_service_generate(service_box, call_box, size) -> None:
+    service = ThumbnailService(width=service_box, height=service_box)
+    kwargs = {"width": call_box, "height": call_box} if call_box else {}
+    assert _open(service.generate(_png(*LANDSCAPE), **kwargs))[0] == size
 
 
-@pytest.mark.skipif(not PILLOW_AVAILABLE, reason="Pillow not installed")
-class TestEdgeCases:
-    """Tests for edge cases and error handling."""
-
-    def test_very_small_thumbnail(self, sample_image: Any) -> None:
-        """Test generating very small thumbnail."""
-        thumbnail = ImageProcessor.generate_thumbnail(sample_image, width=10, height=10)
-
-        img = Image.open(BytesIO(thumbnail))
-        assert img.size[0] <= 10
-        assert img.size[1] <= 10
-
-    def test_very_large_dimensions(self, sample_image: Any) -> None:
-        """Test with dimensions larger than image."""
-        thumbnail = ImageProcessor.generate_thumbnail(sample_image, width=2000, height=2000)
-
-        img = Image.open(BytesIO(thumbnail))
-        # Should not upscale
-        assert img.size[0] <= 800
-        assert img.size[1] <= 600
-
-    def test_single_pixel_image(self) -> None:
-        """Test with minimal image."""
-        if not PILLOW_AVAILABLE:
-            pytest.skip("Pillow not installed")
-
-        img = Image.new("RGB", (1, 1), color="white")
-        buffer = BytesIO()
-        img.save(buffer, format="PNG")
-        buffer.seek(0)
-
-        thumbnail = ImageProcessor.generate_thumbnail(buffer.getvalue(), width=100, height=100)
-
-        result = Image.open(BytesIO(thumbnail))
-        assert result.size == (1, 1)  # Can't upscale
-
-    def test_palette_mode_image(self) -> None:
-        """Test with palette mode image."""
-        if not PILLOW_AVAILABLE:
-            pytest.skip("Pillow not installed")
-
-        # Create palette mode image
-        img = Image.new("P", (100, 100))
-        buffer = BytesIO()
-        img.save(buffer, format="PNG")
-        buffer.seek(0)
-
-        # Should convert to RGB for JPEG
-        thumbnail = ImageProcessor.generate_thumbnail(
-            buffer.getvalue(), width=50, height=50, format="JPEG"
-        )
-
-        result = Image.open(BytesIO(thumbnail))
-        assert result.mode == "RGB"
+@pytest.mark.parametrize(
+    ("content_type", "expected"),
+    [
+        pytest.param("image/jpeg", True, id="jpeg"),
+        pytest.param("image/png", True, id="png"),
+        pytest.param("image/gif", True, id="gif"),
+        pytest.param("image/webp", True, id="webp"),
+        pytest.param("IMAGE/JPEG", True, id="case-insensitive"),
+        pytest.param("application/pdf", False, id="pdf"),
+        pytest.param("text/plain", False, id="text"),
+        pytest.param("video/mp4", False, id="video"),
+    ],
+)
+def test_should_generate(content_type, expected) -> None:
+    assert ThumbnailService().should_generate(content_type) is expected

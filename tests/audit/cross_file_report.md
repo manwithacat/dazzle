@@ -9,7 +9,7 @@ Tests sharing the same `(class_name, assertion_shape, public_target)` across mul
 - **Clusters of size ≥4 across ≥2 files**: 24
 - **Tests inside cross-file clusters**: 220
 - **Theoretical saving**: ~196 if each cluster collapses to one parametric test
-- **Skipped (no attributable public target)**: 1,269 tests — shape matches without a shared target are not actionable
+- **Skipped (no attributable public target)**: 1,251 tests — shape matches without a shared target are not actionable
 
 ### Top 25 cross-file clusters
 
@@ -67,7 +67,7 @@ Files dominated by tests that pin internal call shapes (high mocks, short body, 
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 10434
+- **Twin pairs**: 10191
 
 ### Top 30 twin pairs
 
@@ -75,13 +75,10 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 |---|---|---:|---:|---:|---:|
 | `test_parser.py` | `test_rbac_verifier.py` | 130 | 43 | 36 | 0.84 |
 | `test_fidelity_scorer.py` | `test_parser.py` | 39 | 130 | 34 | 0.87 |
-| `test_query_builder.py` | `test_parser.py` | 44 | 130 | 31 | 0.7 |
 | `test_fidelity_scorer.py` | `test_rbac_verifier.py` | 39 | 43 | 29 | 0.74 |
 | `test_parser.py` | `test_workspace_layout_prefs.py` | 130 | 31 | 29 | 0.94 |
-| `test_datatable_handler.py` | `test_parser.py` | 30 | 130 | 28 | 0.93 |
 | `test_parser.py` | `test_structured_content.py` | 130 | 32 | 27 | 0.84 |
 | `test_agent_performance_resource.py` | `test_persona_journey.py` | 33 | 55 | 26 | 0.79 |
-| `test_datatable_handler.py` | `test_mapping_executor.py` | 30 | 53 | 26 | 0.87 |
 | `test_events.py` | `test_parser.py` | 36 | 130 | 26 | 0.72 |
 | `test_expression_lang.py` | `test_org_activation.py` | 82 | 36 | 26 | 0.72 |
 | `test_expression_lang.py` | `test_rbac_ui_fixes.py` | 82 | 30 | 26 | 0.87 |
@@ -89,11 +86,7 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_scim_routes.py` | `test_parser.py` | 33 | 130 | 25 | 0.76 |
 | `test_agent_auth.py` | `test_persona_journey.py` | 26 | 55 | 25 | 0.96 |
 | `test_agent_performance_resource.py` | `test_ux_contract_checker.py` | 33 | 36 | 25 | 0.76 |
-| `test_datatable_handler.py` | `test_expression_lang.py` | 30 | 82 | 25 | 0.83 |
-| `test_datatable_handler.py` | `test_rbac_verifier.py` | 30 | 43 | 25 | 0.83 |
 | `test_parser.py` | `test_rbac_ui_fixes.py` | 130 | 30 | 25 | 0.83 |
-| `test_auth.py` | `test_rbac_ui_fixes.py` | 73 | 30 | 24 | 0.8 |
-| `test_auth.py` | `test_structured_content.py` | 73 | 32 | 24 | 0.75 |
 | `test_agent_auth.py` | `test_ux_contract_checker.py` | 26 | 36 | 24 | 0.92 |
 | `test_agent_data_integrity.py` | `test_parser.py` | 26 | 130 | 24 | 0.92 |
 | `test_agent_data_integrity.py` | `test_persona_journey.py` | 26 | 55 | 24 | 0.92 |
@@ -102,4 +95,11 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_agent_performance_resource.py` | `test_rbac_verifier.py` | 33 | 43 | 24 | 0.73 |
 | `test_parser.py` | `test_ses_adapter.py` | 130 | 31 | 24 | 0.77 |
 | `test_parser.py` | `test_sla_manager.py` | 130 | 32 | 24 | 0.75 |
-| `test_auth.py` | `test_otp_store.py` | 73 | 28 | 23 | 0.82 |
+| `test_agent_auth.py` | `test_expression_lang.py` | 26 | 82 | 23 | 0.88 |
+| `test_agent_auth.py` | `test_parser.py` | 26 | 130 | 23 | 0.88 |
+| `test_expression_lang.py` | `test_sla_manager.py` | 82 | 32 | 23 | 0.72 |
+| `test_workspace_layout_prefs.py` | `test_workspace_rendering.py` | 31 | 46 | 23 | 0.74 |
+| `test_agent_auth.py` | `test_agent_performance_resource.py` | 26 | 33 | 22 | 0.85 |
+| `test_agent_auth.py` | `test_routes.py` | 26 | 58 | 22 | 0.85 |
+| `test_agent_business_logic.py` | `test_persona_journey.py` | 22 | 55 | 22 | 1.0 |
+| `test_agent_data_integrity.py` | `test_expression_lang.py` | 26 | 82 | 22 | 0.85 |

@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -168,39 +169,138 @@ def _url(entity: str = "Attachment", eid: Any = None, field: str = "file") -> st
     return f"/_dazzle/documents/{entity}/{eid or ENTITY_ID}/{field}/file"
 
 
-# ── resolution + opacity ────────────────────────────────────────────
+@dataclass
+class _AuthCtx:
+    is_authenticated: bool
+    user: Any = None
 
 
-def test_unknown_entity_is_opaque_404() -> None:
-    r = _client().get(_url(entity="Nope"))
-    assert r.status_code == 404
+async def _anon_dep() -> Any:
+    return _AuthCtx(is_authenticated=False)
 
 
-def test_missing_record_is_opaque_404() -> None:
-    r = _client(record=None).get(_url())
-    assert r.status_code == 404
+async def _user_dep() -> Any:
+    return _AuthCtx(is_authenticated=True)
 
 
-def test_invalid_entity_id_is_404() -> None:
-    r = _client().get(_url(eid="not-a-uuid"))
-    assert r.status_code == 404
+async def _gated_deny(service: Any, access: Any, eid: Any, **kw: Any) -> Any:
+    from dazzle.http.runtime.access.gated import RecordNotFound
+
+    raise RecordNotFound("Attachment")
 
 
-def test_empty_field_value_is_404() -> None:
-    r = _client(record={"id": str(ENTITY_ID), "file": ""}).get(_url())
-    assert r.status_code == 404
+_OPAQUE_404 = {"detail": "Not found"}
 
 
-def test_metadata_triple_mismatch_is_opaque_404() -> None:
-    # the file exists but belongs to a DIFFERENT entity — holding a valid
-    # record + a foreign file URL must not leak the bytes
-    r = _client(meta=_meta(entity_name="Invoice")).get(_url())
-    assert r.status_code == 404
+# ── resolution, opacity and auth (the P1 review's SEV-1 region) ─────
+#
+# Every denial is the SAME opaque 404 body, so a caller cannot tell an
+# unknown entity from a missing record, a foreign file or a scope denial.
 
 
-def test_field_name_mismatch_is_404() -> None:
-    r = _client(meta=_meta(field_name="avatar")).get(_url())
-    assert r.status_code == 404
+@pytest.mark.parametrize(
+    ("client_kwargs", "url_kwargs", "gated_read", "status"),
+    [
+        pytest.param({}, {"entity": "Nope"}, None, 404, id="opaque-404-unknown-entity"),
+        pytest.param({"record": None}, {}, None, 404, id="opaque-404-missing-record"),
+        pytest.param({}, {"eid": "not-a-uuid"}, None, 404, id="opaque-404-invalid-entity-id"),
+        pytest.param(
+            {"record": {"id": str(ENTITY_ID), "file": ""}},
+            {},
+            None,
+            404,
+            id="opaque-404-empty-field-value",
+        ),
+        # The file exists but belongs to a DIFFERENT entity — holding a valid
+        # record + a foreign file URL must not leak the bytes.
+        pytest.param(
+            {"meta": _meta(entity_name="Invoice")},
+            {},
+            None,
+            404,
+            id="opaque-404-file-of-another-entity",
+        ),
+        pytest.param(
+            {"meta": _meta(field_name="avatar")},
+            {},
+            None,
+            404,
+            id="opaque-404-file-of-another-field",
+        ),
+        # The REST read posture applies: an authenticated app's no-spec entity
+        # must not serve bytes to anonymous callers (the anonymous-bypass finding).
+        pytest.param(
+            {"auth_dep": _anon_dep, "require_auth_by_default": True},
+            {},
+            None,
+            404,
+            id="opaque-404-anonymous-when-app-enforces-auth",
+        ),
+        pytest.param(
+            {"specs": {"Attachment": object()}, "auth_dep": _user_dep},
+            {},
+            _gated_deny,
+            404,
+            id="opaque-404-cedar-scope-denial",
+        ),
+        pytest.param(
+            {"auth_dep": _user_dep, "require_auth_by_default": True},
+            {},
+            None,
+            200,
+            id="authenticated-caller-served-when-app-enforces-auth",
+        ),
+        pytest.param(
+            {"record": {"id": str(ENTITY_ID), "file": str(FILE_ID)}},
+            {},
+            None,
+            200,
+            id="bare-uuid-field-value-accepted",
+        ),
+    ],
+)
+def test_resolution_and_access(
+    monkeypatch: pytest.MonkeyPatch,
+    client_kwargs: dict[str, Any],
+    url_kwargs: dict[str, Any],
+    gated_read: Any,
+    status: int,
+) -> None:
+    if gated_read is not None:
+        from dazzle.http.runtime import document_routes as dr
+
+        monkeypatch.setattr(dr, "gated_read", gated_read)
+
+    r = _client(**client_kwargs).get(_url(**url_kwargs))
+
+    assert r.status_code == status
+    if status == 404:
+        assert r.json() == _OPAQUE_404
+    else:
+        assert r.content == PDF_BYTES
+
+
+def test_cedar_path_receives_the_dependency_auth_context(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The auth context must flow from the FastAPI dependency into
+    gated_read's AccessContext (the review found request.state was read
+    instead — never populated → 500 on every gated entity)."""
+    from dazzle.http.runtime import document_routes as dr
+
+    marker = _AuthCtx(is_authenticated=True, user=object())
+    seen: dict[str, Any] = {}
+
+    async def fake_gated_read(service: Any, access: Any, eid: Any, **kw: Any) -> Any:
+        seen["auth"] = access.auth_context
+        return {"id": str(ENTITY_ID), "file": f"/files/{FILE_ID}/download"}
+
+    monkeypatch.setattr(dr, "gated_read", fake_gated_read)
+
+    async def user_dep() -> Any:
+        return marker
+
+    r = _client(specs={"Attachment": object()}, auth_dep=user_dep).get(_url())
+    assert r.status_code == 200
+    assert seen["auth"] is marker
 
 
 # ── streaming + headers ─────────────────────────────────────────────
@@ -231,51 +331,76 @@ def test_filename_is_sanitized_in_disposition() -> None:
     assert '"' not in star and ";" not in star and " " not in star
 
 
-def test_bare_uuid_field_value_accepted() -> None:
-    r = _client(record={"id": str(ENTITY_ID), "file": str(FILE_ID)}).get(_url())
+def test_non_ascii_filename_survives_via_rfc6266() -> None:
+    r = _client(meta=_meta(filename="契約書.pdf")).get(_url())
     assert r.status_code == 200
+    assert "filename*=UTF-8''" in r.headers["content-disposition"]
+
+
+def test_unsafe_content_type_downgrades_inline_to_attachment() -> None:
+    r = _client(meta=_meta(content_type="text/html")).get(_url())
+    assert r.status_code == 200
+    assert r.headers["content-disposition"].startswith("attachment;")
 
 
 # ── Range validation (spec §18) ─────────────────────────────────────
 
+_N = len(PDF_BYTES)
 
-def test_range_206_with_content_range() -> None:
-    r = _client().get(_url(), headers={"Range": "bytes=0-99"})
+
+@pytest.mark.parametrize(
+    ("range_header", "status", "body", "content_range"),
+    [
+        pytest.param("bytes=0-99", 206, PDF_BYTES[:100], f"bytes 0-99/{_N}", id="first-100"),
+        pytest.param("bytes=0-0", 206, PDF_BYTES[:1], f"bytes 0-0/{_N}", id="single-byte"),
+        pytest.param(
+            "bytes=1000-", 206, PDF_BYTES[1000:], f"bytes 1000-{_N - 1}/{_N}", id="open-ended"
+        ),
+        pytest.param(
+            "bytes=-33", 206, PDF_BYTES[-33:], f"bytes {_N - 33}-{_N - 1}/{_N}", id="suffix"
+        ),
+        pytest.param(f"bytes={_N}-", 416, None, f"bytes */{_N}", id="unsatisfiable-416"),
+        # RFC 9110: a syntactically invalid Range header is ignored.
+        pytest.param("bytes=zz-yy", 200, PDF_BYTES, None, id="malformed-served-whole"),
+        # multipart/byteranges is out of v1 scope — serve the full body.
+        pytest.param("bytes=0-1,5-9", 200, PDF_BYTES, None, id="multi-range-served-whole"),
+    ],
+)
+def test_range(
+    range_header: str, status: int, body: bytes | None, content_range: str | None
+) -> None:
+    r = _client().get(_url(), headers={"Range": range_header})
+    assert r.status_code == status
+    if body is not None:
+        assert r.content == body
+        assert r.headers["content-length"] == str(len(body))
+    assert r.headers.get("content-range") == content_range
+
+
+def test_handler_streams_via_read_range_not_download() -> None:
+    """The handler serves through serve_bytes, which calls file_service.read_range
+    with the requested window — not the buffering file_service.download."""
+    fake_fs = _FakeFileService(_meta())
+    app = FastAPI()
+    app.include_router(
+        create_document_routes(
+            file_service=fake_fs,
+            services={
+                "Attachment": _FakeService(
+                    {"id": str(ENTITY_ID), "file": f"/files/{FILE_ID}/download"}
+                )
+            },
+            cedar_access_specs={},
+            fk_graph=None,
+            optional_auth_dep=None,
+            admin_personas=None,
+        )
+    )
+
+    r = TestClient(app).get(_url(), headers={"Range": "bytes=0-9"})
+
     assert r.status_code == 206
-    assert r.content == PDF_BYTES[:100]
-    assert r.headers["content-range"] == f"bytes 0-99/{len(PDF_BYTES)}"
-    assert r.headers["content-length"] == "100"
-
-
-def test_open_ended_range() -> None:
-    r = _client().get(_url(), headers={"Range": "bytes=1000-"})
-    assert r.status_code == 206
-    assert r.content == PDF_BYTES[1000:]
-
-
-def test_suffix_range() -> None:
-    r = _client().get(_url(), headers={"Range": "bytes=-33"})
-    assert r.status_code == 206
-    assert r.content == PDF_BYTES[-33:]
-
-
-def test_unsatisfiable_range_416() -> None:
-    r = _client().get(_url(), headers={"Range": f"bytes={len(PDF_BYTES)}-"})
-    assert r.status_code == 416
-    assert r.headers["content-range"] == f"bytes */{len(PDF_BYTES)}"
-
-
-def test_malformed_range_served_whole_200() -> None:
-    # RFC 9110: a syntactically invalid Range header is ignored
-    r = _client().get(_url(), headers={"Range": "bytes=zz-yy"})
-    assert r.status_code == 200
-    assert r.content == PDF_BYTES
-
-
-def test_multi_range_served_whole_200() -> None:
-    # multipart/byteranges is out of v1 scope — serve the full body
-    r = _client().get(_url(), headers={"Range": "bytes=0-1,5-9"})
-    assert r.status_code == 200
+    assert fake_fs.read_range_calls == [(FILE_ID, 0, 9)]
 
 
 # ── download variant ────────────────────────────────────────────────
@@ -288,131 +413,8 @@ def test_download_sets_attachment_and_audits() -> None:
     assert r.headers["content-disposition"].startswith("attachment;")
     assert len(audit.events) == 1
     ev = audit.events[0]
-    assert ev.get("entity_name") == "Attachment"
-    assert ev.get("operation") == "document_download"
-    assert ev.get("decision") == "allow"
-
-
-# ── auth wiring (the P1 review's SEV-1 region) ──────────────────────
-
-
-@dataclass
-class _AuthCtx:
-    is_authenticated: bool
-    user: Any = None
-
-
-def test_no_spec_entity_denies_anonymous_when_app_enforces_auth() -> None:
-    """The REST read posture applies: an authenticated app's no-spec
-    entity must not serve bytes to anonymous callers (opaque 404) —
-    the review's anonymous-bypass finding."""
-
-    async def anon_dep() -> Any:
-        return _AuthCtx(is_authenticated=False)
-
-    r = _client(auth_dep=anon_dep, require_auth_by_default=True).get(_url())
-    assert r.status_code == 404
-
-
-def test_no_spec_entity_serves_authenticated_caller() -> None:
-    async def user_dep() -> Any:
-        return _AuthCtx(is_authenticated=True)
-
-    r = _client(auth_dep=user_dep, require_auth_by_default=True).get(_url())
-    assert r.status_code == 200
-
-
-def test_cedar_path_receives_the_dependency_auth_context(monkeypatch) -> None:
-    """The auth context must flow from the FastAPI dependency into
-    gated_read's AccessContext (the review found request.state was read
-    instead — never populated → 500 on every gated entity)."""
-    from dazzle.http.runtime import document_routes as dr
-
-    marker = _AuthCtx(is_authenticated=True, user=object())
-    seen: dict[str, Any] = {}
-
-    async def fake_gated_read(service: Any, access: Any, eid: Any, **kw: Any) -> Any:
-        seen["auth"] = access.auth_context
-        return {"id": str(ENTITY_ID), "file": f"/files/{FILE_ID}/download"}
-
-    monkeypatch.setattr(dr, "gated_read", fake_gated_read)
-
-    async def user_dep() -> Any:
-        return marker
-
-    r = _client(specs={"Attachment": object()}, auth_dep=user_dep).get(_url())
-    assert r.status_code == 200
-    assert seen["auth"] is marker
-
-
-def test_cedar_denial_is_opaque_404(monkeypatch) -> None:
-    from dazzle.http.runtime import document_routes as dr
-    from dazzle.http.runtime.access.gated import RecordNotFound
-
-    async def deny(service: Any, access: Any, eid: Any, **kw: Any) -> Any:
-        raise RecordNotFound("Attachment")
-
-    monkeypatch.setattr(dr, "gated_read", deny)
-
-    async def user_dep() -> Any:
-        return _AuthCtx(is_authenticated=True)
-
-    r = _client(specs={"Attachment": object()}, auth_dep=user_dep).get(_url())
-    assert r.status_code == 404
-
-
-# ── disposition hardening ───────────────────────────────────────────
-
-
-def test_non_ascii_filename_survives_via_rfc6266() -> None:
-    r = _client(meta=_meta(filename="契約書.pdf")).get(_url())
-    assert r.status_code == 200
-    cd = r.headers["content-disposition"]
-    assert "filename*=UTF-8''" in cd  # original rides the RFC 6266 form
-
-
-def test_unsafe_content_type_downgrades_inline_to_attachment() -> None:
-    r = _client(meta=_meta(content_type="text/html")).get(_url())
-    assert r.status_code == 200
-    assert r.headers["content-disposition"].startswith("attachment;")
-
-
-def test_single_byte_range() -> None:
-    r = _client().get(_url(), headers={"Range": "bytes=0-0"})
-    assert r.status_code == 206
-    assert r.content == PDF_BYTES[:1]
-
-
-# ── serve_bytes integration (TDD: must fail until Step 2) ──────────────
-
-
-def test_handler_streams_via_serve_bytes_not_download() -> None:
-    """After the document_routes repoint, the handler MUST call
-    file_service.read_range (serve_bytes' streaming path) — not the
-    buffering file_service.download call that _resolve_bytes used.
-    A Range request that returns 206 is also a proxy for 'serve_bytes
-    handled this', since the old buffering path returns 200 for all
-    satisfiable ranges."""
-    app = FastAPI()
-    fake_fs = _FakeFileService(_meta())
-    router = create_document_routes(
-        file_service=fake_fs,
-        services={
-            "Attachment": _FakeService({"id": str(ENTITY_ID), "file": f"/files/{FILE_ID}/download"})
-        },
-        cedar_access_specs={},
-        fk_graph=None,
-        optional_auth_dep=None,
-        admin_personas=None,
+    assert (ev["entity_name"], ev["operation"], ev["decision"]) == (
+        "Attachment",
+        "document_download",
+        "allow",
     )
-    app.include_router(router)
-    client = TestClient(app)
-
-    # A satisfiable Range on /file must return 206 (serve_bytes) and
-    # must have called read_range, NOT download.
-    r = client.get(_url(), headers={"Range": "bytes=0-9"})
-    assert r.status_code == 206, f"expected 206 from serve_bytes, got {r.status_code}"
-    assert len(fake_fs.read_range_calls) == 1, (
-        "serve_bytes must call file_service.read_range, not download"
-    )
-    assert fake_fs.read_range_calls[0] == (FILE_ID, 0, 9)

@@ -1,63 +1,17 @@
-"""Tests for DataTable sort/filter/search query parameter handling."""
+"""Tests for DataTable sort/filter/search query parameter handling.
+
+The REST list handler forwards ``sort``/``dir``, ``filter[field]`` and
+``search`` to the service. It is leftover-honest (cycle 2191): a sort or
+filter naming an undeclared field, or a filter value that cannot be a value
+of the declared field type, is dropped rather than invented, while the valid
+siblings in the same request still ride.
+"""
 
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _make_request(
-    query_params: dict[str, str] | None = None,
-    headers: dict[str, str] | None = None,
-) -> MagicMock:
-    """Build a mock FastAPI Request."""
-    req = MagicMock()
-    req.query_params = query_params or {}
-    req.headers = headers or {}
-    req.url.path = "/tasks"
-    req.state = MagicMock()
-    # Remove htmx attributes so handler returns JSON
-    del req.state.htmx_columns
-    del req.state.htmx_detail_url
-    del req.state.htmx_entity_name
-    del req.state.htmx_empty_message
-    return req
-
-
-def _make_service(items: list[dict[str, Any]] | None = None) -> AsyncMock:
-    """Build a mock service that returns a paginated result."""
-    svc = AsyncMock()
-    svc.execute = AsyncMock(
-        return_value={
-            "items": items or [],
-            "total": len(items) if items else 0,
-            "page": 1,
-            "page_size": 20,
-        }
-    )
-    # Leftover-honest REST sort (cycle 2191) reads entity_spec.fields.
-    # AsyncMock would invent a spec without names and drop known sorts.
-    svc.entity_spec = SimpleNamespace(
-        fields=[
-            SimpleNamespace(name="id"),
-            SimpleNamespace(name="title"),
-            SimpleNamespace(name="name"),
-            SimpleNamespace(name="status"),
-            SimpleNamespace(name="priority"),
-        ],
-        temporal=None,
-    )
-    return svc
-
-
-# ---------------------------------------------------------------------------
-# Import create_list_handler (requires FastAPI)
-# ---------------------------------------------------------------------------
 
 pytest.importorskip("fastapi", reason="FastAPI required for handler tests")
 
@@ -67,603 +21,212 @@ from dazzle.http.runtime.route_generator import (  # noqa: E402
     create_list_handler,
 )
 
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
-
-
-class TestListHandlerSort:
-    """Verify sort/dir query params are forwarded to the service."""
-
-    @pytest.mark.asyncio
-    async def test_handler_passes_sort_to_service(self) -> None:
-        service = _make_service()
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request()
-        await handler(request=request, page=1, page_size=20, sort="title", dir="desc", search=None)
-
-        service.execute.assert_called_once()
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["sort"] == ["-title"]
-
-    @pytest.mark.asyncio
-    async def test_handler_sort_asc(self) -> None:
-        service = _make_service()
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request()
-        await handler(request=request, page=1, page_size=20, sort="name", dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["sort"] == ["name"]
-
-    @pytest.mark.asyncio
-    async def test_handler_no_sort(self) -> None:
-        service = _make_service()
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request()
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["sort"] is None
-
-    @pytest.mark.asyncio
-    async def test_handler_leftover_sort_does_not_invent(self) -> None:
-        service = _make_service()
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request()
-        await handler(request=request, page=1, page_size=20, sort="zzz", dir="desc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["sort"] is None
-
-
-class TestListHandlerFilter:
-    """Verify filter[field] params are extracted from the query string."""
-
-    @pytest.mark.asyncio
-    async def test_handler_extracts_filter_params(self) -> None:
-        service = _make_service()
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(
-            query_params={"filter[status]": "active", "filter[priority]": "high"}
-        )
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        filters = call_kwargs["filters"]
-        assert filters is not None
-        assert filters["status"] == "active"
-        assert filters["priority"] == "high"
-
-    @pytest.mark.asyncio
-    async def test_handler_ignores_empty_filter(self) -> None:
-        service = _make_service()
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[status]": ""})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        # Empty filter values should not be included
-        assert call_kwargs["filters"] is None
-
-    @pytest.mark.asyncio
-    async def test_handler_leftover_filter_does_not_invent(self) -> None:
-        service = _make_service()
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(
-            query_params={"filter[zzz]": "Ada", "filter[ghost]": "1", "filter[status]": "open"}
-        )
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"status": "open"}
-
-    @pytest.mark.asyncio
-    async def test_handler_leftover_filter_value_does_not_invent(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="id"),
-            SimpleNamespace(name="title"),
-            SimpleNamespace(
-                name="status",
-                type=SimpleNamespace(enum_values=["open", "in_progress", "resolved", "closed"]),
-            ),
-            SimpleNamespace(name="priority"),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[status]": "zzz", "filter[title]": "Ada"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"title": "Ada"}
-
-    @pytest.mark.asyncio
-    async def test_handler_valid_filter_enum_value_rides(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(
-                name="status",
-                type=SimpleNamespace(enum_values=["open", "in_progress", "resolved", "closed"]),
-            ),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[status]": "resolved"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"status": "resolved"}
-
-    @pytest.mark.asyncio
-    async def test_handler_leftover_filter_id_value_does_not_invent(self) -> None:
-        service = _make_service()
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[id]": "zzz", "filter[title]": "Ada"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"title": "Ada"}
-
-    @pytest.mark.asyncio
-    async def test_handler_valid_filter_id_value_rides(self) -> None:
-        service = _make_service()
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        rid = "12345678-1234-5678-1234-567812345678"
-        request = _make_request(query_params={"filter[id]": rid})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"id": rid}
-
-    @pytest.mark.asyncio
-    async def test_handler_leftover_filter_date_value_does_not_invent(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="id"),
-            SimpleNamespace(name="title"),
-            SimpleNamespace(name="created_at", type=SimpleNamespace(kind="datetime")),
-            SimpleNamespace(name="due_date", type=SimpleNamespace(kind="date")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[created_at]": "zzz", "filter[title]": "Ada"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"title": "Ada"}
-
-    @pytest.mark.asyncio
-    async def test_handler_valid_filter_date_value_rides(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="created_at", type=SimpleNamespace(kind="datetime")),
-            SimpleNamespace(name="due_date", type=SimpleNamespace(kind="date")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[created_at]": "2026-07-01T09:00:00"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"created_at": "2026-07-01T09:00:00"}
-
-    @pytest.mark.asyncio
-    async def test_handler_leftover_filter_bool_value_does_not_invent(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="id"),
-            SimpleNamespace(name="title"),
-            SimpleNamespace(name="is_active", type=SimpleNamespace(kind="bool")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[is_active]": "zzz", "filter[title]": "Ada"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"title": "Ada"}
-
-    @pytest.mark.asyncio
-    async def test_handler_valid_filter_bool_value_rides(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="is_active", type=SimpleNamespace(kind="bool")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[is_active]": "true"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"is_active": "true"}
-
-    @pytest.mark.asyncio
-    async def test_handler_leftover_filter_int_value_does_not_invent(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="id"),
-            SimpleNamespace(name="title"),
-            SimpleNamespace(name="amount", type=SimpleNamespace(kind="int")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[amount]": "zzz", "filter[title]": "Ada"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"title": "Ada"}
-
-    @pytest.mark.asyncio
-    async def test_handler_valid_filter_int_value_rides(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="amount", type=SimpleNamespace(kind="int")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[amount]": "42"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"amount": "42"}
-
-    @pytest.mark.asyncio
-    async def test_handler_leftover_filter_email_value_does_not_invent(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="id"),
-            SimpleNamespace(name="title"),
-            SimpleNamespace(name="email", type=SimpleNamespace(kind="email")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[email]": "zzz", "filter[title]": "Ada"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"title": "Ada"}
-
-    @pytest.mark.asyncio
-    async def test_handler_valid_filter_email_value_rides(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="email", type=SimpleNamespace(kind="email")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[email]": "ada@example.com"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"email": "ada@example.com"}
-
-    @pytest.mark.asyncio
-    async def test_handler_leftover_filter_url_value_does_not_invent(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="id"),
-            SimpleNamespace(name="title"),
-            SimpleNamespace(name="preview_url", type=SimpleNamespace(kind="url")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[preview_url]": "zzz", "filter[title]": "Ada"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"title": "Ada"}
-
-    @pytest.mark.asyncio
-    async def test_handler_valid_filter_url_value_rides(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="preview_url", type=SimpleNamespace(kind="url")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[preview_url]": "https://placehold.co/400"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"preview_url": "https://placehold.co/400"}
-
-    @pytest.mark.asyncio
-    async def test_handler_leftover_filter_slug_value_does_not_invent(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="id"),
-            SimpleNamespace(name="title"),
-            SimpleNamespace(name="slug", type=SimpleNamespace(kind="slug")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[slug]": "ab", "filter[title]": "Ada"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"title": "Ada"}
-
-    @pytest.mark.asyncio
-    async def test_handler_valid_filter_slug_value_rides(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="slug", type=SimpleNamespace(kind="slug")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[slug]": "acme"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"slug": "acme"}
-
-    @pytest.mark.asyncio
-    async def test_handler_leftover_filter_file_value_does_not_invent(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="id"),
-            SimpleNamespace(name="title"),
-            SimpleNamespace(name="file", type=SimpleNamespace(kind="file")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[file]": "zzz", "filter[title]": "Ada"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"title": "Ada"}
-
-    @pytest.mark.asyncio
-    async def test_handler_valid_filter_file_value_rides(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="file", type=SimpleNamespace(kind="file")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[file]": "report.pdf"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"file": "report.pdf"}
-
-    @pytest.mark.asyncio
-    async def test_handler_leftover_filter_json_value_does_not_invent(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="id"),
-            SimpleNamespace(name="title"),
-            SimpleNamespace(name="preferences", type=SimpleNamespace(kind="json")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[preferences]": "zzz", "filter[title]": "Ada"})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"title": "Ada"}
-
-    @pytest.mark.asyncio
-    async def test_handler_valid_filter_json_value_rides(self) -> None:
-        service = _make_service()
-        service.entity_spec.fields = [
-            SimpleNamespace(name="preferences", type=SimpleNamespace(kind="json")),
-        ]
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request(query_params={"filter[preferences]": '{"theme":"dark"}'})
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["filters"] == {"preferences": '{"theme":"dark"}'}
-
-
-class TestListHandlerSearch:
-    """Verify search query param is forwarded to the service."""
-
-    @pytest.mark.asyncio
-    async def test_handler_passes_search_to_service(self) -> None:
-        service = _make_service()
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request()
-        await handler(
-            request=request, page=1, page_size=20, sort=None, dir="asc", search="foo", q=None
-        )
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["search"] == "foo"
-
-    @pytest.mark.asyncio
-    async def test_handler_no_search(self) -> None:
-        service = _make_service()
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request()
-        await handler(
-            request=request, page=1, page_size=20, sort=None, dir="asc", search=None, q=None
-        )
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["search"] is None
-
-
-class TestListHandlerBackwardCompat:
-    """No extra params → service gets sort=None, search=None, filters=None."""
-
-    @pytest.mark.asyncio
-    async def test_handler_backward_compat(self) -> None:
-        service = _make_service()
-        handler = create_list_handler(
-            RouteSpec(
-                handler=HandlerConfig(),
-                service=service,
-            ),
-        )
-
-        request = _make_request()
-        await handler(
-            request=request, page=1, page_size=20, sort=None, dir="asc", search=None, q=None
-        )
-
-        call_kwargs = service.execute.call_args.kwargs
-        assert call_kwargs["sort"] is None
-        assert call_kwargs["search"] is None
-        assert call_kwargs["filters"] is None
-        assert call_kwargs["page"] == 1
-        assert call_kwargs["page_size"] == 20
+# The handler reads ``entity_spec.fields``; an AsyncMock would invent a spec
+# without names and drop every known sort. ``name`` alone = an untyped field.
+_DEFAULT_FIELDS = [SimpleNamespace(name=n) for n in ("id", "title", "name", "status", "priority")]
+
+
+def _field(name: str, kind: str | None = None, enum: list[str] | None = None) -> Any:
+    if enum is not None:
+        return SimpleNamespace(name=name, type=SimpleNamespace(enum_values=enum))
+    return SimpleNamespace(name=name, type=SimpleNamespace(kind=kind))
+
+
+def _request(query_params: dict[str, str] | None = None) -> MagicMock:
+    req = MagicMock()
+    req.query_params = query_params or {}
+    req.headers = {}
+    req.url.path = "/tasks"
+    req.state = MagicMock()
+    # Remove htmx attributes so the handler returns JSON
+    del req.state.htmx_columns
+    del req.state.htmx_detail_url
+    del req.state.htmx_entity_name
+    del req.state.htmx_empty_message
+    return req
+
+
+async def _service_kwargs(
+    fields: list[Any] | None = None,
+    query_params: dict[str, str] | None = None,
+    **handler_kwargs: Any,
+) -> dict[str, Any]:
+    """Run the list handler once; return the kwargs it passed to service.execute."""
+    service = AsyncMock()
+    service.execute = AsyncMock(return_value={"items": [], "total": 0, "page": 1, "page_size": 20})
+    service.entity_spec = SimpleNamespace(
+        fields=fields if fields is not None else _DEFAULT_FIELDS, temporal=None
+    )
+    handler = create_list_handler(RouteSpec(handler=HandlerConfig(), service=service))
+    call: dict[str, Any] = {"page": 1, "page_size": 20, "sort": None, "dir": "asc", "search": None}
+    call.update(handler_kwargs)
+    await handler(request=_request(query_params), **call)
+    service.execute.assert_called_once()
+    return service.execute.call_args.kwargs
+
+
+@pytest.mark.asyncio
+async def test_no_params_forwards_none_and_paging() -> None:
+    kwargs = await _service_kwargs(q=None)
+    assert (kwargs["sort"], kwargs["search"], kwargs["filters"]) == (None, None, None)
+    assert (kwargs["page"], kwargs["page_size"]) == (1, 20)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("sort", "direction", "expected"),
+    [
+        pytest.param("title", "desc", ["-title"], id="desc-prefixes-minus"),
+        pytest.param("name", "asc", ["name"], id="asc"),
+        pytest.param("zzz", "desc", None, id="leftover-sort-dropped"),
+    ],
+)
+async def test_sort(sort: str, direction: str, expected: list[str] | None) -> None:
+    assert (await _service_kwargs(sort=sort, dir=direction))["sort"] == expected
+
+
+@pytest.mark.asyncio
+async def test_search_forwarded() -> None:
+    assert (await _service_kwargs(search="foo", q=None))["search"] == "foo"
+
+
+_STATUS_ENUM = _field("status", enum=["open", "in_progress", "resolved", "closed"])
+_UUID = "12345678-1234-5678-1234-567812345678"
+
+
+def _typed(field: Any) -> list[Any]:
+    """The typed field next to the untyped ``id`` / ``title`` siblings."""
+    return [SimpleNamespace(name="id"), SimpleNamespace(name="title"), field]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("fields", "query", "expected"),
+    [
+        pytest.param(
+            None,
+            {"filter[status]": "active", "filter[priority]": "high"},
+            {"status": "active", "priority": "high"},
+            id="filter-params-extracted",
+        ),
+        pytest.param(None, {"filter[status]": ""}, None, id="empty-value-ignored"),
+        pytest.param(
+            None,
+            {"filter[zzz]": "Ada", "filter[ghost]": "1", "filter[status]": "open"},
+            {"status": "open"},
+            id="undeclared-field-dropped",
+        ),
+        # Per-type value checks: a junk value is dropped while the valid
+        # sibling rides; a valid value of the declared type rides.
+        pytest.param(
+            _typed(_STATUS_ENUM),
+            {"filter[status]": "zzz", "filter[title]": "Ada"},
+            {"title": "Ada"},
+            id="enum.leftover-dropped",
+        ),
+        pytest.param(
+            [_STATUS_ENUM], {"filter[status]": "resolved"}, {"status": "resolved"}, id="enum.valid"
+        ),
+        pytest.param(
+            None,
+            {"filter[id]": "zzz", "filter[title]": "Ada"},
+            {"title": "Ada"},
+            id="id.leftover-dropped",
+        ),
+        pytest.param(None, {"filter[id]": _UUID}, {"id": _UUID}, id="id.uuid-valid"),
+        pytest.param(
+            _typed(_field("created_at", "datetime")),
+            {"filter[created_at]": "zzz", "filter[title]": "Ada"},
+            {"title": "Ada"},
+            id="datetime.leftover-dropped",
+        ),
+        pytest.param(
+            [_field("created_at", "datetime"), _field("due_date", "date")],
+            {"filter[created_at]": "2026-07-01T09:00:00"},
+            {"created_at": "2026-07-01T09:00:00"},
+            id="datetime.valid",
+        ),
+        pytest.param(
+            _typed(_field("is_active", "bool")),
+            {"filter[is_active]": "zzz", "filter[title]": "Ada"},
+            {"title": "Ada"},
+            id="bool.leftover-dropped",
+        ),
+        pytest.param(
+            [_field("is_active", "bool")],
+            {"filter[is_active]": "true"},
+            {"is_active": "true"},
+            id="bool.valid",
+        ),
+        pytest.param(
+            _typed(_field("amount", "int")),
+            {"filter[amount]": "zzz", "filter[title]": "Ada"},
+            {"title": "Ada"},
+            id="int.leftover-dropped",
+        ),
+        pytest.param(
+            [_field("amount", "int")], {"filter[amount]": "42"}, {"amount": "42"}, id="int.valid"
+        ),
+        pytest.param(
+            _typed(_field("email", "email")),
+            {"filter[email]": "zzz", "filter[title]": "Ada"},
+            {"title": "Ada"},
+            id="email.leftover-dropped",
+        ),
+        pytest.param(
+            [_field("email", "email")],
+            {"filter[email]": "ada@example.com"},
+            {"email": "ada@example.com"},
+            id="email.valid",
+        ),
+        pytest.param(
+            _typed(_field("preview_url", "url")),
+            {"filter[preview_url]": "zzz", "filter[title]": "Ada"},
+            {"title": "Ada"},
+            id="url.leftover-dropped",
+        ),
+        pytest.param(
+            [_field("preview_url", "url")],
+            {"filter[preview_url]": "https://placehold.co/400"},
+            {"preview_url": "https://placehold.co/400"},
+            id="url.valid",
+        ),
+        pytest.param(
+            _typed(_field("slug", "slug")),
+            {"filter[slug]": "ab", "filter[title]": "Ada"},
+            {"title": "Ada"},
+            id="slug.too-short-dropped",
+        ),
+        pytest.param(
+            [_field("slug", "slug")], {"filter[slug]": "acme"}, {"slug": "acme"}, id="slug.valid"
+        ),
+        pytest.param(
+            _typed(_field("file", "file")),
+            {"filter[file]": "zzz", "filter[title]": "Ada"},
+            {"title": "Ada"},
+            id="file.leftover-dropped",
+        ),
+        pytest.param(
+            [_field("file", "file")],
+            {"filter[file]": "report.pdf"},
+            {"file": "report.pdf"},
+            id="file.valid",
+        ),
+        pytest.param(
+            _typed(_field("preferences", "json")),
+            {"filter[preferences]": "zzz", "filter[title]": "Ada"},
+            {"title": "Ada"},
+            id="json.leftover-dropped",
+        ),
+        pytest.param(
+            [_field("preferences", "json")],
+            {"filter[preferences]": '{"theme":"dark"}'},
+            {"preferences": '{"theme":"dark"}'},
+            id="json.valid",
+        ),
+    ],
+)
+async def test_filters(
+    fields: list[Any] | None, query: dict[str, str], expected: dict[str, str] | None
+) -> None:
+    assert (await _service_kwargs(fields, query))["filters"] == expected

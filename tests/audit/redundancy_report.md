@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 942
-- **Tests inside those clusters**: 3,646
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,704 tests** (≈ 18.9% of the suite)
+- **Clusters of ≥3**: 908
+- **Tests inside those clusters**: 3,468
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,560 tests** (≈ 17.9% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -14,28 +14,22 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 
 | Size | Clusters |
 |---|---:|
-| 20+ | 2 |
-| 10-19 | 9 |
-| 5-9 | 161 |
-| 3-4 | 770 |
+| 20+ | 1 |
+| 10-19 | 5 |
+| 5-9 | 156 |
+| 3-4 | 746 |
 
 ## Top 30 largest clusters
 
 | File | Class | Size | Sample test names |
 |---|---|---:|---|
-| `tests/unit/test_datatable_handler.py` | `TestListHandlerFilter` | 21 | test_handler_leftover_filter_does_not_invent, test_handler_leftover_filter_value_does_not_invent, test_handler_valid_filter_enum_value_rides… |
 | `tests/unit/test_auth_connection_cli.py` | `(module)` | 20 | test_verify_domain_not_found_prints_record, test_show_verification, test_doctor_ready_exit_0… |
 | `tests/unit/test_hm_contract_dom_conformance.py` | `(module)` | 15 | test_money_field_fixed_conforms_to_money_contract, test_search_result_row_conforms_to_result_contract, test_metric_tile_emission_conforms_to_metrics_contract… |
-| `tests/unit/test_auth_error_leftover.py` | `(module)` | 12 | test_valid_login_error_still_renders_banner, test_declared_sso_no_connection_rides, test_declared_sso_unavailable_rides… |
-| `tests/unit/test_form_widget_showcase_phase3.py` | `(module)` | 12 | test_combobox_controller_leftover_does_not_invent, test_grid_controller_rejects_whitespace_query, test_search_box_controller_rejects_empty_query… |
 | `tests/integration/test_scim_routes.py` | `(module)` | 11 | test_no_bearer_is_401, test_bad_bearer_is_401, test_create_user_unverified_domain_is_400… |
-| `tests/unit/http_runtime/test_query_builder.py` | `TestFilterCondition` | 11 | test_parse_gt_operator, test_parse_gte_operator, test_parse_lt_operator… |
 | `tests/unit/test_dedup_footgun_gates.py` | `(module)` | 11 | test_no_inline_entity_slug, test_no_inline_404_guard, test_logger_uses_dunder_name_not_string_bucket… |
-| `tests/unit/test_document_routes.py` | `(module)` | 11 | test_unknown_entity_is_opaque_404, test_missing_record_is_opaque_404, test_invalid_entity_id_is_404… |
 | `tests/integration/test_saml_routes.py` | `(module)` | 10 | test_login_redirects_to_idp, test_login_resolves_by_verified_email_domain, test_sls_kills_only_the_connections_org_sessions… |
 | `tests/unit/test_goal_b_coat.py` | `(module)` | 10 | test_stamp_pair_grids_saturate_media, test_note_kind_chrome_saturates_conversation, test_tree_people_org_saturates… |
 | `tests/integration/test_scim_routes.py` | `(module)` | 9 | test_service_provider_config_requires_bearer, test_leftover_users_filter_is_invalid_filter, test_delete_user… |
-| `tests/unit/http_runtime/test_query_builder.py` | `TestFilterCondition` | 9 | test_to_sql_equality, test_to_sql_contains, test_to_sql_startswith… |
 | `tests/unit/test_auth_views_password_reset.py` | `(module)` | 9 | test_forgot_password_view_posts_to_submit_endpoint, test_forgot_password_view_uses_product_name_in_brand, test_forgot_password_view_links_back_to_login… |
 | `tests/unit/test_enterprise_login.py` | `(module)` | 9 | test_no_verified_domains_refuses_everyone, test_empty_email_refuses, test_unsigned_fallback_without_email_verified_refuses… |
 | `tests/unit/test_entity_card_data_resolution.py` | `(module)` | 9 | test_halo_section_omitted_when_no_record, test_section_omitted_when_record_has_no_field_values, test_quick_actions_omits_section_when_no_actions_declared… |
@@ -53,21 +47,27 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_cohort_strip_tone_bands_1144.py` | `(module)` | 8 | test_value_clears_highest_band_takes_that_tone, test_value_falls_to_middle_band, test_value_below_all_bands_stays_neutral… |
 | `tests/unit/test_csrf_disposition_phase3.py` | `TestCsrfDisposition` | 8 | test_bearer_is_na_bearer, test_webhook_is_na_signature, test_sign_route_is_na_signature… |
 | `tests/unit/test_csrf_disposition_phase3.py` | `TestProtectedPathOverrides` | 8 | test_switch_org_is_protected_session, test_select_org_is_protected_session, test_logout_is_protected_session… |
+| `tests/unit/test_enterprise_login.py` | `(module)` | 8 | test_verified_domain_match_is_case_insensitive, test_unsigned_fallback_with_email_verified_true_allowed, test_id_token_path_tolerates_missing_email_verified… |
+| `tests/unit/test_landing_resolver.py` | `(module)` | 8 | test_infers_first_active_scene_workspace, test_kind_unset_uses_first_phase, test_explicit_active_preferred_over_earlier_unmarked_phase… |
+| `tests/unit/test_list_index_emission.py` | `(module)` | 8 | test_no_list_surface_no_extra_index, test_surface_without_ux_sort_is_skipped, test_non_list_surface_skipped… |
+| `tests/unit/test_llm_driver.py` | `TestResolveLlmDriver` | 8 | test_explicit_wins_over_everything, test_env_var_beats_manifest, test_manifest_drives_resolution… |
+| `tests/unit/test_org_activation.py` | `TestDeriveMembershipsRequired` | 8 | test_tenant_host_implies_required_without_auto_provision, test_auto_provision_still_implies_required, test_neither_is_not_required… |
+| `tests/unit/test_result.py` | `(module)` | 8 | test_ok_carries_value, test_err_carries_error, test_ok_unwrap_returns_value… |
 
 ## Top 10 files by collapse-saving potential
 
 | File | Tests that could collapse |
 |---|---:|
 | `tests/unit/test_auth_connection_cli.py` | 27 |
-| `tests/unit/http_runtime/test_query_builder.py` | 27 |
 | `tests/unit/test_expression_lang.py` | 27 |
 | `tests/unit/test_schema_diff.py` | 25 |
 | `tests/unit/test_two_factor_views.py` | 25 |
 | `tests/unit/test_hm_contract_dom_conformance.py` | 24 |
 | `tests/integration/test_connection_admin_routes.py` | 23 |
-| `tests/unit/test_datatable_handler.py` | 20 |
 | `tests/integration/test_scim_routes.py` | 20 |
 | `tests/unit/test_entity_card_data_resolution.py` | 20 |
+| `tests/unit/test_rbac_verifier.py` | 20 |
+| `tests/unit/test_validator.py` | 19 |
 
 ## Fuzz-target worklist (property/fuzz-candidate clusters)
 

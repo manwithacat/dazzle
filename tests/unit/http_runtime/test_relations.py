@@ -192,60 +192,21 @@ def test_db() -> Any:
 # =============================================================================
 
 
-class TestRelationInfo:
-    """Tests for RelationInfo."""
-
-    def test_is_to_one_many_to_one(self) -> None:
-        """Test is_to_one for many-to-one relation."""
-        info = RelationInfo(
-            name="owner",
-            from_entity="Task",
-            to_entity="User",
-            kind="many_to_one",
-            foreign_key_field="owner_id",
-        )
-
-        assert info.is_to_one is True
-        assert info.is_to_many is False
-
-    def test_is_to_one_one_to_one(self) -> None:
-        """Test is_to_one for one-to-one relation."""
-        info = RelationInfo(
-            name="profile",
-            from_entity="User",
-            to_entity="Profile",
-            kind="one_to_one",
-            foreign_key_field="profile_id",
-        )
-
-        assert info.is_to_one is True
-        assert info.is_to_many is False
-
-    def test_is_to_many_one_to_many(self) -> None:
-        """Test is_to_many for one-to-many relation."""
-        info = RelationInfo(
-            name="tasks",
-            from_entity="User",
-            to_entity="Task",
-            kind="one_to_many",
-            foreign_key_field="owner_id",
-        )
-
-        assert info.is_to_many is True
-        assert info.is_to_one is False
-
-    def test_is_to_many_many_to_many(self) -> None:
-        """Test is_to_many for many-to-many relation."""
-        info = RelationInfo(
-            name="tags",
-            from_entity="Task",
-            to_entity="Tag",
-            kind="many_to_many",
-            foreign_key_field="task_id",
-        )
-
-        assert info.is_to_many is True
-        assert info.is_to_one is False
+@pytest.mark.parametrize(
+    ("kind", "is_to_one"),
+    [
+        pytest.param("many_to_one", True, id="many-to-one"),
+        pytest.param("one_to_one", True, id="one-to-one"),
+        pytest.param("one_to_many", False, id="one-to-many"),
+        pytest.param("many_to_many", False, id="many-to-many"),
+    ],
+)
+def test_relation_cardinality(kind: str, is_to_one: bool) -> None:
+    """is_to_one and is_to_many are exact complements over the four kinds."""
+    info = RelationInfo(
+        name="rel", from_entity="A", to_entity="B", kind=kind, foreign_key_field="b_id"
+    )
+    assert (info.is_to_one, info.is_to_many) == (is_to_one, not is_to_one)
 
 
 # =============================================================================
@@ -493,52 +454,26 @@ class TestRelationLoader:
 class TestForeignKeyConstraints:
     """Tests for FK constraint generation."""
 
-    def test_build_fk_constraint_cascade(self) -> None:
-        """Test FK constraint with CASCADE on delete."""
+    @pytest.mark.parametrize(
+        ("on_delete", "clause"),
+        [
+            pytest.param("cascade", "CASCADE", id="cascade"),
+            pytest.param("restrict", "RESTRICT", id="restrict"),
+            pytest.param("set_null", "SET NULL", id="set-null"),
+        ],
+    )
+    def test_build_fk_constraint(self, on_delete: str, clause: str) -> None:
         info = RelationInfo(
             name="owner",
             from_entity="Task",
             to_entity="User",
             kind="many_to_one",
             foreign_key_field="owner_id",
-            on_delete="cascade",
+            on_delete=on_delete,
         )
-
-        sql = build_foreign_key_constraint(info, "Task")
-
-        assert 'FOREIGN KEY ("owner_id")' in sql
-        assert 'REFERENCES "User"("id")' in sql
-        assert "ON DELETE CASCADE" in sql
-
-    def test_build_fk_constraint_restrict(self) -> None:
-        """Test FK constraint with RESTRICT on delete."""
-        info = RelationInfo(
-            name="owner",
-            from_entity="Task",
-            to_entity="User",
-            kind="many_to_one",
-            foreign_key_field="owner_id",
-            on_delete="restrict",
+        assert build_foreign_key_constraint(info, "Task") == (
+            f'FOREIGN KEY ("owner_id") REFERENCES "User"("id") ON DELETE {clause}'
         )
-
-        sql = build_foreign_key_constraint(info, "Task")
-
-        assert "ON DELETE RESTRICT" in sql
-
-    def test_build_fk_constraint_set_null(self) -> None:
-        """Test FK constraint with SET NULL on delete."""
-        info = RelationInfo(
-            name="owner",
-            from_entity="Task",
-            to_entity="User",
-            kind="many_to_one",
-            foreign_key_field="owner_id",
-            on_delete="set_null",
-        )
-
-        sql = build_foreign_key_constraint(info, "Task")
-
-        assert "ON DELETE SET NULL" in sql
 
     def test_get_fk_constraints(self, task_entity: Any, all_entities: Any) -> None:
         """Test getting all FK constraints for an entity.

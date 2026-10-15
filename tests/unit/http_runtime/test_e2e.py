@@ -205,110 +205,31 @@ class TestE2EEndpoints:
         assert response.status_code == 200
         assert response.json()["status"] == "healthy"
 
-    def test_list_empty(self, client: TestClient) -> None:
-        """Test listing tasks when empty."""
-        response = client.get("/tasks")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["items"] == []
-        assert data["total"] == 0
-
-    def test_create_task(self, client: TestClient) -> None:
-        """Test creating a task."""
-        response = client.post(
-            "/tasks",
-            json={"title": "Test Task", "status": "pending"},
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["title"] == "Test Task"
-        assert data["status"] == "pending"
-        assert "id" in data
-
-    def test_read_task(self, client: TestClient) -> None:
-        """Test reading a task."""
-        # Create first
-        create_response = client.post(
-            "/tasks",
-            json={"title": "Read Test", "status": "pending"},
-        )
-        task_id = create_response.json()["id"]
-
-        # Read back
-        response = client.get(f"/tasks/{task_id}")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["title"] == "Read Test"
-
-    def test_update_task(self, client: TestClient) -> None:
-        """Test updating a task."""
-        # Create first
-        create_response = client.post(
-            "/tasks",
-            json={"title": "Original", "status": "pending"},
-        )
-        task_id = create_response.json()["id"]
-
-        # Update
-        response = client.put(
-            f"/tasks/{task_id}",
-            json={"title": "Updated", "status": "done"},
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["title"] == "Updated"
-        assert data["status"] == "done"
-
-    def test_delete_task(self, client: TestClient) -> None:
-        """Test deleting a task."""
-        # Create first
-        create_response = client.post(
-            "/tasks",
-            json={"title": "To Delete", "status": "pending"},
-        )
-        task_id = create_response.json()["id"]
-
-        # Delete
-        response = client.delete(f"/tasks/{task_id}")
-        assert response.status_code == 200
-
-        # Verify deleted
-        get_response = client.get(f"/tasks/{task_id}")
-        assert get_response.status_code == 404
-
     def test_crud_flow(self, client: TestClient) -> None:
-        """Test complete CRUD flow."""
-        # 1. Create
-        create_response = client.post(
-            "/tasks",
-            json={"title": "CRUD Test", "status": "pending"},
-        )
-        assert create_response.status_code == 200
-        task = create_response.json()
+        """Empty list → create → list → read → update → delete → 404 → empty list."""
+        empty = client.get("/tasks")
+        assert empty.status_code == 200
+        assert (empty.json()["items"], empty.json()["total"]) == ([], 0)
+
+        created = client.post("/tasks", json={"title": "CRUD Test", "status": "pending"})
+        assert created.status_code == 200
+        task = created.json()
+        assert (task["title"], task["status"]) == ("CRUD Test", "pending")
         task_id = task["id"]
 
-        # 2. List (should have 1 item)
-        list_response = client.get("/tasks")
-        assert list_response.json()["total"] == 1
+        assert client.get("/tasks").json()["total"] == 1
 
-        # 3. Read
-        read_response = client.get(f"/tasks/{task_id}")
-        assert read_response.json()["title"] == "CRUD Test"
+        read = client.get(f"/tasks/{task_id}")
+        assert read.status_code == 200
+        assert read.json()["title"] == "CRUD Test"
 
-        # 4. Update
-        update_response = client.put(
-            f"/tasks/{task_id}",
-            json={"title": "Updated CRUD", "status": "done"},
-        )
-        assert update_response.json()["status"] == "done"
+        updated = client.put(f"/tasks/{task_id}", json={"title": "Updated", "status": "done"})
+        assert updated.status_code == 200
+        assert (updated.json()["title"], updated.json()["status"]) == ("Updated", "done")
 
-        # 5. Delete
-        delete_response = client.delete(f"/tasks/{task_id}")
-        assert delete_response.status_code == 200
-
-        # 6. Verify empty again
-        final_list = client.get("/tasks")
-        assert final_list.json()["total"] == 0
+        assert client.delete(f"/tasks/{task_id}").status_code == 200
+        assert client.get(f"/tasks/{task_id}").status_code == 404
+        assert client.get("/tasks").json()["total"] == 0
 
     def test_db_info(self, client: TestClient) -> None:
         """Test database info endpoint."""

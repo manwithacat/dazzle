@@ -21,18 +21,6 @@ from dazzle.http.specs import (
 )
 
 
-def test_field_spec_creation() -> None:
-    """Test creating a FieldSpec."""
-    field = FieldSpec(
-        name="email",
-        type=FieldType(kind="scalar", scalar_type=ScalarType.EMAIL),
-        required=True,
-    )
-    assert field.name == "email"
-    assert field.type.scalar_type == ScalarType.EMAIL
-    assert field.required is True
-
-
 def test_entity_spec_creation() -> None:
     """Test creating an EntitySpec."""
     entity = EntitySpec(
@@ -194,7 +182,3 @@ def test_immutability() -> None:
 
     with pytest.raises((AttributeError, TypeError, ValidationError)):
         entity.name = "NewName"
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

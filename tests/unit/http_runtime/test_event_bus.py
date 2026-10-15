@@ -8,15 +8,7 @@ from typing import Any
 
 import pytest
 
-from dazzle.http.runtime.event_bus import (
-    EntityEvent,
-    EntityEventBus,
-    EntityEventType,
-)
-
-# =============================================================================
-# Fixtures
-# =============================================================================
+from dazzle.http.runtime.event_bus import EntityEventBus, EntityEventType
 
 
 @pytest.fixture
@@ -25,179 +17,93 @@ def event_bus() -> Any:
     return EntityEventBus()
 
 
-# =============================================================================
-# EntityEvent Tests
-# =============================================================================
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("emit", "kwargs", "event_type", "data", "user_id"),
+    [
+        pytest.param(
+            "emit_created",
+            {"data": {"title": "Test"}, "user_id": "user_456"},
+            EntityEventType.CREATED,
+            {"title": "Test"},
+            "user_456",
+            id="created",
+        ),
+        pytest.param(
+            "emit_updated",
+            {"data": {"title": "Updated"}},
+            EntityEventType.UPDATED,
+            {"title": "Updated"},
+            None,
+            id="updated",
+        ),
+        pytest.param("emit_deleted", {}, EntityEventType.DELETED, None, None, id="deleted-no-data"),
+    ],
+)
+async def test_emit_delivers_one_event(
+    event_bus: Any, emit: str, kwargs: dict, event_type: Any, data: Any, user_id: Any
+) -> None:
+    events: list[Any] = []
+
+    async def handler(event: Any) -> None:
+        events.append(event)
+
+    event_bus.add_handler(handler)
+    await getattr(event_bus, emit)(entity_name="Task", entity_id="123", **kwargs)
+
+    assert len(events) == 1
+    event = events[0]
+    assert (event.event_type, event.entity_name, event.entity_id) == (event_type, "Task", "123")
+    assert (event.data, event.user_id) == (data, user_id)
+    assert event.timestamp > 0
 
 
-class TestEntityEvent:
-    """Tests for EntityEvent class."""
+@pytest.mark.asyncio
+async def test_every_async_and_sync_handler_is_called(event_bus: Any) -> None:
+    calls: list[str] = []
 
-    def test_create_event(self) -> None:
-        """Test creating an event."""
-        event = EntityEvent(
-            event_type=EntityEventType.CREATED,
-            entity_name="Task",
-            entity_id="123",
-            data={"title": "Test"},
-            user_id="user_456",
-        )
+    async def first(event: Any) -> None:
+        calls.append("async-1")
 
-        assert event.event_type == EntityEventType.CREATED
-        assert event.entity_name == "Task"
-        assert event.entity_id == "123"
-        assert event.data is not None and event.data["title"] == "Test"
-        assert event.user_id == "user_456"
-        assert event.timestamp > 0
+    async def second(event: Any) -> None:
+        calls.append("async-2")
 
+    def sync(event: Any) -> None:
+        calls.append("sync")
 
-# =============================================================================
-# EntityEventBus Tests
-# =============================================================================
+    event_bus.add_handler(first)
+    event_bus.add_handler(second)
+    event_bus.add_sync_handler(sync)
+
+    await event_bus.emit_created("Task", "123", {"title": "Test"})
+
+    assert sorted(calls) == ["async-1", "async-2", "sync"]
 
 
-class TestEntityEventBus:
-    """Tests for EntityEventBus class."""
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["async", "sync"])
+async def test_failing_handler_does_not_stop_others(event_bus: Any, kind: str) -> None:
+    events: list[Any] = []
 
-    @pytest.mark.asyncio
-    async def test_emit_created(self, event_bus: Any) -> None:
-        """Test emitting created event."""
-        events = []
+    def failing_sync(event: Any) -> None:
+        raise ValueError("Handler failed")
 
-        async def handler(event: Any) -> None:
-            events.append(event)
+    def working_sync(event: Any) -> None:
+        events.append(event)
 
-        event_bus.add_handler(handler)
+    async def failing_async(event: Any) -> None:
+        failing_sync(event)
 
-        await event_bus.emit_created(
-            entity_name="Task",
-            entity_id="123",
-            data={"title": "Test"},
-            user_id="user_456",
-        )
+    async def working_async(event: Any) -> None:
+        working_sync(event)
 
-        assert len(events) == 1
-        assert events[0].event_type == EntityEventType.CREATED
-        assert events[0].entity_name == "Task"
-        assert events[0].entity_id == "123"
+    if kind == "async":
+        event_bus.add_handler(failing_async)
+        event_bus.add_handler(working_async)
+    else:
+        event_bus.add_sync_handler(failing_sync)
+        event_bus.add_sync_handler(working_sync)
 
-    @pytest.mark.asyncio
-    async def test_emit_updated(self, event_bus: Any) -> None:
-        """Test emitting updated event."""
-        events = []
+    await event_bus.emit_created("Task", "123", {})  # must not raise
 
-        async def handler(event: Any) -> None:
-            events.append(event)
-
-        event_bus.add_handler(handler)
-
-        await event_bus.emit_updated(
-            entity_name="Task",
-            entity_id="123",
-            data={"title": "Updated"},
-        )
-
-        assert len(events) == 1
-        assert events[0].event_type == EntityEventType.UPDATED
-
-    @pytest.mark.asyncio
-    async def test_emit_deleted(self, event_bus: Any) -> None:
-        """Test emitting deleted event."""
-        events = []
-
-        async def handler(event: Any) -> None:
-            events.append(event)
-
-        event_bus.add_handler(handler)
-
-        await event_bus.emit_deleted(
-            entity_name="Task",
-            entity_id="123",
-        )
-
-        assert len(events) == 1
-        assert events[0].event_type == EntityEventType.DELETED
-        assert events[0].data is None
-
-    @pytest.mark.asyncio
-    async def test_multiple_handlers(self, event_bus: Any) -> None:
-        """Test multiple handlers are called."""
-        handler1_calls = []
-        handler2_calls = []
-
-        async def handler1(event: Any) -> None:
-            handler1_calls.append(event)
-
-        async def handler2(event: Any) -> None:
-            handler2_calls.append(event)
-
-        event_bus.add_handler(handler1)
-        event_bus.add_handler(handler2)
-
-        await event_bus.emit_created("Task", "123", {"title": "Test"})
-
-        assert len(handler1_calls) == 1
-        assert len(handler2_calls) == 1
-
-    @pytest.mark.asyncio
-    async def test_sync_handler(self, event_bus: Any) -> None:
-        """Test synchronous handler."""
-        events = []
-
-        def sync_handler(event: Any) -> None:
-            events.append(event)
-
-        event_bus.add_sync_handler(sync_handler)
-
-        await event_bus.emit_created("Task", "123", {"title": "Test"})
-
-        assert len(events) == 1
-
-
-# =============================================================================
-# Handler Error Handling Tests
-# =============================================================================
-
-
-class TestHandlerErrors:
-    """Tests for handler error handling."""
-
-    @pytest.mark.asyncio
-    async def test_handler_error_does_not_stop_others(self, event_bus: Any) -> None:
-        """Test that a handler error doesn't stop other handlers."""
-        events = []
-
-        async def failing_handler(event: Any) -> None:
-            raise ValueError("Handler failed")
-
-        async def working_handler(event: Any) -> None:
-            events.append(event)
-
-        event_bus.add_handler(failing_handler)
-        event_bus.add_handler(working_handler)
-
-        # Should not raise
-        await event_bus.emit_created("Task", "123", {})
-
-        # Working handler should still be called
-        assert len(events) == 1
-
-    @pytest.mark.asyncio
-    async def test_sync_handler_error_does_not_stop_others(self, event_bus: Any) -> None:
-        """Test that a sync handler error doesn't stop others."""
-        events = []
-
-        def failing_handler(event: Any) -> None:
-            raise ValueError("Handler failed")
-
-        def working_handler(event: Any) -> None:
-            events.append(event)
-
-        event_bus.add_sync_handler(failing_handler)
-        event_bus.add_sync_handler(working_handler)
-
-        # Should not raise
-        await event_bus.emit_created("Task", "123", {})
-
-        # Working handler should still be called
-        assert len(events) == 1
+    assert len(events) == 1
