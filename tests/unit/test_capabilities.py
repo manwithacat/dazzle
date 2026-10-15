@@ -5,46 +5,45 @@ import dataclasses
 import pytest
 
 from dazzle.core.capabilities.models import Capability
+from tests.unit._fake_capabilities import fake_capabilities  # noqa: F401  (fixture)
 
 
 def test_capability_is_frozen_and_self_describing():
     cap = Capability(
-        id="auth.enterprise.saml",
-        label="Enterprise SAML SSO",
-        probe_module="onelogin",
-        required_extras=("saml",),
-        remediation="pip install 'dazzle-dsl[saml]'  # needs native libxmlsec1",
+        id="demo.beta",
+        label="Demo beta",
+        probe_module="dazzle_demo_absent",
+        required_extras=("beta",),
+        remediation="pip install 'dazzle-dsl[beta]'",
     )
-    assert cap.id == "auth.enterprise.saml"
-    assert cap.required_extras == ("saml",)
+    assert cap.id == "demo.beta"
+    assert cap.required_extras == ("beta",)
     # frozen — id cannot be reassigned
     with pytest.raises(dataclasses.FrozenInstanceError):
         cap.id = "x"  # type: ignore[misc]
 
 
-def test_enterprise_capabilities_are_registered():
+def test_no_framework_capability_is_registered():
+    # The enterprise auth capabilities were the only ones; DD-013 parked them.
     from dazzle.core.capabilities import known_capability_ids
 
-    ids = known_capability_ids()
-    assert {
-        "auth.enterprise.oidc",
-        "auth.enterprise.saml",
-        "auth.enterprise.scim",
-    } <= ids
+    assert known_capability_ids() == set()
 
 
+@pytest.mark.usefixtures("fake_capabilities")
 def test_resolution_active_requires_declared_and_available(monkeypatch):
     import dazzle.core.capabilities.registry as reg
     from dazzle.core.capabilities import resolve_capabilities
 
-    # Force OIDC's probe module to look installed, everything else absent.
+    # Force alpha's probe module to look installed, everything else absent.
     monkeypatch.setattr(reg, "find_spec", lambda name: object() if name == "authlib" else None)
 
-    resolved = resolve_capabilities(["auth.enterprise.oidc"])
-    assert resolved.is_active("auth.enterprise.oidc")
-    assert not resolved.is_active("auth.enterprise.saml")  # not declared
+    resolved = resolve_capabilities(["demo.alpha"])
+    assert resolved.is_active("demo.alpha")
+    assert not resolved.is_active("demo.beta")  # not declared
 
 
+@pytest.mark.usefixtures("fake_capabilities")
 def test_declared_but_unavailable_raises_with_remediation(monkeypatch):
     import dazzle.core.capabilities.registry as reg
     from dazzle.core.capabilities import resolve_capabilities
@@ -53,16 +52,18 @@ def test_declared_but_unavailable_raises_with_remediation(monkeypatch):
     monkeypatch.setattr(reg, "find_spec", lambda name: None)  # nothing installed
 
     with pytest.raises(CapabilityUnavailableError) as exc:
-        resolve_capabilities(["auth.enterprise.saml"])
-    assert "dazzle-dsl[saml]" in str(exc.value)  # runbook present
+        resolve_capabilities(["demo.beta"])
+    assert "dazzle-dsl[beta]" in str(exc.value)  # runbook present
 
 
+@pytest.mark.usefixtures("fake_capabilities")
 def test_unknown_id_is_reported_not_resolved():
     from dazzle.core.capabilities import unknown_capability_ids
 
-    assert unknown_capability_ids(["auth.enterprise.oidc", "auth.bogus"]) == ["auth.bogus"]
+    assert unknown_capability_ids(["demo.alpha", "demo.bogus"]) == ["demo.bogus"]
 
 
+@pytest.mark.usefixtures("fake_capabilities")
 def test_every_capability_declares_extras_and_remediation():
     from dazzle.core.capabilities import all_capabilities
 
@@ -76,15 +77,16 @@ def test_every_capability_declares_extras_and_remediation():
             assert cap.remediation.strip(), f"{cap.id} missing remediation"
 
 
-def test_scim_is_always_available_without_any_extra(monkeypatch):
-    """auth.enterprise.scim has no import-time dependency (#1342 review): declaring
-    it activates it even when no SSO/SAML package is installed."""
+@pytest.mark.usefixtures("fake_capabilities")
+def test_probe_free_capability_is_always_available(monkeypatch):
+    """A capability with no import-time dependency (#1342 review): declaring it
+    activates it even when no optional package is installed."""
     import dazzle.core.capabilities.registry as reg
     from dazzle.core.capabilities import resolve_capabilities
 
     monkeypatch.setattr(reg, "find_spec", lambda name: None)  # nothing installed
-    resolved = resolve_capabilities(["auth.enterprise.scim"])  # must NOT raise
-    assert resolved.is_active("auth.enterprise.scim")
+    resolved = resolve_capabilities(["demo.gamma"])  # must NOT raise
+    assert resolved.is_active("demo.gamma")
 
 
 def test_is_available_guards_missing_parent_package(monkeypatch):

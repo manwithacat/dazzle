@@ -101,52 +101,23 @@ class TestLoginCsrfCookie:
         assert 'dazzle_csrf=""' in cleared or "dazzle_csrf=;" in cleared
         assert "expires=" in cleared.lower() or "max-age=0" in cleared.lower()
 
-    # ---- SP-initiated SAML SLO integration (#1342) ----
+    # ---- logout redirect targets (SAML SLO parked in DD-013) ----
 
-    def test_logout_redirects_to_idp_slo_for_saml_session(
-        self, setup: tuple[Any, MagicMock], monkeypatch
-    ) -> None:
-        """A SAML session → /auth/logout redirects the browser to the IdP SLO, AND the local
-        session is still deleted (local logout is unconditional + first)."""
+    def test_logout_browser_redirects_home(self, setup: tuple[Any, MagicMock]) -> None:
         client, store = setup
         self._login(client, store)
-        monkeypatch.setattr(
-            "dazzle.http.runtime.auth.saml_logout.saml_slo_redirect_url",
-            lambda store, request, *, session_id: "https://idp.example/slo?SAMLRequest=x",
-        )
-        logout = client.post(
-            "/auth/logout", headers={"accept": "text/html"}, follow_redirects=False
-        )
-        assert logout.status_code == 303
-        assert logout.headers["location"] == "https://idp.example/slo?SAMLRequest=x"
-        store.delete_session.assert_called_once()  # local logout happened regardless
-
-    def test_logout_local_redirect_when_not_saml(
-        self, setup: tuple[Any, MagicMock], monkeypatch
-    ) -> None:
-        client, store = setup
-        self._login(client, store)
-        monkeypatch.setattr(
-            "dazzle.http.runtime.auth.saml_logout.saml_slo_redirect_url",
-            lambda store, request, *, session_id: None,
-        )
         logout = client.post(
             "/auth/logout", headers={"accept": "text/html"}, follow_redirects=False
         )
         assert logout.status_code == 303
         assert logout.headers["location"] == "/"
+        store.delete_session.assert_called_once()
 
-    def test_logout_htmx_uses_hx_redirect_to_idp_slo(
-        self, setup: tuple[Any, MagicMock], monkeypatch
-    ) -> None:
+    def test_logout_htmx_uses_hx_redirect_home(self, setup: tuple[Any, MagicMock]) -> None:
         client, store = setup
         self._login(client, store)
-        monkeypatch.setattr(
-            "dazzle.http.runtime.auth.saml_logout.saml_slo_redirect_url",
-            lambda store, request, *, session_id: "https://idp.example/slo?SAMLRequest=x",
-        )
         logout = client.post("/auth/logout", headers={"hx-request": "true"})
-        assert logout.headers["HX-Redirect"] == "https://idp.example/slo?SAMLRequest=x"
+        assert logout.headers["HX-Redirect"] == "/"
 
 
 # ---------------------------------------------------------------------------

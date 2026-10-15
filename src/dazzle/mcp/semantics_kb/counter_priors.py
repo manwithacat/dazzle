@@ -69,7 +69,7 @@ class CounterPrior(BaseModel):
     detectors: list[DetectorRef] = Field(default_factory=list)
     # Opt-in capability this antipattern is scoped to (#1342). None = always
     # relevant. When set, the proactive flag is suppressed unless the capability
-    # is active — don't warn about a SAML pathology in a non-SAML app.
+    # is active.
     capability: str | None = None
 
     file_path: str

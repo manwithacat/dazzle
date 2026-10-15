@@ -16,8 +16,8 @@ Fourteen families. Two are deliberate *shape*, not missed extraction:
 `per-class-constant-accessors` (only the body shape matches). Two are detector
 artefacts: `ir-facade-accessors` and `consolidated-tool-wrappers` import a
 *different* function under one local alias, and the exact-body serialiser drops
-import names. `auth-domain-and-connection-helpers` lives in the enterprise-auth
-and two-factor modules that ships AD and AG park.
+import names. `auth-domain-and-connection-helpers` is down to the org-context
+select/switch pair; its enterprise-auth members went with ship AD (DD-013).
 
 Fixed: the clock (one `dazzle.core.clock.utcnow()`, gated); flense ship AH: 35 of
 76 exact and 19 of 62 structural clusters (parser keyword handlers, naming, cron,

@@ -27,7 +27,7 @@ export UV_MANAGED_PYTHON := 1
 export PYENV_VERSION := system
 
 # Day-to-day local extras (CI jobs use frozen lists via setup-dazzle / ci_local.sh).
-DEV_EXTRAS := --extra dev --extra llm --extra mcp --extra postgres --extra perf --extra saml
+DEV_EXTRAS := --extra dev --extra llm --extra mcp --extra postgres --extra perf
 
 # Default target
 help:

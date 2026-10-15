@@ -156,24 +156,10 @@ sso = [
     # itsdangerous moved to core deps in v0.67.96 (#1054) — required
     # by Starlette's SessionMiddleware whether or not authlib is
     # installed. Kept here for documentation; pip dedupes.
-    # cryptography: AES-GCM secret-at-rest for enterprise Connections
-    # (auth Plan 4a, dazzle.http.runtime.auth.connection_crypto) — lazy-imported,
-    # so core installs without [sso] are unaffected until a connection is used.
-    "cryptography>=50.0.0",
-    # dnspython: DNS-TXT domain-ownership verification for enterprise Connections
-    # (auth Plan 4b.iv, dazzle.http.runtime.auth.domain_verification) — lazy-imported
-    # inside DnspythonResolver, so core installs are unaffected until verify-domain runs.
+    # dnspython: DNS TXT/CNAME checks for custom-domain host aliases
+    # (ADR-0055, dazzle.http.runtime.tenant.aliases) — lazy-imported inside the
+    # resolvers, so core installs are unaffected until an alias is verified.
     "dnspython>=2.0",
-]
-saml = [
-    # python3-saml drives SP-initiated SAML 2.0 (auth Plan 5, dazzle.http.runtime.auth.
-    # saml_provider) — it owns all XML parsing + signature validation (XXE / signature-
-    # wrapping defenses), imported lazily inside NativeSAMLProvider._build_auth.
-    # SEPARATE from [sso] because it needs the native libxmlsec1 (python-xmlsec / lxml):
-    # keeping it out of [sso] means OIDC/SCIM installs stay pure-pip. Install the system
-    # lib first (e.g. apt-get install libxmlsec1-dev pkg-config) then
-    # `pip install 'dazzle-dsl[saml]'`.
-    "python3-saml>=1.15",
 ]
 signing = [
     # #1283 phase 2: native document signing primitive.
@@ -301,8 +287,8 @@ aws-test = [
 # Coverage bundle: the pure-pip optional subsystems whose tests otherwise
 # skip on the CI coverage job (no native deps), undercounting coverage.
 # Wired into the py-tests (coverage) job's install. Deliberately EXCLUDES
-# compliance/weasyprint (native libpango/cairo) and saml (native libxmlsec1)
-# — those need system deps and are a separate decision.
+# compliance/weasyprint (native libpango/cairo) — it needs system deps and is
+# a separate decision.
 test-full = [
     "dazzle-dsl[graph,signing,observability,aws]",
 ]

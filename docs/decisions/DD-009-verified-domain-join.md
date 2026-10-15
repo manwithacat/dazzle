@@ -16,7 +16,8 @@ No consumer turns on verified-domain join; its example (`domain_join_co`) was
 retired in flense ship E. Flense ship F (ADR-0057) removes the join policy,
 the join-request queue and the membership admission gate. Enterprise SSO's
 DNS-TXT domain verification (`auth/domain_verification.py`,
-`verified_domains` on connections, home-realm routing) stays.
+`verified_domains` on connections, home-realm routing) stayed until flense
+ship AD parked it with enterprise SSO in DD-013 (2026-10-15).
 
 ## Plan (what we already concluded)
 
@@ -61,7 +62,9 @@ When a force lands:
 ## Already shipped (do not re-litigate)
 
 - Enterprise SSO connections, DNS-TXT domain verification and
-  verified-domain home-realm discovery for OIDC/SAML.
+  verified-domain home-realm discovery for OIDC/SAML were parked in DD-013
+  (flense ship AD). Verified domains are a prerequisite of this plan, so a
+  force here restores DD-013's connection and domain-verification slice first.
 - The `organizations.settings` JSON column (still present, now unread).
 
 ## Explicitly out of scope until force
@@ -74,3 +77,4 @@ When a force lands:
 | Date | Event |
 |------|--------|
 | 2026-10-12 | Parked (this DD); verified-domain join removed in flense ship F |
+| 2026-10-15 | Domain verification parked with enterprise SSO (DD-013, flense ship AD) |

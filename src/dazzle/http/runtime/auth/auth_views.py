@@ -50,11 +50,6 @@ LOGIN_ERROR_TOKENS: frozenset[str] = frozenset(
         "sso_no_email",
         "sso_email_unverified",
         "sso_provider_unknown",
-        "sso_no_connection",
-        "sso_unavailable",
-        "sso_domain_not_verified",
-        "sso_unverified_fallback",
-        "sso_no_membership",
     }
 )
 SIGNUP_ERROR_TOKENS: frozenset[str] = frozenset(
@@ -80,16 +75,6 @@ LOGIN_ERROR_MESSAGES: dict[str, str] = {
         "Your SSO email address isn't verified with the provider yet. Verify it and try again."
     ),
     "sso_provider_unknown": "That SSO provider isn't configured on this deployment.",
-    "sso_no_connection": "No SSO connection is available for that organization.",
-    "sso_unavailable": "SSO isn't available right now. Please try again.",
-    "sso_domain_not_verified": ("That email domain isn't verified for this organization."),
-    "sso_unverified_fallback": (
-        "We couldn't verify your email with that sign-in method. "
-        "Try again or use a different method."
-    ),
-    "sso_no_membership": (
-        "You don't have a membership in that organization. Ask an admin to invite you."
-    ),
 }
 SIGNUP_ERROR_MESSAGES: dict[str, str] = {
     "mismatch": "The two password fields didn't match. Try again.",
@@ -113,11 +98,7 @@ def leftover_honest_auth_error(raw: Any, declared: Any) -> str | None:
     """Valid declared ``?error=`` tokens ride. Leftover junk restores None.
 
     Leftover ``?error=zzz`` used to invent a clean page (no banner)
-    via omit-as-absent. Enterprise/SAML already emit
-    ``sso_no_connection`` / ``sso_unavailable`` /
-    ``sso_domain_not_verified`` / ``sso_unverified_fallback`` /
-    ``sso_no_membership`` — those vanished the same way. Valid
-    declared tokens ride. Absent / blank is the honest first-visit
+    via omit-as-absent. Valid declared tokens ride. Absent / blank is the honest first-visit
     default (``""``). Rest is stay-put (None). Distinct from leftover
     2FA sent (oral #94) and leftover 2FA mode (oral #92). Live
     simple_task ``/login``. Cycle 2221.
@@ -143,13 +124,10 @@ def leftover_honest_auth_email(raw: Any) -> str | None:
     login/signup used to invent ``/login/sent`` theater (nonempty
     leftover omitted as unknown). The same leftover on
     forgot-password invented ``/forgot-password/sent``. Leftover
-    on invite invented a persist. Leftover ``?email=zzz`` on
-    enterprise/SAML login invented the host-pinned default IdP
-    (no ``@`` treated as absent). Valid mailboxes ride
+    on invite invented a persist. Valid mailboxes ride
     (lowercased). Absent / blank is the honest first-visit
     default (``""``). Rest is stay-put (None → 400). Distinct
-    from leftover GET list email VALUE (oral #80) and leftover
-    SCIM userName (oral #102). Live simple_task
+    from leftover GET list email VALUE (oral #80). Live simple_task
     ``/auth/login/magic-link``. Cycle 2233.
     """
     if raw is None:

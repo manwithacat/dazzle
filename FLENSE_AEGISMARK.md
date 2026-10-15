@@ -116,6 +116,11 @@ gated on the consumer inventory — but prove it here rather than trust it:
    - 42 fields on 26 entities are rich text (`ConsentTemplate.body_html`, `SafeguardingConcern.*`,
      `Question.*`, `MarkingResult.*`, …): run `db resanitize-rich-text` with priority on
      `SafeguardingConcern` and `ConsentTemplate`.
+   - `docs/enterprise-auth-enablement.md` describes SAML/SCIM/OIDC enterprise connections that the
+     framework parked on 2026-10-15 (DD-013, flense ship AD; the `auth.enterprise.*` capabilities,
+     `dazzle auth connection` and five empty tables are gone, revision 0023 drops them on
+     `dazzle db upgrade head`). Archive the runbook or re-point it at DD-013's reopen trigger: a
+     consumer with a real IdP to test against reopens the decision.
    - `AGENTS.md:442` advertises `dazzle test coverage`, which does not exist; the kept `dazzle test`
      commands are `run`, `dsl-run`, `generate`, `walk`, `create-sessions`, `diff-personas`,
      `verify-story`, `populate`, `agent` and `tier2-generate` (`dazzle test --help`).

@@ -382,7 +382,7 @@ class CapabilitiesConfig:
     Reads ``[capabilities]`` from dazzle.toml:
 
         [capabilities]
-        enabled = ["auth.enterprise.oidc"]
+        enabled = ["<capability id>"]
 
     Default empty → a greenfield app activates no gated capability.
     """
@@ -1038,7 +1038,7 @@ def load_manifest(path: Path) -> ProjectManifest:
     cap_data = data.get("capabilities", {}) if isinstance(data.get("capabilities"), dict) else {}
     raw_enabled = cap_data.get("enabled", [])
     if not isinstance(raw_enabled, list):
-        # Fail loud, not open: a scalar (e.g. enabled = "auth.enterprise.oidc")
+        # Fail loud, not open: a scalar (e.g. enabled = "area.feature")
         # would otherwise shred into characters and silently activate nothing.
         raise ValueError(
             "[capabilities] enabled must be a list of capability ids, "

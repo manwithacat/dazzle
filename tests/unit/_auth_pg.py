@@ -21,9 +21,6 @@ AUTH_TABLES = (
     "sessions",
     "memberships",
     "organizations",
-    "scim_groups",
-    "scim_group_members",
-    "saml_consumed_assertions",
     "password_reset_tokens",
     "user_preferences",
 )

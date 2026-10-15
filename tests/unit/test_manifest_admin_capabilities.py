@@ -25,11 +25,9 @@ def test_admin_capabilities_parsed(tmp_path):
             tmp_path,
             '\n[auth]\nenabled = true\norg_admin_roles = ["org_admin"]\n'
             "\n[auth.admin_capabilities]\n"
-            'manage_members = ["business_admin"]\n'
-            'manage_connections = ["it_admin"]\n',
+            'manage_members = ["business_admin"]\n',
         )
     )
     assert m.auth.admin_capabilities == {
         "manage_members": ["business_admin"],
-        "manage_connections": ["it_admin"],
     }

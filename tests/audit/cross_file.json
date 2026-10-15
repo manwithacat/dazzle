@@ -684,14 +684,6 @@
       "overlap_ratio": 0.72
     },
     {
-      "file_a": "tests/integration/test_scim_routes.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 33,
-      "tests_b": 130,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.76
-    },
-    {
       "file_a": "tests/unit/test_parser.py",
       "file_b": "tests/unit/test_rbac_ui_fixes.py",
       "tests_a": 130,
@@ -1010,6 +1002,14 @@
       "tests_b": 26,
       "shared_shape_count": 19,
       "overlap_ratio": 0.73
+    },
+    {
+      "file_a": "tests/unit/test_scope_rules.py",
+      "file_b": "tests/unit/test_vendor_mock_orchestrator.py",
+      "tests_a": 49,
+      "tests_b": 22,
+      "shared_shape_count": 19,
+      "overlap_ratio": 0.86
     }
   ]
 }

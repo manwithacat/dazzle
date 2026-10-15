@@ -24,9 +24,9 @@ def test_capabilities_defaults_to_none():
 
 def test_capabilities_field_is_queryable():
     caps = ResolvedCapabilities(
-        active=frozenset({"auth.enterprise.oidc"}),
-        declared=("auth.enterprise.oidc",),
+        active=frozenset({"demo.alpha"}),
+        declared=("demo.alpha",),
     )
     ctx = _ctx(capabilities=caps)
-    assert ctx.capabilities.is_active("auth.enterprise.oidc")
-    assert not ctx.capabilities.is_active("auth.enterprise.scim")
+    assert ctx.capabilities.is_active("demo.alpha")
+    assert not ctx.capabilities.is_active("demo.gamma")

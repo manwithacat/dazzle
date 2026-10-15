@@ -50,7 +50,7 @@ last few releases (see the gap columns).
 | RBAC audit trail | **Beta** | The production `AuditLogger` writes every CRUD decision to PostgreSQL. Recently hardened (fail-closed mode #1172; scope-denied writes captured since #1179). |
 | Compliance evidence mapping | **Beta** | Maps DSL constructs to ISO 27001 / SOC 2 controls and flags coverage gaps. Does exactly what the (reframed) docs claim; the `partial` status is reserved but unimplemented. |
 | Session CSRF protection | **Beta** | Session-bound token + Origin gate with auth-class-derived disposition (ADR-0033). Shipped v0.81.15–18; young but tested. |
-| Enterprise SSO/SCIM (opt-in) | **Beta** | OIDC/SAML/SCIM behind a `[capabilities]` opt-in registry; a greenfield app exposes none. Each piece is tested, but the cluster (#1342) is still in active development. |
+| Enterprise SSO/SCIM | **Parked** | Removed in flense ship AD (ADR-0057); no consumer enabled it. The design and the code's last commit are in [DD-013](../decisions/DD-013-enterprise-sso-scim-connections.md). |
 | Membership-fenced tenancy | **Beta** | Global Identity + Org + fenced Membership; PostgreSQL RLS keyed on a membership-derived `tenant_id`, proven against real PG as a non-superuser. Phases A+E shipped; generated RLS (B–D) is roadmap. |
 
 ---
@@ -195,22 +195,12 @@ stated limits) · **Roadmap** (not yet built).
   deliberately not built (hx-headers transport switch, a DSL escape hatch). The
   disposition surface is young — treat it as correct-but-recent.
 
-#### C8 · Enterprise SSO/SCIM is available only behind an explicit opt-in capability
-- **Status:** Implemented · **Maturity:** Beta
-- **What it means:** OIDC/SAML login and SCIM user/group provisioning are gated
-  behind a `[capabilities]` opt-in registry — a greenfield app exposes none of
-  these routes. SAML supports IdP-metadata import, SP-signed AuthnRequests,
-  encrypted assertions, and Single-Logout; SCIM supports the /Users, /Groups,
-  /ResourceTypes, and /Schemas endpoints.
-- **Enforced where:** `src/dazzle/http/runtime/auth/saml_provider.py`,
-  `saml_routes.py`, `scim_provisioning.py`, `scim_routes.py`; opt-in gate in
-  `auth/capability_guard.py`.
-- **Tested where:** `tests/integration/test_saml_routes.py`,
-  `test_scim_routes.py`; `tests/unit/test_saml_provider.py`,
-  `test_saml_metadata.py`, `test_saml_logout.py`.
-- **Known gaps:** The enterprise-auth cluster (#1342) is **still in active
-  development** — SP-initiated SLO and a boot guard (#1344) remain. Rated Beta:
-  each piece is code + tested, but the surface is young and the issue is open.
+#### C8 · Enterprise SSO/SCIM (withdrawn)
+- **Status:** Withdrawn · **Maturity:** Parked
+- **What it means:** Per-org OIDC/SAML login and SCIM provisioning were removed in
+  flense ship AD (ADR-0057): no consumer declared the opt-in capability. The claim
+  returns when a consumer forces DD-013
+  (`docs/decisions/DD-013-enterprise-sso-scim-connections.md`).
 
 #### C9 · Tenant rows are fenced by membership-derived row-level security
 - **Status:** Partial · **Maturity:** Beta

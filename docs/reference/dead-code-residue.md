@@ -44,11 +44,3 @@ Two things to know before deleting anything the gate names:
 When an entry has had no caller for more than one release and no Deferred
 Decision names it, delete it (and its row here) rather than re-classifying it:
 that is how the three retired families went.
-
-## The trap when you go looking
-
-`scim_provisioning.py::_member_ids` sits directly beside the live
-`leftover_honest_scim_member_ids`, and the live one's docstring cites the dead
-one by name as the historical culprit. Reading the code alone, the pair looks
-like a helper and its caller. The ratchet is right about which is which; your eyes
-are not, which is why the gate exists.

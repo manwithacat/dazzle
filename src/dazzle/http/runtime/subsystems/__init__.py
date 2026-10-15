@@ -82,7 +82,7 @@ class SubsystemContext:
 
     # Resolved opt-in capabilities (#1342) — set by DazzleBackendApp before
     # subsystem startup. A `ResolvedCapabilities`; query with
-    # `.is_active("auth.enterprise.oidc")`. None when no manifest was resolved.
+    # `.is_active("<capability id>")`. None when no manifest was resolved.
     capabilities: Any = None
 
     # Extra static directories to prepend to the framework's /static mount.

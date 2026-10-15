@@ -98,34 +98,6 @@ def resolve_capabilities(declared: list[str]) -> ResolvedCapabilities:
     return ResolvedCapabilities(active=frozenset(active), declared=tuple(declared))
 
 
-# --- Enterprise auth capabilities (consumer #1) -----------------------------
-register(
-    Capability(
-        id="auth.enterprise.oidc",
-        label="Enterprise OIDC SSO",
-        probe_module="authlib",
-        required_extras=("sso",),
-        remediation="pip install 'dazzle-dsl[sso]'",
-    )
-)
-register(
-    Capability(
-        id="auth.enterprise.saml",
-        label="Enterprise SAML SSO",
-        probe_module="onelogin",
-        required_extras=("saml",),
-        remediation="pip install 'dazzle-dsl[saml]'  # needs native libxmlsec1",
-    )
-)
-register(
-    Capability(
-        id="auth.enterprise.scim",
-        label="Enterprise SCIM provisioning",
-        # SCIM is stateless bearer auth over JSON with no import-time dependency
-        # (it mounted unconditionally pre-#1342). Always available once declared —
-        # no extra to install, so no probe and no remediation runbook.
-        probe_module=None,
-        required_extras=(),
-        remediation="",
-    )
-)
+# No capability is registered. The enterprise auth capabilities
+# (auth.enterprise.oidc / .saml / .scim) were the only ones; they are parked in
+# docs/decisions/DD-013-enterprise-sso-scim-connections.md (flense ship AD).

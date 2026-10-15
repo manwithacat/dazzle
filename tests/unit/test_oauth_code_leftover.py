@@ -3,15 +3,13 @@
 leftover-honest consume token / 2FA code already exist (oral #109 /
 #108). SSO callback still forwarded leftover ``?code=zzz`` / ``ghost``
 into authorize_access_token and invented ``303 /login?error=sso_failed``.
-The same leftover on GET ``/auth/enterprise/callback`` invented the
-same theater. Leftover ``?state=zzz`` did too. Valid opaque IdP codes
+Leftover ``?state=zzz`` did too. Valid opaque IdP codes
 (urlsafe + ``/+=.``, length 16–512) ride; leftover stays put (400, no
 theater). Absent / blank still first-visit (stray / cancel still
 sso_failed). Well-formed codes that fail exchange still bounce
 sso_failed. Live simple_task ``/auth/sso/{provider}/callback``.
 Oral #113 — not leftover consume token (oral #109), not leftover 2FA
-code (oral #108), not leftover SSO provider (oral #112), not leftover
-``?connection=`` (oral #110).
+code (oral #108), not leftover SSO provider (oral #112).
 """
 
 from __future__ import annotations
@@ -24,7 +22,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.middleware.sessions import SessionMiddleware
 
-from dazzle.http.runtime.auth.enterprise_routes import create_enterprise_sso_routes
 from dazzle.http.runtime.auth.leftover_oauth_code import leftover_honest_oauth_code
 from dazzle.http.runtime.auth.sso_config import SsoProviderConfig
 from dazzle.http.runtime.auth.sso_routes import create_sso_routes
@@ -46,15 +43,6 @@ _SSO = (
     / "runtime"
     / "auth"
     / "sso_routes.py"
-)
-_ENTERPRISE = (
-    Path(__file__).resolve().parents[2]
-    / "src"
-    / "dazzle"
-    / "http"
-    / "runtime"
-    / "auth"
-    / "enterprise_routes.py"
 )
 _VIEWS = (
     Path(__file__).resolve().parents[2]
@@ -140,16 +128,6 @@ def _sso_app(*, raising: bool = False) -> FastAPI:
     return app
 
 
-def _enterprise_app() -> FastAPI:
-    app = FastAPI()
-    app.add_middleware(SessionMiddleware, secret_key="test-secret", same_site="lax")
-    store = MagicMock()
-    store.get_connection.return_value = None
-    app.state.auth_store = store
-    app.include_router(create_enterprise_sso_routes())
-    return app
-
-
 def test_leftover_sso_code_does_not_invent_sso_failed() -> None:
     client = TestClient(_sso_app())
     resp = client.get("/auth/sso/google/callback?code=zzz", follow_redirects=False)
@@ -176,14 +154,6 @@ def test_leftover_sso_state_does_not_invent_sso_failed() -> None:
     assert "sso_failed" not in (resp.headers.get("location") or "")
 
 
-def test_leftover_enterprise_code_does_not_invent_sso_failed() -> None:
-    client = TestClient(_enterprise_app())
-    resp = client.get("/auth/enterprise/callback?code=zzz", follow_redirects=False)
-    assert resp.status_code == 400
-    assert "Unknown authorization code" in resp.text
-    assert "sso_failed" not in (resp.headers.get("location") or "")
-
-
 def test_absent_code_still_first_visit() -> None:
     client = TestClient(_sso_app(raising=True))
     resp = client.get("/auth/sso/google/callback", follow_redirects=False)
@@ -204,19 +174,13 @@ def test_wellformed_exchange_miss_still_sso_failed() -> None:
 def test_helper_source_pins_oauth_code_leftover() -> None:
     helper = _HELPER.read_text()
     sso = _SSO.read_text()
-    enterprise = _ENTERPRISE.read_text()
     assert "def leftover_honest_oauth_code" in helper
     assert "_OAUTH_CODE" in helper
     assert "leftover_honest_oauth_code" in sso
-    assert "leftover_honest_oauth_code" in enterprise
     assert "Unknown authorization code" in sso
     assert "Unknown OAuth state" in sso
-    assert "Unknown authorization code" in enterprise
-    assert "Unknown OAuth state" in enterprise
     assert "HTMLResponse" in sso
-    assert "HTMLResponse" in enterprise
     assert "Response(\n            status_code=400,\n            content=" not in sso
-    assert "Response(\n            status_code=400,\n            content=" not in enterprise
 
 
 def test_live_login_buttons_name_sso_callback_path() -> None:

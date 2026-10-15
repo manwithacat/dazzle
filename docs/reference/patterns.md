@@ -404,37 +404,6 @@ generated/
 
 ---
 
-## Enterprise Sso
-
-Per-org enterprise SSO via OIDC connections — an opt-in capability. Connections are runtime data (dazzle auth connection ...), fenced per org and gated by domain verification. SAML and SCIM are sibling capabilities (auth.enterprise.saml / .scim).
-
-### Syntax
-
-```dsl
-# 1. Opt in (declares the capability + prints the runbook):
-dazzle capability enable auth.enterprise.oidc
-# 2. Create a per-org connection (runtime data, not DSL):
-dazzle auth connection create --tenant <org> --issuer <url> \
-    --client-id <id> --client-secret <secret>
-# 3. Verify the org's email domain (DNS-TXT), then sign in at /auth/enterprise/login.
-```
-
-### Example
-
-```dsl
-# dazzle.toml
-[capabilities]
-enabled = ["auth.enterprise.oidc"]
-
-# Per org (CLI, runtime — secrets never in DSL):
-$ dazzle auth connection create --tenant acme --issuer https://acme.okta.com \
-    --client-id ... --client-secret ...
-$ dazzle auth connection add-domain <id> acme.com   # publish the printed TXT record
-$ dazzle auth connection verify-domain <id> acme.com
-```
-
----
-
 ## Junction Many To Many
 
 Many-to-many relationships are modelled with an explicit junction entity

@@ -27,15 +27,6 @@ ALLOWLIST: set[tuple[str, str]] = {
     # Framework CSS bundle: serves in-process bytes compiled at startup,
     # not stored file bytes.
     ("site_routes", "serve_dazzle_css"),
-    # SAML SP metadata endpoint: returns XML generated from the app config,
-    # an authentication protocol response, not stored file bytes.
-    ("saml_routes", "saml_metadata"),
-    # SAML SLS (Single Logout Service): returns plain-text error or logout
-    # responses as part of the SAML protocol, not stored file bytes.
-    ("saml_routes", "saml_sls"),
-    # SAML logout helper: returns a plain-text "logged out" response with
-    # cookies cleared, not stored file bytes.
-    ("saml_routes", "_logged_out_response"),
     # S3-backed object storage proxy (#942): serves bytes from project-declared
     # [storage.<name>] backends (S3/GCS/etc.) under a prefix-sandbox access
     # model. This is a different subsystem from Dazzle's document storage;

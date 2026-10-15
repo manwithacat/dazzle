@@ -1,6 +1,6 @@
 """Capability opt-in registry (#1342).
 
-Import side effect: registers the framework's built-in capabilities.
+No capability is registered today (DD-013 parked the enterprise auth ones).
 """
 
 from dazzle.core.capabilities.cognition import (

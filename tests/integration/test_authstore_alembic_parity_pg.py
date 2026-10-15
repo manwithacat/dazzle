@@ -73,18 +73,18 @@ def test_alembic_head_coexists_with_init_db(scratch_url: str) -> None:
         # alembic head recorded, and the new tables/columns are present (from _init_db, and
         # 0013/0014/0015 no-op over them) — schema intact after both ran.
         version = eng.connect().execute(sa.text("SELECT version_num FROM alembic_version")).scalar()
-        assert version == "0022_flense_park_tables"
+        assert version == "0023_flense_park_enterprise_auth"
         # 0019 (PG coordination Phase 1): the framework process-runtime tables.
         assert insp.has_table("process_runs")
         assert insp.has_table("process_tasks")
-        assert insp.has_table("saml_consumed_assertions")
         # organizations.settings column stays; join_requests was dropped by 0022 (DD-009).
         assert "settings" in {c["name"] for c in insp.get_columns("organizations")}
         assert not insp.has_table("join_requests")
         assert insp.has_table("tenant_host_aliases")
         assert "external_id" in {c["name"] for c in insp.get_columns("memberships")}
-        assert "external_id" in {c["name"] for c in insp.get_columns("scim_groups")}
-        assert insp.has_table("scim_group_members")
+        # the enterprise-auth tables were dropped by 0023 (DD-013).
+        for parked in ("connections", "scim_groups", "scim_group_members"):
+            assert not insp.has_table(parked)
         # the partial unique index 0014 mirrors must exist (from _init_db; 0014 no-ops over it)
         index_names = {ix["name"] for ix in insp.get_indexes("memberships")}
         assert "uq_memberships_tenant_external" in index_names

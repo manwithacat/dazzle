@@ -20,15 +20,13 @@ def leftover_honest_oauth_code(raw: Any) -> str | None:
     Leftover ``?code=zzz`` / ``ghost`` on GET
     ``/auth/sso/{provider}/callback`` used to invent
     ``303 /login?error=sso_failed`` theater (authlib exchange
-    miss). The same leftover on GET ``/auth/enterprise/callback``
-    invented the same theater. Leftover ``?state=zzz`` did too.
+    miss). Leftover ``?state=zzz`` did too.
     Valid opaque IdP codes (urlsafe + ``/+=.``, length 16–512)
     ride. Absent / blank is first-visit (``""`` — stray callback
     / cancel still bounces ``sso_failed``). Well-formed codes
     that fail exchange still bounce ``sso_failed``. Distinct from
     leftover consume token (oral #109), leftover 2FA code (oral
-    #108), leftover SSO provider (oral #112), and leftover
-    ``?connection=`` (oral #110). Live simple_task
+    #108) and leftover SSO provider (oral #112). Live simple_task
     ``/auth/sso/{provider}/callback``. Cycle 2243.
     """
     if raw is None:

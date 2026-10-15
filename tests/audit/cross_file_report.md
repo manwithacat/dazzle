@@ -67,7 +67,7 @@ Files dominated by tests that pin internal call shapes (high mocks, short body, 
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 9635
+- **Twin pairs**: 9023
 
 ### Top 30 twin pairs
 
@@ -82,7 +82,6 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_expression_lang.py` | `test_org_activation.py` | 82 | 36 | 26 | 0.72 |
 | `test_expression_lang.py` | `test_rbac_ui_fixes.py` | 82 | 30 | 26 | 0.87 |
 | `test_persona_journey.py` | `test_ux_contract_checker.py` | 55 | 36 | 26 | 0.72 |
-| `test_scim_routes.py` | `test_parser.py` | 33 | 130 | 25 | 0.76 |
 | `test_parser.py` | `test_rbac_ui_fixes.py` | 130 | 30 | 25 | 0.83 |
 | `test_parser.py` | `test_ses_adapter.py` | 130 | 31 | 24 | 0.77 |
 | `test_parser.py` | `test_sla_manager.py` | 130 | 32 | 24 | 0.75 |
@@ -103,3 +102,4 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_css_clip_check.py` | `test_parser.py` | 21 | 130 | 20 | 0.95 |
 | `test_css_clip_check.py` | `test_persona_journey.py` | 21 | 55 | 20 | 0.95 |
 | `test_css_clip_check.py` | `test_workspace_layout_prefs.py` | 21 | 31 | 20 | 0.95 |
+| `test_css_clip_check.py` | `test_workspace_rendering.py` | 21 | 46 | 20 | 0.95 |

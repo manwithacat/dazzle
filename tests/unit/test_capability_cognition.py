@@ -2,18 +2,23 @@
 
 import json
 
+import pytest
+
 import dazzle.core.capabilities.registry as reg
 from dazzle.core.capabilities import active_capability_ids
+from tests.unit._fake_capabilities import fake_capabilities  # noqa: F401  (fixture)
+
+pytestmark = pytest.mark.usefixtures("fake_capabilities")
 
 
 def test_active_capability_ids_is_non_raising(monkeypatch):
-    # OIDC available, SAML not. Unlike resolve_capabilities, this must NOT raise
+    # alpha available, beta not. Unlike resolve_capabilities, this must NOT raise
     # when a declared capability's extra is missing — it just omits it.
     monkeypatch.setattr(reg, "find_spec", lambda name: object() if name == "authlib" else None)
-    active = active_capability_ids(["auth.enterprise.oidc", "auth.enterprise.saml", "auth.bogus"])
-    assert active == {"auth.enterprise.oidc"}  # available+declared only
-    assert "auth.enterprise.saml" not in active  # declared but unavailable → omitted
-    assert "auth.bogus" not in active  # unknown → omitted
+    active = active_capability_ids(["demo.alpha", "demo.beta", "demo.bogus"])
+    assert active == {"demo.alpha"}  # available+declared only
+    assert "demo.beta" not in active  # declared but unavailable → omitted
+    assert "demo.bogus" not in active  # unknown → omitted
 
 
 def test_active_capabilities_for_reads_manifest(tmp_path, monkeypatch):
@@ -22,10 +27,10 @@ def test_active_capabilities_for_reads_manifest(tmp_path, monkeypatch):
     monkeypatch.setattr(reg, "find_spec", lambda name: object())  # all available
     (tmp_path / "dazzle.toml").write_text(
         '[project]\nname = "t"\nversion = "0.0.1"\n\n[modules]\npaths = ["app"]\n\n'
-        '[capabilities]\nenabled = ["auth.enterprise.oidc"]\n',
+        '[capabilities]\nenabled = ["demo.alpha"]\n',
         encoding="utf-8",
     )
-    assert active_capabilities_for(tmp_path) == {"auth.enterprise.oidc"}
+    assert active_capabilities_for(tmp_path) == {"demo.alpha"}
 
 
 def test_active_capabilities_for_missing_manifest_is_empty(tmp_path):
@@ -47,22 +52,22 @@ def test_partition_by_capability_splits_surfaced_and_gated():
 
     items = [
         {"id": "a", "cap": None},
-        {"id": "b", "cap": "auth.enterprise.oidc"},
-        {"id": "c", "cap": "auth.enterprise.saml"},
+        {"id": "b", "cap": "demo.alpha"},
+        {"id": "c", "cap": "demo.beta"},
     ]
     surfaced, gated = partition_by_capability(
-        items, active={"auth.enterprise.oidc"}, capability_of=lambda it: it["cap"]
+        items, active={"demo.alpha"}, capability_of=lambda it: it["cap"]
     )
     assert [i["id"] for i in surfaced] == ["a", "b"]  # ungated + active
-    assert gated == [(items[2], "auth.enterprise.saml")]  # gated + inactive
+    assert gated == [(items[2], "demo.beta")]  # gated + inactive
 
 
 def test_enable_suggestion_carries_runbook():
     from dazzle.core.capabilities.cognition import enable_suggestion
 
-    s = enable_suggestion("auth.enterprise.oidc")
-    assert s["capability"] == "auth.enterprise.oidc"
-    assert s["enable"] == "dazzle capability enable auth.enterprise.oidc"
+    s = enable_suggestion("demo.alpha")
+    assert s["capability"] == "demo.alpha"
+    assert s["enable"] == "dazzle capability enable demo.alpha"
     assert "dazzle-dsl[sso]" in s["remediation"]
 
 
@@ -78,7 +83,7 @@ def test_engine_filters_gated_relevance(monkeypatch):
         category="cat",
         examples=[],
         kg_entity="k",
-        gated_by="auth.enterprise.oidc",
+        gated_by="demo.alpha",
     )
     ungated = Relevance(
         context="c2", capability="cap2", category="cat2", examples=[], kg_entity="k2"
@@ -95,7 +100,7 @@ def test_engine_filters_gated_relevance(monkeypatch):
     assert "k2" in keys and "k" not in keys
 
     # Active → the gated item surfaces.
-    out2 = eng.suggest_capabilities(appspec, active={"auth.enterprise.oidc"})
+    out2 = eng.suggest_capabilities(appspec, active={"demo.alpha"})
     assert {"k", "k2"} <= {r.kg_entity for r in out2}
 
     # Default (no active arg) → behaviour unchanged for existing callers: nothing
@@ -123,16 +128,16 @@ def test_lint_appspec_forwards_active_capabilities(monkeypatch, tmp_path):
         return real(a, **kw)
 
     monkeypatch.setattr(lint, "suggest_capabilities", spy)
-    lint.lint_appspec(appspec, active_capabilities={"auth.enterprise.oidc"})
-    assert captured["active"] == {"auth.enterprise.oidc"}
+    lint.lint_appspec(appspec, active_capabilities={"demo.alpha"})
+    assert captured["active"] == {"demo.alpha"}
 
 
 _BLOB = {
     "patterns": {
-        "enterprise_sso": {
-            "name": "Enterprise SSO",
+        "gated_sso": {
+            "name": "Gated SSO",
             "category": "Auth",
-            "capability": "auth.enterprise.oidc",
+            "capability": "demo.alpha",
             "triggers": ["okta", "sso"],
         }
     }
@@ -148,17 +153,13 @@ def test_propose_patterns_gates_and_suggests(monkeypatch):
     out = json.loads(
         sa._propose_patterns({"spec_text": "Staff sign in via Okta SSO."}, active=set())
     )
-    assert any(
-        s["capability"] == "auth.enterprise.oidc" for s in out.get("capability_suggestions", [])
-    )
+    assert any(s["capability"] == "demo.alpha" for s in out.get("capability_suggestions", []))
     assert out["pattern_proposals"] == []
 
     # Active → a normal proposal, no suggestion.
-    out2 = json.loads(
-        sa._propose_patterns({"spec_text": "Okta SSO."}, active={"auth.enterprise.oidc"})
-    )
+    out2 = json.loads(sa._propose_patterns({"spec_text": "Okta SSO."}, active={"demo.alpha"}))
     assert out2.get("capability_suggestions", []) == []
-    assert any(p["pattern_id"] == "enterprise_sso" for p in out2["pattern_proposals"])
+    assert any(p["pattern_id"] == "gated_sso" for p in out2["pattern_proposals"])
 
 
 def test_bootstrap_surfaces_capability_suggestions(monkeypatch, tmp_path):
@@ -170,19 +171,19 @@ def test_bootstrap_surfaces_capability_suggestions(monkeypatch, tmp_path):
     # capability suggestion in the briefing, not a full proposal.
     out = json.loads(bs._run_cognition_pass("Staff sign in via Okta SSO.", "test", tmp_path))
     sugg = out["analysis"].get("capability_suggestions", [])
-    assert any(s["capability"] == "auth.enterprise.oidc" for s in sugg)
+    assert any(s["capability"] == "demo.alpha" for s in sugg)
     assert out["analysis"]["pattern_proposals"] == []
 
     # Declare it (available) → the suggestion goes away, the proposal appears.
     monkeypatch.setattr(reg, "find_spec", lambda name: object())
     (tmp_path / "dazzle.toml").write_text(
         '[project]\nname="t"\nversion="0.0.1"\n\n[modules]\npaths=["app"]\n\n'
-        '[capabilities]\nenabled=["auth.enterprise.oidc"]\n',
+        '[capabilities]\nenabled=["demo.alpha"]\n',
         encoding="utf-8",
     )
     out2 = json.loads(bs._run_cognition_pass("Okta SSO.", "test", tmp_path))
     assert out2["analysis"].get("capability_suggestions", []) == []
-    assert any(p["pattern_id"] == "enterprise_sso" for p in out2["analysis"]["pattern_proposals"])
+    assert any(p["pattern_id"] == "gated_sso" for p in out2["analysis"]["pattern_proposals"])
 
 
 def test_counter_prior_gate_suppresses_when_inactive(monkeypatch):
@@ -190,14 +191,14 @@ def test_counter_prior_gate_suppresses_when_inactive(monkeypatch):
     from dazzle.mcp.semantics_kb.counter_priors import CounterPrior
 
     cp = CounterPrior(
-        id="saml_pathology",
-        name="SAML pathology",
+        id="gated_pathology",
+        name="Gated pathology",
         layer="inference",
-        summary="don't do the SAML thing",
+        summary="don't do the gated thing",
         triggers_text=["widget soup"],
         file_path="x",
         body="...",
-        capability="auth.enterprise.saml",
+        capability="demo.beta",
     )
     monkeypatch.setattr(sa, "_load_counter_priors_for_flagging", lambda: [cp])
     monkeypatch.setattr("dazzle.mcp.semantics_kb.get_dsl_patterns", lambda: {"patterns": {}})
@@ -207,10 +208,8 @@ def test_counter_prior_gate_suppresses_when_inactive(monkeypatch):
     assert out["antipattern_flags"] == []
 
     # Active → the antipattern is flagged.
-    out2 = json.loads(
-        sa._propose_patterns({"spec_text": "widget soup"}, active={"auth.enterprise.saml"})
-    )
-    assert any(f["guidance_id"] == "saml_pathology" for f in out2["antipattern_flags"])
+    out2 = json.loads(sa._propose_patterns({"spec_text": "widget soup"}, active={"demo.beta"}))
+    assert any(f["guidance_id"] == "gated_pathology" for f in out2["antipattern_flags"])
 
 
 def test_knowledge_pull_path_is_ungated(monkeypatch):
@@ -228,57 +227,35 @@ def test_knowledge_pull_path_is_ungated(monkeypatch):
         triggers_text=["t"],
         file_path="x",
         body="...",
-        capability="auth.enterprise.saml",
+        capability="demo.beta",
     )
     monkeypatch.setattr(kn, "load_all_counter_priors", lambda: [cp])
     out = kn.counter_prior_handler({"id": "gated_cp"})
     assert "gated_cp" in out  # returned even though nothing is active
 
 
-def test_enterprise_sso_pattern_is_gated_end_to_end(monkeypatch, tmp_path):
-    # End-to-end against the REAL patterns.toml (no monkeypatched blob): the
-    # enterprise_sso pattern (Task 9) is gated by auth.enterprise.oidc.
-    import dazzle.mcp.server.handlers.bootstrap as bs
-
-    # No capability declared → an Okta spec yields the enable suggestion, and the
-    # full enterprise_sso proposal is withheld.
-    out = json.loads(
-        bs._run_cognition_pass("Staff sign in via Okta (OpenID Connect).", "t", tmp_path)
-    )
-    analysis = out["analysis"]
-    assert any(
-        s["capability"] == "auth.enterprise.oidc"
-        for s in analysis.get("capability_suggestions", [])
-    )
-    assert not any(p["pattern_id"] == "enterprise_sso" for p in analysis["pattern_proposals"])
-
-    # Declared (+available) → the proposal surfaces, the suggestion is gone.
-    monkeypatch.setattr(reg, "find_spec", lambda name: object())
-    (tmp_path / "dazzle.toml").write_text(
-        '[project]\nname="t"\nversion="0.0.1"\n\n[modules]\npaths=["app"]\n\n'
-        '[capabilities]\nenabled=["auth.enterprise.oidc"]\n',
-        encoding="utf-8",
-    )
-    out2 = json.loads(bs._run_cognition_pass("We use Okta SSO.", "t", tmp_path))
-    analysis2 = out2["analysis"]
-    assert not analysis2.get("capability_suggestions")
-    assert any(p["pattern_id"] == "enterprise_sso" for p in analysis2["pattern_proposals"])
-
-
-def test_pattern_capability_round_trips_through_kg():
+def test_pattern_capability_round_trips_through_kg(monkeypatch):
     # #1265-class regression: the `capability` gate MUST survive the KG seed
     # round-trip. Before the seed.py fix, _propose_patterns saw capability=None
     # under a seeded KG (full-suite/production) and the gate silently no-op'd —
-    # while passing in isolation via the TOML fallback. Seed an in-memory KG and
-    # assert the field is stashed.
+    # while passing in isolation via the TOML fallback. No shipped pattern is
+    # gated since DD-013, so inject one into the TOML read and seed an in-memory KG.
+    import dazzle.mcp.semantics_kb as kb
     from dazzle.mcp.knowledge_graph.seed import seed_framework_knowledge
     from dazzle.mcp.knowledge_graph.store import KnowledgeGraph
 
+    real_load = kb._load_toml_file
+
+    def load_with_gated_pattern(path):
+        data = real_load(path)
+        if path.name == "patterns.toml":
+            data = {**data, "patterns": {**data.get("patterns", {}), **_BLOB["patterns"]}}
+        return data
+
+    monkeypatch.setattr(kb, "_load_toml_file", load_with_gated_pattern)
     graph = KnowledgeGraph(":memory:")
     seed_framework_knowledge(graph)
     entity = next(
-        e
-        for e in graph.list_entities(entity_type="pattern", limit=500)
-        if e.name == "enterprise_sso"
+        e for e in graph.list_entities(entity_type="pattern", limit=500) if e.name == "gated_sso"
     )
-    assert entity.metadata.get("capability") == "auth.enterprise.oidc"
+    assert entity.metadata.get("capability") == "demo.alpha"

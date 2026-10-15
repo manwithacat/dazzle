@@ -6,10 +6,8 @@ Attach: TXT then CNAME (+ ops SNI). Detach: keep serving until DNS is gone,
 then cool ≥24h so the hostname is not reused while records might still
 point here.
 
-TXT lookup reuses the injectable DNS seam from
-``dazzle.http.runtime.auth.domain_verification``. Do **not** reuse
-``dazzle auth connection verify-domain`` or its HMAC tokens; CLI, table,
-and attach lifecycle are a different plane.
+TXT and CNAME lookups go through injectable resolver seams (dnspython in
+production, a fake in tests).
 """
 
 from __future__ import annotations
@@ -21,7 +19,6 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol, cast, runtime_checkable
 from uuid import UUID
 
-from dazzle.http.runtime.auth.domain_verification import DnspythonResolver, DnsTxtResolver
 from dazzle.http.runtime.tenant.metrics import note_alias_verify
 
 # Fail-closed: missing/mismatched TXT never verifies.
@@ -139,6 +136,36 @@ def validate_alias_hostname(
             "hostname is on the provider domain; aliases compose with A/B, they are not slugs",
         )
     return host
+
+
+@runtime_checkable
+class DnsTxtResolver(Protocol):
+    """Resolves a domain's TXT records to a list of strings (the seam for tests)."""
+
+    def resolve_txt(self, domain: str) -> list[str]: ...
+
+
+class DnspythonResolver:
+    """Production TXT lookup. DNS errors (NXDOMAIN, no answer, timeout) yield ``[]``
+    so verification simply doesn't match: never a silent pass, never a crash."""
+
+    def resolve_txt(self, domain: str) -> list[str]:
+        import dns.exception
+        import dns.resolver
+
+        try:
+            answers = dns.resolver.resolve(domain.strip().lower().rstrip("."), "TXT")
+        except dns.exception.DNSException:
+            return []
+        records: list[str] = []
+        for rdata in answers:
+            # A TXT rdata is one or more quoted strings; join the byte chunks.
+            parts = getattr(rdata, "strings", None)
+            if parts is not None:
+                records.append(b"".join(parts).decode("utf-8", "replace"))
+            else:
+                records.append(str(rdata).strip('"'))
+        return records
 
 
 @runtime_checkable

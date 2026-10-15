@@ -37,7 +37,7 @@ UV="${HOME}/.local/bin/uv"
 [[ -x "$UV" ]] || UV="$(command -v uv 2>/dev/null || true)"
 if [[ -n "$UV" ]]; then
   (cd "$DIR" && "$UV" sync --frozen --extra dev --extra llm --extra mcp \
-      --extra postgres --extra perf --extra saml --extra lsp --quiet) >&2 \
+      --extra postgres --extra perf --quiet) >&2 \
     || echo "warning: uv sync failed in $DIR — run it manually" >&2
 else
   echo "warning: uv not found; worktree has no venv" >&2

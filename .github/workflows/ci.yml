@@ -73,7 +73,7 @@ jobs:
         # +test-full: the pure-pip optional subsystems (graph/signing/
         # sendgrid/observability + aiosqlite) whose tests otherwise
         # skip on this coverage-measuring job, undercounting coverage.
-        extras: dev,llm,mcp,postgres,perf,saml,test-full
+        extras: dev,llm,mcp,postgres,perf,test-full
 
     - name: Build asset bundles
       # #1052: dist/dazzle.min.{css,js} + dazzle-icons.min.js are
@@ -325,7 +325,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,llm,mcp,perf,saml  # +saml: run test_saml_routes in CI (#1345)
+        extras: dev,llm,mcp,perf
 
     - name: Build asset bundles
       # #1052: dist/dazzle.min.* are gitignored — built here for tests.

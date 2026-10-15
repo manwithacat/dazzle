@@ -4,6 +4,7 @@ import pytest
 import typer
 
 from dazzle.cli.project import validate_command
+from tests.unit._fake_capabilities import fake_capabilities  # noqa: F401  (fixture)
 
 
 def _toml(tmp_path, capability_line: str) -> str:
@@ -16,12 +17,13 @@ def _toml(tmp_path, capability_line: str) -> str:
     return str(p)
 
 
+@pytest.mark.usefixtures("fake_capabilities")
 def test_validate_rejects_unknown_capability(tmp_path, capsys):
-    path = _toml(tmp_path, '[capabilities]\nenabled = ["auth.enterprize.oidc"]\n')
+    path = _toml(tmp_path, '[capabilities]\nenabled = ["demo.alpah"]\n')
     with pytest.raises(typer.Exit) as exc:
         validate_command(manifest=path, format="human")
     assert exc.value.exit_code == 1
     out = capsys.readouterr()
     combined = out.out + out.err
     assert "Unknown capability" in combined
-    assert "auth.enterprise.oidc" in combined  # did-you-mean suggestion
+    assert "demo.alpha" in combined  # did-you-mean suggestion

@@ -30,17 +30,8 @@ class MutationTarget:
 
 
 # Baselines measured 2026-06-08 (with PG where needs_pg):
-#   connection_crypto 83% | rbac/matrix 69% | csrf 84% | rls_schema 60% | predicate 45%
+#   rbac/matrix 69% | csrf 84% | rls_schema 60% | predicate 45%
 SECURITY_TARGETS: tuple[MutationTarget, ...] = (
-    MutationTarget(
-        module="src/dazzle/http/runtime/auth/connection_crypto.py",
-        tests=(
-            "tests/unit/test_connection_crypto.py",
-            "tests/unit/test_fuzz_small_parsers.py::TestConnectionCryptoRoundTrip",
-        ),
-        floor=80,
-        note="secret-at-rest AES-GCM",
-    ),
     MutationTarget(
         module="src/dazzle/rbac/matrix.py",
         tests=("tests/unit/test_rbac_matrix.py",),

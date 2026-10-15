@@ -6,7 +6,7 @@ manifest, and a check is the set-intersection of the caller's effective in-org r
 capability's persona set. Default-deny, fail-closed. ``org_admin_roles`` is the default persona set
 for any capability not explicitly mapped, so apps that set only ``org_admin_roles`` are unchanged.
 
-This is the framework's OWN admin surfaces only (members, connections) — separate from the
+This is the framework's OWN admin surfaces only (members) — separate from the
 app-domain ``permit:``/``scope:``/``grant_schema`` plane. Pure + I/O-free → unit-testable.
 """
 
@@ -18,7 +18,7 @@ from typing import Any
 
 #: The framework-defined admin capabilities. The single source of truth (tests + drift gate
 #: assert against this). Add a name here (and wire a surface to it) to introduce a capability.
-CAPABILITIES: tuple[str, ...] = ("manage_members", "manage_connections")
+CAPABILITIES: tuple[str, ...] = ("manage_members",)
 
 
 @dataclass(frozen=True)

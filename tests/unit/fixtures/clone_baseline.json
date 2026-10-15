@@ -399,56 +399,11 @@
     ]
   },
   {
-    "signature": "caa0527e353ca0f13b285a780f5eb8c9",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/auth/connection_admin_routes.py::_gate",
-      "dazzle/http/runtime/auth/member_admin_routes.py::_gate"
-    ]
-  },
-  {
-    "signature": "exact:9fed46369caf6cca1b8be96f01aa84fa",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/auth/connection_admin_routes.py::_normalize_domain",
-      "dazzle/http/runtime/auth/domain_verification.py::_normalize"
-    ]
-  },
-  {
     "signature": "exact:faa745ef6d2a5a29be4f696f4e70f594",
-    "count": 7,
+    "count": 2,
     "names": [
-      "dazzle/http/runtime/auth/connection_probe.py::__init__",
-      "dazzle/http/runtime/auth/domain_verification.py::__init__",
-      "dazzle/http/runtime/auth/enterprise_login.py::__init__",
       "dazzle/http/runtime/auth/invitations.py::__init__",
-      "dazzle/http/runtime/auth/saml_metadata.py::__init__",
-      "dazzle/http/runtime/auth/scim_provisioning.py::__init__",
       "dazzle/http/runtime/tenant/aliases.py::__init__"
-    ]
-  },
-  {
-    "signature": "6ca9e766589731c5378a623a05b65063",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/auth/enterprise_routes.py::_resolve_connection",
-      "dazzle/http/runtime/auth/saml_routes.py::_resolve_saml_connection"
-    ]
-  },
-  {
-    "signature": "f20c4d2025da48cdcff8a98b82c38c87",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/auth/enterprise_routes.py::enterprise_login",
-      "dazzle/http/runtime/auth/saml_routes.py::saml_login"
-    ]
-  },
-  {
-    "signature": "exact:748c91ca3eacb4bf9ebcbce07014f56c",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/auth/leftover_connection_id.py::leftover_honest_connection_id",
-      "dazzle/http/runtime/auth/org_context_routes.py::leftover_honest_membership_id"
     ]
   },
   {
@@ -457,14 +412,6 @@
     "names": [
       "dazzle/http/runtime/auth/mailer.py::get_invitation_mailer",
       "dazzle/http/runtime/auth/mailer.py::get_verification_mailer"
-    ]
-  },
-  {
-    "signature": "b98a69b274b9538fbf65f595a0606ca6",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/auth/member_admin_routes.py::_resolve_target",
-      "dazzle/http/runtime/auth/scim_routes.py::_membership_in_org"
     ]
   },
   {
@@ -481,22 +428,6 @@
     "names": [
       "dazzle/http/runtime/auth/routes_2fa.py::_get_otp_store",
       "dazzle/http/runtime/auth/routes_2fa.py::_get_recovery_store"
-    ]
-  },
-  {
-    "signature": "51f3067e4b3fbaf2037d289491c3e7c7",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/auth/store.py::disable_connection_assertion_encryption",
-      "dazzle/http/runtime/auth/store.py::disable_connection_request_signing"
-    ]
-  },
-  {
-    "signature": "526ad8a6acf09cc2713fbbc3d8887575",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/auth/store.py::enable_connection_assertion_encryption",
-      "dazzle/http/runtime/auth/store.py::enable_connection_request_signing"
     ]
   },
   {
@@ -602,14 +533,6 @@
     "names": [
       "dazzle/http/runtime/storage/s3_provider.py::render_prefix",
       "dazzle/http/runtime/storage/testing.py::render_prefix"
-    ]
-  },
-  {
-    "signature": "7d6d80c67f51b24ab89b4ec14a6644e3",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/subsystems/auth.py::_mount_enterprise_sso",
-      "dazzle/http/runtime/subsystems/auth.py::_mount_saml"
     ]
   },
   {

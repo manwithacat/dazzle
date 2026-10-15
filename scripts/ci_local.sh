@@ -37,7 +37,7 @@ fi
 # type-check job:
 EXTRAS_TYPE="dev,llm,mcp,postgres,viewport,perf"
 # python-tests job:
-EXTRAS_TEST="dev,llm,mcp,postgres,perf,saml,test-full"
+EXTRAS_TEST="dev,llm,mcp,postgres,perf,test-full"
 # lint job (subset; tier1 uses TYPE for one sync rather than three):
 # EXTRAS_LINT="dev,llm,mcp,postgres,perf"
 # security-tests job:

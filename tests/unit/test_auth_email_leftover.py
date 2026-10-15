@@ -1,15 +1,12 @@
 """Auth leftover email must not invent sent theater / persist / default IdP (cycle 2233).
 
-leftover-honest GET list email VALUE already exists (oral #80). SCIM
-userName leftover already exists (oral #102). Magic-link login/signup
+leftover-honest GET list email VALUE already exists (oral #80). Magic-link login/signup
 still omitted leftover ``email=zzz`` / ``ghost`` as unknown and
 invented ``/login/sent``. Forgot-password invented
-``/forgot-password/sent``. Invite invented a persist. Enterprise/SAML
-``?email=zzz`` invented the host-pinned default IdP. Valid mailboxes
+``/forgot-password/sent``. Invite invented a persist. Valid mailboxes
 ride; leftover stays put (400, no write / no theater). Absent / blank
 still first-visit. Live simple_task ``/auth/login/magic-link``.
-Oral #105 — not leftover SCIM userName (oral #102), not leftover GET
-list email VALUE (oral #80).
+Oral #105 — not leftover GET list email VALUE (oral #80).
 """
 
 from __future__ import annotations
@@ -63,24 +60,6 @@ _INVITE = (
     / "runtime"
     / "auth"
     / "invitation_routes.py"
-)
-_ENT = (
-    Path(__file__).resolve().parents[2]
-    / "src"
-    / "dazzle"
-    / "http"
-    / "runtime"
-    / "auth"
-    / "enterprise_routes.py"
-)
-_SAML = (
-    Path(__file__).resolve().parents[2]
-    / "src"
-    / "dazzle"
-    / "http"
-    / "runtime"
-    / "auth"
-    / "saml_routes.py"
 )
 _PW = (
     Path(__file__).resolve().parents[2]
@@ -307,46 +286,6 @@ def test_leftover_password_signup_email_does_not_invent_invalid_banner() -> None
     store.create_user.assert_not_called()
 
 
-def test_leftover_enterprise_email_does_not_invent_idp() -> None:
-    from dazzle.http.runtime.auth.connections import _PROVIDERS, register_provider
-    from tests.integration.test_enterprise_routes import _client, _conn, _FakeProvider, _Store
-
-    register_provider("oidc", "native", _FakeProvider())
-    try:
-        store = _Store(connections=[_conn()])
-        resp = _client(store).get("/auth/enterprise/login?email=zzz", follow_redirects=False)
-        assert resp.status_code == 400
-        assert "Invalid email" in resp.text
-    finally:
-        _PROVIDERS.pop(("oidc", "native"), None)
-
-
-def test_valid_enterprise_email_still_rides() -> None:
-    from dazzle.http.runtime.auth.connections import _PROVIDERS, register_provider
-    from tests.integration.test_enterprise_routes import _client, _conn, _FakeProvider, _Store
-
-    register_provider("oidc", "native", _FakeProvider())
-    try:
-        store = _Store(connections=[_conn(verified_domains=["acme.test"])])
-        resp = _client(store).get(
-            "/auth/enterprise/login?email=jane@acme.test", follow_redirects=False
-        )
-        assert resp.status_code == 303
-        assert "idp.example" in resp.headers["location"]
-    finally:
-        _PROVIDERS.pop(("oidc", "native"), None)
-
-
-def test_leftover_saml_email_does_not_invent_idp() -> None:
-    from dazzle.http.runtime.auth.connections import _PROVIDERS
-    from tests.integration.test_saml_routes import _client, _Store
-
-    resp = _client(_Store(connections=[])).get("/auth/saml/login?email=zzz", follow_redirects=False)
-    assert resp.status_code == 400
-    assert "Invalid email" in resp.text
-    _PROVIDERS.pop(("saml", "native"), None)
-
-
 def test_codeql_redos_payload_stays_put_linear() -> None:
     """CodeQL py/polynomial-redos #227 — ``!@!.`` + ``!.`` * n must not hang."""
     import time
@@ -374,10 +313,6 @@ def test_helper_source_pins_auth_email_leftover() -> None:
     assert "leftover_auth_email_or_400" in reset
     invite = _INVITE.read_text()
     assert "leftover_auth_email_or_400" in invite
-    ent = _ENT.read_text()
-    assert "leftover_honest_sso_login_query" in ent
-    saml = _SAML.read_text()
-    assert "leftover_honest_sso_login_query" in saml
     pw = _PW.read_text()
     assert "leftover_auth_email_or_400" in pw
 

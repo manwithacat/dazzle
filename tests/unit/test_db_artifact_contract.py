@@ -137,6 +137,8 @@ _ALLOWLIST = frozenset(
         # recreates the three parked tables. No live runtime path creates them.
         "dazzle.http.alembic.versions.0021_ingest_fingerprint.upgrade",
         "dazzle.http.alembic.versions.0022_flense_park_tables.downgrade",
+        # 0023.downgrade recreates the enterprise-auth tables parked in ship AD (DD-013).
+        "dazzle.http.alembic.versions.0023_flense_park_enterprise_auth.downgrade",
     }
 )
 

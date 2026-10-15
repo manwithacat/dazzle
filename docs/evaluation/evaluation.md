@@ -218,7 +218,7 @@ Ratings use the rubric in [`security-claims.md`](security-claims.md#maturity-rub
 | Dynamic RBAC verifier | **Beta** | Real verifier since v0.71.91 (replaced a stub); functional, tested, needs live PostgreSQL. |
 | RBAC audit trail | **Beta** | Production `AuditLogger` → PostgreSQL; recently hardened (fail-closed mode, scope-deny capture). |
 | Session CSRF protection | **Beta** | Session-bound token + Origin gate, auth-class-derived disposition (ADR-0033); shipped v0.81.15–18, tested. |
-| Enterprise SSO/SCIM (opt-in) | **Beta** | OIDC/SAML/SCIM behind a `[capabilities]` opt-in registry; each piece tested, cluster (#1342) still in active development. |
+| Enterprise SSO/SCIM | **Parked** | Removed in flense ship AD (ADR-0057); no consumer enabled it. The design and the code's last commit are in [DD-013](../decisions/DD-013-enterprise-sso-scim-connections.md). |
 | Membership-fenced tenancy | **Beta** | Membership-derived `tenant_id` + Postgres RLS, proven vs real PG as non-superuser; RLS Phases A+E shipped, B–D roadmap. |
 | Compliance evidence mapping | **Beta** | ~100 tests; does what the docs claim; `partial` status unimplemented. |
 | Compliance — operational/infra checks | **Roadmap** | Not built. The pipeline reasons about the DSL spec only. |

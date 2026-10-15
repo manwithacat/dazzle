@@ -350,10 +350,12 @@ def test_no_local_product_name_lookup() -> None:
     )
 
 
-def test_the_six_auth_route_modules_share_the_one_product_name_helper() -> None:
-    """The six copies are all callers now; none may quietly stop importing it."""
+def test_the_auth_route_modules_share_the_one_product_name_helper() -> None:
+    """The former copies are all callers now; none may quietly stop importing it.
+
+    (The sixth, ``connection_admin_routes``, went with enterprise auth: DD-013.)
+    """
     consumers = (
-        "connection_admin_routes",
         "forbidden_org",
         "invitation_routes",
         "member_admin_routes",

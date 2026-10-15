@@ -23,8 +23,8 @@ FRAMEWORK_TABLES: frozenset[str] = frozenset(
         "alembic_version",  # alembic's own bookkeeping
         "analytics_events",
         "api_calls",
-        "connection_secret_events",
-        "connections",
+        "connection_secret_events",  # dropped by 0023 (DD-013); kept so autogenerate never targets it
+        "connections",  # dropped by 0023 (DD-013); kept so autogenerate never targets it
         "dazzle_files",
         "deployment_history",
         "devices",  # device registry removed (flense ship O); kept so autogenerate never targets it
@@ -43,9 +43,9 @@ FRAMEWORK_TABLES: frozenset[str] = frozenset(
         "process_tasks",
         "refresh_tokens",
         "retention_config",
-        "saml_consumed_assertions",
-        "scim_group_members",
-        "scim_groups",
+        "saml_consumed_assertions",  # dropped by 0023 (DD-013); kept so autogenerate never targets it
+        "scim_group_members",  # dropped by 0023 (DD-013); kept so autogenerate never targets it
+        "scim_groups",  # dropped by 0023 (DD-013); kept so autogenerate never targets it
         "sessions",
         "spec_versions",
         "tenant_host_aliases",

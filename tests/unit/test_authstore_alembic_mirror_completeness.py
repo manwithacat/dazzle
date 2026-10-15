@@ -30,9 +30,6 @@ _BASELINE_DDL_CORE_TABLES = {
     # Auth tables in _init_db inline DDL, now covered by ensure_auth_core_tables() via baseline:
     "memberships",
     "organizations",
-    "saml_consumed_assertions",
-    "scim_group_members",
-    "scim_groups",
     # Tables always in _INIT_DB_PRIMARY_ONLY (not in _init_db inline DDL at all):
     "users",
     "sessions",

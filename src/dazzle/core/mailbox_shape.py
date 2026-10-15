@@ -1,6 +1,6 @@
 """Linear mailbox-shape check (CodeQL py/polynomial-redos #227).
 
-Leftover-honest auth/SCIM/list-filter used
+Leftover-honest auth/list-filter used
 ``^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$``. The two ``[^@\\s]+`` groups around
 the last-dot split overlap, so CodeQL flags quadratic time on
 ``!@!.`` + ``!.`` * n. Partition + a single label scan is O(n).

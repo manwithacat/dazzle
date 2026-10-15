@@ -1,7 +1,6 @@
 """CLI: dazzle tenant alias — custom-domain hostname aliases (ADR-0055 PR4).
 
-New commands. Do **not** reuse ``dazzle auth connection verify-domain``
-(that proves email-domain ownership for membership, not HTTP Host routing).
+Proves HTTP Host routing for a tenant, not email-domain ownership.
 """
 
 from __future__ import annotations

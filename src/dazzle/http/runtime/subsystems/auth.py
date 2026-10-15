@@ -77,7 +77,7 @@ class AuthSubsystem:
         # (fail-closed — empty means nobody can invite). Read by the invite route.
         _auth_cfg = getattr(ctx.config, "auth_config", None)
         ctx.app.state.org_admin_roles = list(getattr(_auth_cfg, "org_admin_roles", []) or [])
-        # Admin-capability policy (manage_members / manage_connections). org_admin_roles is the
+        # Admin-capability policy (manage_members). org_admin_roles is the
         # default for any unlisted capability, so apps that set only org_admin_roles are unchanged.
         from dazzle.http.runtime.auth.admin_policy import AdminPolicy, unknown_admin_personas
 
@@ -207,18 +207,6 @@ class AuthSubsystem:
 
         ctx.app.include_router(create_member_admin_routes())
 
-        # Org-admin connection surface: an org admin manages their org's connections in-app
-        # (create OIDC/SCIM/SAML, claim + DNS-TXT verify domains), RBAC-gated + org-scoped.
-        # Read surface is secret-free; creation accepts secrets (encrypted at rest) and shows a
-        # minted SCIM bearer once. Gated on an active enterprise capability (#1342) — no
-        # enterprise capability declared → no admin surface.
-        if self._any_enterprise_active(ctx):
-            from dazzle.http.runtime.auth.connection_admin_routes import (
-                create_connection_admin_routes,
-            )
-
-            ctx.app.include_router(create_connection_admin_routes())
-
         # auth Plan 3c.ii: the member's own profile (archetype: profile) — get-or-
         # create by (active membership tenant, current_user.id), RLS-bound.
         from dazzle.http.runtime.auth.profile_routes import create_profile_routes
@@ -264,23 +252,14 @@ class AuthSubsystem:
         configured = load_sso_providers_from_env()
         ctx.app.state.sso_providers = configured
 
-        # Enterprise (per-org) SSO connections (auth Plans 4b/4c/5) are gated on
-        # declared opt-in capabilities (#1342): a route group mounts only when its
-        # capability is *active* (declared in [capabilities] AND its extra installed).
-        # A greenfield app declares nothing → no enterprise routes, even if the [sso]
-        # extra happens to be installed. SCIM is included — no longer unconditional.
-        any_enterprise = self._any_enterprise_active(ctx)
-
         # SessionMiddleware backs Authlib's `state` storage between the initiate
-        # redirect and the callback (global-SSO + OIDC enterprise + SAML all need it —
-        # SAML stashes the connection id + AuthnRequest id there for InResponseTo). The
-        # session cookie is signed (not encrypted) via itsdangerous — fine for the
-        # short-lived state token but DON'T put sensitive data in `request.session`.
-        # The secret defaults to a random per-process value; production deployments
+        # redirect and the callback. The session cookie is signed (not encrypted)
+        # via itsdangerous — fine for the short-lived state token but DON'T put
+        # sensitive data in `request.session`. The secret defaults to a random per-process value; production deployments
         # should set DAZZLE_SESSION_SECRET so the cookie survives restarts. Added at
         # most once, and only when something actually needs it (no blast radius for
         # non-SSO apps).
-        if configured or any_enterprise:
+        if configured:
             import os
             import secrets
 
@@ -294,11 +273,7 @@ class AuthSubsystem:
                 https_only=False,  # cookie_secure() controls per-cookie
             )
 
-        if configured:
             ctx.app.include_router(create_sso_routes())
-
-        self._mount_enterprise_capabilities(ctx)
-        self._register_capability_boot_guard(ctx)
 
         # 2FA routes — thread the AppSpec-level TwoFactorConfig through so
         # DSL authors can tune recovery-code count etc. at app-configuration
@@ -321,88 +296,6 @@ class AuthSubsystem:
             register_ses_webhook(ctx.app)
         except Exception:
             logger.info("SES webhooks not available, skipping registration")
-
-    # Enterprise auth capability ids gated by the opt-in model (#1342).
-    _ENTERPRISE_CAPABILITY_IDS = (
-        "auth.enterprise.oidc",
-        "auth.enterprise.saml",
-        "auth.enterprise.scim",
-    )
-
-    def _any_enterprise_active(self, ctx: SubsystemContext) -> bool:
-        """True iff any enterprise auth capability is active for this app (#1342)."""
-        caps = getattr(ctx, "capabilities", None)
-        return caps is not None and any(
-            caps.is_active(cid) for cid in self._ENTERPRISE_CAPABILITY_IDS
-        )
-
-    def _register_capability_boot_guard(self, ctx: SubsystemContext) -> None:
-        """Loud-log at startup if connection rows exist for a protocol whose enterprise
-        capability isn't active (#1344) — their routes silently don't mount (SSO/SCIM 404).
-
-        A startup hook (not build-time) because the DB pool only opens at lifespan startup;
-        loud-log only (the lifespan registry swallows hook exceptions, and the mismatch is
-        SAFE — aborting would crash-loop a safe deploy). Registered unconditionally: the whole
-        point is to fire when a capability is *absent*."""
-        from dazzle.http.runtime.auth.capability_guard import capability_boot_warnings
-        from dazzle.http.runtime.lifespan_hooks import register_lifespan_hook
-
-        store = getattr(ctx, "auth_store", None)
-        if store is None:
-            return
-        caps = getattr(ctx, "capabilities", None)
-
-        def _startup() -> None:
-            is_active = caps.is_active if caps is not None else (lambda _cid: False)
-            for msg in capability_boot_warnings(store.connection_type_counts(), is_active):
-                logger.error("Capability boot guard: %s", msg)
-
-        register_lifespan_hook(ctx.app, startup=_startup)
-
-    def _mount_enterprise_capabilities(self, ctx: SubsystemContext) -> None:
-        """Mount each enterprise auth route group gated on its capability (#1342)."""
-        caps = getattr(ctx, "capabilities", None)
-        if caps is None:
-            return
-        if caps.is_active("auth.enterprise.oidc"):
-            self._mount_enterprise_sso(ctx)
-        if caps.is_active("auth.enterprise.saml"):
-            self._mount_saml(ctx)
-        if caps.is_active("auth.enterprise.scim"):
-            self._mount_scim(ctx)
-
-    def _mount_enterprise_sso(self, ctx: SubsystemContext) -> None:
-        """Register the native OIDC provider + mount the per-org enterprise routes.
-
-        Registration is idempotent across app boots: the process-wide registry is
-        keyed by (type, provider); per-connection authlib clients live inside the
-        provider instance (keyed by connection id+revision), so no cross-app collision.
-        """
-        from dazzle.http.runtime.auth.enterprise_routes import (
-            create_enterprise_sso_routes,
-        )
-        from dazzle.http.runtime.auth.oidc_provider import register_native_oidc
-
-        register_native_oidc()
-        ctx.app.include_router(create_enterprise_sso_routes())
-
-    def _mount_saml(self, ctx: SubsystemContext) -> None:
-        """Register the native SAML provider + mount the SAML routes.
-
-        The ACS POST lives under the /auth/ CSRF-exempt prefix — correct, as its
-        integrity is the signed assertion + InResponseTo, not a CSRF token.
-        """
-        from dazzle.http.runtime.auth.saml_provider import register_native_saml
-        from dazzle.http.runtime.auth.saml_routes import create_saml_routes
-
-        register_native_saml()
-        ctx.app.include_router(create_saml_routes())
-
-    def _mount_scim(self, ctx: SubsystemContext) -> None:
-        """Mount the SCIM 2.0 provisioning endpoints (stateless bearer auth)."""
-        from dazzle.http.runtime.auth.scim_routes import create_scim_routes
-
-        ctx.app.include_router(create_scim_routes())
 
     def _ensure_jwt_service(self, ctx: SubsystemContext) -> bool:
         """Build (or reuse) JWTService + TokenStore, idempotently.

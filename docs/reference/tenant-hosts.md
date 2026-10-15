@@ -124,7 +124,7 @@ dazzle tenant alias verify app.customer.com
 dazzle tenant alias detach app.customer.com   # keeps serving until DNS is gone
 ```
 
-This is **not** `dazzle auth connection verify-domain` (email-domain join).
+This proves Host routing for a tenant, not ownership of an email domain.
 
 v1: one live hostname per tenant; no bare apex (`customer.com`); no
 customer-supplied certs; no path tenancy. Detach cools ≥24h after DNS

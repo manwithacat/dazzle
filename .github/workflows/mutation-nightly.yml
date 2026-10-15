@@ -44,7 +44,7 @@ jobs:
 
     - uses: ./.github/actions/setup-dazzle
       with:
-        extras: dev,llm,mcp,postgres,saml,sso
+        extras: dev,llm,mcp,postgres,sso
 
     - name: Build asset bundles
       run: python scripts/build_dist.py

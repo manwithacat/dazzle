@@ -413,22 +413,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_auth_error_leftover.py",
     # cycle 2222: leftover auth ?next=zzz must not invent the default landing
     "tests/unit/test_auth_next_leftover.py",
-    # cycle 2223: leftover connections ?new=zzz must not invent a clean list
-    "tests/unit/test_connection_new_leftover.py",
     # cycle 2224: leftover auth ?token= / ?session= must not invent form theater
     "tests/unit/test_auth_token_leftover.py",
-    # cycle 2227: leftover SCIM ?filter= must not invent the unfiltered list
-    "tests/unit/test_scim_filter_leftover.py",
-    # cycle 2228: leftover SCIM active must not invent inactive / a 200 no-op
-    "tests/unit/test_scim_active_leftover.py",
-    # cycle 2229: leftover SCIM members must not invent a wipe / empty group
-    "tests/unit/test_scim_members_leftover.py",
-    # cycle 2230: leftover SCIM userName / emails must not invent a 500 / provision
-    "tests/unit/test_scim_username_leftover.py",
-    # cycle 2231: leftover SCIM PATCH Operations must not invent a 500 / 200 no-op
-    "tests/unit/test_scim_operations_leftover.py",
-    # cycle 2232: leftover SCIM displayName must not invent a group / str() rename
-    "tests/unit/test_scim_displayname_leftover.py",
     # cycle 2233: leftover auth email must not invent sent theater / persist / default IdP
     "tests/unit/test_auth_email_leftover.py",
     # cycle 2235: leftover mailbox regex was py/polynomial-redos #227
@@ -439,29 +425,16 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_2fa_code_leftover.py",
     # cycle 2239: leftover consume token must not invent invalid theater
     "tests/unit/test_auth_consume_token_leftover.py",
-    # cycle 2240: leftover SSO connection id must not invent sso_no_connection
-    "tests/unit/test_connection_id_leftover.py",
-    # cycle 2241: leftover SCIM externalId must not invent a 500 / persist
-    "tests/unit/test_scim_external_id_leftover.py",
     # cycle 2242: leftover SSO provider slug must not invent sso_provider_unknown
     "tests/unit/test_sso_provider_leftover.py",
     # cycle 2243: leftover OAuth code/state must not invent sso_failed
     "tests/unit/test_oauth_code_leftover.py",
-    # cycle 2244: leftover SCIM schemas must not invent a provision
-    "tests/unit/test_scim_schemas_leftover.py",
-    # cycle 2245: leftover SCIM User.groups must not invent a 500 / provision
-    "tests/unit/test_scim_groups_leftover.py",
-    # cycle 2246: leftover SCIM PatchOp op must not invent a 200 no-op
-    "tests/unit/test_scim_patch_op_leftover.py",
     # cycle 2247: leftover search ?entity= must not invent the fleet
     "tests/unit/test_search_entity_leftover.py",
     # cycle 2248: leftover fragment ?source= must not invent 200 empty-result theater
     "tests/unit/test_fragment_source_leftover.py",
-    # cycle 2249: leftover connection group_map must not invent a persist
-    "tests/unit/test_group_map_leftover.py",
     # cycle 2250: leftover file ?entity= must not invent a persist
     "tests/unit/test_file_entity_leftover.py",
-    "tests/unit/test_connection_create_form.py",
     "tests/integration/test_sso_routes.py::test_callback_leftover_code_stays_put",
     "tests/integration/test_sso_routes.py::test_initiate_unknown_provider_stays_put",
     "tests/integration/test_sso_routes.py::test_callback_unknown_provider_stays_put",

@@ -101,14 +101,8 @@ def enable(capability_id: str) -> None:
     assert cap is not None
     if not is_available(cap):
         typer.secho(f"\nNot installed yet — {cap.remediation}", fg=typer.colors.YELLOW)
-    typer.echo(
-        "\nActivation runbook:\n"
-        f"  1. {cap.remediation}\n"
-        "  2. Configure the connection: `dazzle auth connection create …` "
-        "(see docs/reference/enterprise-sso.md)\n"
-        "  3. Set DAZZLE_CONNECTION_SECRET for encrypted secret storage.\n"
-        "  4. Verify readiness: `dazzle auth connection doctor <id>`."
-    )
+    if cap.remediation:
+        typer.echo(f"\nActivation runbook:\n  1. {cap.remediation}")
 
 
 @capability_app.command("disable")

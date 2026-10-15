@@ -287,13 +287,9 @@ The prover reports an honest verdict per obligation, not a blanket green — `PR
 
 **When you mint your own grants.** The "who could access" upper-bound reading is proven only over **DSL-declared grant classes** (`grant_schema`). Grants minted by your own application code *outside* the declared classes are fully supported at runtime but are **not** covered by the proof — `dazzle rbac report` labels such an app with a residual-risk note, and its claim degrades from "proven upper bound" to "upper bound over declared classes". That boundary is stated, not buried: see the [RBAC Proof Model & Trust Boundary](docs/reference/rbac-proof-model.md), plus [RBAC Verification](docs/reference/rbac-verification.md) and [Compliance](docs/reference/compliance.md).
 
-### Enterprise authentication & identity (opt-in)
+### Authentication & identity
 
-For apps that need it, Dazzle ships native, per-organization enterprise identity — **OIDC, SAML 2.0, and SCIM provisioning** — so a customer's IdP (Okta, Microsoft Entra ID, Google, Ping) drives sign-in and user lifecycle. Connections are framework-owned runtime data (not DSL), fenced to one org, and gated by **DNS-verified domain ownership**; secret material is AES-256-GCM encrypted at rest. SAML covers IdP-metadata import, SP-signed AuthnRequests, encrypted assertions, and bidirectional Single Logout; SCIM covers user/group provisioning with group→role mapping.
-
-It is **off by default** — a greenfield app sees none of it until you opt in (`dazzle capability enable auth.enterprise.oidc`), so the simple path stays simple. Identity is modelled as **global Identity + Organization + fenced Membership + Session**, so one person can belong to many orgs with tenant isolation enforced at the data layer, not bolted on.
-
-See **[Enterprise SSO & Provisioning](docs/reference/enterprise-sso.md)** and [multi-tenant hosting](docs/reference/tenant-hosts.md).
+Identity is modelled as **global Identity + Organization + fenced Membership + Session**, so one person can belong to many orgs with tenant isolation enforced at the data layer, not bolted on. Sign-in covers password, magic link and social OAuth via Authlib (Google, Microsoft, Apple, GitHub). Per-org enterprise SSO (OIDC, SAML 2.0) and SCIM provisioning are parked until a consumer needs them ([DD-013](docs/decisions/DD-013-enterprise-sso-scim-connections.md)). See also [multi-tenant hosting](docs/reference/tenant-hosts.md).
 
 ---
 
@@ -424,7 +420,6 @@ These four are the whole set in [`examples/`](examples/); the consumer apps prov
 - **[Graphs](docs/reference/graphs.md)** — entity graph relationships, CTE traversal, algorithms
 - **[Compliance](docs/reference/compliance.md)** — ISO 27001 + SOC 2 evidence pipeline
 - **[RBAC Verification](docs/reference/rbac-verification.md)** — provable access control
-- **[Enterprise SSO & Provisioning](docs/reference/enterprise-sso.md)** — per-org OIDC / SAML 2.0 / SCIM (opt-in)
 
 - **[Architecture](docs/architecture/)** — system design, pipeline, MCP server
 - **[Getting Started](docs/getting-started/)** — installation, quickstart, first app

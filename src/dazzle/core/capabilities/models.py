@@ -13,13 +13,12 @@ class Capability:
     """A declarable, gateable framework capability.
 
     Attributes:
-        id: Dotted identifier, e.g. ``auth.enterprise.oidc``.
+        id: Dotted identifier, e.g. ``area.feature``.
         label: Human-readable name for CLI/diagnostics.
         probe_module: Importable module whose presence means the capability is
             *available* in this runtime (e.g. ``authlib``), probed with
             ``importlib.util.find_spec``. ``None`` means the capability has no
-            import-time dependency and is *always available* (e.g. SCIM, which is
-            stateless bearer auth over JSON).
+            import-time dependency and is *always available*.
         required_extras: pip extras that install ``probe_module`` (for the
             remediation runbook), e.g. ``("sso",)``. Empty when ``probe_module``
             is ``None``.

@@ -2,8 +2,7 @@
 
 leftover-honest 2FA sent/mode already exist (oral #94 / #92). Login
 still omitted leftover ``?error=zzz`` as absent and invented a clean
-sign-in. Enterprise/SAML already emit ``sso_no_connection`` /
-``sso_unavailable`` / ``sso_{reason}`` — those vanished the same way.
+sign-in. Social SSO's ``sso_{reason}`` tokens vanished the same way.
 Valid declared tokens ride; leftover stays put (400, no invented
 clean page). Live simple_task ``/login``. Oral #95 — not leftover
 2FA sent (oral #94), not leftover 2FA mode (oral #92).
@@ -27,7 +26,7 @@ from dazzle.http.runtime.site_routes import create_auth_page_routes
     ("raw", "declared", "expected"),
     [
         ("invalid_credentials", ("invalid_credentials", "sso_failed"), "invalid_credentials"),
-        ("sso_no_connection", ("sso_no_connection", "sso_failed"), "sso_no_connection"),
+        ("sso_provider_unknown", ("sso_provider_unknown", "sso_failed"), "sso_provider_unknown"),
         ("", ("invalid_credentials",), ""),
         (None, ("invalid_credentials",), ""),
         ("   ", ("invalid_credentials",), ""),
@@ -38,7 +37,7 @@ from dazzle.http.runtime.site_routes import create_auth_page_routes
     ],
     ids=[
         "valid-credentials",
-        "valid-sso-no-connection",
+        "valid-sso-provider-unknown",
         "empty-default",
         "none-default",
         "blank-default",
@@ -120,7 +119,7 @@ _CASES = [
             (),
             id=f"login-{token.replace('_', '-')}-rides",
         )
-        for token in ("sso_no_connection", "sso_unavailable", "sso_domain_not_verified")
+        for token in ("sso_provider_unknown",)
     ],
     pytest.param(
         _site_client,

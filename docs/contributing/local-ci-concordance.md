@@ -193,10 +193,10 @@ Copied into `scripts/ci_local.sh` — do not invent a third list.
 | Job | Extras |
 |-----|--------|
 | type-check | `dev,llm,mcp,postgres,viewport,perf` |
-| python-tests | `dev,llm,mcp,postgres,perf,saml,test-full` |
+| python-tests | `dev,llm,mcp,postgres,perf,test-full` |
 | lint | `dev,llm,mcp,postgres,perf` |
 | security-tests | `dev,sso,postgres,perf` |
-| setup-dazzle default | `dev,llm,mcp,postgres,perf,saml` |
+| setup-dazzle default | `dev,llm,mcp,postgres,perf` |
 
 Install type-check env only:
 

@@ -28,7 +28,9 @@ default.
   intent; Domain cookies are a separate wiring step.
 - Custom domains alias an existing tenant id; they are not
   `topology: custom_alias`.
-- Domain-join email TXT is identity onboarding, not HTTP routing.
+- Email-domain verification (DNS TXT) is identity onboarding, not HTTP
+  routing; it is parked with domain join (DD-009) and enterprise SSO
+  (DD-013).
 - Jobs/tests declare tenant; reset preserves tenant-root.
 - Leftover topology tokens: parse error / T1 / mapper `None` — do not
   invent B.
