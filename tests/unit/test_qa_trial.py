@@ -112,16 +112,21 @@ class TestBuildTrialMission:
         tool = next(t for t in m.tools if t.name == "record_friction")
         tool.handler(
             category="bug",
-            description="Something broke",
-            url="/app/tickets",
-            evidence="Got a 500.",
+            description="Queue empty with no explanation",
+            url="/app/queues",
+            evidence="blank tbody",
             severity="high",
+            blocks_pilot=True,
+            ownership="framework",
         )
         assert len(sink["friction"]) == 1
         entry = sink["friction"][0]
         assert entry["category"] == "bug"
         assert entry["severity"] == "high"
-        assert entry["url"] == "/app/tickets"
+        assert entry["url"] == "/app/queues"
+        assert entry["blocks_pilot"] is True
+        assert entry["ownership"] == "framework"
+        assert entry["framework_vs_app"] == "framework"
 
     def test_record_friction_sanitises_unknown_category(self, scenario: dict) -> None:
         sink: dict = {"friction": []}
@@ -129,15 +134,6 @@ class TestBuildTrialMission:
         tool = next(t for t in m.tools if t.name == "record_friction")
         tool.handler(category="not-a-category", description="hmm")
         assert sink["friction"][0]["category"] == "other"
-
-    def test_submit_verdict_records_verdict_in_sink(self, scenario: dict) -> None:
-        sink: dict = {"friction": []}
-        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
-        tool = next(t for t in m.tools if t.name == "submit_verdict")
-        # Verdict with NO negative tokens — should record without rejection.
-        result = tool.handler(verdict="Would not switch — tight UX quirks.")
-        assert sink["verdict"][0]["text"] == "Would not switch — tight UX quirks."
-        assert result.get("ended") is True
 
     def test_submit_verdict_rejects_negative_verdict_without_friction(self, scenario: dict) -> None:
         """Regression guard for the simple_task/agency_lead trial on
@@ -271,24 +267,6 @@ class TestBuildTrialMission:
         assert "Suggested phases" in m.system_prompt
         assert "Orient" in m.system_prompt
 
-    def test_record_friction_gen2_metadata(self, scenario: dict) -> None:
-        sink: dict = {"friction": []}
-        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
-        tool = next(t for t in m.tools if t.name == "record_friction")
-        tool.handler(
-            category="bug",
-            description="Queue empty with no explanation",
-            url="/app/queues",
-            evidence="blank tbody",
-            severity="high",
-            blocks_pilot=True,
-            ownership="framework",
-        )
-        entry = sink["friction"][0]
-        assert entry["blocks_pilot"] is True
-        assert entry["ownership"] == "framework"
-        assert entry["framework_vs_app"] == "framework"
-
     def test_submit_verdict_records_recommend_and_criteria(self, scenario: dict) -> None:
         sink: dict = {"friction": []}
         m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
@@ -303,6 +281,9 @@ class TestBuildTrialMission:
             pilot_blockers_summary="None blocking; reassignment UX friction only.",
         )
         assert result.get("ended") is True
+        assert sink["verdict"][0]["text"] == (
+            "Conditional pilot — urgency works, reassignment is buried."
+        )
         assert sink["verdict"][0]["recommend"] == "conditional"
         assert len(sink["verdict"][0]["criteria_scores"]) == 2
         assert sink["verdict"][0]["criteria_scores"][0]["score"] == "pass"
@@ -400,24 +381,25 @@ class TestReportRendering:
         assert "*ownership:* framework" in md
         assert "Pilot blockers:" in md
 
-    def test_empty_friction_renders_tombstone(self) -> None:
+    @pytest.mark.parametrize(
+        ("friction", "verdict", "expected"),
+        [
+            pytest.param(
+                [],
+                "Good stuff.",
+                ["no friction recorded", "## Verdict", "Good stuff."],
+                id="empty-friction",
+            ),
+            pytest.param([], "", ["no verdict recorded"], id="missing-verdict"),
+        ],
+    )
+    def test_tombstones(self, friction: list, verdict: str, expected: list[str]) -> None:
         report = build_trial_report(
-            scenario_name="s",
-            user_identity="Sarah",
-            friction=[],
-            verdict="Good stuff.",
+            scenario_name="s", user_identity="Sarah", friction=friction, verdict=verdict
         )
         out = render_trial_report(report)
-        assert "no friction recorded" in out
-        assert "## Verdict" in out
-        assert "Good stuff." in out
-
-    def test_verdict_missing_surfaces_tombstone(self) -> None:
-        report = build_trial_report(
-            scenario_name="s", user_identity="Sarah", friction=[], verdict=""
-        )
-        out = render_trial_report(report)
-        assert "no verdict recorded" in out
+        for fragment in expected:
+            assert fragment in out
 
     def test_friction_is_grouped_by_category(self) -> None:
         friction = [
@@ -526,6 +508,15 @@ class TestFreshDbReset:
         assert Path.cwd() == before
 
 
+_PRAISE_EVIDENCE = (
+    "Issue Board filters: Device, Category, Severity, Status; table rows for issuereport list"
+)
+_SHARED_EVIDENCE = (
+    "URL: http://localhost:3462/app/alert - Page shows 'No items yet' "
+    "and 'No alerts. All systems operational.'"
+)
+
+
 class TestFrictionClustering:
     """Near-duplicate friction clustering (#812).
 
@@ -535,229 +526,161 @@ class TestFrictionClustering:
     near-duplicates, annotated with the cluster size.
     """
 
-    def test_identical_entries_collapse_to_one(self) -> None:
-        friction = [
-            {
-                "category": "bug",
-                "description": "Alert list 403s.",
-                "url": "/app/alert",
-                "severity": "high",
-            }
-        ] * 4
+    @pytest.mark.parametrize(
+        ("friction", "header", "reported"),
+        [
+            pytest.param(
+                [
+                    {
+                        "category": "bug",
+                        "description": "Alert list 403s.",
+                        "url": "/app/alert",
+                        "severity": "high",
+                    }
+                ]
+                * 4,
+                "Friction observations (1 · 3 near-duplicates clustered)",
+                "×4",
+                id="identical-entries-collapse-812",
+            ),
+            pytest.param(
+                [
+                    {"category": "bug", "description": "403.", "url": "/app/alert"},
+                    {"category": "bug", "description": "403.", "url": "/app/user"},
+                ],
+                "Friction observations (2)",
+                None,
+                id="different-urls-stay-apart",
+            ),
+            pytest.param(
+                [
+                    {"category": "bug", "description": "Same words.", "url": "/x"},
+                    {"category": "praise", "description": "Same words.", "url": "/x"},
+                ],
+                "Friction observations (2)",
+                None,
+                id="different-categories-without-evidence-stay-apart-1073",
+            ),
+            pytest.param(
+                [
+                    {
+                        "category": "praise",
+                        "description": "The Issue Board is exactly what I need as a manager.",
+                        "url": "/app/issue",
+                    },
+                    {
+                        "category": "praise",
+                        "description": "Issue Board is exactly what I need as a manager.",
+                        "url": "/app/issue",
+                    },
+                ],
+                "Friction observations (1 · 1 near-duplicates clustered)",
+                None,
+                id="near-duplicate-descriptions-cluster",
+            ),
+            pytest.param(
+                [
+                    {"category": "bug", "description": "Filter broken.", "url": "/x"},
+                    {"category": "bug", "description": "Button misaligned.", "url": "/x"},
+                ],
+                "Friction observations (2)",
+                None,
+                id="dissimilar-descriptions-same-url-stay-apart",
+            ),
+            pytest.param(
+                # LLM paraphrase variance: the 0.8 threshold missed these; 0.65 catches them.
+                [
+                    {
+                        "category": "missing",
+                        "description": "The Systems page shows 'No items found' - there are no monitored systems visible.",
+                        "url": "/app/system",
+                        "severity": "high",
+                    },
+                    {
+                        "category": "missing",
+                        "description": "The Systems page shows 'No items found' with no monitored systems visible.",
+                        "url": "/app/system",
+                        "severity": "high",
+                    },
+                ],
+                "Friction observations (1 · 1 near-duplicates clustered)",
+                None,
+                id="lenient-threshold-catches-llm-variance-819",
+            ),
+            pytest.param(
+                # TR-32: positive wording diverges more than friction; soft praise
+                # floors + token Jaccard collapse four framings of one surface.
+                [
+                    {
+                        "category": "praise",
+                        "description": desc,
+                        "url": "/app/issuereport",
+                        "evidence": evidence,
+                        "severity": "low",
+                    }
+                    for desc, evidence in [
+                        (
+                            "The Issue Board is exactly what I need — Device/Category/"
+                            "Severity/Status filters make triage straightforward.",
+                            _PRAISE_EVIDENCE,
+                        ),
+                        (
+                            "I love how the Issue Board lets me filter by Device, Category, "
+                            "Severity and Status without leaving the page.",
+                            _PRAISE_EVIDENCE,
+                        ),
+                        (
+                            "Great Issue Board experience: filtering Device/Category/"
+                            "Severity/Status keeps the queue scannable for a manager.",
+                            _PRAISE_EVIDENCE + "  ",  # whitespace noise
+                        ),
+                        (
+                            "As an eng manager the Issue Board filters (Device, Category, "
+                            "Severity, Status) are the highlight of the product.",
+                            _PRAISE_EVIDENCE,
+                        ),
+                    ]
+                ],
+                "Friction observations (1 · 3 near-duplicates clustered)",
+                "×4",
+                id="praise-issue-board-paraphrases-cluster-TR-32",
+            ),
+            pytest.param(
+                # #1073: five 'No alerts' entries across 3 categories share identical
+                # DOM evidence; the cross-category pass collapses them into one.
+                [
+                    {
+                        "category": category,
+                        "description": desc,
+                        "url": "/app/alert",
+                        "evidence": _SHARED_EVIDENCE,
+                    }
+                    for category, desc in [
+                        ("missing", "The alerts page shows 'No items yet' and 'No alerts.'"),
+                        ("missing", "Cannot test the alert acknowledgment workflow."),
+                        ("confusion", "Can't tell if the system is healthy or just unconfigured."),
+                        ("other", "Need sample data for a real evaluation."),
+                        ("missing", "No way to evaluate alert sorting or acknowledgment."),
+                    ]
+                ],
+                "Friction observations (1 · 4 near-duplicates clustered)",
+                None,
+                id="cross-category-collapse-on-shared-evidence-1073",
+            ),
+        ],
+    )
+    def test_clustering_outcome(
+        self, friction: list[dict[str, str]], header: str, reported: str | None
+    ) -> None:
         report = build_trial_report(
             scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
         )
         out = render_trial_report(report)
-        assert "Friction observations (1 · 3 near-duplicates clustered)" in out
-        assert "*reported:* ×4" in out
-
-    def test_different_urls_do_not_cluster(self) -> None:
-        friction = [
-            {"category": "bug", "description": "403.", "url": "/app/alert"},
-            {"category": "bug", "description": "403.", "url": "/app/user"},
-        ]
-        report = build_trial_report(
-            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
-        )
-        out = render_trial_report(report)
-        # Two distinct entries, no clustering annotation.
-        assert "near-duplicates clustered" not in out
-        assert "Friction observations (2)" in out
-
-    def test_different_categories_do_not_cluster(self) -> None:
-        friction = [
-            {"category": "bug", "description": "Same words.", "url": "/x"},
-            {"category": "praise", "description": "Same words.", "url": "/x"},
-        ]
-        report = build_trial_report(
-            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
-        )
-        out = render_trial_report(report)
-        assert "Friction observations (2)" in out
-
-    def test_near_duplicate_descriptions_cluster(self) -> None:
-        friction = [
-            {
-                "category": "praise",
-                "description": "The Issue Board is exactly what I need as a manager.",
-                "url": "/app/issue",
-            },
-            {
-                "category": "praise",
-                "description": "Issue Board is exactly what I need as a manager.",
-                "url": "/app/issue",
-            },
-        ]
-        report = build_trial_report(
-            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
-        )
-        out = render_trial_report(report)
-        assert "Friction observations (1 · 1 near-duplicates clustered)" in out
-
-    def test_dissimilar_descriptions_on_same_url_do_not_cluster(self) -> None:
-        friction = [
-            {"category": "bug", "description": "Filter broken.", "url": "/x"},
-            {"category": "bug", "description": "Button misaligned.", "url": "/x"},
-        ]
-        report = build_trial_report(
-            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
-        )
-        out = render_trial_report(report)
-        assert "Friction observations (2)" in out
-
-    def test_lenient_threshold_catches_llm_variance(self) -> None:
-        """#819: LLM-generated friction varies enough that 0.8 missed obvious
-        duplicates. 0.65 catches paraphrased near-duplicates while leaving
-        genuinely distinct findings separate (see
-        ``test_dissimilar_descriptions_on_same_url_do_not_cluster``)."""
-        friction = [
-            {
-                "category": "missing",
-                "description": "The Systems page shows 'No items found' - there are no monitored systems visible.",
-                "url": "/app/system",
-                "severity": "high",
-            },
-            {
-                "category": "missing",
-                "description": "The Systems page shows 'No items found' with no monitored systems visible.",
-                "url": "/app/system",
-                "severity": "high",
-            },
-        ]
-        report = build_trial_report(
-            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
-        )
-        out = render_trial_report(report)
-        assert "Friction observations (1 · 1 near-duplicates clustered)" in out
-
-    def test_praise_issue_board_paraphrases_cluster(self) -> None:
-        """TR-32: four praise framings of the same Issue Board filters surface.
-
-        Positive wording diverges more than friction; SequenceMatcher alone
-        at 0.65 let all four through. Soft praise floors + token Jaccard collapse
-        them when URL (+ optional shared evidence) matches.
-        """
-        evidence = (
-            "Issue Board filters: Device, Category, Severity, Status; "
-            "table rows for issuereport list"
-        )
-        friction = [
-            {
-                "category": "praise",
-                "description": (
-                    "The Issue Board is exactly what I need — Device/Category/"
-                    "Severity/Status filters make triage straightforward."
-                ),
-                "url": "/app/issuereport",
-                "evidence": evidence,
-                "severity": "low",
-            },
-            {
-                "category": "praise",
-                "description": (
-                    "I love how the Issue Board lets me filter by Device, Category, "
-                    "Severity and Status without leaving the page."
-                ),
-                "url": "/app/issuereport",
-                "evidence": evidence,
-                "severity": "low",
-            },
-            {
-                "category": "praise",
-                "description": (
-                    "Great Issue Board experience: filtering Device/Category/"
-                    "Severity/Status keeps the queue scannable for a manager."
-                ),
-                "url": "/app/issuereport",
-                "evidence": evidence + "  ",  # whitespace noise
-                "severity": "low",
-            },
-            {
-                "category": "praise",
-                "description": (
-                    "As an eng manager the Issue Board filters (Device, Category, "
-                    "Severity, Status) are the highlight of the product."
-                ),
-                "url": "/app/issuereport",
-                "evidence": evidence,
-                "severity": "low",
-            },
-        ]
-        report = build_trial_report(
-            scenario_name="s", user_identity="EM", friction=friction, verdict="v"
-        )
-        out = render_trial_report(report)
-        assert "Friction observations (1 · 3 near-duplicates clustered)" in out
-        assert "*reported:* ×4" in out
-
-    def test_cross_category_collapse_on_shared_evidence(self) -> None:
-        """#1073: cycle 120 ops_dashboard recorded 5 near-identical 'No alerts'
-        entries spanning 3 categories (missing × 3, confusion × 1, other × 1).
-
-        The original same-category dedup let all 5 through. The cross-category
-        pass keyed on shared evidence collapses them — agents file the same
-        observable phenomenon under varied categories when description wording
-        differs, but the DOM evidence is identical.
-        """
-        evidence = (
-            "URL: http://localhost:3462/app/alert - Page shows 'No items yet' "
-            "and 'No alerts. All systems operational.'"
-        )
-        friction = [
-            {
-                "category": "missing",
-                "description": "The alerts page shows 'No items yet' and 'No alerts.'",
-                "url": "/app/alert",
-                "evidence": evidence,
-            },
-            {
-                "category": "missing",
-                "description": "Cannot test the alert acknowledgment workflow.",
-                "url": "/app/alert",
-                "evidence": evidence,
-            },
-            {
-                "category": "confusion",
-                "description": "Can't tell if the system is healthy or just unconfigured.",
-                "url": "/app/alert",
-                "evidence": evidence,
-            },
-            {
-                "category": "other",
-                "description": "Need sample data for a real evaluation.",
-                "url": "/app/alert",
-                "evidence": evidence,
-            },
-            {
-                "category": "missing",
-                "description": "No way to evaluate alert sorting or acknowledgment.",
-                "url": "/app/alert",
-                "evidence": evidence,
-            },
-        ]
-        report = build_trial_report(
-            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
-        )
-        out = render_trial_report(report)
-        # Original 5 entries → 1 canonical + 4 collapsed (across 3 categories).
-        # The cross-category pass collapses the 3 single-category survivors
-        # into one shared-evidence cluster.
-        assert "Friction observations (1 · 4 near-duplicates clustered)" in out
-
-    def test_cross_category_no_collapse_without_evidence(self) -> None:
-        """The cross-category pass requires non-empty evidence. Two entries
-        with same url + different categories but no evidence MUST NOT collapse
-        (regression guard for the historical
-        test_different_categories_do_not_cluster assertion)."""
-        friction = [
-            {"category": "bug", "description": "Same words.", "url": "/x"},
-            {"category": "praise", "description": "Same words.", "url": "/x"},
-        ]
-        report = build_trial_report(
-            scenario_name="s", user_identity="Dan", friction=friction, verdict="v"
-        )
-        out = render_trial_report(report)
-        assert "Friction observations (2)" in out
+        assert header in out
+        if "clustered" not in header:
+            assert "near-duplicates clustered" not in out
+        if reported:
+            assert f"*reported:* {reported}" in out
 
 
 # ---------------------------------------------------------------------------
@@ -794,6 +717,78 @@ class TestVerdictFallbackFormatter:
 # ---------------------------------------------------------------------------
 # Seed pre-flight / circuit breaker (#826)
 # ---------------------------------------------------------------------------
+
+
+class _FakeEntity:
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.fields: list[Any] = []
+
+
+def _stub_seed_env(
+    monkeypatch: pytest.MonkeyPatch,
+    entity_names: list[str],
+    *,
+    data_dir: Path | None = None,
+    status_code: int = 200,
+    forbid_regen: bool = False,
+) -> list[dict[str, Any]]:
+    """Stub the AppSpec loader, entity sort, data-dir discovery and httpx client
+    used by ``_seed_demo_data_for_trial``; returns the recorded POST kwargs."""
+    import dazzle.mcp.server.handlers.demo_data as demo_mod
+
+    class _Domain:
+        entities = [_FakeEntity(n) for n in entity_names]
+
+    class _AppSpec:
+        domain = _Domain()
+
+    class _Resp:
+        text = "{}"
+
+        def __init__(self) -> None:
+            self.status_code = status_code
+
+        def json(self) -> dict[str, Any]:
+            return {"created": {"x": 1}}
+
+    calls: list[dict[str, Any]] = []
+
+    class _Client:
+        def __init__(self, *_a: Any, **_k: Any) -> None:
+            pass
+
+        def __enter__(self) -> _Client:
+            return self
+
+        def __exit__(self, *_a: Any) -> None:
+            return None
+
+        def post(self, *_a: Any, **kwargs: Any) -> _Resp:
+            calls.append(kwargs)
+            return _Resp()
+
+    monkeypatch.setattr("dazzle.cli.utils.load_project_appspec", lambda _p: _AppSpec())
+    monkeypatch.setattr(
+        "dazzle.demo_data.loader.topological_sort_entities", lambda _e: entity_names
+    )
+    if data_dir is not None:
+        monkeypatch.setattr(
+            "dazzle.demo_data.test_mode_load.find_demo_data_dir", lambda _p: data_dir
+        )
+    monkeypatch.setattr("httpx.Client", _Client)
+
+    if forbid_regen:
+
+        def _boom(*_a: Any, **_k: Any) -> None:
+            raise AssertionError("must not regenerate faker when seed files exist")
+
+        monkeypatch.setattr(demo_mod, "demo_generate_impl", _boom)
+    return calls
+
+
+def _posted_fixtures(calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [fx for c in calls for fx in (c.get("json") or {}).get("fixtures") or []]
 
 
 class TestSeedPreflightAndCircuitBreaker:
@@ -898,77 +893,21 @@ class TestSeedPreflightAndCircuitBreaker:
         circuit-breaker message pointing at `dazzle demo verify`."""
         from dazzle.cli import qa as qa_cli
 
-        # No blueprint — skip the pre-flight branch. We need
-        # existing_data to force the data-dir path.
         data_dir = tmp_path / "demo_jsonl"
         data_dir.mkdir()
-        # Seed 20 fixtures so the circuit breaker can trip at 10.
+        # 20 fixtures so the circuit breaker can trip at 10.
         (data_dir / "Manuscript.jsonl").write_text(
             "\n".join('{"id": "' + f"row-{i}" + '"}' for i in range(20)) + "\n"
         )
-
-        # Stub AppSpec loader + entity topological sort + data-dir
-        # discovery. The source-module patches propagate into
-        # `from ... import X` statements inside the target function.
-        class _FakeEntity:
-            def __init__(self, name: str) -> None:
-                self.name = name
-                self.fields = []
-
-        class _FakeDomain:
-            entities = [_FakeEntity("Manuscript")]
-
-        class _FakeAppSpec:
-            domain = _FakeDomain()
-
-        monkeypatch.setattr(
-            "dazzle.cli.utils.load_project_appspec",
-            lambda _p: _FakeAppSpec(),
-        )
-        monkeypatch.setattr(
-            "dazzle.demo_data.loader.topological_sort_entities",
-            lambda _entities: ["Manuscript"],
-        )
-        monkeypatch.setattr(
-            "dazzle.demo_data.test_mode_load.find_demo_data_dir",
-            lambda _p: data_dir,
-        )
-
-        # Stub httpx.Client so every POST returns 400. Record how
-        # many attempts happened before the circuit broke.
-        post_count = {"n": 0}
-
-        class _FakeResp:
-            status_code = 400
-            text = 'invalid input syntax for type uuid: "row-0"'
-
-            def json(self) -> dict[str, Any]:
-                return {"created": {}}
-
-        class _FakeClient:
-            def __init__(self, *_a: Any, **_k: Any) -> None:
-                pass
-
-            def __enter__(self) -> _FakeClient:
-                return self
-
-            def __exit__(self, *_a: Any) -> None:
-                return None
-
-            def post(self, *_a: Any, **_k: Any) -> _FakeResp:
-                post_count["n"] += 1
-                return _FakeResp()
-
-        monkeypatch.setattr("httpx.Client", _FakeClient)
+        calls = _stub_seed_env(monkeypatch, ["Manuscript"], data_dir=data_dir, status_code=400)
 
         qa_cli._seed_demo_data_for_trial(tmp_path, "http://localhost:9999", "test-secret")
-        out = capsys.readouterr()
-        # Should have stopped at 10 consecutive failures, not iterated
-        # through all 20 fixtures.
-        assert post_count["n"] == 10, f"expected circuit at 10, got {post_count['n']}"
-        assert "Seed aborted" in out.err
-        assert "10 consecutive failures" in out.err
-        assert "dazzle demo verify" in out.err
+        err = capsys.readouterr().err
+        # Stopped at 10 consecutive failures, not all 20 fixtures.
+        assert len(calls) == 10
+        assert "Seed aborted" in err
+        assert "10 consecutive failures" in err
+        assert "dazzle demo verify" in err
 
     def test_prefers_story_spine_jsonl_over_blueprint_only_dazzle_dir(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -988,66 +927,14 @@ class TestSeedPreflightAndCircuitBreaker:
         (spine / "Brand.jsonl").write_text(
             '{"id": "4d000000-0000-4000-8000-000000000001", "name": "Northwind"}\n'
         )
-
-        class _FakeEntity:
-            def __init__(self, name: str) -> None:
-                self.name = name
-                self.fields = []
-
-        class _FakeDomain:
-            entities = [_FakeEntity("Brand")]
-
-        class _FakeAppSpec:
-            domain = _FakeDomain()
-
-        monkeypatch.setattr(
-            "dazzle.cli.utils.load_project_appspec",
-            lambda _p: _FakeAppSpec(),
-        )
-        monkeypatch.setattr(
-            "dazzle.demo_data.loader.topological_sort_entities",
-            lambda _entities: ["Brand"],
-        )
-
-        posted: list[dict[str, Any]] = []
-
-        class _FakeResp:
-            status_code = 200
-            text = "{}"
-
-            def json(self) -> dict[str, Any]:
-                return {"created": {"Brand": 1}}
-
-        class _FakeClient:
-            def __init__(self, *_a: Any, **_k: Any) -> None:
-                pass
-
-            def __enter__(self) -> _FakeClient:
-                return self
-
-            def __exit__(self, *_a: Any) -> None:
-                return None
-
-            def post(self, *_a: Any, **_k: Any) -> _FakeResp:
-                body = _k.get("json") or {}
-                for fx in body.get("fixtures") or []:
-                    posted.append(fx)
-                return _FakeResp()
-
-        monkeypatch.setattr("httpx.Client", _FakeClient)
-
-        def _boom(*_a: Any, **_k: Any) -> None:
-            raise AssertionError("must not regenerate faker when story-spine jsonl exists")
-
-        import dazzle.mcp.server.handlers.demo_data as _demo_mod
-
-        monkeypatch.setattr(_demo_mod, "demo_generate_impl", _boom)
+        calls = _stub_seed_env(monkeypatch, ["Brand"], forbid_regen=True)
 
         ok = qa_cli._seed_demo_data_for_trial(tmp_path, "http://localhost:9999", "test-secret")
         assert ok is True
-        assert len(posted) == 1
-        assert posted[0]["entity"] == "Brand"
-        assert posted[0]["id"] == "4d000000-0000-4000-8000-000000000001"
+        posted = _posted_fixtures(calls)
+        assert [(p["entity"], p["id"]) for p in posted] == [
+            ("Brand", "4d000000-0000-4000-8000-000000000001")
+        ]
 
     def test_trial_seed_loads_csv_parents_before_jsonl_children(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1071,71 +958,17 @@ class TestSeedPreflightAndCircuitBreaker:
             '"contact": "b2926c87-cfb0-4a8a-93af-1e817baaac27", "body": "note"}\n',
             encoding="utf-8",
         )
-
-        class _FakeEntity:
-            def __init__(self, name: str) -> None:
-                self.name = name
-                self.fields = []
-
-        class _FakeDomain:
-            entities = [_FakeEntity("Contact"), _FakeEntity("ContactNote")]
-
-        class _FakeAppSpec:
-            domain = _FakeDomain()
-
-        monkeypatch.setattr(
-            "dazzle.cli.utils.load_project_appspec",
-            lambda _p: _FakeAppSpec(),
+        calls = _stub_seed_env(
+            monkeypatch, ["Contact", "ContactNote"], data_dir=data_dir, forbid_regen=True
         )
-        monkeypatch.setattr(
-            "dazzle.demo_data.loader.topological_sort_entities",
-            lambda _entities: ["Contact", "ContactNote"],
-        )
-        monkeypatch.setattr(
-            "dazzle.demo_data.test_mode_load.find_demo_data_dir",
-            lambda _p: data_dir,
-        )
-
-        posted: list[dict[str, Any]] = []
-
-        class _FakeResp:
-            status_code = 200
-            text = "{}"
-
-            def json(self) -> dict[str, Any]:
-                return {"created": {"x": 1}}
-
-        class _FakeClient:
-            def __init__(self, *_a: Any, **_k: Any) -> None:
-                pass
-
-            def __enter__(self) -> _FakeClient:
-                return self
-
-            def __exit__(self, *_a: Any) -> None:
-                return None
-
-            def post(self, *_a: Any, **_k: Any) -> _FakeResp:
-                body = _k.get("json") or {}
-                for fx in body.get("fixtures") or []:
-                    posted.append(fx)
-                return _FakeResp()
-
-        monkeypatch.setattr("httpx.Client", _FakeClient)
-
-        def _boom(*_a: Any, **_k: Any) -> None:
-            raise AssertionError("must not regenerate when CSV/JSONL seeds exist")
-
-        import dazzle.mcp.server.handlers.demo_data as _demo_mod
-
-        monkeypatch.setattr(_demo_mod, "demo_generate_impl", _boom)
 
         ok = qa_cli._seed_demo_data_for_trial(tmp_path, "http://localhost:9999", "test-secret")
         assert ok is True
-        entities = [p["entity"] for p in posted]
-        assert entities == ["Contact", "ContactNote"]
-        assert posted[0]["id"] == "b2926c87-cfb0-4a8a-93af-1e817baaac27"
-        assert posted[1]["id"] == "c8000000-0000-4000-8000-000000000001"
+        posted = _posted_fixtures(calls)
+        assert [(p["entity"], p["id"]) for p in posted] == [
+            ("Contact", "b2926c87-cfb0-4a8a-93af-1e817baaac27"),
+            ("ContactNote", "c8000000-0000-4000-8000-000000000001"),
+        ]
 
 
 # ---------------------------------------------------------------------------

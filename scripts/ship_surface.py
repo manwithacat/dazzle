@@ -326,12 +326,10 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_csv_export.py::test_csv_leftover_datetime_stays_put",
     "tests/unit/test_csv_export.py::test_csv_bool_uses_yes_no",
     # cycle 2254: timeago future due dates must not invent just now (oral #123)
-    "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_future_date_does_not_invent_just_now",
-    "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_due_today_is_today",
-    "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_future_datetime_does_not_invent_just_now",
-    "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_leftover_stays_put",
     # cycle 2255: timeago naive UTC must not invent elapsed vs wall now (oral #124)
-    "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_naive_utc_does_not_invent_elapsed_vs_wall_now",
+    # (both are cases of the one timeago table since flense ship AW: due_*-123,
+    # future_*, leftover_*, *-124)
+    "tests/unit/test_workspace_rendering.py::test_timeago_filter",
     # cycle 2256: workspace today must not invent unbounded / whole-book / on-time (oral #125)
     "tests/unit/test_date_expr_eval.py::test_today_is_tenant_calendar",
     # The cedar_row_filters pin that sat here moved: that module was deleted with
@@ -339,7 +337,8 @@ SHIP_TESTS: tuple[str, ...] = (
     # DSL). The pin directly below covers the same class on the live
     # condition→predicate path.
     "tests/unit/test_condition_to_predicate.py::test_today_lt_binds_tenant_calendar",
-    "tests/unit/test_workspace_rendering.py::TestAttentionHighlighting::test_today_overdue_does_not_invent_on_time",
+    "tests/unit/test_workspace_rendering.py::test_attention_signals[past_due_date_fires]",
+    "tests/unit/test_workspace_rendering.py::test_attention_signals[future_due_date_quiet]",
     # cycle 2175: list-region _emit_pagination hx-get drops include_closed / as_of
     "tests/unit/test_list_pagination_temporal_leftover.py",
     # cycle 2177: infinite-scroll sentinel _build_table_url_params drops include_closed / as_of

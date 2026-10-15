@@ -520,24 +520,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_persona_journey.py",
-    "class": "TestNavigationScope",
-    "assertion_shape": "('eq',)",
-    "size": 7,
-    "members": [
-      "test_no_over_exposure_when_workspace_covers_all",
-      "test_out_of_workspace_entities_not_over_exposed",
-      "test_policy_access_prevents_over_exposure",
-      "test_persona_variant_prevents_over_exposure",
-      "test_no_gaps_when_no_workspace_and_no_stories",
-      "test_many_out_of_workspace_entities_not_flagged",
-      "test_workspace_access_denial_excludes_entities"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_pip_audit.py",
     "class": "(module)",
     "assertion_shape": "('eq',)",
@@ -831,23 +813,6 @@
     "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
   },
   {
-    "file": "tests/unit/test_persona_journey.py",
-    "class": "TestExperienceReachability",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_reachable_experience_no_gap",
-      "test_experience_for_other_persona_ignored",
-      "test_access_spec_allows_persona_no_gap",
-      "test_access_spec_empty_allow_no_deny_no_gap",
-      "test_access_spec_denies_persona_still_gap",
-      "test_access_spec_allows_other_persona_still_gap"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_predicate_policy_mode.py",
     "class": "TestInlineLiteral",
     "assertion_shape": "('eq',)",
@@ -876,23 +841,6 @@
       "test_minimal_fields_for_fallback_for_unknown_entity",
       "test_minimal_fields_for_suffixes_unique_str_fields",
       "test_minimal_fields_for_no_suffix_without_run_id"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_qa_trial.py",
-    "class": "TestFrictionClustering",
-    "assertion_shape": "('in',)",
-    "size": 6,
-    "members": [
-      "test_different_categories_do_not_cluster",
-      "test_near_duplicate_descriptions_cluster",
-      "test_dissimilar_descriptions_on_same_url_do_not_cluster",
-      "test_lenient_threshold_catches_llm_variance",
-      "test_cross_category_collapse_on_shared_evidence",
-      "test_cross_category_no_collapse_without_evidence"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -1240,22 +1188,6 @@
     "recommendation": "parametrise",
     "recommended_form": "fuzz",
     "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
-  },
-  {
-    "file": "tests/unit/test_events.py",
-    "class": "TestDevBusMemory",
-    "assertion_shape": "('eq',)",
-    "size": 5,
-    "members": [
-      "test_ack_and_nack",
-      "test_nack_to_dlq",
-      "test_replay_events",
-      "test_list_topics",
-      "test_unsubscribe"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
     "file": "tests/unit/test_example_guide_bar.py",
@@ -5995,34 +5927,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_events.py",
-    "class": "TestEventEnvelope",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 3,
-    "members": [
-      "test_create_with_correlation",
-      "test_caused_by",
-      "test_caused_by_with_existing_correlation"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_events.py",
-    "class": "TestDevBusMemory",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 3,
-    "members": [
-      "test_publish_and_subscribe",
-      "test_multiple_consumers",
-      "test_replay_with_time_filter"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_example_index.py",
     "class": "TestComponentShowcase",
     "assertion_shape": "('gt', 'in', 'in')",
@@ -7445,20 +7349,6 @@
       "test_hide_does_not_touch_non_matching_columns",
       "test_role_prefix_stripped",
       "test_read_only_respects_role_prefix"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_persona_journey.py",
-    "class": "TestOrphanSurfaceDetection",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_surface_referenced_by_workspace_region",
-      "test_list_surface_not_flagged",
-      "test_experience_referenced_surface_not_orphaned"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -9103,20 +8993,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_testspec_generator.py",
-    "class": "TestFullE2ETestSpecGeneration",
-    "assertion_shape": "('eq', 'isnot')",
-    "size": 3,
-    "members": [
-      "test_testspec_can_get_fixture",
-      "test_testspec_usability_rules",
-      "test_testspec_a11y_rules"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_types.py",
     "class": "(module)",
     "assertion_shape": "('is',)",
@@ -9517,20 +9393,6 @@
       "test_explicit_value_within_range",
       "test_clamps_below_one",
       "test_clamps_above_twelve"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_workspace_rendering.py",
-    "class": "TestTimeagoFilter",
-    "assertion_shape": "('eq', 'eq', 'eq')",
-    "size": 3,
-    "members": [
-      "test_future_date_does_not_invent_just_now",
-      "test_naive_utc_does_not_invent_elapsed_vs_wall_now",
-      "test_leftover_stays_put"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",

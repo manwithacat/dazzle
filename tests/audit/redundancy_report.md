@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 650
-- **Tests inside those clusters**: 2,429
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **1,779 tests** (≈ 12.4% of the suite)
+- **Clusters of ≥3**: 641
+- **Tests inside those clusters**: 2,390
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **1,749 tests** (≈ 12.2% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -16,8 +16,8 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 |---|---:|
 | 20+ | 0 |
 | 10-19 | 3 |
-| 5-9 | 102 |
-| 3-4 | 545 |
+| 5-9 | 98 |
+| 3-4 | 540 |
 
 ## Top 30 largest clusters
 
@@ -50,9 +50,9 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_dispatch_ctx_list_row_links.py` | `(module)` | 7 | test_dispatch_ctx_threads_detail_url_template, test_dispatch_ctx_omits_detail_url_template_when_unset, test_resolve_row_links_substitutes_named_placeholders… |
 | `tests/unit/test_error_views.py` | `(module)` | 7 | test_404_view_announces_404, test_404_view_custom_message_overrides_default, test_404_view_renders_product_name… |
 | `tests/unit/test_pending_document_route.py` | `(module)` | 7 | test_uploader_gets_pending_file, test_non_uploader_denied_404, test_attached_file_not_servable_via_pending… |
-| `tests/unit/test_persona_journey.py` | `TestNavigationScope` | 7 | test_no_over_exposure_when_workspace_covers_all, test_out_of_workspace_entities_not_over_exposed, test_policy_access_prevents_over_exposure… |
 | `tests/unit/test_pip_audit.py` | `(module)` | 7 | test_parse_findings_reads_the_id_column_not_the_whole_line, test_parse_findings_keeps_only_three_columns, test_parse_findings_dedupes_the_alias_rows_pip_audit_repeats… |
 | `tests/unit/test_rate_limit_key_1296.py` | `(module)` | 7 | test_default_zero_trusted_proxies_uses_client_host_ignoring_xff, test_one_trusted_proxy_takes_rightmost_xff, test_two_trusted_proxies_takes_second_from_right… |
+| `tests/unit/test_scope_create_eval.py` | `(module)` | 7 | test_user_attr_check_resolves_named_user_attribute, test_column_check_literal_eq, test_column_check_with_current_user_value_ref… |
 
 ## Top 10 files by collapse-saving potential
 
@@ -63,11 +63,11 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_scope_create_eval.py` | 14 |
 | `tests/unit/test_task_inbox_data_resolution.py` | 14 |
 | `tests/unit/test_onboarding_renderer.py` | 13 |
-| `tests/unit/test_persona_journey.py` | 13 |
 | `tests/unit/test_goal_b_coat.py` | 12 |
 | `tests/unit/test_landing_resolver.py` | 12 |
 | `tests/unit/test_tenant_middleware.py` | 12 |
 | `tests/integration/test_auth_password_mode_chrome_gate.py` | 12 |
+| `tests/unit/test_nav_model_render_1324.py` | 12 |
 
 ## Fuzz-target worklist (property/fuzz-candidate clusters)
 

@@ -15,6 +15,7 @@ from typing import Any
 
 import pytest
 
+from dazzle.core import ir
 from dazzle.core.ir import AggregateRef
 from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
 
@@ -43,15 +44,14 @@ def _make_entity(
     state_machine: Any = None,
 ) -> SimpleNamespace:
     """Create a minimal EntitySpec-like object."""
-    return SimpleNamespace(
-        name=name,
-        fields=fields,
-        state_machine=state_machine,
-    )
+    return SimpleNamespace(name=name, fields=fields, state_machine=state_machine)
+
+
+_ID = _make_field("id", FieldTypeKind.UUID)
 
 
 # ===========================================================================
-# TestFieldKindToColType
+# Column types
 # ===========================================================================
 
 
@@ -96,777 +96,578 @@ class TestFieldKindToColType:
         assert _field_kind_to_col_type(f, entity) == expected
 
 
-class TestSsrFieldTypeToColumnType1597:
+@pytest.mark.parametrize(
+    ("field_factory", "name"),
+    [
+        pytest.param(
+            lambda: ir.FieldSpec(
+                name="assigned_at", type=ir.FieldType(kind=ir.FieldTypeKind.DATETIME)
+            ),
+            "assigned_at",
+            id="datetime_kind-1597",
+        ),
+        pytest.param(lambda: None, "created_at", id="injected_created_at-1597"),
+        pytest.param(lambda: None, "updated_at", id="injected_updated_at-1597"),
+    ],
+)
+def test_ssr_column_type_is_datetime_not_date_1597(field_factory, name) -> None:
     """SSR template_compiler mapper must match HTMX datetime vocabulary (#1597)."""
+    from dazzle.page.converters.template_compiler import _field_type_to_column_type
 
-    def test_datetime_kind_is_datetime_not_date(self) -> None:
-        from dazzle.core import ir
-        from dazzle.page.converters.template_compiler import _field_type_to_column_type
-
-        fld = ir.FieldSpec(
-            name="assigned_at",
-            type=ir.FieldType(kind=ir.FieldTypeKind.DATETIME),
-        )
-        assert _field_type_to_column_type(fld, "assigned_at") == "datetime"
-
-    def test_injected_at_suffix_is_datetime(self) -> None:
-        from dazzle.page.converters.template_compiler import _field_type_to_column_type
-
-        assert _field_type_to_column_type(None, "created_at") == "datetime"
-        assert _field_type_to_column_type(None, "updated_at") == "datetime"
+    assert _field_type_to_column_type(field_factory(), name) == "datetime"
 
 
 # ===========================================================================
-# TestFilterableColumns
+# Filterable / ref / hidden columns (public path: build_entity_columns_full)
 # ===========================================================================
 
 
-class TestFilterableColumns:
-    """Column-building in server.py should mark filterable columns."""
-
-    def _build_columns(self, entity: Any) -> list[dict[str, Any]]:
-        """Simulate the column-building loop from server.py."""
-        from dazzle.http.runtime.server import _field_kind_to_col_type
-
-        columns: list[dict[str, Any]] = []
-        for f in entity.fields:
-            if f.name == "id":
-                continue
-            ft = getattr(f, "type", None)
-            kind = getattr(ft, "kind", None)
-            kind_val = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
-            # Ref and belongs_to: show as ref columns with relation name key
-            if kind_val in ("ref", "belongs_to"):
-                rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
-                ref_entity = getattr(ft, "ref_entity", None)
-                from dazzle.page.app_paths import detail_path, entity_slug
-
-                ref_route = detail_path("/app", entity_slug(str(ref_entity))) if ref_entity else ""
-                columns.append(
-                    {
-                        "key": rel_name,
-                        "label": rel_name.replace("_", " ").title(),
-                        "type": "ref",
-                        "sortable": False,
-                        "ref_route": ref_route,
-                    }
-                )
-                continue
-            if kind_val in ("uuid", "has_many", "has_one", "embeds"):
-                continue
-            if f.name.endswith("_id"):
-                continue
-            col_type = _field_kind_to_col_type(f, entity)
-            col: dict[str, Any] = {
-                "key": f.name,
-                "label": getattr(f, "label", None) or f.name.replace("_", " ").title(),
-                "type": col_type,
-                "sortable": True,
-            }
-            if col_type == "badge":
-                if kind_val == "enum":
-                    ev = getattr(ft, "enum_values", None)
-                    if ev:
-                        col["filterable"] = True
-                        col["filter_options"] = list(ev)
-                else:
-                    sm = getattr(entity, "state_machine", None)
-                    if sm:
-                        states = getattr(sm, "states", [])
-                        if states:
-                            col["filterable"] = True
-                            col["filter_options"] = list(states)
-            if col_type == "bool":
-                col["filterable"] = True
-                col["filter_options"] = ["true", "false"]
-            columns.append(col)
-        return columns
-
-    def test_filterable_columns(self) -> None:
-        """Columns are filterable when enum/bool/state_machine; str is not.
-
-        Combined: enum_column_is_filterable_with_options, bool_column_is_filterable,
-        str_column_not_filterable, state_machine_status_filterable_with_states.
-        """
-        # Enum field — filterable with enum values as options
-        cols = self._build_columns(
-            _make_entity(
-                "Task",
-                [
-                    _make_field(
-                        "status", FieldTypeKind.ENUM, enum_values=["open", "closed", "pending"]
-                    )
-                ],
-            )
-        )
-        assert len(cols) == 1
-        assert cols[0]["filterable"] is True
-        assert cols[0]["filter_options"] == ["open", "closed", "pending"]
-
-        # Bool field — filterable with true/false options
-        cols = self._build_columns(
-            _make_entity("Task", [_make_field("completed", FieldTypeKind.BOOL)])
-        )
-        assert len(cols) == 1
-        assert cols[0]["filterable"] is True
-        assert cols[0]["filter_options"] == ["true", "false"]
-
-        # Str field — not filterable
-        cols = self._build_columns(_make_entity("Task", [_make_field("title", FieldTypeKind.STR)]))
-        assert len(cols) == 1
-        assert "filterable" not in cols[0]
-
-        # State-machine status field — filterable with states list
-        sm = SimpleNamespace(status_field="status", states=["draft", "active", "done"])
-        cols = self._build_columns(
-            _make_entity("Task", [_make_field("status", FieldTypeKind.STR)], state_machine=sm)
-        )
-        assert len(cols) == 1
-        assert cols[0]["filterable"] is True
-        assert cols[0]["filter_options"] == ["draft", "active", "done"]
-
-
-# ===========================================================================
-# TestTimeagoFilter
-# ===========================================================================
-
-
-class TestTimeagoFilter:
-    """timeago Jinja2 filter returns human-readable relative times."""
-
-    def test_seconds_ago(self) -> None:
-        from dazzle.render.filters import _timeago_filter
-
-        dt = datetime.now(UTC) - timedelta(seconds=30)
-        result = _timeago_filter(dt)
-        assert "seconds ago" in result
-
-    @pytest.mark.parametrize(
-        ("input_factory", "expected"),
-        [
-            (lambda: datetime.now(UTC) - timedelta(hours=3), "3 hours ago"),
-            (lambda: datetime.now(UTC) - timedelta(days=5), "5 days ago"),
-            (lambda: "not-a-date", "not-a-date"),
-            (lambda: None, ""),
-            (lambda: (datetime.now(UTC) - timedelta(minutes=10)).isoformat(), "10 minutes ago"),
-        ],
-        ids=[
-            "test_hours_ago",
-            "test_days_ago",
-            "test_invalid_input_returns_original",
-            "test_none_returns_empty",
-            "test_iso_string_parsed",
-        ],
-    )
-    def test_filter(self, input_factory, expected) -> None:
-        from dazzle.render.filters import _timeago_filter
-
-        assert _timeago_filter(input_factory()) == expected
-
-    def test_future_date_does_not_invent_just_now(self) -> None:
-        """Calendar due dates must not invent 'just now' (oral #123)."""
-        from dazzle.i18n.display_locale import calendar_today
-        from dazzle.render.filters import _timeago_filter
-
-        tomorrow = calendar_today() + timedelta(days=1)
-        later = calendar_today() + timedelta(days=5)
-        assert _timeago_filter(tomorrow) == "tomorrow"
-        assert _timeago_filter(later) == "in 5 days"
-        assert _timeago_filter(tomorrow.isoformat()) == "tomorrow"
-
-    def test_due_today_is_today(self) -> None:
-        from dazzle.i18n.display_locale import calendar_today
-        from dazzle.render.filters import _timeago_filter
-
-        today = calendar_today()
-        yesterday = today - timedelta(days=1)
-        assert _timeago_filter(today) == "today"
-        assert _timeago_filter(yesterday) == "yesterday"
-
-    def test_future_datetime_does_not_invent_just_now(self) -> None:
-        from dazzle.render.filters import _timeago_filter
-
-        # Pad the delta so integer-second flooring cannot drop a bucket.
-        hours = _timeago_filter(datetime.now(UTC) + timedelta(hours=3, minutes=5))
-        minutes = _timeago_filter(datetime.now(UTC) + timedelta(minutes=10, seconds=5))
-        assert hours == "in 3 hours"
-        assert minutes == "in 10 minutes"
-        assert "just now" not in hours
-        assert "just now" not in minutes
-
-    def test_naive_utc_does_not_invent_elapsed_vs_wall_now(self) -> None:
-        """Naive datetimes are UTC storage — wall ``datetime.now()`` must
-        not invent elapsed time by the TZ offset (oral #124)."""
-        from dazzle.render.filters import _timeago_filter
-
-        aware = datetime.now(UTC) - timedelta(minutes=30, seconds=5)
-        naive = aware.replace(tzinfo=None)
-        zulu = aware.strftime("%Y-%m-%dT%H:%M:%SZ")
-        assert _timeago_filter(aware) == "30 minutes ago"
-        assert _timeago_filter(naive) == "30 minutes ago"
-        assert _timeago_filter(zulu) == "30 minutes ago"
-
-    def test_leftover_stays_put(self) -> None:
-        from dazzle.render.filters import _timeago_filter
-
-        assert _timeago_filter("zzz") == "zzz"
-        assert _timeago_filter("ghost") == "ghost"
-        assert _timeago_filter("12abc") == "12abc"
-
-
-# ===========================================================================
-# TestAttentionHighlighting
-# ===========================================================================
-
-
-class TestAttentionHighlighting:
-    """Attention signals evaluate conditions and annotate rows."""
-
-    def _make_signal(self, level: str, field: str, operator: str, value: str, message: str) -> Any:
-        from dazzle.core.ir.conditions import Comparison, ConditionExpr, ConditionValue
-        from dazzle.core.ir.ux import AttentionSignal, SignalLevel
-
-        cond = ConditionExpr(
-            comparison=Comparison(
-                field=field,
-                operator=operator,
-                value=ConditionValue(literal=value),
-            )
-        )
-        return AttentionSignal(level=SignalLevel(level), condition=cond, message=message)
-
-    def _evaluate_attention(
-        self, signals: list[Any], item: dict[str, Any]
-    ) -> dict[str, str] | None:
-        """Reproduce the attention evaluation logic from server.py."""
-        from dazzle.http.runtime.condition_evaluator import evaluate_condition
-
-        severity_order = {"critical": 0, "warning": 1, "notice": 2, "info": 3}
-        best: dict[str, str] | None = None
-        best_sev = 999
-        for sig in signals:
-            cond_dict = sig.condition.model_dump(exclude_none=True)
-            if evaluate_condition(cond_dict, item, {}):
-                lvl = sig.level.value if hasattr(sig.level, "value") else str(sig.level)
-                sev = severity_order.get(lvl, 99)
-                if sev < best_sev:
-                    best_sev = sev
-                    best = {"level": lvl, "message": sig.message}
-        return best
-
-    def test_attention_evaluation(self) -> None:
-        """Attention signals: matching condition wins, no match returns None, highest severity wins.
-
-        Combined: warning_condition_matches, no_condition_match_returns_none,
-        multiple_signals_highest_severity_wins.
-        """
-        # Matching condition produces signal
-        sig = self._make_signal("warning", "status", "=", "overdue", "Task is overdue")
-        result = self._evaluate_attention([sig], {"status": "overdue", "title": "Fix bug"})
-        assert result is not None
-        assert result["level"] == "warning"
-        assert result["message"] == "Task is overdue"
-
-        # No matching condition → None
-        assert self._evaluate_attention([sig], {"status": "active", "title": "Fix bug"}) is None
-
-        # Multiple signals — critical beats warning
-        sig_warning = self._make_signal("warning", "status", "=", "overdue", "Overdue")
-        sig_critical = self._make_signal("critical", "priority", "=", "high", "High priority")
-        item = {"status": "overdue", "priority": "high"}
-        result = self._evaluate_attention([sig_warning, sig_critical], item)
-        assert result is not None
-        assert result["level"] == "critical"
-        assert result["message"] == "High priority"
-
-    def test_today_overdue_does_not_invent_on_time(self) -> None:
-        """Attention ``due_date < today`` must fire for a past due date."""
-        from dazzle.core.ir.conditions import Comparison, ConditionExpr, ConditionValue
-        from dazzle.core.ir.dates import DateLiteral, DateLiteralKind
-        from dazzle.core.ir.ux import AttentionSignal, SignalLevel
-        from dazzle.i18n.display_locale import calendar_today
-
-        cond = ConditionExpr(
-            comparison=Comparison(
-                field="due_date",
-                operator="<",
-                value=ConditionValue(date_expr=DateLiteral(kind=DateLiteralKind.TODAY)),
-            )
-        )
-        sig = AttentionSignal(level=SignalLevel.WARNING, condition=cond, message="Overdue task")
-        yesterday = calendar_today() - timedelta(days=1)
-        tomorrow = calendar_today() + timedelta(days=1)
-        past = self._evaluate_attention([sig], {"due_date": yesterday, "status": "todo"})
-        assert past is not None
-        assert past["message"] == "Overdue task"
-        assert self._evaluate_attention([sig], {"due_date": tomorrow}) is None
-
-
-# ===========================================================================
-# TestRefColumnHiding
-# ===========================================================================
-
-
-class TestRefColumnHiding:
-    """Ref/belongs_to show as ref columns; UUID and relationship columns are hidden."""
-
-    def _build_columns(self, entity: Any) -> list[dict[str, Any]]:
-        """Simulate the column-building loop from workspace_rendering.py."""
-        from dazzle.http.runtime.server import _field_kind_to_col_type
-
-        columns: list[dict[str, Any]] = []
-        for f in entity.fields:
-            if f.name == "id":
-                continue
-            ft = getattr(f, "type", None)
-            kind = getattr(ft, "kind", None)
-            kind_val = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
-            if kind_val in ("ref", "belongs_to"):
-                rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
-                columns.append({"key": rel_name, "type": "ref"})
-                continue
-            if kind_val in ("uuid", "has_many", "has_one", "embeds"):
-                continue
-            if f.name.endswith("_id"):
-                continue
-            col_type = _field_kind_to_col_type(f, entity)
-            columns.append({"key": f.name, "type": col_type})
-        return columns
-
-    def test_ref_field_shown_as_ref_column(self) -> None:
-        """Ref fields appear as ref-type columns with relation name key (#553)."""
-        fields = [
-            _make_field("title", FieldTypeKind.STR),
-            _make_field("customer", FieldTypeKind.REF, ref_entity="Customer"),
-        ]
-        entity = _make_entity("Order", fields)
-        cols = self._build_columns(entity)
-        keys = [c["key"] for c in cols]
-        assert "customer" in keys
-        assert "title" in keys
-        ref_col = next(c for c in cols if c["key"] == "customer")
-        assert ref_col["type"] == "ref"
-
-    def test_belongs_to_field_shown_as_ref_column(self) -> None:
-        """Belongs_to fields appear as ref-type columns (#553)."""
-        fields = [
-            _make_field("title", FieldTypeKind.STR),
-            _make_field("order_id", FieldTypeKind.BELONGS_TO, ref_entity="Order"),
-        ]
-        entity = _make_entity("LineItem", fields)
-        cols = self._build_columns(entity)
-        keys = [c["key"] for c in cols]
-        assert "order" in keys  # _id suffix stripped
-        ref_col = next(c for c in cols if c["key"] == "order")
-        assert ref_col["type"] == "ref"
-
-    def test_hidden_field_kinds(self) -> None:
-        """Hidden columns: uuid, has_many, id, _id-suffix-as-str.
-
-        Combined: uuid_field_hidden, has_many_field_hidden, id_field_hidden,
-        fk_suffix_field_hidden.
-        """
-        # uuid hidden
-        cols = self._build_columns(
-            _make_entity(
-                "Order",
-                [
-                    _make_field("title", FieldTypeKind.STR),
-                    _make_field("external_id", FieldTypeKind.UUID),
-                ],
-            )
-        )
-        keys = [c["key"] for c in cols]
-        assert "external_id" not in keys
-
-        # has_many hidden
-        cols = self._build_columns(
-            _make_entity(
-                "Order",
-                [
-                    _make_field("title", FieldTypeKind.STR),
-                    _make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
-                ],
-            )
-        )
-        keys = [c["key"] for c in cols]
-        assert "items" not in keys
-
-        # id field hidden, other fields visible
-        cols = self._build_columns(
-            _make_entity(
-                "Order",
-                [
-                    _make_field("id", FieldTypeKind.UUID),
-                    _make_field("title", FieldTypeKind.STR),
-                ],
-            )
-        )
-        keys = [c["key"] for c in cols]
-        assert "id" not in keys
-        assert "title" in keys
-
-        # fk_suffix string field hidden
-        cols = self._build_columns(
-            _make_entity(
-                "Order",
-                [
-                    _make_field("title", FieldTypeKind.STR),
-                    _make_field("customer_id", FieldTypeKind.STR),
-                ],
-            )
-        )
-        keys = [c["key"] for c in cols]
-        assert "customer_id" not in keys
-
-
-# ===========================================================================
-# TestCrossEntityAction
-# ===========================================================================
-
-
-class TestCrossEntityAction:
-    """Action URL resolution handles cross-entity surfaces."""
-
-    def _make_app_spec(
-        self,
-        surface_name: str,
-        surface_entity: str,
-        source_entity_name: str | None = None,
-        source_fields: list[FieldSpec] | None = None,
-    ) -> Any:
-        """Create minimal app_spec with domain + surface."""
-        surface = SimpleNamespace(name=surface_name, entity_ref=surface_entity)
-        entities = []
-        if source_entity_name and source_fields:
-            entities.append(SimpleNamespace(name=source_entity_name, fields=source_fields))
-        domain = SimpleNamespace(entities=entities)
-        return SimpleNamespace(surfaces=[surface], domain=domain)
-
-    def test_action_url_resolution(self) -> None:
-        """Action URL resolution: same-entity, cross-entity FK, fallback to {id}.
-
-        Combined: same_entity_uses_id, cross_entity_resolves_fk_field,
-        cross_entity_fallback_to_id.
-        """
-        from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
-        from dazzle.page.runtime.workspace_renderer import build_workspace_context
-
-        # Same entity → /app/<entity>/{id}
-        region = WorkspaceRegion(name="tasks", source="Task", action="task_edit")
-        ws = WorkspaceSpec(name="dashboard", regions=[region])
-        ctx = build_workspace_context(ws, self._make_app_spec("task_edit", "Task"))
-        assert ctx.regions[0].action_url == "/app/task/{id}"
-
-        # Cross-entity: FK on source resolves to action_id_field
-        order_fields_fk = [
-            _make_field("title", FieldTypeKind.STR),
-            _make_field("customer", FieldTypeKind.REF, ref_entity="Customer"),
-        ]
-        region2 = WorkspaceRegion(name="orders", source="Order", action="customer_detail")
-        ws2 = WorkspaceSpec(name="dashboard", regions=[region2])
-        ctx2 = build_workspace_context(
-            ws2,
-            self._make_app_spec(
-                "customer_detail",
-                "Customer",
-                source_entity_name="Order",
-                source_fields=order_fields_fk,
-            ),
-        )
-        assert ctx2.regions[0].action_url == "/app/customer/{id}"
-        assert ctx2.regions[0].action_id_field == "customer"
-
-        # Cross-entity: no FK link → fallback to {id}
-        order_fields_no_fk = [_make_field("title", FieldTypeKind.STR)]
-        region3 = WorkspaceRegion(name="orders", source="Order", action="customer_detail")
-        ws3 = WorkspaceSpec(name="dashboard", regions=[region3])
-        ctx3 = build_workspace_context(
-            ws3,
-            self._make_app_spec(
-                "customer_detail",
-                "Customer",
-                source_entity_name="Order",
-                source_fields=order_fields_no_fk,
-            ),
-        )
-        assert ctx3.regions[0].action_url == "/app/customer/{id}"
-
-
-# ===========================================================================
-# TestQueueDisplayMode
-# ===========================================================================
-
-
-class TestDisplayModes:
-    """Combined tests for queue (#300) and activity_feed (#564) display modes."""
-
-    @pytest.mark.parametrize(
-        ("mode_name", "string_value", "expected_template", "entity_name", "fields_factory"),
-        [
-            pytest.param(
-                "QUEUE",
-                "queue",
-                "workspace/regions/_typed_primitive.html",
-                "Task",
-                lambda: [
-                    _make_field("title", FieldTypeKind.STR),
-                    _make_field("status", FieldTypeKind.ENUM, enum_values=["pending", "approved"]),
-                ],
-                id="queue",
-            ),
-            pytest.param(
-                "ACTIVITY_FEED",
-                "activity_feed",
-                "workspace/regions/_typed_primitive.html",
-                "AuditLog",
-                lambda: [_make_field("description", FieldTypeKind.STR)],
-                id="activity_feed",
-            ),
-        ],
-    )
-    def test_display_mode_full(
-        self, mode_name, string_value, expected_template, entity_name, fields_factory
-    ) -> None:
-        """Combined: enum value, template mapping, region acceptance, render template, string-from-value."""
-        from dazzle.core.ir.workspaces import DisplayMode, WorkspaceRegion, WorkspaceSpec
-        from dazzle.page.runtime.workspace_renderer import (
-            DISPLAY_TEMPLATE_MAP,
-            build_workspace_context,
-        )
-
-        # enum value
-        mode = getattr(DisplayMode, mode_name)
-        assert mode == string_value
-        assert DisplayMode(string_value) == mode
-        assert DisplayMode(string_value).value == string_value
-
-        # template mapping
-        assert mode_name in DISPLAY_TEMPLATE_MAP
-        assert DISPLAY_TEMPLATE_MAP[mode_name] == expected_template
-
-        # WorkspaceRegion accepts the display value
-        region = WorkspaceRegion(name="r", source=entity_name, display=mode)
-        assert region.display == mode
-
-        # build_workspace_context wires the right template path
-        entity = _make_entity(entity_name, fields_factory())
-        ws_region = WorkspaceRegion(name="r", source=entity_name, display=mode)
-        ws = WorkspaceSpec(name="dashboard", regions=[ws_region])
-        app_spec = SimpleNamespace(
-            domain=SimpleNamespace(
-                entities=[entity],
-                get_entity=lambda n, _e=entity, _name=entity_name: _e if n == _name else None,
-            ),
-            surfaces=[],
-            workspaces=[ws],
-        )
-        ctx = build_workspace_context(ws, app_spec)
-        assert ctx.regions[0].template == expected_template
-
-
-class TestCurrentUserFilter:
-    """Tests for current_user identifier resolution in filter context."""
-
-    @pytest.mark.parametrize(
-        ("filter_ctx", "expected_value"),
-        [
-            pytest.param({"current_user_id": "user-123"}, "user-123", id="with_auth"),
-            pytest.param({}, None, id="without_auth"),
-        ],
-    )
-    def test_current_user_filter_resolution(self, filter_ctx, expected_value) -> None:
-        """current_user resolves from filter context (None when unauthenticated)."""
-        from dazzle.http.runtime.condition_evaluator import condition_to_sql_filter
-
-        condition = {
-            "comparison": {
-                "field": "reviewer",
-                "operator": "eq",
-                "value": {"literal": "current_user"},
-            }
-        }
-        result = condition_to_sql_filter(condition, filter_ctx)
-        assert result == {"reviewer": expected_value}
-
-
-# ===========================================================================
-# TestBuildSurfaceColumns (#357)
-# ===========================================================================
-
-
-def _make_surface_section(field_names: list[str]) -> SimpleNamespace:
-    """Create a minimal SurfaceSection-like object with elements."""
-    elements = [SimpleNamespace(field_name=fn) for fn in field_names]
-    return SimpleNamespace(elements=elements)
-
-
-def _make_surface(
-    entity_ref: str,
-    mode: str = "list",
-    field_names: list[str] | None = None,
-) -> SimpleNamespace:
-    """Create a minimal SurfaceSpec-like object."""
-    sections = [_make_surface_section(field_names)] if field_names else []
-    return SimpleNamespace(
-        entity_ref=entity_ref,
-        mode=mode,
-        sections=sections,
-    )
-
-
-class TestBuildSurfaceColumns:
-    """_build_surface_columns() should use surface field projection (#357)."""
-
-    def test_uses_surface_field_projection(self) -> None:
-        """Only surface-declared fields appear as columns."""
-        from dazzle.http.runtime.workspace_columns import (
-            build_surface_columns as _build_surface_columns,
-        )
-
-        entity = _make_entity(
-            "Task",
+def _entity_columns(entity: SimpleNamespace) -> list[dict[str, Any]]:
+    from dazzle.http.runtime.workspace_columns import build_entity_columns_full
+
+    return build_entity_columns_full(entity)
+
+
+_STATUS_SM = SimpleNamespace(status_field="status", states=["draft", "active", "done"])
+
+
+@pytest.mark.parametrize(
+    ("field", "state_machine", "tokens"),
+    [
+        pytest.param(
+            _make_field("status", FieldTypeKind.ENUM, enum_values=["open", "closed", "pending"]),
+            None,
+            ["open", "closed", "pending"],
+            id="enum_with_values",
+        ),
+        pytest.param(
+            _make_field("completed", FieldTypeKind.BOOL), None, ["true", "false"], id="bool"
+        ),
+        pytest.param(_make_field("title", FieldTypeKind.STR), None, None, id="str_not_filterable"),
+        pytest.param(
+            _make_field("status", FieldTypeKind.STR),
+            _STATUS_SM,
+            ["draft", "active", "done"],
+            id="state_machine_status",
+        ),
+    ],
+)
+def test_filterable_columns(field, state_machine, tokens) -> None:
+    """Columns are filterable when enum/bool/state-machine status; plain str is not."""
+    (col,) = _entity_columns(_make_entity("Task", [field], state_machine=state_machine))
+    if tokens is None:
+        assert "filterable" not in col
+        return
+    assert col["filterable"] is True
+    assert [opt[0] for opt in col["filter_options"]] == tokens
+
+
+@pytest.mark.parametrize(
+    ("fields", "expected"),
+    [
+        pytest.param(
             [
-                _make_field("id", FieldTypeKind.UUID),
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("customer", FieldTypeKind.REF, ref_entity="Customer"),
+            ],
+            [("title", "text"), ("customer", "ref")],
+            id="ref_shown_as_ref-553",
+        ),
+        pytest.param(
+            [
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("order_id", FieldTypeKind.BELONGS_TO, ref_entity="Order"),
+            ],
+            [("title", "text"), ("order", "ref")],  # _id suffix stripped
+            id="belongs_to_shown_as_ref-553",
+        ),
+        pytest.param(
+            [
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("external_id", FieldTypeKind.UUID),
+            ],
+            [("title", "text")],
+            id="uuid_hidden",
+        ),
+        pytest.param(
+            [
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
+            ],
+            [("title", "text")],
+            id="has_many_hidden",
+        ),
+        pytest.param(
+            [_ID, _make_field("title", FieldTypeKind.STR)],
+            [("title", "text")],
+            id="id_hidden",
+        ),
+        pytest.param(
+            [
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("customer_id", FieldTypeKind.STR),
+            ],
+            [("title", "text")],
+            id="fk_suffix_str_hidden",
+        ),
+    ],
+)
+def test_ref_and_hidden_columns(fields, expected) -> None:
+    """Ref/belongs_to show as ref columns; uuid, has_many, id and *_id strs are hidden."""
+    cols = _entity_columns(_make_entity("Order", fields))
+    assert [(c["key"], c["type"]) for c in cols] == expected
+
+
+# ===========================================================================
+# timeago filter
+# ===========================================================================
+
+
+def _ago(**delta: float) -> datetime:
+    return datetime.now(UTC) - timedelta(**delta)
+
+
+def _ahead(**delta: float) -> datetime:
+    return datetime.now(UTC) + timedelta(**delta)
+
+
+def _calendar(days: int) -> Any:
+    from dazzle.i18n.display_locale import calendar_today
+
+    return calendar_today() + timedelta(days=days)
+
+
+@pytest.mark.parametrize(
+    ("make_input", "expected"),
+    [
+        pytest.param(lambda: _ago(seconds=30), "30 seconds ago", id="seconds_ago"),
+        pytest.param(lambda: _ago(hours=3), "3 hours ago", id="hours_ago"),
+        pytest.param(lambda: _ago(days=5), "5 days ago", id="days_ago"),
+        pytest.param(lambda: _ago(minutes=10).isoformat(), "10 minutes ago", id="iso_string"),
+        pytest.param(lambda: "not-a-date", "not-a-date", id="invalid_returns_original"),
+        pytest.param(lambda: None, "", id="none_returns_empty"),
+        # Leftover junk stays put.
+        pytest.param(lambda: "zzz", "zzz", id="leftover_zzz"),
+        pytest.param(lambda: "ghost", "ghost", id="leftover_ghost"),
+        pytest.param(lambda: "12abc", "12abc", id="leftover_12abc"),
+        # Calendar due dates must not invent 'just now' (oral #123).
+        pytest.param(lambda: _calendar(1), "tomorrow", id="due_tomorrow-123"),
+        pytest.param(lambda: _calendar(5), "in 5 days", id="due_in_5_days-123"),
+        pytest.param(lambda: _calendar(1).isoformat(), "tomorrow", id="due_tomorrow_iso-123"),
+        pytest.param(lambda: _calendar(0), "today", id="due_today"),
+        pytest.param(lambda: _calendar(-1), "yesterday", id="due_yesterday"),
+        # Pad the delta so integer-second flooring cannot drop a bucket.
+        pytest.param(lambda: _ahead(hours=3, minutes=5), "in 3 hours", id="future_hours"),
+        pytest.param(lambda: _ahead(minutes=10, seconds=5), "in 10 minutes", id="future_minutes"),
+        # Naive datetimes are UTC storage — wall datetime.now() must not invent
+        # elapsed time by the TZ offset (oral #124).
+        pytest.param(lambda: _ago(minutes=30, seconds=5), "30 minutes ago", id="aware-124"),
+        pytest.param(
+            lambda: _ago(minutes=30, seconds=5).replace(tzinfo=None),
+            "30 minutes ago",
+            id="naive_utc-124",
+        ),
+        pytest.param(
+            lambda: _ago(minutes=30, seconds=5).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "30 minutes ago",
+            id="zulu_string-124",
+        ),
+    ],
+)
+def test_timeago_filter(make_input, expected) -> None:
+    from dazzle.render.filters import _timeago_filter
+
+    assert _timeago_filter(make_input()) == expected
+
+
+# ===========================================================================
+# Attention highlighting
+# ===========================================================================
+
+
+def _signal(level: str, field: str, operator: str, value: str, message: str) -> Any:
+    from dazzle.core.ir.conditions import Comparison, ConditionExpr, ConditionValue
+    from dazzle.core.ir.ux import AttentionSignal, SignalLevel
+
+    cond = ConditionExpr(
+        comparison=Comparison(field=field, operator=operator, value=ConditionValue(literal=value))
+    )
+    return AttentionSignal(level=SignalLevel(level), condition=cond, message=message)
+
+
+def _overdue_status() -> Any:
+    return _signal("warning", "status", "=", "overdue", "Task is overdue")
+
+
+def _high_priority() -> Any:
+    return _signal("critical", "priority", "=", "high", "High priority")
+
+
+def _due_before_today() -> Any:
+    from dazzle.core.ir.conditions import Comparison, ConditionExpr, ConditionValue
+    from dazzle.core.ir.dates import DateLiteral, DateLiteralKind
+    from dazzle.core.ir.ux import AttentionSignal, SignalLevel
+
+    cond = ConditionExpr(
+        comparison=Comparison(
+            field="due_date",
+            operator="<",
+            value=ConditionValue(date_expr=DateLiteral(kind=DateLiteralKind.TODAY)),
+        )
+    )
+    return AttentionSignal(level=SignalLevel.WARNING, condition=cond, message="Overdue task")
+
+
+@pytest.mark.parametrize(
+    ("make_signals", "make_item", "expected"),
+    [
+        pytest.param(
+            lambda: [_overdue_status()],
+            lambda: {"status": "overdue", "title": "Fix bug"},
+            {"level": "warning", "message": "Task is overdue"},
+            id="warning_matches",
+        ),
+        pytest.param(
+            lambda: [_overdue_status()],
+            lambda: {"status": "active", "title": "Fix bug"},
+            None,
+            id="no_match",
+        ),
+        pytest.param(
+            lambda: [_overdue_status(), _high_priority()],
+            lambda: {"status": "overdue", "priority": "high"},
+            {"level": "critical", "message": "High priority"},
+            id="highest_severity_wins",
+        ),
+        pytest.param(
+            lambda: [_due_before_today()],
+            lambda: {"due_date": _calendar(-1), "status": "todo"},
+            {"level": "warning", "message": "Overdue task"},
+            id="past_due_date_fires",
+        ),
+        pytest.param(
+            lambda: [_due_before_today()],
+            lambda: {"due_date": _calendar(1)},
+            None,
+            id="future_due_date_quiet",
+        ),
+    ],
+)
+def test_attention_signals(make_signals, make_item, expected) -> None:
+    """apply_attention_signals annotates a row with the most severe matching signal."""
+    from dazzle.http.runtime.workspace_region_computes import apply_attention_signals
+
+    items = [make_item()]
+    apply_attention_signals(items, make_signals(), {})
+    assert items[0].get("_attention") == expected
+
+
+# ===========================================================================
+# Cross-entity action URL resolution
+# ===========================================================================
+
+
+@pytest.mark.parametrize(
+    ("source", "action", "surface_entity", "source_fields", "expected_url", "expected_id_field"),
+    [
+        pytest.param("Task", "task_edit", "Task", None, "/app/task/{id}", "id", id="same_entity"),
+        pytest.param(
+            "Order",
+            "customer_detail",
+            "Customer",
+            [
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("customer", FieldTypeKind.REF, ref_entity="Customer"),
+            ],
+            "/app/customer/{id}",
+            "customer",
+            id="cross_entity_fk_field",
+        ),
+        pytest.param(
+            "Order",
+            "customer_detail",
+            "Customer",
+            [_make_field("title", FieldTypeKind.STR)],
+            "/app/customer/{id}",
+            "id",
+            id="cross_entity_fallback_to_id",
+        ),
+    ],
+)
+def test_action_url_resolution(
+    source, action, surface_entity, source_fields, expected_url, expected_id_field
+) -> None:
+    from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
+    from dazzle.page.runtime.workspace_renderer import build_workspace_context
+
+    entities = [SimpleNamespace(name=source, fields=source_fields)] if source_fields else []
+    app_spec = SimpleNamespace(
+        surfaces=[SimpleNamespace(name=action, entity_ref=surface_entity)],
+        domain=SimpleNamespace(entities=entities),
+    )
+    region = WorkspaceRegion(name="r", source=source, action=action)
+    ctx = build_workspace_context(WorkspaceSpec(name="dashboard", regions=[region]), app_spec)
+    assert ctx.regions[0].action_url == expected_url
+    assert ctx.regions[0].action_id_field == expected_id_field
+
+
+# ===========================================================================
+# Display modes — queue (#300) and activity_feed (#564)
+# ===========================================================================
+
+
+@pytest.mark.parametrize(
+    ("mode_name", "string_value", "expected_template", "entity_name", "fields_factory"),
+    [
+        pytest.param(
+            "QUEUE",
+            "queue",
+            "workspace/regions/_typed_primitive.html",
+            "Task",
+            lambda: [
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("status", FieldTypeKind.ENUM, enum_values=["pending", "approved"]),
+            ],
+            id="queue-300",
+        ),
+        pytest.param(
+            "ACTIVITY_FEED",
+            "activity_feed",
+            "workspace/regions/_typed_primitive.html",
+            "AuditLog",
+            lambda: [_make_field("description", FieldTypeKind.STR)],
+            id="activity_feed-564",
+        ),
+    ],
+)
+def test_display_mode_full(
+    mode_name, string_value, expected_template, entity_name, fields_factory
+) -> None:
+    """Enum value, template mapping, region acceptance and rendered template path."""
+    from dazzle.core.ir.workspaces import DisplayMode, WorkspaceRegion, WorkspaceSpec
+    from dazzle.page.runtime.workspace_renderer import (
+        DISPLAY_TEMPLATE_MAP,
+        build_workspace_context,
+    )
+
+    mode = getattr(DisplayMode, mode_name)
+    assert mode == string_value
+    assert DisplayMode(string_value) == mode
+    assert DISPLAY_TEMPLATE_MAP[mode_name] == expected_template
+
+    entity = _make_entity(entity_name, fields_factory())
+    ws_region = WorkspaceRegion(name="r", source=entity_name, display=mode)
+    assert ws_region.display == mode
+    ws = WorkspaceSpec(name="dashboard", regions=[ws_region])
+    app_spec = SimpleNamespace(
+        domain=SimpleNamespace(
+            entities=[entity],
+            get_entity=lambda n, _e=entity, _name=entity_name: _e if n == _name else None,
+        ),
+        surfaces=[],
+        workspaces=[ws],
+    )
+    assert build_workspace_context(ws, app_spec).regions[0].template == expected_template
+
+
+# ===========================================================================
+# current_user resolution (#486)
+# ===========================================================================
+
+
+@pytest.mark.parametrize(
+    ("literal", "filter_ctx", "expected_value"),
+    [
+        pytest.param("current_user", {"current_user_id": "user-123"}, "user-123", id="with_auth"),
+        pytest.param("current_user", {}, None, id="without_auth"),
+        pytest.param(
+            "current_user.department",
+            {"current_user_id": "user-123", "current_user_entity": {"department": "dept-456"}},
+            "dept-456",
+            id="dot_notation-486",
+        ),
+    ],
+)
+def test_current_user_filter_resolution(literal, filter_ctx, expected_value) -> None:
+    from dazzle.http.runtime.condition_evaluator import condition_to_sql_filter
+
+    condition = {
+        "comparison": {"field": "reviewer", "operator": "eq", "value": {"literal": literal}}
+    }
+    assert condition_to_sql_filter(condition, filter_ctx) == {"reviewer": expected_value}
+
+
+_DEPT = "f6ac5054-79ff-5b1a-acd0-f1c832d3433b"
+
+
+@pytest.mark.parametrize(
+    ("value", "context", "expected"),
+    [
+        pytest.param(
+            {"literal": "current_user.department"},
+            {
+                "current_user_id": "user-123",
+                "current_user_entity": {"id": "u", "department": _DEPT},
+            },
+            _DEPT,
+            id="scalar_field-486",
+        ),
+        pytest.param(
+            {"literal": "current_user.department"},
+            {
+                "current_user_id": "user-123",
+                "current_user_entity": {"id": "u", "department": {"id": _DEPT, "name": "English"}},
+            },
+            _DEPT,
+            id="ref_dict_extracts_id-486",
+        ),
+        pytest.param(
+            {"literal": "current_user"},
+            {"current_user_id": "user-123"},
+            "user-123",
+            id="plain_current_user",
+        ),
+        pytest.param(
+            {"literal": "current_user.department"},
+            {"current_user_id": "user-123"},
+            None,
+            id="missing_entity",
+        ),
+        pytest.param(
+            {"literal": "current_user.department"},
+            {"current_user_id": "user-123", "current_user_entity": {"id": "u", "name": "Alice"}},
+            None,
+            id="missing_field",
+        ),
+        pytest.param(
+            {"kind": "identifier", "value": "current_user.team_id"},
+            {"current_user_id": "user-123", "current_user_entity": {"team_id": "team-789"}},
+            "team-789",
+            id="identifier_kind",
+        ),
+    ],
+)
+def test_resolve_current_user_value(value, context, expected) -> None:
+    from dazzle.http.runtime.condition_evaluator import _resolve_value
+
+    assert _resolve_value(value, context) == expected
+
+
+# ===========================================================================
+# Surface columns (#357, #872, #1426)
+# ===========================================================================
+
+
+def _make_surface(entity_ref: str, field_names: list[str]) -> SimpleNamespace:
+    """Create a minimal SurfaceSpec-like object (no sections when field_names is empty)."""
+    sections = (
+        [SimpleNamespace(elements=[SimpleNamespace(field_name=fn) for fn in field_names])]
+        if field_names
+        else []
+    )
+    return SimpleNamespace(entity_ref=entity_ref, mode="list", sections=sections)
+
+
+def _surface_columns(entity: Any, surface: Any) -> list[dict[str, Any]]:
+    from dazzle.http.runtime.workspace_columns import build_surface_columns
+
+    return build_surface_columns(entity, surface)
+
+
+@pytest.mark.parametrize(
+    ("fields", "surface_fields", "expected"),
+    [
+        pytest.param(
+            [
+                _ID,
                 _make_field("title", FieldTypeKind.STR),
                 _make_field("description", FieldTypeKind.TEXT),
                 _make_field("status", FieldTypeKind.ENUM, enum_values=["open", "done"]),
                 _make_field("priority", FieldTypeKind.STR),
                 _make_field("created_at", FieldTypeKind.DATETIME),
             ],
-        )
-        surface = _make_surface("Task", field_names=["title", "status"])
-        columns = _build_surface_columns(entity, surface)
-
-        keys = [c["key"] for c in columns]
-        assert keys == ["title", "status"]
-
-    def test_preserves_field_order(self) -> None:
-        """Columns should appear in surface section order, not entity order."""
-        from dazzle.http.runtime.workspace_columns import (
-            build_surface_columns as _build_surface_columns,
-        )
-
-        entity = _make_entity(
-            "Notification",
+            ["title", "status"],
+            [("title", "text"), ("status", "badge")],
+            id="uses_surface_projection-357",
+        ),
+        pytest.param(
             [
-                _make_field("id", FieldTypeKind.UUID),
+                _ID,
                 _make_field("severity", FieldTypeKind.STR),
                 _make_field("title", FieldTypeKind.STR),
                 _make_field("category", FieldTypeKind.STR),
                 _make_field("message", FieldTypeKind.TEXT),
                 _make_field("created_at", FieldTypeKind.DATETIME),
             ],
-        )
-        surface = _make_surface(
-            "Notification", field_names=["category", "severity", "title", "message", "created_at"]
-        )
-        columns = _build_surface_columns(entity, surface)
-
-        keys = [c["key"] for c in columns]
-        assert keys == ["category", "severity", "title", "message", "created_at"]
-
-    def test_falls_back_to_all_fields_when_surface_empty(self) -> None:
-        """Empty surface sections should fall back to all entity fields."""
-        from dazzle.http.runtime.workspace_columns import (
-            build_surface_columns as _build_surface_columns,
-        )
-
-        entity = _make_entity(
-            "Task",
+            ["category", "severity", "title", "message", "created_at"],
             [
-                _make_field("id", FieldTypeKind.UUID),
+                ("category", "text"),
+                ("severity", "text"),
+                ("title", "text"),
+                ("message", "text"),
+                ("created_at", "datetime"),
+            ],
+            id="preserves_surface_order-357",
+        ),
+        pytest.param(
+            [
+                _ID,
                 _make_field("title", FieldTypeKind.STR),
                 _make_field("status", FieldTypeKind.ENUM, enum_values=["open"]),
             ],
-        )
-        surface = _make_surface("Task", field_names=[])
-        columns = _build_surface_columns(entity, surface)
-
-        keys = [c["key"] for c in columns]
-        assert "title" in keys
-        assert "status" in keys
-
-    def test_ref_columns_use_app_detail_route_not_api_plural(self) -> None:
-        """Kanban/detail FK links must target /app/<slug>/{id} hubs (#1426),
-        not JSON API plurals like /projects/{id} (story-walk friction)."""
-        from dazzle.http.runtime.workspace_columns import (
-            build_entity_columns_full,
-        )
-        from dazzle.http.runtime.workspace_columns import (
-            build_surface_columns as _build_surface_columns,
-        )
-
-        entity = _make_entity(
-            "Task",
+            [],
+            [("title", "text"), ("status", "badge")],
+            id="empty_surface_falls_back_to_all_fields-357",
+        ),
+        pytest.param(
+            [_ID, _make_field("title", FieldTypeKind.STR)],
+            ["id", "title"],
+            [("title", "text")],
+            id="id_in_projection_skipped-357",
+        ),
+        pytest.param(
             [
-                _make_field("id", FieldTypeKind.UUID),
-                _make_field("title", FieldTypeKind.STR),
-                _make_field("project", FieldTypeKind.REF, ref_entity="Project"),
-                _make_field("assigned_to", FieldTypeKind.REF, ref_entity="User"),
-            ],
-        )
-        surface = _make_surface("Task", field_names=["title", "project", "assigned_to"])
-        by_key = {c["key"]: c for c in _build_surface_columns(entity, surface)}
-        assert by_key["project"]["ref_route"] == "/app/project/{id}"
-        assert by_key["assigned_to"]["ref_route"] == "/app/user/{id}"
-        # API plurals must not leak into UI secondary-field hrefs
-        assert "/projects/" not in by_key["project"]["ref_route"]
-        assert "/users/" not in by_key["assigned_to"]["ref_route"]
-
-        full = {c["key"]: c for c in build_entity_columns_full(entity)}
-        assert full["project"]["ref_route"] == "/app/project/{id}"
-        assert full["assigned_to"]["ref_route"] == "/app/user/{id}"
-
-    def test_skips_id_field_in_projection(self) -> None:
-        """'id' in surface fields should be ignored."""
-        from dazzle.http.runtime.workspace_columns import (
-            build_surface_columns as _build_surface_columns,
-        )
-
-        entity = _make_entity(
-            "Task",
-            [
-                _make_field("id", FieldTypeKind.UUID),
-                _make_field("title", FieldTypeKind.STR),
-            ],
-        )
-        surface = _make_surface("Task", field_names=["id", "title"])
-        columns = _build_surface_columns(entity, surface)
-
-        keys = [c["key"] for c in columns]
-        assert "id" not in keys
-        assert keys == ["title"]
-
-    def test_column_types_preserved(self) -> None:
-        """Surface-aware columns should have correct types (badge, date, etc.)."""
-        from dazzle.http.runtime.workspace_columns import (
-            build_surface_columns as _build_surface_columns,
-        )
-
-        entity = _make_entity(
-            "Task",
-            [
-                _make_field("id", FieldTypeKind.UUID),
+                _ID,
                 _make_field("title", FieldTypeKind.STR),
                 _make_field("status", FieldTypeKind.ENUM, enum_values=["open", "done"]),
                 _make_field("created_at", FieldTypeKind.DATETIME),
                 _make_field("completed", FieldTypeKind.BOOL),
             ],
-        )
-        surface = _make_surface("Task", field_names=["title", "status", "created_at", "completed"])
-        columns = _build_surface_columns(entity, surface)
+            ["title", "status", "created_at", "completed"],
+            [
+                ("title", "text"),
+                ("status", "badge"),
+                ("created_at", "datetime"),
+                ("completed", "bool"),
+            ],
+            id="column_types_per_field_kind",
+        ),
+    ],
+)
+def test_surface_column_projection(fields, surface_fields, expected) -> None:
+    columns = _surface_columns(_make_entity("Task", fields), _make_surface("Task", surface_fields))
+    assert [(c["key"], c["type"]) for c in columns] == expected
 
-        col_map = {c["key"]: c for c in columns}
-        assert col_map["title"]["type"] == "text"
-        assert col_map["status"]["type"] == "badge"
-        assert col_map["created_at"]["type"] == "datetime"
-        assert col_map["completed"]["type"] == "bool"
+
+def test_ref_columns_use_app_detail_route_not_api_plural_1426() -> None:
+    """Kanban/detail FK links must target /app/<slug>/{id} hubs, not JSON API plurals."""
+    entity = _make_entity(
+        "Task",
+        [
+            _ID,
+            _make_field("title", FieldTypeKind.STR),
+            _make_field("project", FieldTypeKind.REF, ref_entity="Project"),
+            _make_field("assigned_to", FieldTypeKind.REF, ref_entity="User"),
+        ],
+    )
+    surface = _make_surface("Task", ["title", "project", "assigned_to"])
+    expected = {"project": "/app/project/{id}", "assigned_to": "/app/user/{id}"}
+    for columns in (_surface_columns(entity, surface), _entity_columns(entity)):
+        assert {c["key"]: c["ref_route"] for c in columns if c["type"] == "ref"} == expected
 
 
-def _make_visible_role(role_name: str) -> SimpleNamespace:
-    """Build a ConditionExpr-shaped object whose model_dump() yields a role check."""
-    payload = {
+def _role_payload(role_name: str) -> dict[str, Any]:
+    return {
         "role_check": {"role_name": role_name},
         "operator": None,
         "left": None,
@@ -874,471 +675,198 @@ def _make_visible_role(role_name: str) -> SimpleNamespace:
         "comparison": None,
         "grant_check": None,
     }
-    return SimpleNamespace(model_dump=lambda p=payload: p)
 
 
-class TestSurfaceColumnsVisibleCondition:
-    """_build_surface_columns() should carry visible: predicates onto columns (#872)."""
-
-    def test_element_visible_attached_to_column(self) -> None:
-        from dazzle.http.runtime.workspace_columns import (
-            build_surface_columns as _build_surface_columns,
-        )
-
-        entity = _make_entity(
-            "Task",
-            [
-                _make_field("id", FieldTypeKind.UUID),
-                _make_field("title", FieldTypeKind.STR),
-                _make_field("priority", FieldTypeKind.STR),
-            ],
-        )
-        section = SimpleNamespace(
-            visible=None,
-            elements=[
-                SimpleNamespace(field_name="title", visible=None),
-                SimpleNamespace(field_name="priority", visible=_make_visible_role("admin")),
-            ],
-        )
-        surface = SimpleNamespace(sections=[section])
-        columns = _build_surface_columns(entity, surface)
-
-        col_map = {c["key"]: c for c in columns}
-        assert "visible_condition" not in col_map["title"]
-        assert col_map["priority"]["visible_condition"] == {
-            "role_check": {"role_name": "admin"},
-            "operator": None,
-            "left": None,
-            "right": None,
-            "comparison": None,
-            "grant_check": None,
-        }
-
-    def test_section_visible_falls_through_to_columns(self) -> None:
-        from dazzle.http.runtime.workspace_columns import (
-            build_surface_columns as _build_surface_columns,
-        )
-
-        entity = _make_entity(
-            "Task",
-            [
-                _make_field("id", FieldTypeKind.UUID),
-                _make_field("title", FieldTypeKind.STR),
-                _make_field("priority", FieldTypeKind.STR),
-            ],
-        )
-        section = SimpleNamespace(
-            visible=_make_visible_role("school_admin"),
-            elements=[
-                SimpleNamespace(field_name="title", visible=None),
-                SimpleNamespace(field_name="priority", visible=None),
-            ],
-        )
-        surface = SimpleNamespace(sections=[section])
-        columns = _build_surface_columns(entity, surface)
-
-        for col in columns:
-            assert col["visible_condition"]["role_check"]["role_name"] == "school_admin"
-
-    def test_element_visible_overrides_section_visible(self) -> None:
-        from dazzle.http.runtime.workspace_columns import (
-            build_surface_columns as _build_surface_columns,
-        )
-
-        entity = _make_entity(
-            "Task",
-            [
-                _make_field("id", FieldTypeKind.UUID),
-                _make_field("title", FieldTypeKind.STR),
-                _make_field("priority", FieldTypeKind.STR),
-            ],
-        )
-        section = SimpleNamespace(
-            visible=_make_visible_role("school_admin"),
-            elements=[
-                SimpleNamespace(field_name="title", visible=None),
-                SimpleNamespace(field_name="priority", visible=_make_visible_role("teacher")),
-            ],
-        )
-        surface = SimpleNamespace(sections=[section])
-        columns = _build_surface_columns(entity, surface)
-
-        col_map = {c["key"]: c for c in columns}
-        assert col_map["title"]["visible_condition"]["role_check"]["role_name"] == "school_admin"
-        assert col_map["priority"]["visible_condition"]["role_check"]["role_name"] == "teacher"
+def _visible_role(role_name: str) -> SimpleNamespace:
+    """ConditionExpr-shaped object whose model_dump() yields a role check."""
+    return SimpleNamespace(model_dump=lambda: _role_payload(role_name))
 
 
-# ---------------------------------------------------------------------------
-# Surface UX Metadata on WorkspaceRegionContext (#362)
-# ---------------------------------------------------------------------------
-
-
-class TestWorkspaceRegionContextUXMetadata:
-    """WorkspaceRegionContext should carry surface UX sort and empty_message."""
-
-    def test_default_sort_stored(self) -> None:
-        """surface_default_sort should store SortSpec-like objects."""
-        from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
-
-        sort_specs = [SimpleNamespace(field="due_date", direction="desc")]
-        ctx = WorkspaceRegionContext(
-            ctx_region=SimpleNamespace(
-                display="LIST",
-                limit=None,
-                empty_message="No data available.",
-                aggregates={},
-                group_by="",
-                template="workspace/regions/_typed_primitive.html",
-                title="Tasks",
-                name="tasks",
-                endpoint="/api/workspaces/dash/regions/tasks",
-                action_url="",
-                source_tabs=[],
-            ),
-            ir_region=SimpleNamespace(sort=[], filter=None),
-            source="Task",
-            entity_spec=None,
-            attention_signals=[],
-            ws_access=None,
-            repositories={},
-            require_auth=False,
-            auth_middleware=None,
-            surface_default_sort=sort_specs,
-        )
-        assert ctx.surface_default_sort == sort_specs
-        assert ctx.surface_default_sort[0].field == "due_date"
-        assert ctx.surface_default_sort[0].direction == "desc"
-
-    def test_empty_message_stored(self) -> None:
-        """surface_empty_message should store the surface's empty message."""
-        from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
-
-        ctx = WorkspaceRegionContext(
-            ctx_region=SimpleNamespace(
-                display="LIST",
-                limit=None,
-                empty_message="No data available.",
-                aggregates={},
-                group_by="",
-                template="workspace/regions/_typed_primitive.html",
-                title="Tasks",
-                name="tasks",
-                endpoint="/api/workspaces/dash/regions/tasks",
-                action_url="",
-                source_tabs=[],
-            ),
-            ir_region=SimpleNamespace(sort=[], filter=None),
-            source="Task",
-            entity_spec=None,
-            attention_signals=[],
-            ws_access=None,
-            repositories={},
-            require_auth=False,
-            auth_middleware=None,
-            surface_empty_message="No tasks assigned yet.",
-        )
-        assert ctx.surface_empty_message == "No tasks assigned yet."
-
-    def test_defaults_when_not_provided(self) -> None:
-        """Default values should be empty list/string when not provided."""
-        from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
-
-        ctx = WorkspaceRegionContext(
-            ctx_region=SimpleNamespace(
-                display="LIST",
-                limit=None,
-                empty_message="fallback",
-                aggregates={},
-                group_by="",
-                template="workspace/regions/_typed_primitive.html",
-                title="T",
-                name="t",
-                endpoint="",
-                action_url="",
-                source_tabs=[],
-            ),
-            ir_region=SimpleNamespace(sort=[], filter=None),
-            source="Task",
-            entity_spec=None,
-            attention_signals=[],
-            ws_access=None,
-            repositories={},
-            require_auth=False,
-            auth_middleware=None,
-        )
-        assert ctx.surface_default_sort == []
-        assert ctx.surface_empty_message == ""
-
-
-# ===========================================================================
-# TestViewportLazyLoading (#378)
-# ===========================================================================
-
-
-class TestViewportLazyLoading:
-    """Regions below the fold use intersect-based lazy loading (#378)."""
-
-    @pytest.mark.parametrize(
-        ("stage", "expected"),
-        [
-            (None, 3),
-            ("command_center", 3),
-            ("monitor_wall", 4),
-            ("scanner_table", 2),
-            ("dual_pane_flow", 3),
-            ("pair_strip", 3),
-        ],
-        ids=[
-            "test_fold_count_default",
-            "test_fold_count_command_center",
-            "test_fold_count_monitor_wall",
-            "test_fold_count_scanner_table",
-            "test_fold_count_dual_pane",
-            "test_fold_count_pair_strip",
+@pytest.mark.parametrize(
+    ("section_visible", "priority_visible", "expected"),
+    [
+        pytest.param(
+            None,
+            _visible_role("admin"),
+            {"title": None, "priority": _role_payload("admin")},
+            id="element_visible_attached-872",
+        ),
+        pytest.param(
+            _visible_role("school_admin"),
+            None,
+            {"title": _role_payload("school_admin"), "priority": _role_payload("school_admin")},
+            id="section_visible_falls_through-872",
+        ),
+        pytest.param(
+            _visible_role("school_admin"),
+            _visible_role("teacher"),
+            {"title": _role_payload("school_admin"), "priority": _role_payload("teacher")},
+            id="element_overrides_section-872",
+        ),
+    ],
+)
+def test_surface_columns_visible_condition(section_visible, priority_visible, expected) -> None:
+    entity = _make_entity(
+        "Task",
+        [_ID, _make_field("title", FieldTypeKind.STR), _make_field("priority", FieldTypeKind.STR)],
+    )
+    section = SimpleNamespace(
+        visible=section_visible,
+        elements=[
+            SimpleNamespace(field_name="title", visible=None),
+            SimpleNamespace(field_name="priority", visible=priority_visible),
         ],
     )
-    def test_fold_count(self, stage, expected) -> None:
-        from dazzle.core.ir.workspaces import WorkspaceSpec
-        from dazzle.page.runtime.workspace_renderer import build_workspace_context
+    columns = _surface_columns(entity, SimpleNamespace(sections=[section]))
+    assert {c["key"]: c.get("visible_condition") for c in columns} == expected
 
-        kwargs = {"name": "dashboard", "regions": []}
-        if stage is not None:
-            kwargs["stage"] = stage
-        ws = WorkspaceSpec(**kwargs)
-        ctx = build_workspace_context(ws)
-        assert ctx.fold_count == expected
 
-    def test_stage_fold_count_map_keys(self) -> None:
-        """All stages in STAGE_DEFAULT_SPANS have a corresponding fold count."""
-        from dazzle.page.runtime.workspace_renderer import STAGE_DEFAULT_SPANS, STAGE_FOLD_COUNTS
+# ===========================================================================
+# WorkspaceRegionContext (#362) and stats endpoint (#783)
+# ===========================================================================
 
-        for stage in STAGE_DEFAULT_SPANS:
-            assert stage in STAGE_FOLD_COUNTS, f"Missing fold count for stage: {stage}"
+
+def _region_ctx(
+    *,
+    region_name: str = "t",
+    aggregates: dict[str, Any] | None = None,
+    repositories: dict[str, Any] | None = None,
+    require_auth: bool = False,
+    auth_middleware: Any = None,
+) -> Any:
+    from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
+
+    return WorkspaceRegionContext(
+        ctx_region=SimpleNamespace(
+            display="LIST",
+            limit=None,
+            empty_message="",
+            aggregates=aggregates or {},
+            group_by="",
+            template="workspace/regions/_typed_primitive.html",
+            title=region_name.title(),
+            name=region_name,
+            endpoint="/api/workspaces/dash/regions/r",
+            action_url="",
+            source_tabs=[],
+        ),
+        ir_region=SimpleNamespace(sort=[], filter=None),
+        source="Task",
+        entity_spec=None,
+        attention_signals=[],
+        ws_access=None,
+        repositories=repositories or {},
+        require_auth=require_auth,
+        auth_middleware=auth_middleware,
+    )
+
+
+def test_region_context_surface_ux_defaults_362() -> None:
+    """Surface UX sort / empty_message default to empty list / string when not provided."""
+    ctx = _region_ctx()
+    assert ctx.surface_default_sort == []
+    assert ctx.surface_empty_message == ""
+
+
+class _FakeRepo:
+    def __init__(self, total: int) -> None:
+        self._total = total
+
+    async def list(self, *, page: int, page_size: int, filters: Any = None) -> Any:
+        return {"items": [], "total": self._total}
+
+
+def _agg_ctx(name: str, label_key: str, entity: str, total: int) -> Any:
+    return _region_ctx(
+        region_name=name,
+        aggregates={label_key: AggregateRef(func="count", entity=entity)},
+        repositories={entity: _FakeRepo(total)},
+    )
+
+
+@pytest.mark.parametrize(
+    ("make_ctxs", "expected_stats"),
+    [
+        pytest.param(lambda: [_region_ctx(region_name="tasks")], {}, id="no_aggregates"),
+        pytest.param(
+            lambda: [_agg_ctx("overview", "total_work", "Work", 42)],
+            {"overview": {"Total Work": 42}},
+            id="count_entity_aggregate",
+        ),
+        pytest.param(
+            lambda: [
+                _agg_ctx("kpis", "active_works", "Work", 10),
+                _agg_ctx("campaigns", "running", "Campaign", 3),
+            ],
+            {"kpis": {"Active Works": 10}, "campaigns": {"Running": 3}},
+            id="namespaced_by_region",
+        ),
+        pytest.param(
+            lambda: [_region_ctx(region_name="plain"), _agg_ctx("with_agg", "n", "Task", 5)],
+            {"with_agg": {"N": 5}},
+            id="skips_regions_without_aggregates",
+        ),
+    ],
+)
+async def test_workspace_stats_handler_783(make_ctxs, expected_stats) -> None:
+    from dazzle.http.runtime.workspace_handlers import _workspace_stats_handler
+
+    result = await _workspace_stats_handler(SimpleNamespace(query_params={}), make_ctxs())
+    assert result == {"workspace": "dash", "stats": expected_stats}
+
+
+async def test_workspace_stats_handler_requires_auth_when_configured_783() -> None:
+    from fastapi import HTTPException
+
+    from dazzle.http.runtime.workspace_handlers import _workspace_stats_handler
+
+    class FailingAuth:
+        def get_auth_context(self, request: Any) -> Any:
+            return SimpleNamespace(is_authenticated=False, user=None, roles=[])
+
+    ctx = _region_ctx(
+        region_name="kpis",
+        aggregates={"n": AggregateRef(func="count", entity="Task")},
+        require_auth=True,
+        auth_middleware=FailingAuth(),
+    )
+    with pytest.raises(HTTPException) as exc:
+        await _workspace_stats_handler(SimpleNamespace(query_params={}), [ctx])
+    assert exc.value.status_code == 401
+
+
+# ===========================================================================
+# Viewport lazy loading (#378)
+# ===========================================================================
+
+
+@pytest.mark.parametrize(
+    ("stage", "expected"),
+    [
+        pytest.param(None, 3, id="default"),
+        pytest.param("command_center", 3, id="command_center"),
+        pytest.param("monitor_wall", 4, id="monitor_wall"),
+        pytest.param("scanner_table", 2, id="scanner_table"),
+        pytest.param("dual_pane_flow", 3, id="dual_pane"),
+        pytest.param("pair_strip", 3, id="pair_strip"),
+    ],
+)
+def test_fold_count_378(stage, expected) -> None:
+    from dazzle.core.ir.workspaces import WorkspaceSpec
+    from dazzle.page.runtime.workspace_renderer import build_workspace_context
+
+    kwargs: dict[str, Any] = {"name": "dashboard", "regions": []}
+    if stage is not None:
+        kwargs["stage"] = stage
+    assert build_workspace_context(WorkspaceSpec(**kwargs)).fold_count == expected
+
+
+def test_stage_fold_count_map_keys_378() -> None:
+    """All stages in STAGE_DEFAULT_SPANS have a corresponding fold count."""
+    from dazzle.page.runtime.workspace_renderer import STAGE_DEFAULT_SPANS, STAGE_FOLD_COUNTS
+
+    assert set(STAGE_DEFAULT_SPANS) <= set(STAGE_FOLD_COUNTS)
 
 
 # Region-request current_user resolution (#483, #484, #486, #588) is pinned
 # behaviourally in test_workspace_user_stable_id_1626.py.
-
-
-class TestCurrentUserDotNotation:
-    """Tests for current_user.<field> dot-notation in condition evaluator (#486)."""
-
-    def test_resolve_current_user_dot_notation(self) -> None:
-        """current_user.<field> dot-notation: scalar, ref dict, plain, missing entity, missing field.
-
-        Combined: department, department_ref_dict, plain_still_works, missing_entity, missing_field.
-        """
-        from dazzle.http.runtime.condition_evaluator import _resolve_value
-
-        # Scalar field (uuid string)
-        ctx_scalar = {
-            "current_user_id": "user-123",
-            "current_user_entity": {
-                "id": "user-123",
-                "department": "f6ac5054-79ff-5b1a-acd0-f1c832d3433b",
-            },
-        }
-        assert (
-            _resolve_value({"literal": "current_user.department"}, ctx_scalar)
-            == "f6ac5054-79ff-5b1a-acd0-f1c832d3433b"
-        )
-
-        # Ref dict — extract id from {id, name}
-        ctx_ref = {
-            "current_user_id": "user-123",
-            "current_user_entity": {
-                "id": "user-123",
-                "department": {
-                    "id": "f6ac5054-79ff-5b1a-acd0-f1c832d3433b",
-                    "name": "English",
-                },
-            },
-        }
-        assert (
-            _resolve_value({"literal": "current_user.department"}, ctx_ref)
-            == "f6ac5054-79ff-5b1a-acd0-f1c832d3433b"
-        )
-
-        # Plain current_user (no dot) → user_id
-        assert (
-            _resolve_value({"literal": "current_user"}, {"current_user_id": "user-123"})
-            == "user-123"
-        )
-
-        # Missing entity → None
-        assert (
-            _resolve_value({"literal": "current_user.department"}, {"current_user_id": "user-123"})
-            is None
-        )
-
-        # Missing field on entity → None
-        ctx_missing_field = {
-            "current_user_id": "user-123",
-            "current_user_entity": {"id": "user-123", "name": "Alice"},
-        }
-        assert _resolve_value({"literal": "current_user.department"}, ctx_missing_field) is None
-
-    def test_condition_to_sql_filter_with_dot_notation(self) -> None:
-        """condition_to_sql_filter resolves current_user.department in filters."""
-        from dazzle.http.runtime.condition_evaluator import condition_to_sql_filter
-
-        condition = {
-            "comparison": {
-                "field": "department",
-                "operator": "eq",
-                "value": {"literal": "current_user.department"},
-            }
-        }
-        context = {
-            "current_user_id": "user-123",
-            "current_user_entity": {
-                "id": "user-123",
-                "department": "dept-456",
-            },
-        }
-        filters = condition_to_sql_filter(condition, context)
-        assert filters == {"department": "dept-456"}
-
-    def test_identifier_kind_dot_notation(self) -> None:
-        """Handle current_user.field via identifier kind value format."""
-        from dazzle.http.runtime.condition_evaluator import _resolve_value
-
-        context = {
-            "current_user_id": "user-123",
-            "current_user_entity": {"id": "user-123", "team_id": "team-789"},
-        }
-        value = {"kind": "identifier", "value": "current_user.team_id"}
-        result = _resolve_value(value, context)
-        assert result == "team-789"
-
-
-# ===========================================================================
-# Workspace stats endpoint (#783)
-# ===========================================================================
-
-
-class TestWorkspaceStatsHandler:
-    """_workspace_stats_handler computes region aggregates as standalone JSON."""
-
-    def _make_ctx(
-        self,
-        *,
-        region_name: str,
-        aggregates: dict[str, str],
-        repositories: dict[str, Any] | None = None,
-        endpoint: str = "/api/workspaces/dash/regions/r",
-        require_auth: bool = False,
-        ws_access: Any = None,
-        auth_middleware: Any = None,
-    ) -> Any:
-        from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
-
-        return WorkspaceRegionContext(
-            ctx_region=SimpleNamespace(
-                display="LIST",
-                limit=None,
-                empty_message="",
-                aggregates=aggregates,
-                group_by="",
-                template="workspace/regions/_typed_primitive.html",
-                title=region_name.title(),
-                name=region_name,
-                endpoint=endpoint,
-                action_url="",
-                source_tabs=[],
-            ),
-            ir_region=SimpleNamespace(sort=[], filter=None),
-            source="Task",
-            entity_spec=None,
-            attention_signals=[],
-            ws_access=ws_access,
-            repositories=repositories or {},
-            require_auth=require_auth,
-            auth_middleware=auth_middleware,
-        )
-
-    async def test_returns_empty_stats_when_no_aggregates(self) -> None:
-        from dazzle.http.runtime.workspace_handlers import _workspace_stats_handler
-
-        ctx = self._make_ctx(region_name="tasks", aggregates={})
-        result = await _workspace_stats_handler(SimpleNamespace(query_params={}), [ctx])
-        assert result == {"workspace": "dash", "stats": {}}
-
-    async def test_computes_count_entity_aggregates(self) -> None:
-        from dazzle.http.runtime.workspace_handlers import _workspace_stats_handler
-
-        class FakeRepo:
-            async def list(self, *, page: int, page_size: int, filters: Any = None) -> Any:
-                return {"items": [], "total": 42}
-
-        ctx = self._make_ctx(
-            region_name="overview",
-            aggregates={"total_work": AggregateRef(func="count", entity="Work")},
-            repositories={"Work": FakeRepo()},
-        )
-        result = await _workspace_stats_handler(SimpleNamespace(query_params={}), [ctx])
-        assert result["workspace"] == "dash"
-        assert result["stats"] == {"overview": {"Total Work": 42}}
-
-    async def test_namespaces_stats_by_region(self) -> None:
-        from dazzle.http.runtime.workspace_handlers import _workspace_stats_handler
-
-        class FakeRepo:
-            def __init__(self, total: int) -> None:
-                self._total = total
-
-            async def list(self, *, page: int, page_size: int, filters: Any = None) -> Any:
-                return {"items": [], "total": self._total}
-
-        ctx1 = self._make_ctx(
-            region_name="kpis",
-            aggregates={"active_works": AggregateRef(func="count", entity="Work")},
-            repositories={"Work": FakeRepo(10)},
-        )
-        ctx2 = self._make_ctx(
-            region_name="campaigns",
-            aggregates={"running": AggregateRef(func="count", entity="Campaign")},
-            repositories={"Campaign": FakeRepo(3)},
-        )
-        result = await _workspace_stats_handler(SimpleNamespace(query_params={}), [ctx1, ctx2])
-        assert result["stats"]["kpis"] == {"Active Works": 10}
-        assert result["stats"]["campaigns"] == {"Running": 3}
-
-    async def test_skips_regions_without_aggregates(self) -> None:
-        from dazzle.http.runtime.workspace_handlers import _workspace_stats_handler
-
-        class FakeRepo:
-            async def list(self, *, page: int, page_size: int, filters: Any = None) -> Any:
-                return {"items": [], "total": 5}
-
-        plain = self._make_ctx(region_name="plain", aggregates={})
-        with_agg = self._make_ctx(
-            region_name="with_agg",
-            aggregates={"n": AggregateRef(func="count", entity="Task")},
-            repositories={"Task": FakeRepo()},
-        )
-        result = await _workspace_stats_handler(SimpleNamespace(query_params={}), [plain, with_agg])
-        assert "plain" not in result["stats"]
-        assert result["stats"]["with_agg"] == {"N": 5}
-
-    async def test_requires_auth_when_configured(self) -> None:
-        from fastapi import HTTPException
-
-        from dazzle.http.runtime.workspace_handlers import _workspace_stats_handler
-
-        class FailingAuth:
-            def get_auth_context(self, request: Any) -> Any:
-                return SimpleNamespace(is_authenticated=False, user=None, roles=[])
-
-        ctx = self._make_ctx(
-            region_name="kpis",
-            aggregates={"n": AggregateRef(func="count", entity="Task")},
-            require_auth=True,
-            auth_middleware=FailingAuth(),
-        )
-        try:
-            await _workspace_stats_handler(SimpleNamespace(query_params={}), [ctx])
-        except HTTPException as e:
-            assert e.status_code == 401
-        else:
-            raise AssertionError("Expected 401 HTTPException")

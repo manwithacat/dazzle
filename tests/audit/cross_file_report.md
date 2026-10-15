@@ -43,35 +43,22 @@ Files dominated by tests that pin internal call shapes (high mocks, short body, 
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 6993
+- **Twin pairs**: 6935
 
 ### Top 30 twin pairs
 
 | File A | File B | A | B | Shared | Overlap |
 |---|---|---:|---:|---:|---:|
-| `test_persona_journey.py` | `test_ux_contract_checker.py` | 55 | 36 | 26 | 0.72 |
-| `test_fidelity_scorer.py` | `test_persona_journey.py` | 26 | 55 | 23 | 0.88 |
-| `test_workspace_layout_prefs.py` | `test_workspace_rendering.py` | 31 | 42 | 23 | 0.74 |
-| `test_demo_data_loader.py` | `test_persona_journey.py` | 27 | 55 | 21 | 0.78 |
-| `test_fidelity_scorer.py` | `test_ux_contract_checker.py` | 26 | 36 | 21 | 0.81 |
 | `test_rbac_enforcement.py` | `test_sla_manager.py` | 30 | 32 | 21 | 0.7 |
 | `test_rbac_enforcement.py` | `test_structured_content.py` | 30 | 32 | 21 | 0.7 |
-| `test_css_clip_check.py` | `test_persona_journey.py` | 21 | 55 | 20 | 0.95 |
 | `test_css_clip_check.py` | `test_workspace_layout_prefs.py` | 21 | 31 | 20 | 0.95 |
-| `test_css_clip_check.py` | `test_workspace_rendering.py` | 21 | 42 | 20 | 0.95 |
 | `test_curl_test_generator.py` | `test_list_chrome_parity_phase1.py` | 28 | 33 | 20 | 0.71 |
 | `test_parser.py` | `test_workspace_layout_prefs.py` | 25 | 31 | 20 | 0.8 |
-| `test_parser.py` | `test_workspace_rendering.py` | 25 | 42 | 20 | 0.8 |
-| `test_persona_journey.py` | `test_python_audit_agent.py` | 55 | 27 | 20 | 0.74 |
-| `test_predicate_policy_mode.py` | `test_workspace_rendering.py` | 28 | 42 | 20 | 0.71 |
 | `test_css_clip_check.py` | `test_expression_lang.py` | 21 | 43 | 19 | 0.9 |
 | `test_css_clip_check.py` | `test_rbac_enforcement.py` | 21 | 30 | 19 | 0.9 |
 | `test_css_clip_check.py` | `test_sla_manager.py` | 21 | 32 | 19 | 0.9 |
 | `test_expression_lang.py` | `test_grant_store.py` | 43 | 23 | 19 | 0.83 |
 | `test_expression_lang.py` | `test_session_manager.py` | 43 | 26 | 19 | 0.73 |
-| `test_parser.py` | `test_persona_journey.py` | 25 | 55 | 19 | 0.76 |
-| `test_python_audit_agent.py` | `test_workspace_rendering.py` | 27 | 42 | 19 | 0.7 |
-| `test_session_manager.py` | `test_workspace_rendering.py` | 26 | 42 | 19 | 0.73 |
 | `test_aws_config.py` | `test_peek_when_empty_1494.py` | 24 | 50 | 18 | 0.75 |
 | `test_computed_evaluator.py` | `test_expression_lang.py` | 21 | 43 | 18 | 0.86 |
 | `test_css_clip_check.py` | `test_parser.py` | 21 | 25 | 18 | 0.86 |
@@ -79,3 +66,16 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_money_expansion.py` | `test_peek_when_empty_1494.py` | 24 | 50 | 18 | 0.75 |
 | `test_parser.py` | `test_rbac_enforcement.py` | 25 | 30 | 18 | 0.72 |
 | `test_app_error_views.py` | `test_pdf_viewer_component.py` | 22 | 36 | 17 | 0.77 |
+| `test_bar_chart_bucketed_aggregate.py` | `test_css_clip_check.py` | 40 | 21 | 17 | 0.81 |
+| `test_bar_chart_bucketed_aggregate.py` | `test_task_inbox_data_resolution.py` | 40 | 20 | 17 | 0.85 |
+| `test_css_clip_check.py` | `test_python_audit_agent.py` | 21 | 27 | 17 | 0.81 |
+| `test_grant_store.py` | `test_session_manager.py` | 23 | 26 | 17 | 0.74 |
+| `test_grant_store.py` | `test_viewport.py` | 23 | 43 | 17 | 0.74 |
+| `test_workspace_layout_prefs.py` | `test_workspace_rendering.py` | 31 | 19 | 17 | 0.89 |
+| `test_app_error_views.py` | `test_curl_test_generator.py` | 22 | 28 | 16 | 0.73 |
+| `test_app_error_views.py` | `test_error_views.py` | 22 | 19 | 16 | 0.84 |
+| `test_app_error_views.py` | `test_list_chrome_parity_phase1.py` | 22 | 33 | 16 | 0.73 |
+| `test_badge_wcag_icon_1493.py` | `test_peek_when_empty_1494.py` | 19 | 50 | 16 | 0.84 |
+| `test_bar_chart_bucketed_aggregate.py` | `test_tenant_middleware.py` | 40 | 19 | 16 | 0.84 |
+| `test_css_clip_check.py` | `test_persona_journey.py` | 21 | 33 | 16 | 0.76 |
+| `test_entity_card_primitive.py` | `test_task_inbox_primitive.py` | 20 | 27 | 16 | 0.8 |

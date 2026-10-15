@@ -4,6 +4,8 @@ Unit tests for the E2E TestSpec Generator.
 Tests that the generator correctly produces E2ETestSpec from AppSpec.
 """
 
+from typing import Any
+
 import pytest
 
 from dazzle.core.ir import (
@@ -47,41 +49,55 @@ from dazzle.testing.testspec_generator import (
 )
 
 
+def _pk() -> FieldSpec:
+    return FieldSpec(
+        name="id", type=FieldType(kind=FieldTypeKind.UUID), modifiers=[FieldModifier.PK]
+    )
+
+
+def _req_str(name: str = "title", max_length: int = 200) -> FieldSpec:
+    return FieldSpec(
+        name=name,
+        type=FieldType(kind=FieldTypeKind.STR, max_length=max_length),
+        modifiers=[FieldModifier.REQUIRED],
+    )
+
+
+def _enum(name: str, values: list[str]) -> FieldSpec:
+    return FieldSpec(name=name, type=FieldType(kind=FieldTypeKind.ENUM, enum_values=values))
+
+
+def _entity(name: str, *fields: FieldSpec, **kwargs: Any) -> EntitySpec:
+    return EntitySpec(name=name, title=name, fields=[_pk(), *fields], **kwargs)
+
+
+def _app(name: str, *entities: EntitySpec, **kwargs: Any) -> AppSpec:
+    return AppSpec(
+        name=name,
+        title=f"{name} app",
+        domain=DomainSpec(entities=list(entities)),
+        surfaces=[
+            SurfaceSpec(name=f"{e.name.lower()}_list", entity_ref=e.name, mode=SurfaceMode.LIST)
+            for e in entities
+        ],
+        **kwargs,
+    )
+
+
+def _asserts(flow: Any) -> list[Any]:
+    return [s for s in flow.steps if s.kind == FlowStepKind.ASSERT]
+
+
 @pytest.fixture
 def task_entity() -> EntitySpec:
     """Create a sample Task entity for testing."""
-    return EntitySpec(
-        name="Task",
-        title="Task",
-        fields=[
-            FieldSpec(
-                name="id",
-                type=FieldType(kind=FieldTypeKind.UUID),
-                modifiers=[FieldModifier.PK],
-            ),
-            FieldSpec(
-                name="title",
-                type=FieldType(kind=FieldTypeKind.STR, max_length=200),
-                modifiers=[FieldModifier.REQUIRED],
-            ),
-            FieldSpec(
-                name="description",
-                type=FieldType(kind=FieldTypeKind.TEXT),
-            ),
-            FieldSpec(
-                name="completed",
-                type=FieldType(kind=FieldTypeKind.BOOL),
-                default=False,
-            ),
-            FieldSpec(
-                name="priority",
-                type=FieldType(kind=FieldTypeKind.ENUM, enum_values=["low", "medium", "high"]),
-            ),
-            FieldSpec(
-                name="due_date",
-                type=FieldType(kind=FieldTypeKind.DATE),
-            ),
-        ],
+    return _entity(
+        "Task",
+        _req_str(),
+        FieldSpec(name="description", type=FieldType(kind=FieldTypeKind.TEXT)),
+        FieldSpec(name="completed", type=FieldType(kind=FieldTypeKind.BOOL), default=False),
+        _enum("priority", ["low", "medium", "high"]),
+        FieldSpec(name="due_date", type=FieldType(kind=FieldTypeKind.DATE)),
     )
 
 
@@ -89,30 +105,14 @@ def task_entity() -> EntitySpec:
 def task_surfaces() -> list[SurfaceSpec]:
     """Create sample surfaces for Task entity."""
     return [
+        SurfaceSpec(name="task_list", title="Tasks", entity_ref="Task", mode=SurfaceMode.LIST),
         SurfaceSpec(
-            name="task_list",
-            title="Tasks",
-            entity_ref="Task",
-            mode=SurfaceMode.LIST,
+            name="task_detail", title="Task Detail", entity_ref="Task", mode=SurfaceMode.VIEW
         ),
         SurfaceSpec(
-            name="task_detail",
-            title="Task Detail",
-            entity_ref="Task",
-            mode=SurfaceMode.VIEW,
+            name="task_create", title="Create Task", entity_ref="Task", mode=SurfaceMode.CREATE
         ),
-        SurfaceSpec(
-            name="task_create",
-            title="Create Task",
-            entity_ref="Task",
-            mode=SurfaceMode.CREATE,
-        ),
-        SurfaceSpec(
-            name="task_edit",
-            title="Edit Task",
-            entity_ref="Task",
-            mode=SurfaceMode.EDIT,
-        ),
+        SurfaceSpec(name="task_edit", title="Edit Task", entity_ref="Task", mode=SurfaceMode.EDIT),
     ]
 
 
@@ -128,72 +128,171 @@ def simple_appspec(task_entity: EntitySpec, task_surfaces: list[SurfaceSpec]) ->
     )
 
 
+@pytest.fixture
+def ticket_entity_with_state_machine() -> EntitySpec:
+    return _entity(
+        "Ticket",
+        _req_str(),
+        _enum("status", ["open", "in_progress", "resolved", "closed"]),
+        state_machine=StateMachineSpec(
+            status_field="status",
+            states=["open", "in_progress", "resolved", "closed"],
+            transitions=[
+                StateTransition(from_state="open", to_state="in_progress"),
+                StateTransition(from_state="in_progress", to_state="resolved"),
+                StateTransition(from_state="resolved", to_state="closed"),
+            ],
+        ),
+    )
+
+
+@pytest.fixture
+def role_guarded_ticket_entity() -> EntitySpec:
+    """Ticket entity whose transition is gated by role(agent)."""
+    return _entity(
+        "Ticket",
+        _req_str(),
+        _enum("status", ["open", "in_progress"]),
+        state_machine=StateMachineSpec(
+            status_field="status",
+            states=["open", "in_progress"],
+            transitions=[
+                StateTransition(
+                    from_state="open",
+                    to_state="in_progress",
+                    guards=[TransitionGuard(requires_role="agent")],
+                ),
+            ],
+        ),
+    )
+
+
+@pytest.fixture
+def invoice_entity_with_computed() -> EntitySpec:
+    return _entity(
+        "Invoice",
+        _req_str("number", 50),
+        computed_fields=[
+            ComputedFieldSpec(
+                name="item_count",
+                expression=AggregateCall(
+                    function=AggregateFunction.COUNT,
+                    field=FieldReference(path=["line_items"]),
+                ),
+            ),
+            ComputedFieldSpec(
+                name="total",
+                expression=AggregateCall(
+                    function=AggregateFunction.SUM,
+                    field=FieldReference(path=["line_items", "amount"]),
+                ),
+            ),
+        ],
+    )
+
+
+@pytest.fixture
+def document_entity_with_access() -> EntitySpec:
+    return _entity(
+        "Document",
+        _req_str(),
+        access=AccessSpec(
+            permissions=[
+                PermissionRule(operation=PermissionKind.CREATE, require_auth=True),
+                PermissionRule(operation=PermissionKind.UPDATE, require_auth=True),
+                PermissionRule(operation=PermissionKind.DELETE, require_auth=True),
+            ],
+        ),
+    )
+
+
+@pytest.fixture
+def task_entity_with_ref() -> EntitySpec:
+    return _entity(
+        "Task",
+        _req_str(),
+        FieldSpec(
+            name="project_id",
+            type=FieldType(kind=FieldTypeKind.REF, ref_entity="Project"),
+            modifiers=[FieldModifier.REQUIRED],
+        ),
+    )
+
+
+@pytest.fixture
+def full_featured_appspec() -> AppSpec:
+    """AppSpec with state machine, computed field and access rules."""
+    ticket = _entity(
+        "Ticket",
+        _req_str(),
+        _enum("status", ["open", "closed"]),
+        state_machine=StateMachineSpec(
+            status_field="status",
+            states=["open", "closed"],
+            transitions=[StateTransition(from_state="open", to_state="closed")],
+        ),
+        computed_fields=[
+            ComputedFieldSpec(
+                name="comment_count",
+                expression=AggregateCall(
+                    function=AggregateFunction.COUNT,
+                    field=FieldReference(path=["comments"]),
+                ),
+            ),
+        ],
+        access=AccessSpec(
+            permissions=[PermissionRule(operation=PermissionKind.CREATE, require_auth=True)],
+        ),
+    )
+    return _app("support", ticket)
+
+
 class TestFixtureGeneration:
     """Tests for fixture generation."""
 
     def test_generate_entity_fixtures(self, task_entity: EntitySpec) -> None:
-        """Test generating fixtures for an entity — IDs/data, types, PK exclusion.
-
-        Combined: fixture_values_match_field_types, fixtures_skip_pk_fields.
-        """
+        """Fixtures for an entity — IDs/data, types, PK exclusion."""
         fixtures = generate_entity_fixtures(task_entity)
+        assert len(fixtures) >= 2  # valid and updated
 
-        # Should generate at least 2 fixtures (valid and updated)
-        assert len(fixtures) >= 2
-
-        # Check valid fixture
         valid = next((f for f in fixtures if f.id == "Task_valid"), None)
         assert valid is not None
         assert valid.entity == "Task"
         assert "title" in valid.data
         assert valid.data["completed"] is True  # bool defaults to True
 
-        # Check updated fixture
         updated = next((f for f in fixtures if f.id == "Task_updated"), None)
         assert updated is not None
         assert updated.entity == "Task"
 
-        # Field types are appropriate
-        assert isinstance(valid.data["title"], str)  # str field
-        assert isinstance(valid.data["completed"], bool)  # bool field
-        assert valid.data["priority"] in ["low", "medium", "high"]  # enum field
+        assert isinstance(valid.data["title"], str)
+        assert isinstance(valid.data["completed"], bool)
+        assert valid.data["priority"] in ["low", "medium", "high"]
         assert isinstance(valid.data["due_date"], str)  # date as ISO string
         assert "-" in valid.data["due_date"]
-
-        # PK field should not be in data
-        assert "id" not in valid.data
+        assert "id" not in valid.data  # PK excluded
 
     def test_generate_fixtures_all_entities(self, simple_appspec: AppSpec) -> None:
         """Test generating fixtures for all entities in AppSpec."""
         fixtures = generate_fixtures(simple_appspec)
-
-        # Should have fixtures for each entity
-        assert len(fixtures) >= 2  # At least valid + updated for Task
-
-        # All should be for Task entity
-        for fixture in fixtures:
-            assert fixture.entity == "Task"
+        assert len(fixtures) >= 2  # valid + updated for Task
+        assert {f.entity for f in fixtures} == {"Task"}
 
 
 class TestCRUDFlowGeneration:
     """Tests for CRUD flow generation."""
 
     def test_generate_crud_flows(self, task_entity: EntitySpec, simple_appspec: AppSpec) -> None:
-        """Test generating CRUD flows for an entity."""
         flows = generate_entity_crud_flows(task_entity, simple_appspec)
-
-        # Should generate 4 flows (create, view, update, delete)
         assert len(flows) == 4
-
-        # Check flow IDs
-        flow_ids = {f.id for f in flows}
-        assert "Task_create_valid" in flow_ids
-        assert "Task_view_detail" in flow_ids
-        assert "Task_update_valid" in flow_ids
-        assert "Task_delete" in flow_ids
+        assert {f.id for f in flows} == {
+            "Task_create_valid",
+            "Task_view_detail",
+            "Task_update_valid",
+            "Task_delete",
+        }
 
     def test_create_flow_structure(self, task_entity: EntitySpec, simple_appspec: AppSpec) -> None:
-        """Test the structure of a create flow."""
         flows = generate_entity_crud_flows(task_entity, simple_appspec)
         create_flow = next((f for f in flows if f.id == "Task_create_valid"), None)
 
@@ -204,21 +303,11 @@ class TestCRUDFlowGeneration:
         assert "crud" in create_flow.tags
         assert "create" in create_flow.tags
 
-        # Check steps
         steps = create_flow.steps
-        assert len(steps) >= 3  # navigate, click create, at least one fill, click save, assert
-
-        # First step should be navigate
+        assert len(steps) >= 3  # navigate, click create, fill, click save, assert
         assert steps[0].kind == FlowStepKind.NAVIGATE
         assert "view:" in steps[0].target
-
-        # Should have a click for create action
-        create_clicks = [
-            s for s in steps if s.kind == FlowStepKind.CLICK and "create" in (s.target or "")
-        ]
-        assert len(create_clicks) >= 1
-
-        # Last step should be assert
+        assert [s for s in steps if s.kind == FlowStepKind.CLICK and "create" in (s.target or "")]
         assert steps[-1].kind == FlowStepKind.ASSERT
         assert steps[-1].assertion is not None
         assert steps[-1].assertion.kind == FlowAssertionKind.ENTITY_EXISTS
@@ -226,7 +315,6 @@ class TestCRUDFlowGeneration:
     def test_update_flow_has_preconditions(
         self, task_entity: EntitySpec, simple_appspec: AppSpec
     ) -> None:
-        """Test that update flow has fixture preconditions."""
         flows = generate_entity_crud_flows(task_entity, simple_appspec)
         update_flow = next((f for f in flows if f.id == "Task_update_valid"), None)
 
@@ -237,24 +325,16 @@ class TestCRUDFlowGeneration:
     def test_delete_flow_has_confirmation(
         self, task_entity: EntitySpec, simple_appspec: AppSpec
     ) -> None:
-        """Test that delete flow includes confirmation step."""
         flows = generate_entity_crud_flows(task_entity, simple_appspec)
         delete_flow = next((f for f in flows if f.id == "Task_delete"), None)
 
         assert delete_flow is not None
-
-        # Should have confirm action click
-        confirm_steps = [
+        assert [
             s
             for s in delete_flow.steps
             if s.kind == FlowStepKind.CLICK and "confirm" in (s.target or "")
         ]
-        assert len(confirm_steps) >= 1
-
-        # Last assertion should be entity_not_exists
-        assert_steps = [s for s in delete_flow.steps if s.kind == FlowStepKind.ASSERT]
-        assert len(assert_steps) >= 1
-        assert assert_steps[-1].assertion.kind == FlowAssertionKind.ENTITY_NOT_EXISTS
+        assert _asserts(delete_flow)[-1].assertion.kind == FlowAssertionKind.ENTITY_NOT_EXISTS
 
 
 class TestValidationFlowGeneration:
@@ -263,23 +343,16 @@ class TestValidationFlowGeneration:
     def test_generate_validation_flows(
         self, task_entity: EntitySpec, simple_appspec: AppSpec
     ) -> None:
-        """Generate validation flows — required-field flow exists with validation_error assertion.
-
-        Combined: validation_flow_asserts_error.
-        """
+        """Required-field flow exists with validation_error assertion."""
         flows = generate_validation_flows(task_entity, simple_appspec)
-
-        # Should have at least one flow for the required 'title' field
         assert len(flows) >= 1
 
-        # Find the title validation flow
         title_flow = next((f for f in flows if "title" in f.id), None)
         assert title_flow is not None
         assert title_flow.priority == FlowPriority.MEDIUM
         assert "validation" in title_flow.tags
 
-        # Should assert validation error on title
-        assert_steps = [s for s in title_flow.steps if s.kind == FlowStepKind.ASSERT]
+        assert_steps = _asserts(title_flow)
         assert len(assert_steps) >= 1
         assert assert_steps[0].assertion.kind == FlowAssertionKind.VALIDATION_ERROR
         assert "title" in assert_steps[0].assertion.target
@@ -291,13 +364,8 @@ class TestSurfaceFlowGeneration:
     def test_generate_surface_flows(
         self, task_surfaces: list[SurfaceSpec], simple_appspec: AppSpec
     ) -> None:
-        """Generate navigation flows for surfaces — id/priority/tags + visibility assertion.
-
-        Combined: surface_flow_asserts_visible.
-        """
-        surface = task_surfaces[0]  # task_list
-        flows = generate_surface_flows(surface, simple_appspec)
-
+        """Navigation flows for surfaces — id/priority/tags + visibility assertion."""
+        flows = generate_surface_flows(task_surfaces[0], simple_appspec)
         assert len(flows) >= 1
 
         nav_flow = flows[0]
@@ -305,8 +373,7 @@ class TestSurfaceFlowGeneration:
         assert nav_flow.priority == FlowPriority.LOW
         assert "navigation" in nav_flow.tags
 
-        # Last step should assert visibility
-        assert_steps = [s for s in nav_flow.steps if s.kind == FlowStepKind.ASSERT]
+        assert_steps = _asserts(nav_flow)
         assert len(assert_steps) >= 1
         assert assert_steps[0].assertion.kind == FlowAssertionKind.VISIBLE
 
@@ -315,365 +382,113 @@ class TestFullE2ETestSpecGeneration:
     """Tests for complete E2ETestSpec generation."""
 
     def test_generate_complete_testspec(self, simple_appspec: AppSpec) -> None:
-        """Test generating a complete E2ETestSpec."""
         testspec = generate_e2e_testspec(simple_appspec)
 
         assert testspec.app_name == "todo"
         assert testspec.version == "0.1.0"
-
-        # Should have fixtures
         assert len(testspec.fixtures) >= 2
-
-        # Should have flows (CRUD + validation + navigation)
-        assert len(testspec.flows) >= 5
-
-        # Should have usability rules
-        assert len(testspec.usability_rules) >= 1
-
-        # Should have a11y rules
-        assert len(testspec.a11y_rules) >= 1
-
-        # Should have metadata
-        assert "entity_count" in testspec.metadata
+        assert len(testspec.flows) >= 5  # CRUD + validation + navigation
         assert testspec.metadata["entity_count"] == 1
 
-    def test_testspec_flows_have_correct_priority(self, simple_appspec: AppSpec) -> None:
-        """Test that generated flows have appropriate priorities."""
-        testspec = generate_e2e_testspec(simple_appspec)
-
-        high_priority = testspec.get_flows_by_priority(FlowPriority.HIGH)
-        medium_priority = testspec.get_flows_by_priority(FlowPriority.MEDIUM)
-        low_priority = testspec.get_flows_by_priority(FlowPriority.LOW)
-
-        # Create and update should be high priority
-        assert len(high_priority) >= 2
-
-        # Validation and delete should be medium
-        assert len(medium_priority) >= 2
-
-        # Navigation should be low
-        assert len(low_priority) >= 1
-
-    def test_testspec_flows_by_entity(self, simple_appspec: AppSpec) -> None:
-        """Test querying flows by entity."""
-        testspec = generate_e2e_testspec(simple_appspec)
-
-        task_flows = testspec.get_flows_by_entity("Task")
-        assert len(task_flows) >= 4  # At least CRUD flows
-
-    def test_testspec_can_get_fixture(self, simple_appspec: AppSpec) -> None:
-        """Test getting fixtures by ID."""
-        testspec = generate_e2e_testspec(simple_appspec)
-
+        # Fixture lookup by ID
         valid_fixture = testspec.get_fixture("Task_valid")
         assert valid_fixture is not None
         assert valid_fixture.entity == "Task"
 
-    def test_testspec_usability_rules(self, simple_appspec: AppSpec) -> None:
-        """Test that usability rules are generated."""
-        testspec = generate_e2e_testspec(simple_appspec)
-
-        # Should have max steps rule
+        # Usability / a11y rules
         max_steps = next(
-            (r for r in testspec.usability_rules if r.id == "high_priority_max_steps"),
-            None,
+            (r for r in testspec.usability_rules if r.id == "high_priority_max_steps"), None
         )
         assert max_steps is not None
         assert max_steps.threshold == 5
-
-    def test_testspec_a11y_rules(self, simple_appspec: AppSpec) -> None:
-        """Test that a11y rules are generated."""
-        testspec = generate_e2e_testspec(simple_appspec)
-
-        # Should have color contrast rule
-        contrast = next(
-            (r for r in testspec.a11y_rules if r.id == "color-contrast"),
-            None,
-        )
+        contrast = next((r for r in testspec.a11y_rules if r.id == "color-contrast"), None)
         assert contrast is not None
         assert contrast.level == "AA"
+
+    def test_testspec_flows_have_correct_priority(self, simple_appspec: AppSpec) -> None:
+        testspec = generate_e2e_testspec(simple_appspec)
+
+        # Create and update high; validation and delete medium; navigation low
+        assert len(testspec.get_flows_by_priority(FlowPriority.HIGH)) >= 2
+        assert len(testspec.get_flows_by_priority(FlowPriority.MEDIUM)) >= 2
+        assert len(testspec.get_flows_by_priority(FlowPriority.LOW)) >= 1
+
+    def test_testspec_flows_by_entity(self, simple_appspec: AppSpec) -> None:
+        testspec = generate_e2e_testspec(simple_appspec)
+        assert len(testspec.get_flows_by_entity("Task")) >= 4  # at least CRUD flows
 
 
 class TestMultiEntityGeneration:
     """Tests for generating tests with multiple entities."""
 
-    @pytest.fixture
-    def multi_entity_appspec(self) -> AppSpec:
-        """Create AppSpec with multiple entities."""
-        task = EntitySpec(
-            name="Task",
-            title="Task",
-            fields=[
-                FieldSpec(
-                    name="id",
-                    type=FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                FieldSpec(
-                    name="title",
-                    type=FieldType(kind=FieldTypeKind.STR, max_length=200),
-                    modifiers=[FieldModifier.REQUIRED],
-                ),
-            ],
+    def test_multi_entity_spec(self) -> None:
+        """Fixtures, CRUD flows and metadata cover every entity."""
+        task = _entity("Task", _req_str())
+        user = _entity(
+            "User",
+            FieldSpec(
+                name="email",
+                type=FieldType(kind=FieldTypeKind.EMAIL),
+                modifiers=[FieldModifier.REQUIRED, FieldModifier.UNIQUE],
+            ),
+            _req_str("name", 100),
         )
+        testspec = generate_e2e_testspec(_app("multi_app", task, user))
 
-        user = EntitySpec(
-            name="User",
-            title="User",
-            fields=[
-                FieldSpec(
-                    name="id",
-                    type=FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                FieldSpec(
-                    name="email",
-                    type=FieldType(kind=FieldTypeKind.EMAIL),
-                    modifiers=[FieldModifier.REQUIRED, FieldModifier.UNIQUE],
-                ),
-                FieldSpec(
-                    name="name",
-                    type=FieldType(kind=FieldTypeKind.STR, max_length=100),
-                    modifiers=[FieldModifier.REQUIRED],
-                ),
-            ],
-        )
-
-        return AppSpec(
-            name="multi_app",
-            title="Multi Entity App",
-            domain=DomainSpec(entities=[task, user]),
-            surfaces=[
-                SurfaceSpec(
-                    name="task_list",
-                    entity_ref="Task",
-                    mode=SurfaceMode.LIST,
-                ),
-                SurfaceSpec(
-                    name="user_list",
-                    entity_ref="User",
-                    mode=SurfaceMode.LIST,
-                ),
-            ],
-        )
-
-    def test_generates_fixtures_for_all_entities(self, multi_entity_appspec: AppSpec) -> None:
-        """Test fixtures are generated for all entities."""
-        testspec = generate_e2e_testspec(multi_entity_appspec)
-
-        # Should have fixtures for both entities
-        task_fixtures = [f for f in testspec.fixtures if f.entity == "Task"]
-        user_fixtures = [f for f in testspec.fixtures if f.entity == "User"]
-
-        assert len(task_fixtures) >= 2
-        assert len(user_fixtures) >= 2
-
-    def test_generates_flows_for_all_entities(self, multi_entity_appspec: AppSpec) -> None:
-        """Test flows are generated for all entities."""
-        testspec = generate_e2e_testspec(multi_entity_appspec)
-
-        task_flows = testspec.get_flows_by_entity("Task")
-        user_flows = testspec.get_flows_by_entity("User")
-
-        assert len(task_flows) >= 4  # CRUD flows
-        assert len(user_flows) >= 4  # CRUD flows
-
-    def test_metadata_reflects_entity_count(self, multi_entity_appspec: AppSpec) -> None:
-        """Test metadata has correct entity count."""
-        testspec = generate_e2e_testspec(multi_entity_appspec)
-
+        for entity in ("Task", "User"):
+            assert len([f for f in testspec.fixtures if f.entity == entity]) >= 2
+            assert len(testspec.get_flows_by_entity(entity)) >= 4  # CRUD flows
         assert testspec.metadata["entity_count"] == 2
         assert testspec.metadata["surface_count"] == 2
-
-
-# =============================================================================
-# v0.13.0 Generator Tests
-# =============================================================================
 
 
 class TestStateMachineFlowGeneration:
     """Tests for state machine transition flow generation."""
 
-    @pytest.fixture
-    def ticket_entity_with_state_machine(self) -> EntitySpec:
-        """Create a Ticket entity with state machine for testing."""
-        return EntitySpec(
-            name="Ticket",
-            title="Support Ticket",
-            fields=[
-                FieldSpec(
-                    name="id",
-                    type=FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                FieldSpec(
-                    name="title",
-                    type=FieldType(kind=FieldTypeKind.STR, max_length=200),
-                    modifiers=[FieldModifier.REQUIRED],
-                ),
-                FieldSpec(
-                    name="status",
-                    type=FieldType(
-                        kind=FieldTypeKind.ENUM,
-                        enum_values=["open", "in_progress", "resolved", "closed"],
-                    ),
-                ),
-            ],
-            state_machine=StateMachineSpec(
-                status_field="status",
-                states=["open", "in_progress", "resolved", "closed"],
-                transitions=[
-                    StateTransition(from_state="open", to_state="in_progress"),
-                    StateTransition(from_state="in_progress", to_state="resolved"),
-                    StateTransition(from_state="resolved", to_state="closed"),
-                ],
-            ),
-        )
+    def test_invalid_transition_flows(self, ticket_entity_with_state_machine: EntitySpec) -> None:
+        app = _app("support", ticket_entity_with_state_machine)
+        flows = generate_state_machine_flows(ticket_entity_with_state_machine, app)
+        assert len(flows) >= 3  # 3 valid transitions plus some invalid
 
-    @pytest.fixture
-    def ticket_appspec(self, ticket_entity_with_state_machine: EntitySpec) -> AppSpec:
-        """Create AppSpec with ticket entity."""
-        return AppSpec(
-            name="support",
-            title="Support App",
-            domain=DomainSpec(entities=[ticket_entity_with_state_machine]),
-            surfaces=[
-                SurfaceSpec(
-                    name="ticket_list",
-                    entity_ref="Ticket",
-                    mode=SurfaceMode.LIST,
-                ),
-            ],
-        )
+        invalid_flows = [f for f in flows if "transition_invalid" in f.id]
+        assert len(invalid_flows) >= 1
+        assert "invalid_transition" in invalid_flows[0].tags
 
-    def test_generate_valid_transition_flows(
-        self, ticket_entity_with_state_machine: EntitySpec, ticket_appspec: AppSpec
+        assert_steps = _asserts(invalid_flows[0])
+        assert len(assert_steps) >= 1
+        assert assert_steps[0].assertion.kind == FlowAssertionKind.STATE_TRANSITION_BLOCKED
+
+    def test_unguarded_transition_emits_anonymous_flow(
+        self, ticket_entity_with_state_machine: EntitySpec
     ) -> None:
-        """Test generating flows for valid state transitions."""
-        flows = generate_state_machine_flows(ticket_entity_with_state_machine, ticket_appspec)
+        """Valid, non-role-guarded transitions emit a plain flow (no user_role)."""
+        app = _app("support", ticket_entity_with_state_machine)
+        flows = generate_state_machine_flows(ticket_entity_with_state_machine, app)
 
-        # Should have flows for valid transitions (3) and some invalid (varies)
-        assert len(flows) >= 3
-
-        # Check for valid transition flow (ID format: Ticket_transition_open_to_in_progress)
         valid_flow = next(
-            (
-                f
-                for f in flows
-                if "transition_open_to_in_progress" in f.id and "invalid" not in f.id
-            ),
-            None,
+            (f for f in flows if f.id == "Ticket_transition_open_to_in_progress"), None
         )
         assert valid_flow is not None
         assert valid_flow.entity == "Ticket"
         assert "state_machine" in valid_flow.tags
         assert "transition" in valid_flow.tags
-
-    def test_generate_invalid_transition_flows(
-        self, ticket_entity_with_state_machine: EntitySpec, ticket_appspec: AppSpec
-    ) -> None:
-        """Test generating flows for invalid state transitions."""
-        flows = generate_state_machine_flows(ticket_entity_with_state_machine, ticket_appspec)
-
-        # Check for invalid transition flow
-        invalid_flows = [f for f in flows if "transition_invalid" in f.id]
-        assert len(invalid_flows) >= 1
-
-        invalid_flow = invalid_flows[0]
-        assert "invalid_transition" in invalid_flow.tags
-
-        # Should assert transition was blocked
-        assert_steps = [s for s in invalid_flow.steps if s.kind == FlowStepKind.ASSERT]
-        assert len(assert_steps) >= 1
-        assert assert_steps[0].assertion.kind == FlowAssertionKind.STATE_TRANSITION_BLOCKED
-
-    def test_no_flows_for_entity_without_state_machine(
-        self, task_entity: EntitySpec, simple_appspec: AppSpec
-    ) -> None:
-        """Test that no flows are generated for entity without state machine."""
-        flows = generate_state_machine_flows(task_entity, simple_appspec)
-        assert flows == []
-
-    def test_unguarded_transition_emits_anonymous_flow(
-        self, ticket_entity_with_state_machine: EntitySpec, ticket_appspec: AppSpec
-    ) -> None:
-        """Non-role-guarded transitions still emit a plain flow (no user_role)."""
-        flows = generate_state_machine_flows(ticket_entity_with_state_machine, ticket_appspec)
-
-        valid_flow = next(
-            (f for f in flows if f.id == "Ticket_transition_open_to_in_progress"),
-            None,
-        )
-        assert valid_flow is not None
-        # Unguarded path: precondition carries only the state fixture, no role.
         assert valid_flow.preconditions is not None
         assert valid_flow.preconditions.user_role is None
         assert valid_flow.preconditions.fixtures == ["Ticket_state_open"]
-        # No skip marker on a real flow.
         assert "skip:no-persona" not in valid_flow.tags
         assert len(valid_flow.steps) > 0
-
-    @pytest.fixture
-    def role_guarded_ticket_entity(self) -> EntitySpec:
-        """Ticket entity whose transition is gated by role(agent)."""
-        return EntitySpec(
-            name="Ticket",
-            title="Support Ticket",
-            fields=[
-                FieldSpec(
-                    name="id",
-                    type=FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                FieldSpec(
-                    name="title",
-                    type=FieldType(kind=FieldTypeKind.STR, max_length=200),
-                    modifiers=[FieldModifier.REQUIRED],
-                ),
-                FieldSpec(
-                    name="status",
-                    type=FieldType(
-                        kind=FieldTypeKind.ENUM,
-                        enum_values=["open", "in_progress"],
-                    ),
-                ),
-            ],
-            state_machine=StateMachineSpec(
-                status_field="status",
-                states=["open", "in_progress"],
-                transitions=[
-                    StateTransition(
-                        from_state="open",
-                        to_state="in_progress",
-                        guards=[TransitionGuard(requires_role="agent")],
-                    ),
-                ],
-            ),
-        )
 
     def test_role_guarded_transition_with_matching_persona(
         self, role_guarded_ticket_entity: EntitySpec
     ) -> None:
         """A role-guarded transition resolves to a persona-scoped flow."""
-        appspec = AppSpec(
-            name="support",
-            title="Support App",
-            domain=DomainSpec(entities=[role_guarded_ticket_entity]),
-            surfaces=[
-                SurfaceSpec(
-                    name="ticket_list",
-                    entity_ref="Ticket",
-                    mode=SurfaceMode.LIST,
-                ),
-            ],
-            personas=[
-                PersonaSpec(id="support_agent", label="Support Agent", role="agent"),
-            ],
+        appspec = _app(
+            "support",
+            role_guarded_ticket_entity,
+            personas=[PersonaSpec(id="support_agent", label="Support Agent", role="agent")],
         )
-
         flows = generate_state_machine_flows(role_guarded_ticket_entity, appspec)
 
-        # The role-guarded transition should produce a persona-scoped flow.
         role_flow = next(
             (f for f in flows if f.id == "Ticket_transition_open_to_in_progress_as_support_agent"),
             None,
@@ -684,315 +499,90 @@ class TestStateMachineFlowGeneration:
         assert role_flow.preconditions.authenticated is True
         assert role_flow.preconditions.fixtures == ["Ticket_state_open"]
         assert "skip:no-persona" not in role_flow.tags
-        # The transition is not silently dropped — a real flow with steps exists.
         assert len(role_flow.steps) > 0
 
     def test_role_guarded_transition_without_persona_emits_stub_and_warns(
         self, role_guarded_ticket_entity: EntitySpec
     ) -> None:
         """A role-guarded transition with no matching persona stubs + warns."""
-        appspec = AppSpec(
-            name="support",
-            title="Support App",
-            domain=DomainSpec(entities=[role_guarded_ticket_entity]),
-            surfaces=[
-                SurfaceSpec(
-                    name="ticket_list",
-                    entity_ref="Ticket",
-                    mode=SurfaceMode.LIST,
-                ),
-            ],
-            # No persona carries role "agent".
-            personas=[
-                PersonaSpec(id="customer", label="Customer", role="customer"),
-            ],
+        appspec = _app(
+            "support",
+            role_guarded_ticket_entity,
+            personas=[PersonaSpec(id="customer", label="Customer", role="customer")],
         )
 
         with pytest.warns(UserWarning, match="role-guarded transition"):
             flows = generate_state_machine_flows(role_guarded_ticket_entity, appspec)
 
-        # The transition is NOT silently dropped — a skip-marked stub exists.
         stub = next((f for f in flows if "skip:no-persona" in f.tags), None)
         assert stub is not None
         assert stub.id == "Ticket_transition_open_to_in_progress_skipped_no_persona"
         assert stub.entity == "Ticket"
-        assert stub.steps == []  # Stub has no executable steps.
+        assert stub.steps == []
         assert "state_machine" in stub.tags
-        # No persona-scoped flow was emitted for this transition.
         assert not any(f.id.endswith("_as_customer") for f in flows)
 
 
 class TestComputedFieldFlowGeneration:
     """Tests for computed field verification flow generation."""
 
-    @pytest.fixture
-    def invoice_entity_with_computed(self) -> EntitySpec:
-        """Create an Invoice entity with computed fields for testing."""
-        return EntitySpec(
-            name="Invoice",
-            title="Invoice",
-            fields=[
-                FieldSpec(
-                    name="id",
-                    type=FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                FieldSpec(
-                    name="number",
-                    type=FieldType(kind=FieldTypeKind.STR, max_length=50),
-                    modifiers=[FieldModifier.REQUIRED],
-                ),
-            ],
-            computed_fields=[
-                ComputedFieldSpec(
-                    name="item_count",
-                    expression=AggregateCall(
-                        function=AggregateFunction.COUNT,
-                        field=FieldReference(path=["line_items"]),
-                    ),
-                ),
-                ComputedFieldSpec(
-                    name="total",
-                    expression=AggregateCall(
-                        function=AggregateFunction.SUM,
-                        field=FieldReference(path=["line_items", "amount"]),
-                    ),
-                ),
-            ],
-        )
-
-    @pytest.fixture
-    def invoice_appspec(self, invoice_entity_with_computed: EntitySpec) -> AppSpec:
-        """Create AppSpec with invoice entity."""
-        return AppSpec(
-            name="billing",
-            title="Billing App",
-            domain=DomainSpec(entities=[invoice_entity_with_computed]),
-            surfaces=[
-                SurfaceSpec(
-                    name="invoice_list",
-                    entity_ref="Invoice",
-                    mode=SurfaceMode.LIST,
-                ),
-            ],
-        )
-
-    def test_generate_computed_field_flows(
-        self, invoice_entity_with_computed: EntitySpec, invoice_appspec: AppSpec
-    ) -> None:
-        """Generate computed-field flows — flow per field + COMPUTED_VALUE assertion.
-
-        Combined: computed_field_flow_asserts_value.
-        """
-        flows = generate_computed_field_flows(invoice_entity_with_computed, invoice_appspec)
-
-        # Should have one flow per computed field
+    def test_generate_computed_field_flows(self, invoice_entity_with_computed: EntitySpec) -> None:
+        """Flow per computed field + COMPUTED_VALUE assertion."""
+        app = _app("billing", invoice_entity_with_computed)
+        flows = generate_computed_field_flows(invoice_entity_with_computed, app)
         assert len(flows) == 2
 
-        # Check for item_count flow
         item_count_flow = next((f for f in flows if "item_count" in f.id), None)
         assert item_count_flow is not None
         assert item_count_flow.entity == "Invoice"
         assert "computed" in item_count_flow.tags
+        assert next((f for f in flows if "total" in f.id), None) is not None
 
-        # Check for total flow
-        total_flow = next((f for f in flows if "total" in f.id), None)
-        assert total_flow is not None
-
-        # Each flow should have COMPUTED_VALUE assertion
-        first_flow = flows[0]
-        assert_steps = [s for s in first_flow.steps if s.kind == FlowStepKind.ASSERT]
-        assert len(assert_steps) >= 1
-        computed_value_assert = next(
-            (s for s in assert_steps if s.assertion.kind == FlowAssertionKind.COMPUTED_VALUE),
-            None,
-        )
-        assert computed_value_assert is not None
-
-    def test_no_flows_for_entity_without_computed(
-        self, task_entity: EntitySpec, simple_appspec: AppSpec
-    ) -> None:
-        """Test that no flows are generated for entity without computed fields."""
-        flows = generate_computed_field_flows(task_entity, simple_appspec)
-        assert flows == []
+        assert any(s.assertion.kind == FlowAssertionKind.COMPUTED_VALUE for s in _asserts(flows[0]))
 
 
 class TestAccessControlFlowGeneration:
     """Tests for access control flow generation."""
 
-    @pytest.fixture
-    def document_entity_with_access(self) -> EntitySpec:
-        """Create a Document entity with access rules for testing."""
-        return EntitySpec(
-            name="Document",
-            title="Document",
-            fields=[
-                FieldSpec(
-                    name="id",
-                    type=FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                FieldSpec(
-                    name="title",
-                    type=FieldType(kind=FieldTypeKind.STR, max_length=200),
-                    modifiers=[FieldModifier.REQUIRED],
-                ),
-            ],
-            access=AccessSpec(
-                permissions=[
-                    PermissionRule(operation=PermissionKind.CREATE, require_auth=True),
-                    PermissionRule(operation=PermissionKind.UPDATE, require_auth=True),
-                    PermissionRule(operation=PermissionKind.DELETE, require_auth=True),
-                ],
-            ),
-        )
+    def test_generate_access_control_flows(self, document_entity_with_access: EntitySpec) -> None:
+        """Allowed/denied pair structure + assertions."""
+        app = _app("docs", document_entity_with_access)
+        flows = generate_access_control_flows(document_entity_with_access, app)
+        assert len(flows) >= 3  # at least one pair per operation
 
-    @pytest.fixture
-    def document_appspec(self, document_entity_with_access: EntitySpec) -> AppSpec:
-        """Create AppSpec with document entity."""
-        return AppSpec(
-            name="docs",
-            title="Document App",
-            domain=DomainSpec(entities=[document_entity_with_access]),
-            surfaces=[
-                SurfaceSpec(
-                    name="document_list",
-                    entity_ref="Document",
-                    mode=SurfaceMode.LIST,
-                ),
-            ],
-        )
-
-    def test_generate_access_control_flows(
-        self, document_entity_with_access: EntitySpec, document_appspec: AppSpec
-    ) -> None:
-        """Generate access control flows — allowed/denied pair structure + assertions.
-
-        Combined: access_allowed_flow_structure, access_denied_flow_structure.
-        """
-        flows = generate_access_control_flows(document_entity_with_access, document_appspec)
-
-        # Should have flows for allowed and denied for each permission
-        assert len(flows) >= 3  # At least one pair per operation
-
-        allowed_flows = [f for f in flows if "_allowed" in f.id]
-        assert len(allowed_flows) >= 1
-        denied_flows = [f for f in flows if "_denied" in f.id]
-        assert len(denied_flows) >= 1
-
-        # Allowed flow structure
         allowed_flow = next((f for f in flows if "create_allowed" in f.id), None)
         assert allowed_flow is not None
         assert allowed_flow.priority == FlowPriority.HIGH
         assert allowed_flow.preconditions is not None
         assert allowed_flow.preconditions.authenticated is True
         assert "access_control" in allowed_flow.tags
-        assert_steps = [s for s in allowed_flow.steps if s.kind == FlowStepKind.ASSERT]
-        assert len(assert_steps) >= 1
-        assert assert_steps[0].assertion.kind == FlowAssertionKind.PERMISSION_GRANTED
+        allowed_asserts = _asserts(allowed_flow)
+        assert len(allowed_asserts) >= 1
+        assert allowed_asserts[0].assertion.kind == FlowAssertionKind.PERMISSION_GRANTED
 
-        # Denied flow structure
         denied_flow = next((f for f in flows if "_denied_anon" in f.id), None)
         assert denied_flow is not None
         assert denied_flow.preconditions is not None
         assert denied_flow.preconditions.authenticated is False
         assert "denied" in denied_flow.tags
-        denied_assert_steps = [s for s in denied_flow.steps if s.kind == FlowStepKind.ASSERT]
-        assert len(denied_assert_steps) >= 1
-        assert denied_assert_steps[0].assertion.kind == FlowAssertionKind.PERMISSION_DENIED
-
-    def test_no_flows_for_entity_without_access(
-        self, task_entity: EntitySpec, simple_appspec: AppSpec
-    ) -> None:
-        """Test that no flows are generated for entity without access rules."""
-        flows = generate_access_control_flows(task_entity, simple_appspec)
-        assert flows == []
+        denied_asserts = _asserts(denied_flow)
+        assert len(denied_asserts) >= 1
+        assert denied_asserts[0].assertion.kind == FlowAssertionKind.PERMISSION_DENIED
 
 
 class TestReferenceFlowGeneration:
     """Tests for reference integrity flow generation."""
 
-    @pytest.fixture
-    def task_entity_with_ref(self) -> EntitySpec:
-        """Create a Task entity with a ref field for testing."""
-        return EntitySpec(
-            name="Task",
-            title="Task",
-            fields=[
-                FieldSpec(
-                    name="id",
-                    type=FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                FieldSpec(
-                    name="title",
-                    type=FieldType(kind=FieldTypeKind.STR, max_length=200),
-                    modifiers=[FieldModifier.REQUIRED],
-                ),
-                FieldSpec(
-                    name="project_id",
-                    type=FieldType(kind=FieldTypeKind.REF, ref_entity="Project"),
-                    modifiers=[FieldModifier.REQUIRED],
-                ),
-            ],
+    def test_generate_reference_flows(self, task_entity_with_ref: EntitySpec) -> None:
+        """Valid/invalid pair, fixture refs, fake UUIDs."""
+        project = _entity("Project", _req_str("name"))
+        app = _app("projects", task_entity_with_ref, project)
+        app.surfaces.append(
+            SurfaceSpec(name="task_create", entity_ref="Task", mode=SurfaceMode.CREATE)
         )
-
-    @pytest.fixture
-    def project_entity(self) -> EntitySpec:
-        """Create a Project entity for ref target."""
-        return EntitySpec(
-            name="Project",
-            title="Project",
-            fields=[
-                FieldSpec(
-                    name="id",
-                    type=FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                FieldSpec(
-                    name="name",
-                    type=FieldType(kind=FieldTypeKind.STR, max_length=200),
-                    modifiers=[FieldModifier.REQUIRED],
-                ),
-            ],
-        )
-
-    @pytest.fixture
-    def task_ref_appspec(
-        self, task_entity_with_ref: EntitySpec, project_entity: EntitySpec
-    ) -> AppSpec:
-        """Create AppSpec with task and project entities."""
-        return AppSpec(
-            name="projects",
-            title="Project Management",
-            domain=DomainSpec(entities=[task_entity_with_ref, project_entity]),
-            surfaces=[
-                SurfaceSpec(
-                    name="task_list",
-                    entity_ref="Task",
-                    mode=SurfaceMode.LIST,
-                ),
-                SurfaceSpec(
-                    name="task_create",
-                    entity_ref="Task",
-                    mode=SurfaceMode.CREATE,
-                ),
-            ],
-        )
-
-    def test_generate_reference_flows(
-        self, task_entity_with_ref: EntitySpec, task_ref_appspec: AppSpec
-    ) -> None:
-        """Generate reference flows — valid/invalid pair, fixture refs, fake UUIDs.
-
-        Combined: valid_ref_flow_uses_fixture, invalid_ref_flow_uses_fake_uuid.
-        """
-        flows = generate_reference_flows(task_entity_with_ref, task_ref_appspec)
-
-        # Should have valid and invalid ref flows
+        flows = generate_reference_flows(task_entity_with_ref, app)
         assert len(flows) == 2
 
-        # Valid ref flow — uses fixture
         valid_flow = next((f for f in flows if "_valid" in f.id), None)
         assert valid_flow is not None
         assert valid_flow.entity == "Task"
@@ -1001,122 +591,48 @@ class TestReferenceFlowGeneration:
         assert valid_flow.priority == FlowPriority.HIGH
         assert valid_flow.preconditions is not None
         assert "Project_valid" in valid_flow.preconditions.fixtures
-        fill_steps = [s for s in valid_flow.steps if s.kind == FlowStepKind.FILL and s.fixture_ref]
-        assert len(fill_steps) >= 1
-        valid_asserts = [s for s in valid_flow.steps if s.kind == FlowStepKind.ASSERT]
-        ref_valid_assert = next(
-            (s for s in valid_asserts if s.assertion.kind == FlowAssertionKind.REF_VALID),
-            None,
-        )
-        assert ref_valid_assert is not None
+        assert [s for s in valid_flow.steps if s.kind == FlowStepKind.FILL and s.fixture_ref]
+        assert any(s.assertion.kind == FlowAssertionKind.REF_VALID for s in _asserts(valid_flow))
 
-        # Invalid ref flow — fake UUID, REF_INVALID assertion
         invalid_flow = next((f for f in flows if "_invalid" in f.id), None)
         assert invalid_flow is not None
         assert "invalid" in invalid_flow.tags
         assert invalid_flow.priority == FlowPriority.MEDIUM
-        invalid_fills = [
+        assert [
             s
             for s in invalid_flow.steps
             if s.kind == FlowStepKind.FILL and s.value and "00000000" in s.value
         ]
-        assert len(invalid_fills) >= 1
-        invalid_asserts = [s for s in invalid_flow.steps if s.kind == FlowStepKind.ASSERT]
-        ref_invalid_assert = next(
-            (s for s in invalid_asserts if s.assertion.kind == FlowAssertionKind.REF_INVALID),
-            None,
+        assert any(
+            s.assertion.kind == FlowAssertionKind.REF_INVALID for s in _asserts(invalid_flow)
         )
-        assert ref_invalid_assert is not None
 
-    def test_no_flows_for_entity_without_refs(
-        self, task_entity: EntitySpec, simple_appspec: AppSpec
-    ) -> None:
-        """Test that no flows are generated for entity without ref fields."""
-        flows = generate_reference_flows(task_entity, simple_appspec)
-        assert flows == []
+
+@pytest.mark.parametrize(
+    "generator",
+    [
+        generate_state_machine_flows,
+        generate_computed_field_flows,
+        generate_access_control_flows,
+        generate_reference_flows,
+    ],
+    ids=["state_machine", "computed", "access_control", "reference"],
+)
+def test_no_flows_for_entity_without_feature(
+    generator: Any, task_entity: EntitySpec, simple_appspec: AppSpec
+) -> None:
+    """A plain entity yields no state-machine/computed/access/ref flows."""
+    assert generator(task_entity, simple_appspec) == []
 
 
 class TestE2ETestSpecWithV013Features:
     """Tests for E2ETestSpec generation with v0.13.0 features."""
 
-    @pytest.fixture
-    def full_featured_appspec(self) -> AppSpec:
-        """Create AppSpec with all v0.13.0 features."""
-        ticket = EntitySpec(
-            name="Ticket",
-            title="Ticket",
-            fields=[
-                FieldSpec(
-                    name="id",
-                    type=FieldType(kind=FieldTypeKind.UUID),
-                    modifiers=[FieldModifier.PK],
-                ),
-                FieldSpec(
-                    name="title",
-                    type=FieldType(kind=FieldTypeKind.STR, max_length=200),
-                    modifiers=[FieldModifier.REQUIRED],
-                ),
-                FieldSpec(
-                    name="status",
-                    type=FieldType(
-                        kind=FieldTypeKind.ENUM,
-                        enum_values=["open", "closed"],
-                    ),
-                ),
-            ],
-            state_machine=StateMachineSpec(
-                status_field="status",
-                states=["open", "closed"],
-                transitions=[StateTransition(from_state="open", to_state="closed")],
-            ),
-            computed_fields=[
-                ComputedFieldSpec(
-                    name="comment_count",
-                    expression=AggregateCall(
-                        function=AggregateFunction.COUNT,
-                        field=FieldReference(path=["comments"]),
-                    ),
-                ),
-            ],
-            access=AccessSpec(
-                permissions=[
-                    PermissionRule(operation=PermissionKind.CREATE, require_auth=True),
-                ],
-            ),
-        )
-
-        return AppSpec(
-            name="support",
-            title="Support App",
-            domain=DomainSpec(entities=[ticket]),
-            surfaces=[
-                SurfaceSpec(
-                    name="ticket_list",
-                    entity_ref="Ticket",
-                    mode=SurfaceMode.LIST,
-                ),
-            ],
-        )
-
     def test_generate_testspec_with_all_features(self, full_featured_appspec: AppSpec) -> None:
-        """Test that testspec includes all v0.13.0 flow types."""
+        """Testspec includes all v0.13.0 flow types, all marked auto-generated."""
         testspec = generate_e2e_testspec(full_featured_appspec)
 
-        # Should have state machine flows
-        sm_flows = [f for f in testspec.flows if "state_machine" in f.tags]
-        assert len(sm_flows) >= 1
-
-        # Should have computed field flows
-        computed_flows = [f for f in testspec.flows if "computed" in f.tags]
-        assert len(computed_flows) >= 1
-
-        # Should have access control flows
-        access_flows = [f for f in testspec.flows if "access_control" in f.tags]
-        assert len(access_flows) >= 1
-
-    def test_all_auto_generated_flows_marked(self, full_featured_appspec: AppSpec) -> None:
-        """Test that all generated flows are marked as auto-generated."""
-        testspec = generate_e2e_testspec(full_featured_appspec)
-
+        for tag in ("state_machine", "computed", "access_control"):
+            assert [f for f in testspec.flows if tag in f.tags], tag
         for flow in testspec.flows:
             assert flow.auto_generated is True, f"Flow {flow.id} should be auto-generated"

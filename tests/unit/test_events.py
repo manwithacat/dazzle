@@ -20,6 +20,7 @@ import pytest
 
 from dazzle.http.events import (
     ConsumerConfig,
+    ConsumerNotFoundError,
     DevBusMemory,
     EventEnvelope,
     EventFramework,
@@ -79,7 +80,7 @@ class TestEventEnvelope:
     """Tests for EventEnvelope creation and serialization."""
 
     def test_create_basic_envelope(self) -> None:
-        """Test creating a basic event envelope."""
+        """Defaults on create, and explicit correlation/causation ids are kept."""
         envelope = EventEnvelope.create(
             event_type="app.Order.created",
             key="order-123",
@@ -93,21 +94,15 @@ class TestEventEnvelope:
         assert isinstance(envelope.event_id, UUID)
         assert isinstance(envelope.timestamp, datetime)
 
-    def test_create_with_correlation(self) -> None:
-        """Test creating envelope with correlation and causation IDs."""
-        correlation_id = uuid4()
-        causation_id = uuid4()
-
-        envelope = EventEnvelope.create(
+        correlation_id, causation_id = uuid4(), uuid4()
+        linked = EventEnvelope.create(
             event_type="app.Order.shipped",
             key="order-123",
-            payload={"status": "shipped"},
+            payload={},
             correlation_id=correlation_id,
             causation_id=causation_id,
         )
-
-        assert envelope.correlation_id == correlation_id
-        assert envelope.causation_id == causation_id
+        assert (linked.correlation_id, linked.causation_id) == (correlation_id, causation_id)
 
     def test_event_type_extraction_properties(self) -> None:
         """Topic, action, and entity_name extracted from event_type.
@@ -172,36 +167,21 @@ class TestEventEnvelope:
         assert correlated.event_id == original.event_id
         assert correlated.event_type == original.event_type
 
-    def test_caused_by(self) -> None:
-        """Test creating event that is caused by another event."""
+    @pytest.mark.parametrize(
+        "parent_correlation",
+        [
+            pytest.param(None, id="parent-uncorrelated-uses-parent-event-id"),
+            pytest.param(uuid4(), id="parent-correlated-inherited"),
+        ],
+    )
+    def test_caused_by(self, parent_correlation: UUID | None) -> None:
+        """caused_by sets causation to the parent and inherits (or starts) its correlation."""
         parent = EventEnvelope.create(
             event_type="app.Order.created",
             key="order-123",
             payload={},
+            correlation_id=parent_correlation,
         )
-
-        child = EventEnvelope.create(
-            event_type="app.Email.sent",
-            key="email-789",
-            payload={"template": "order_confirmation"},
-        )
-
-        caused = child.caused_by(parent)
-
-        # Correlation should be parent's event_id (since parent has no correlation)
-        assert caused.correlation_id == parent.event_id
-        assert caused.causation_id == parent.event_id
-
-    def test_caused_by_with_existing_correlation(self) -> None:
-        """Test caused_by preserves parent's correlation ID."""
-        correlation_id = uuid4()
-        parent = EventEnvelope.create(
-            event_type="app.Order.created",
-            key="order-123",
-            payload={},
-            correlation_id=correlation_id,
-        )
-
         child = EventEnvelope.create(
             event_type="app.Email.sent",
             key="email-789",
@@ -210,8 +190,7 @@ class TestEventEnvelope:
 
         caused = child.caused_by(parent)
 
-        # Should inherit parent's correlation
-        assert caused.correlation_id == correlation_id
+        assert caused.correlation_id == (parent_correlation or parent.event_id)
         assert caused.causation_id == parent.event_id
 
 
@@ -230,13 +209,17 @@ class TestDevBusMemory:
 
     @pytest.mark.asyncio
     async def test_publish_and_subscribe(self, bus: DevBusMemory) -> None:
-        """Test basic publish and subscribe."""
-        received: list[EventEnvelope] = []
+        """Every consumer group gets the published event once; processing acks it."""
+        received: dict[str, list[EventEnvelope]] = {"group1": [], "group2": []}
 
-        async def handler(event: EventEnvelope) -> None:
-            received.append(event)
+        def make_handler(group: str) -> Any:
+            async def handler(event: EventEnvelope) -> None:
+                received[group].append(event)
 
-        await bus.subscribe("app.Order", "test_group", handler)
+            return handler
+
+        for group in received:
+            await bus.subscribe("app.Order", group, make_handler(group))
 
         envelope = EventEnvelope.create(
             event_type="app.Order.created",
@@ -245,61 +228,17 @@ class TestDevBusMemory:
         )
         await bus.publish("app.Order", envelope)
 
-        # Process the event
-        await bus.process_pending("app.Order", "test_group")
+        for group in received:
+            await bus.process_pending("app.Order", group)
 
-        assert len(received) == 1
-        assert received[0].event_id == envelope.event_id
-
-    @pytest.mark.asyncio
-    async def test_multiple_consumers(self, bus: DevBusMemory) -> None:
-        """Test multiple consumer groups receive same event."""
-        group1_received: list[EventEnvelope] = []
-        group2_received: list[EventEnvelope] = []
-
-        async def handler1(event: EventEnvelope) -> None:
-            group1_received.append(event)
-
-        async def handler2(event: EventEnvelope) -> None:
-            group2_received.append(event)
-
-        await bus.subscribe("app.Order", "group1", handler1)
-        await bus.subscribe("app.Order", "group2", handler2)
-
-        envelope = EventEnvelope.create(
-            event_type="app.Order.created",
-            key="order-123",
-            payload={},
-        )
-        await bus.publish("app.Order", envelope)
-
-        await bus.process_pending("app.Order", "group1")
-        await bus.process_pending("app.Order", "group2")
-
-        assert len(group1_received) == 1
-        assert len(group2_received) == 1
-
-    @pytest.mark.asyncio
-    async def test_ack_and_nack(self, bus: DevBusMemory) -> None:
-        """Test acknowledging and nacking events."""
-        received: list[EventEnvelope] = []
-
-        async def handler(event: EventEnvelope) -> None:
-            received.append(event)
-
-        await bus.subscribe("app.Order", "test_group", handler)
-
-        envelope = EventEnvelope.create(
-            event_type="app.Order.created",
-            key="order-123",
-            payload={},
-        )
-        await bus.publish("app.Order", envelope)
-        await bus.process_pending("app.Order", "test_group")
-
-        # Event should already be acked by process_pending
-        status = await bus.get_consumer_status("app.Order", "test_group")
-        assert status.pending_count == 0
+        assert {g: [e.event_id for e in evs] for g, evs in received.items()} == {
+            "group1": [envelope.event_id],
+            "group2": [envelope.event_id],
+        }
+        # process_pending acks what it handled
+        for group in received:
+            status = await bus.get_consumer_status("app.Order", group)
+            assert status.pending_count == 0
 
     @pytest.mark.asyncio
     async def test_nack_to_dlq(self, bus: DevBusMemory) -> None:
@@ -332,71 +271,34 @@ class TestDevBusMemory:
         assert len(dlq_events) == 1
 
     @pytest.mark.asyncio
-    async def test_replay_events(self, bus: DevBusMemory) -> None:
-        """Test replaying events from topic."""
-        for i in range(5):
-            envelope = EventEnvelope.create(
-                event_type="app.Order.created",
-                key=f"order-{i}",
-                payload={"sequence": i},
-            )
-            await bus.publish("app.Order", envelope)
-
-        # Replay all events
-        replayed: list[EventEnvelope] = []
-        async for event in bus.replay("app.Order"):
-            replayed.append(event)
-
-        assert len(replayed) == 5
-
-    @pytest.mark.asyncio
-    async def test_replay_with_time_filter(self, bus: DevBusMemory) -> None:
-        """Test replaying events with time filter."""
+    async def test_replay_and_list_topics(self, bus: DevBusMemory) -> None:
+        """Replay returns all events in order, honours from_timestamp; topics are listed."""
         now = datetime.now(UTC)
-
-        # Create events at different times
-        old_envelope = EventEnvelope.create(
-            event_type="app.Order.created",
-            key="old-order",
-            payload={},
-        )
-        # Manually set timestamp
-        object.__setattr__(old_envelope, "timestamp", now - timedelta(hours=2))
-        await bus.publish("app.Order", old_envelope)
-
-        new_envelope = EventEnvelope.create(
-            event_type="app.Order.created",
-            key="new-order",
-            payload={},
-        )
-        await bus.publish("app.Order", new_envelope)
-
-        # Replay only recent events
-        replayed: list[EventEnvelope] = []
-        async for event in bus.replay("app.Order", from_timestamp=now - timedelta(hours=1)):
-            replayed.append(event)
-
-        assert len(replayed) == 1
-        assert replayed[0].key == "new-order"
-
-    @pytest.mark.asyncio
-    async def test_list_topics(self, bus: DevBusMemory) -> None:
-        """Test listing topics."""
-        await bus.publish(
-            "app.Order",
-            EventEnvelope.create(event_type="app.Order.created", key="1", payload={}),
-        )
+        old = EventEnvelope.create(event_type="app.Order.created", key="old", payload={})
+        object.__setattr__(old, "timestamp", now - timedelta(hours=2))
+        await bus.publish("app.Order", old)
+        for i in range(2):
+            await bus.publish(
+                "app.Order",
+                EventEnvelope.create(event_type="app.Order.created", key=f"new-{i}", payload={}),
+            )
         await bus.publish(
             "app.Shipment",
-            EventEnvelope.create(event_type="app.Shipment.created", key="2", payload={}),
+            EventEnvelope.create(event_type="app.Shipment.created", key="s", payload={}),
         )
 
-        topics = await bus.list_topics()
-        assert set(topics) == {"app.Order", "app.Shipment"}
+        all_keys = [e.key async for e in bus.replay("app.Order")]
+        recent_keys = [
+            e.key async for e in bus.replay("app.Order", from_timestamp=now - timedelta(hours=1))
+        ]
+
+        assert all_keys == ["old", "new-0", "new-1"]
+        assert recent_keys == ["new-0", "new-1"]
+        assert set(await bus.list_topics()) == {"app.Order", "app.Shipment"}
 
     @pytest.mark.asyncio
     async def test_unsubscribe(self, bus: DevBusMemory) -> None:
-        """Test unsubscribing from topic."""
+        """An unsubscribed group is gone: it receives nothing and cannot be processed."""
         received: list[EventEnvelope] = []
 
         async def handler(event: EventEnvelope) -> None:
@@ -410,13 +312,11 @@ class TestDevBusMemory:
             EventEnvelope.create(event_type="app.Order.created", key="1", payload={}),
         )
 
-        # Can't process pending for unsubscribed consumer
-        # Just verify no events were received
-        assert len(received) == 0
+        with pytest.raises(ConsumerNotFoundError):
+            await bus.process_pending("app.Order", "test_group")
+        assert received == []
 
 
-# =============================================================================
-# EventOutbox Tests
 # =============================================================================
 
 
