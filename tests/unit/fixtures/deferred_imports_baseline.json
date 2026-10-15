@@ -222,7 +222,6 @@
   "src/dazzle/core/ir/triples.py": 5,
   "src/dazzle/mcp/_graph_access.py": 1,
   "src/dazzle/cli/project.py": 1,
-  "src/dazzle/testing/ux/reconciler.py": 1,
   "src/dazzle/db/schema_snapshot.py": 1,
   "src/dazzle/cli/ux.py": 20,
   "src/dazzle/testing/session_manager.py": 1,

@@ -9161,20 +9161,6 @@
     "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
   },
   {
-    "file": "tests/unit/test_reconciler.py",
-    "class": "TestReconcileDetailView",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_detail_edit_missing",
-      "test_detail_delete_missing",
-      "test_detail_transition_missing"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_related_conversation_tone.py",
     "class": "(module)",
     "assertion_shape": "('eq', 'eq', 'eq', 'eq', 'eq')",

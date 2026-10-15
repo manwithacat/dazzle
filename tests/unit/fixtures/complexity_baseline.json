@@ -4076,20 +4076,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/core/llm_context.py": {
-    "functions": {
-      "create_llm_instrumentation": 3,
-      "generate_claude_md_adapter": 1,
-      "generate_claude_permissions": 1,
-      "generate_claude_project_context": 2,
-      "generate_copilot_context": 1,
-      "generate_copilot_instructions": 1,
-      "generate_dazzle_primer": 1,
-      "generate_init_agents_md": 2,
-      "generate_llm_context_md": 2
-    },
-    "mi_rank": "A"
-  },
   "dazzle/core/local_snapshots.py": {
     "functions": {
       "CleanReport": 2,
@@ -10795,13 +10781,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/qa/evaluate.py": {
-    "functions": {
-      "build_subagent_prompt": 7,
-      "parse_findings": 9
-    },
-    "mi_rank": "A"
-  },
   "dazzle/qa/hyperpart_dsl_shapes.py": {
     "functions": {
       "PartShape": 2,
@@ -13848,20 +13827,6 @@
       "_get_denied_personas": 2,
       "_get_permitted_personas": 10,
       "generate_inventory": 29
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/testing/ux/reconciler.py": {
-    "functions": {
-      "DSLLever": 1,
-      "Diagnosis": 1,
-      "DiagnosisKind": 1,
-      "_access_lever": 1,
-      "_entity_from_contract": 2,
-      "_field_lever": 1,
-      "_permit_lever": 3,
-      "_triple_label": 2,
-      "reconcile": 31
     },
     "mi_rank": "A"
   },
