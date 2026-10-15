@@ -38,7 +38,6 @@ application — no sidecar or separate management port required.
 | `/_dazzle/events/outbox` | GET | Transactional outbox stats + recent entries | None (all environments) |
 | `/_dazzle/events/dlq` | GET | Dead-letter queue contents | None (all environments) |
 | `/_dazzle/events/dlq/{event_id}/replay` | POST | Re-queue one DLQ event | None (all environments) |
-| `/_dazzle/metrics` | GET | Prometheus scrape endpoint (empty document; no collector wired) | None (all environments) |
 | `/_dazzle/integrations/{name}/retries` | GET | Recent retry attempts (in-process, volatile) | None; only when `integration` blocks declared |
 
 **Gating note:** The `/_dazzle/*` debug and event endpoints are
@@ -66,7 +65,7 @@ expose entity, tables, events, or spec endpoints to public traffic.
 `dazzle perf trace` runs a single instrumented request sequence and writes
 a self-contained SQLite trace file. It is a local developer tool — it
 requires the `perf` optional dependency (`pip install -e ".[perf]"`) and
-does not export to a collector. See [section 5](#5-metrics-traces-and-logs)
+does not export to a collector. See [section 4](#4-metrics-traces-and-logs)
 and [`docs/reference/perf-observability.md`](../reference/perf-observability.md)
 for full usage.
 
@@ -368,66 +367,6 @@ spanned: `dsl.parse`, `predicate.compile`, `aggregate.build_sql`,
 
 See [`docs/reference/perf-observability.md`](../reference/perf-observability.md)
 for complete reference including authenticated traces and MCP usage.
-
-### `MetricsEmitter` → Redis stream
-
-When `REDIS_URL` is configured, Dazzle emits runtime metrics to a Redis
-stream at `dazzle:metrics:stream`. The emitter is fire-and-forget — it
-never blocks request handling. If Redis is unavailable, metrics are
-silently dropped.
-
-**Stream key:** `dazzle:metrics:stream`
-
-**Event shape** (each Redis stream entry):
-```
-name=http_requests_total
-value=1.0
-ts=1716337200.123
-tags={"method":"GET","path":"/invoices","status":"200","instance":"web.1"}
-```
-
-**Metrics emitted by the HTTP middleware:**
-
-| Metric name | Type | Description |
-|---|---|---|
-| `http_requests_total` | counter | One per request; tags: `method`, `path`, `status`, `instance` |
-| `http_latency_ms` | timing | Request duration in ms; same tags |
-| `http_errors_total` | counter | HTTP 4xx/5xx requests; adds `error_class` tag |
-
-Path values are normalised — UUIDs and numeric IDs are replaced with
-`:id` placeholders to avoid cardinality explosion.
-
-**Consuming the stream:**
-
-```python
-import redis
-
-r = redis.from_url(REDIS_URL)
-for msg_id, fields in r.xread({"dazzle:metrics:stream": "0"}, count=100):
-    import json
-    tags = json.loads(fields["tags"]) if fields["tags"] else {}
-    print(fields["name"], fields["value"], tags)
-```
-
-**Integrating a standard observability stack:**
-
-The Redis stream is the integration point for external time-series systems.
-A lightweight bridge reads from `dazzle:metrics:stream` and forwards to
-your chosen backend:
-
-- **Prometheus:** Read the stream and expose it through a pushgateway or
-  exporter (`GET /_dazzle/metrics` carries no series; see below).
-- **Datadog / New Relic / Grafana Cloud:** Read the stream, forward via
-  the provider's ingest API or statsd bridge.
-- **InfluxDB / TimescaleDB:** Read the stream, insert via line protocol.
-
-### `GET /_dazzle/metrics` — Prometheus scrape endpoint
-
-The URL is reserved for a Prometheus scrape (content-type
-`text/plain; version=0.0.4; charset=utf-8`). No metrics collector is wired
-into the runtime, so it always answers HTTP 200 with an empty but valid
-Prometheus document — scrapes succeed with zero series. Use the Redis
-stream above or the OTLP push export below for runtime metrics.
 
 ### OTLP push export
 

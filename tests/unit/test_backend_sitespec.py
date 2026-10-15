@@ -4,8 +4,6 @@ Regression test for issue where sitespec_data parameter was being
 overwritten by config defaults in DazzleBackendApp.__init__.
 """
 
-from unittest.mock import MagicMock, patch
-
 import pytest
 
 # Skip if FastAPI not installed
@@ -99,48 +97,3 @@ class TestDazzleBackendAppSitespec:
         )
 
         assert app_builder._sitespec_data is None
-
-    @patch("dazzle.http.runtime.pg_backend.PostgresBackend")
-    def test_site_routes_registered_when_sitespec_provided(self, mock_pg: MagicMock) -> None:
-        """Test that /_site/* routes are registered when sitespec_data provided."""
-        spec = _create_minimal_appspec()
-
-        sitespec_data = {
-            "version": 1,
-            "brand": {"product_name": "Test"},
-            "pages": [{"route": "/", "type": "landing"}],
-            "legal": {},
-        }
-
-        app_builder = DazzleBackendApp(
-            spec,
-            sitespec_data=sitespec_data,
-            database_url="postgresql://mock/test",
-        )
-        app = app_builder.build()
-
-        # Check that site routes were registered
-        from dazzle.http.runtime.route_validator import route_paths as _route_paths
-
-        paths = _route_paths(app)
-
-        assert "/_site/pages" in paths, "/_site/pages route should be registered"
-        assert "/_site/page/{route:path}" in paths, "/_site/page route should be registered"
-
-    @patch("dazzle.http.runtime.pg_backend.PostgresBackend")
-    def test_site_routes_not_registered_when_no_sitespec(self, mock_pg: MagicMock) -> None:
-        """Test that /_site/* routes are NOT registered when no sitespec_data."""
-        spec = _create_minimal_appspec()
-
-        app_builder = DazzleBackendApp(
-            spec,
-            database_url="postgresql://mock/test",
-        )
-        app = app_builder.build()
-
-        # Check that site routes were NOT registered
-        from dazzle.http.runtime.route_validator import route_paths as _route_paths
-
-        paths = _route_paths(app)
-
-        assert "/_site/pages" not in paths, "/_site/pages should not be registered without sitespec"

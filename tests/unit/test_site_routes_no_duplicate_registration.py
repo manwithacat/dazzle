@@ -42,8 +42,7 @@ def _count_calls(text: str, name: str) -> int:
 class TestSitePageRouteCallSitesUnique:
     def test_create_site_page_routes_called_once(self) -> None:
         """Across the boot wiring (app_factory + subsystems), the page-
-        router factory must be invoked exactly once. system_routes.py
-        keeps the API-only `create_site_routes` call; the page router
+        router factory must be invoked exactly once. The page router
         belongs solely to app_factory.py where the auth/persona/analytics
         context is in scope."""
         files = [
@@ -59,13 +58,3 @@ class TestSitePageRouteCallSitesUnique:
             "intentionally, dedupe the routes the factory registers and "
             "update this gate with the new contract."
         )
-
-    def test_subsystems_keeps_api_router_call(self) -> None:
-        """system_routes.py still registers the API-only `create_site_routes`
-        — that endpoint set (`/api/site/*`) doesn't conflict with the
-        page handlers and is a separate concern."""
-        text = (
-            ROOT / "src" / "dazzle" / "http" / "runtime" / "subsystems" / "system_routes.py"
-        ).read_text()
-        assert "create_site_routes(" in text
-        assert "create_site_page_routes(" not in text

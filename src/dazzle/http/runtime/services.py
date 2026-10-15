@@ -57,10 +57,6 @@ class RuntimeServices:
       ``dazzle.events.framework``) or a ``NullEventFramework`` when
       HLESS is not configured. Renderer code that fires domain
       events reaches for this; rendering-only renderers don't.
-    - ``metrics_emitter`` — push-side surface for metrics emission
-      (the framework's metric-name → Counter adapter). Use when you
-      need to emit a named metric without reaching for the collector
-      directly.
     - ``process_manager`` — the active process / schedule runtime
       (Temporal / event-bus adapter). Extension code that
       starts domain processes reaches for this.
@@ -91,7 +87,6 @@ class RuntimeServices:
     # Typed `Any` to avoid an import cycle at this level — call sites
     # that need the concrete type cast or use TYPE_CHECKING blocks.
     event_framework: Any = None  # EventFramework | NullEventFramework | None
-    metrics_emitter: Any = None  # MetricsEmitter | None
     process_manager: Any = None  # ProcessManager | None
     usage_collector: Any = None  # UsageCollector | None (ADR-0050 first-party usage signal)
     app_spec: ir.AppSpec | None = (

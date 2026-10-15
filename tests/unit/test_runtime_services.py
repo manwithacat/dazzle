@@ -13,7 +13,6 @@ class TestRuntimeServices:
     def test_optional_fields_default_none(self) -> None:
         services = RuntimeServices()
         assert services.event_framework is None
-        assert services.metrics_emitter is None
 
     def test_independent_instances(self) -> None:
         s1 = RuntimeServices()

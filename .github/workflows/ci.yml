@@ -373,7 +373,7 @@ jobs:
         # the parser/validator paths. It MUST fail `dazzle validate`.
         # Same convention as the example-apps `/improve` lane which
         # excludes pra. The remaining fixtures (shapes_validation,
-        # rbac_validation, investigator_smoke) are framework-validation
+        # rbac_validation, …) are framework-validation
         # probes, not user-facing apps.
         for dir in examples/*/ fixtures/*/; do
           if [ -f "${dir}dazzle.toml" ]; then

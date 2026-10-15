@@ -793,14 +793,6 @@ class DazzleBackendApp:
             cookie_name=_i18n_cfg.cookie_name,
         )
 
-        # Metrics middleware (v0.27.0)
-        try:
-            from dazzle.http.runtime.metrics import add_metrics_middleware
-
-            add_metrics_middleware(self._app)
-        except ImportError:
-            pass
-
         # Usage-signal middleware (ADR-0050 Option A, 3a): record heading-action
         # clicks. Raw ASGI (NOT BaseHTTPMiddleware — SSE/streaming-safe, per the
         # csrf.py convention); records after the response when request.state.tenant

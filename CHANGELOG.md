@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Removed
+- **The constant `/_dazzle/metrics` document and the emitter-less metrics middleware removed (ADR-0057, flense ship AE).** `http/runtime/metrics_routes.py` (42 lines) served a fixed one-comment Prometheus document, and `http/runtime/metrics/` (377 lines) mounted a `BaseHTTPMiddleware` on every request whose `MetricsEmitter` was never constructed, so it emitted nothing; the always-`None` `RuntimeServices.metrics_emitter` field, the byte-route allowlist entry, the #1365 router test and the observability guide's Redis-stream and scrape-endpoint sections went with them. No JS, HaTchi-MaXchi, script, CI job or consumer scrapes the URL or imports the package (cyfuture ships its own `services/metrics` copy); OTLP push export (`DAZZLE_OTEL_ENDPOINT`) is the supported metrics path.
+- **The `/_site/*` JSON API removed (ADR-0057, flense ship AE).** `create_site_routes` in `http/runtime/site_routes.py` (`/_site/config`, `/_site/nav`, `/_site/pages`, `/_site/page/{route}`, 100 lines) and its registration in `subsystems/system_routes.py` are gone, with the two registration tests; nothing in the framework, HaTchi-MaXchi or the three consumers fetches those URLs. The server-rendered site pages and the content helpers they share stay.
+- **`/_ops/sse` trimmed to the one stream a workspace uses (ADR-0057, flense ship AE).** `sse_stream.py` loses the `/health`, `/api-calls`, `/analytics`, `/all` and `/stats` routes and their stream types (134 lines): their `ops.*` topics have no publisher since the ops platform went (ADR-0051), and no client connects to them. `/_ops/sse/events` stays because `live: on` workspaces (#1399) render `sse-connect` to it.
+- **`fixtures/investigator_smoke/` removed (ADR-0057, flense ship AE).** Three files (66 lines) for the fitness investigator removed in ship B1; no test, gate or CI step reads them (it had no `dazzle.toml`, so the CI validate loop skipped it). The AGENTS.md fixture list is updated.
+
+### Security
+- **The removed `/_ops/sse/all`, `/api-calls` and `/analytics` streams accepted a client-supplied `tenant_id` and ignored the tenant resolved from the request (ADR-0057, flense ship AE).** With no `tenant_id` at all, `/all` streamed every tenant's entity events to any client whenever a `live: on` workspace had mounted the router. The routes are gone; the one surviving stream, `/_ops/sse/events`, still carries no auth dependency and is the subject of ship AO.
+
 ## [0.117.0] - 2026-10-14
 
 ### Agent Guidance

@@ -5,7 +5,6 @@ Generates FastAPI routes from SiteSpec to serve:
 - Landing pages (/, /about, /pricing)
 - Legal pages (/terms, /privacy)
 - Auth pages (/login, /signup)
-- Site configuration API (/_site/config, /_site/nav)
 """
 
 import logging
@@ -53,110 +52,8 @@ from dazzle.render.navigation_menu import build_site_navigation_menu
 logger = logging.getLogger(__name__)
 
 
-def create_site_routes(
-    sitespec_data: dict[str, Any],
-    project_root: Path | None = None,
-) -> APIRouter:
-    """
-    Create FastAPI routes for site shell pages.
-
-    Args:
-        sitespec_data: SiteSpec as dict (from model_dump or loaded JSON)
-        project_root: Project root for content file loading
-
-    Returns:
-        FastAPI router with site routes
-    """
-    from fastapi import HTTPException
-
-    router = APIRouter(tags=["Site"])
-
-    # Extract key data from sitespec
-    brand = sitespec_data.get("brand", {})
-    layout = sitespec_data.get("layout", {})
-    pages = sitespec_data.get("pages", [])
-    legal = sitespec_data.get("legal", {})
-    integrations = sitespec_data.get("integrations", {})
-
-    # Build navigation data
-    nav_data = layout.get("nav", {})
-    footer_data = layout.get("footer", {})
-
-    # Site configuration endpoint
-    @router.get("/_site/config")
-    async def get_site_config() -> dict[str, Any]:
-        """Get site configuration (brand, layout, integrations)."""
-        return {
-            "brand": brand,
-            "layout": {
-                "theme": layout.get("theme", "saas-default"),
-                "auth": layout.get("auth", {}),
-            },
-            "integrations": integrations,
-        }
-
-    @router.get("/_site/nav")
-    async def get_site_nav() -> dict[str, Any]:
-        """Get navigation data (nav items, footer)."""
-        return {
-            "nav": nav_data,
-            "footer": footer_data,
-        }
-
-    @router.get("/_site/pages")
-    async def list_site_pages() -> dict[str, Any]:
-        """List all site pages with metadata."""
-        page_list = []
-        for page in pages:
-            page_list.append(
-                {
-                    "route": page.get("route"),
-                    "type": page.get("type"),
-                    "title": page.get("title"),
-                }
-            )
-        # Add legal pages
-        if legal.get("terms"):
-            page_list.append(
-                {
-                    "route": legal["terms"].get("route", "/terms"),
-                    "type": "legal",
-                    "title": "Terms of Service",
-                }
-            )
-        if legal.get("privacy"):
-            page_list.append(
-                {
-                    "route": legal["privacy"].get("route", "/privacy"),
-                    "type": "legal",
-                    "title": "Privacy Policy",
-                }
-            )
-        return {"pages": page_list}
-
-    @router.get("/_site/page/{route:path}")
-    async def get_page_data(route: str) -> dict[str, Any]:
-        """Get page data by route."""
-        route_with_slash = f"/{route}" if not route.startswith("/") else route
-
-        # Check pages
-        for page in pages:
-            if page.get("route") == route_with_slash:
-                return _format_page_response(page, project_root)
-
-        # Check legal pages
-        if legal.get("terms") and legal["terms"].get("route") == route_with_slash:
-            return _format_legal_page_response("terms", legal["terms"], project_root)
-        if legal.get("privacy") and legal["privacy"].get("route") == route_with_slash:
-            return _format_legal_page_response("privacy", legal["privacy"], project_root)
-
-        raise HTTPException(status_code=404, detail=f"Page not found: {route_with_slash}")
-
-    return router
-
-
 def _format_page_response(page: dict[str, Any], project_root: Path | None) -> dict[str, Any]:
-    """Format page data for API response."""
+    """Format page data (sections resolved from content files) for rendering."""
     sections = list(page.get("sections", []))
 
     # Resolve section-level markdown sources
@@ -391,8 +288,7 @@ def create_site_page_routes(
     """
     Create FastAPI routes that serve HTML pages directly.
 
-    This is for server-side rendering of site pages using Jinja2 templates.
-    For SPA mode, use create_site_routes() API endpoints instead.
+    This is for server-side rendering of site pages.
 
     When ``get_auth_context`` and ``persona_routes`` are provided, the root
     route (``/``) will redirect authenticated users to their persona's

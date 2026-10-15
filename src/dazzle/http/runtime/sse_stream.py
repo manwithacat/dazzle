@@ -1,15 +1,14 @@
 """
-Server-Sent Events (SSE) streaming infrastructure.
+Server-Sent Events (SSE) live push for `live: on` workspaces (#1399).
 
-Provides SSE endpoints that subscribe to the EventBus and stream
-events to clients in real-time. This leverages the existing Kafka-shaped
-EventBus abstraction (DevBusMemory, KafkaBus) for event delivery.
+Serves ``GET /_ops/sse/events``: subscribes to the entity lifecycle topics
+on the EventBus and streams them to the workspace dashboard
+(``hx-ext="sse" sse-connect``). Mounted only when a workspace declares
+``live: on`` (see ``DazzleBackendApp._wire_sse_live_push``).
 
-Key features:
-- Multiple named streams (health, events, analytics, api_calls)
-- Client-specific subscriptions with filters
-- Automatic reconnection support via Last-Event-ID
-- Tenant-scoped streams for multi-tenant analytics
+- Per-client subscriptions with entity and tenant filters
+- Reconnection support via Last-Event-ID
+- Tenant taken from the request-resolved tenant before the query param
 """
 
 import asyncio
@@ -33,11 +32,7 @@ logger = logging.getLogger(__name__)
 class StreamType(StrEnum):
     """Available SSE stream types."""
 
-    HEALTH = "health"  # System health updates
     EVENTS = "events"  # Entity lifecycle events
-    API_CALLS = "api_calls"  # External API call tracking
-    ANALYTICS = "analytics"  # Tenant analytics events
-    ALL = "all"  # All streams combined
 
 
 @dataclass
@@ -90,10 +85,7 @@ class SSEStreamManager:
 
     # Map stream types to EventBus topics
     STREAM_TOPICS: dict[StreamType, list[str]] = {
-        StreamType.HEALTH: ["ops.health"],
         StreamType.EVENTS: ["entity.created", "entity.updated", "entity.deleted"],
-        StreamType.API_CALLS: ["ops.api_call"],
-        StreamType.ANALYTICS: ["ops.analytics"],
     }
 
     def __init__(
@@ -179,7 +171,7 @@ class SSEStreamManager:
 
             # Route to subscriptions for this stream type
             for sub_id, subscription in list(self._subscriptions.items()):
-                if subscription.stream_type not in (stream_type, StreamType.ALL):
+                if subscription.stream_type != stream_type:
                     continue
 
                 # Apply tenant filter. Compare as strings — the header is a str
@@ -301,17 +293,6 @@ class SSEStreamManager:
         finally:
             self.remove_subscription(subscription_id)
 
-    def get_stats(self) -> dict[str, Any]:
-        """Get stream statistics."""
-        return {
-            "active_subscriptions": len(self._subscriptions),
-            "subscriptions_by_type": {
-                st.value: sum(1 for s in self._subscriptions.values() if s.stream_type == st)
-                for st in StreamType
-            },
-            "running": self._running,
-        }
-
 
 # =============================================================================
 # FastAPI Integration
@@ -320,41 +301,15 @@ class SSEStreamManager:
 
 def create_sse_routes(stream_manager: SSEStreamManager) -> Any:
     """
-    Create FastAPI routes for SSE streaming.
+    Create the ``/_ops/sse/events`` live-push route.
 
     Args:
         stream_manager: SSEStreamManager instance
 
     Returns:
-        FastAPI APIRouter with SSE endpoints
+        FastAPI APIRouter with the live-push endpoint
     """
     router = APIRouter(prefix="/_ops/sse", tags=["SSE Streaming"])
-
-    @router.get("/health")
-    async def stream_health(
-        request: Request,
-        last_event_id: str | None = Header(None, alias="Last-Event-ID"),
-    ) -> StreamingResponse:
-        """
-        Stream health updates via SSE.
-
-        Streams real-time health check results as they occur.
-        Supports reconnection via Last-Event-ID header.
-        """
-        sub_id = stream_manager.create_subscription(
-            stream_type=StreamType.HEALTH,
-            last_event_id=last_event_id,
-        )
-
-        return StreamingResponse(
-            stream_manager.stream(sub_id),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-                "X-Accel-Buffering": "no",  # Disable nginx buffering
-            },
-        )
 
     @router.get("/events")
     async def stream_events(
@@ -390,94 +345,5 @@ def create_sse_routes(stream_manager: SSEStreamManager) -> Any:
                 "X-Accel-Buffering": "no",
             },
         )
-
-    @router.get("/api-calls")
-    async def stream_api_calls(
-        request: Request,
-        tenant_id: str | None = Query(None, description="Filter by tenant ID"),
-        last_event_id: str | None = Header(None, alias="Last-Event-ID"),
-    ) -> StreamingResponse:
-        """
-        Stream external API call events via SSE.
-
-        Streams API call tracking events including latency,
-        status codes, and costs.
-        """
-        sub_id = stream_manager.create_subscription(
-            stream_type=StreamType.API_CALLS,
-            tenant_id=tenant_id,
-            last_event_id=last_event_id,
-        )
-
-        return StreamingResponse(
-            stream_manager.stream(sub_id),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-                "X-Accel-Buffering": "no",
-            },
-        )
-
-    @router.get("/analytics")
-    async def stream_analytics(
-        request: Request,
-        tenant_id: str = Query(..., description="Tenant ID (required)"),
-        last_event_id: str | None = Header(None, alias="Last-Event-ID"),
-    ) -> StreamingResponse:
-        """
-        Stream analytics events via SSE.
-
-        Streams tenant-scoped analytics events (page views, actions, etc.).
-        Tenant ID is required for privacy.
-        """
-        sub_id = stream_manager.create_subscription(
-            stream_type=StreamType.ANALYTICS,
-            tenant_id=tenant_id,
-            last_event_id=last_event_id,
-        )
-
-        return StreamingResponse(
-            stream_manager.stream(sub_id),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-                "X-Accel-Buffering": "no",
-            },
-        )
-
-    @router.get("/all")
-    async def stream_all(
-        request: Request,
-        tenant_id: str | None = Query(None, description="Filter by tenant ID"),
-        last_event_id: str | None = Header(None, alias="Last-Event-ID"),
-    ) -> StreamingResponse:
-        """
-        Stream all events via SSE.
-
-        Combined stream of health, events, API calls, and analytics.
-        Useful for unified Control Plane monitoring.
-        """
-        sub_id = stream_manager.create_subscription(
-            stream_type=StreamType.ALL,
-            tenant_id=tenant_id,
-            last_event_id=last_event_id,
-        )
-
-        return StreamingResponse(
-            stream_manager.stream(sub_id),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-                "X-Accel-Buffering": "no",
-            },
-        )
-
-    @router.get("/stats")
-    async def get_stats() -> dict[str, Any]:
-        """Get SSE stream statistics."""
-        return stream_manager.get_stats()
 
     return router

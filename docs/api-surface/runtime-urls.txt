@@ -10,7 +10,7 @@
 # lens. Adding/removing a route, changing its path template, HTTP
 # method, handler name, or signature all fire the drift gate.
 
-# Counts: 58 routes across 17 modules
+# Counts: 54 routes across 17 modules
 
 module: audit_history_routes
   GET | /{entity_type}/{entity_id}
@@ -119,14 +119,6 @@ module: site_routes
     handler: two_factor_settings_page(request: Request, sitespec: dict[str, Any] = sitespec_data) -> Response
   GET | /2fa/setup
     handler: two_factor_setup_page(request: Request, sitespec: dict[str, Any] = sitespec_data) -> Response
-  GET | /_site/config
-    handler: get_site_config() -> dict[str, Any]
-  GET | /_site/nav
-    handler: get_site_nav() -> dict[str, Any]
-  GET | /_site/page/{route:path}
-    handler: get_page_data(route: str) -> dict[str, Any]
-  GET | /_site/pages
-    handler: list_site_pages() -> dict[str, Any]
   GET | /forgot-password
     handler: forgot_password_page(request: Request, sitespec: dict[str, Any] = sitespec_data) -> str
   GET | /forgot-password/sent

@@ -159,12 +159,6 @@ class SystemRoutesSubsystem:
             event_explorer_router = create_event_explorer_routes(ctx.event_framework)
             ctx.app.include_router(event_explorer_router)
 
-            # Prometheus scrape endpoint (#1192 slice 1). No collector is
-            # wired, so it serves an empty but valid Prometheus document.
-            from dazzle.http.runtime.metrics_routes import create_metrics_routes
-
-            ctx.app.include_router(create_metrics_routes())
-
             # Integration retries explorer (#1194) —
             # /_dazzle/integrations/{name}/retries. Only registered when
             # `integration` blocks are declared. Reads from the
@@ -183,22 +177,6 @@ class SystemRoutesSubsystem:
                     list(ctx.appspec.integrations),
                 )
                 ctx.app.include_router(integrations_retries_router)
-
-        # Site API routes (v0.16.0). The page-router (`/`, `/site.js`,
-        # `/styles/dazzle.css`) is registered by app_factory.py with the
-        # full auth/persona/analytics wiring. Calling
-        # `create_site_page_routes` here too would re-register the same
-        # paths and produce duplicate-route warnings on every boot
-        # (caught by the cycle 4 fuzz sweep against contact_manager,
-        # support_tickets, ops_dashboard).
-        if ctx.sitespec_data:
-            from dazzle.http.runtime.site_routes import create_site_routes
-
-            site_router = create_site_routes(
-                sitespec_data=ctx.sitespec_data,
-                project_root=ctx.project_root,
-            )
-            ctx.app.include_router(site_router)
 
         # Fragment routes (v0.25.0)
         self._init_fragment_routes(ctx)

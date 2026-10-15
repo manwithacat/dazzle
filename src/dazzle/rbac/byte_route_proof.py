@@ -18,9 +18,6 @@ ALLOWLIST: set[tuple[str, str]] = {
     # create_static_file_routes serves the posture-gated uploads dir via
     # FileResponse; it is itself the gated static path (#1551 items 1-3).
     ("file_routes", "serve_stored_file"),
-    # Prometheus scrape endpoint: returns Prometheus text exposition format,
-    # not stored file bytes from Dazzle's document storage.
-    ("metrics_routes", "_render_metrics"),
     # HTML fragment utility: generates HTML strings from in-memory content,
     # not stored file bytes.
     ("fragment_routes", "_html"),
