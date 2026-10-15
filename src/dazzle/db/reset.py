@@ -5,7 +5,7 @@ from typing import Any
 
 from .connection import fetchval
 from .graph import leaves_first
-from .sql import quote_id
+from .sql import quote_identifier
 from .virtual import is_virtual_entity
 
 logger = logging.getLogger(__name__)
@@ -78,7 +78,7 @@ async def db_reset_impl(
             preserved.append(name)
             continue
 
-        table = quote_id(name)
+        table = quote_identifier(name)
         count_sql = _build_count_query(table=table)
         truncate_sql = _build_truncate_query(table=table)
 

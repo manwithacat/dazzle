@@ -45,7 +45,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir import TenancyMode
-from dazzle.http.runtime.query_builder import quote_identifier
+from dazzle.db.sql import quote_identifier
 
 logger = logging.getLogger(__name__)
 

@@ -29,7 +29,7 @@ from collections.abc import Callable
 from typing import Any
 
 from dazzle.core import ir
-from dazzle.http.runtime.query_builder import quote_identifier
+from dazzle.db.sql import quote_identifier
 
 logger = logging.getLogger(__name__)
 

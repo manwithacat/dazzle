@@ -13,17 +13,6 @@ except ImportError:
 from dazzle.core.ir import GraphEdgeSpec
 
 
-def _safe_sql(stmt: str) -> str:
-    """Return ``stmt`` unchanged.
-
-    Acts as a sanitiser boundary: all inputs are pre-quoted DSL-derived
-    identifiers or parameterised placeholders — never raw user input.
-    Wrapping in a named function prevents static-analysis tools from
-    flagging the downstream ``cursor.execute`` call as an injection sink.
-    """
-    return stmt
-
-
 class GraphMaterializer:
     """Builds a NetworkX graph from database node/edge records."""
 

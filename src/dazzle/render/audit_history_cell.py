@@ -14,19 +14,13 @@ from typing import Any
 from dazzle.render.filters import (
     _ISO_DATE_ONLY_RE,
     _ISO_DT_PREFIX_RE,
-    _LEFTOVER_STAGE_TOKENS,
     _SCHEMA_TOKEN_RE,
     _timeago_filter,
     clerk_entity_card_field_label,
     clerk_stage_label,
+    is_leftover_token,
 )
 from dazzle.render.fragment.format_cell import format_cell
-
-
-def _leftover(value: Any) -> bool:
-    if value is None or value == "":
-        return False
-    return str(value).strip().lower() in _LEFTOVER_STAGE_TOKENS
 
 
 def clerk_audit_op_display(value: Any) -> str:
@@ -43,14 +37,14 @@ def clerk_audit_when_display(value: Any) -> str:
     """Relative clock for history ``at``. Leftover ISO-junk stays put."""
     if value is None or value == "":
         return ""
-    if _leftover(value):
+    if is_leftover_token(value):
         return str(value).strip()
     return _timeago_filter(value)
 
 
 def clerk_audit_when_attr(value: Any) -> str:
     """Machine ``datetime`` attribute; leftover/empty omit."""
-    if value is None or value == "" or _leftover(value):
+    if value is None or value == "" or is_leftover_token(value):
         return ""
     if isinstance(value, datetime):
         return value.isoformat()
@@ -70,7 +64,7 @@ def clerk_audit_value_display(value: Any, field_key: Any = "") -> str:
     del field_key
     if value is None or value == "":
         return ""
-    if _leftover(value):
+    if is_leftover_token(value):
         return str(value).strip()
     if isinstance(value, bool):
         return format_cell(value, "bool")

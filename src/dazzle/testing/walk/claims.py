@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from dazzle.core.ir.identity import spec_display_id
 from dazzle.testing.walk.discovery import default_walks_dir, discover_walk_paths
-from dazzle.testing.walk.loader import WalkLoadError, load_walk
+from dazzle.testing.walk.loader import PathLoadError, WalkLoadError, load_walk
 from dazzle.testing.walk.runner import run_walk_sync
 from dazzle.testing.walk.validate import validate_walk
 
@@ -78,12 +78,8 @@ class JobClaimRegistry(BaseModel):
     source_path: str | None = Field(default=None, exclude=True)
 
 
-class ClaimsLoadError(ValueError):
+class ClaimsLoadError(PathLoadError):
     """Registry missing or invalid."""
-
-    def __init__(self, path: Path | str, message: str) -> None:
-        self.path = Path(path)
-        super().__init__(f"{self.path}: {message}")
 
 
 DEFAULT_REGISTRY_CANDIDATES = (

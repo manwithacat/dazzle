@@ -13,11 +13,11 @@ from typing import Any
 
 from psycopg import sql as pgsql
 
-from dazzle.core.archetype_expander import _to_snake_case
 from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
 from dazzle.core.ir.params import ParamRef
+from dazzle.core.strings import to_snake_case
+from dazzle.db.sql import quote_identifier
 from dazzle.http.runtime.predicate_compiler import _USER_GUC_PREFIX
-from dazzle.http.runtime.query_builder import quote_identifier
 from dazzle.http.runtime.rls_schema import HOST_TENANT_GUC, TENANT_GUC, USER_GUC_PREFIX
 from dazzle.http.runtime.tenant.metrics import note_rls_unbound
 from dazzle.http.runtime.tenant_isolation import TenantContextError
@@ -730,7 +730,7 @@ class PostgresBackend:
                 cursor = conn.cursor()
                 cursor.execute(build_assert_subtype_kind_function())
                 for entity in children:
-                    expected_kind = _to_snake_case(entity.name)
+                    expected_kind = to_snake_case(entity.name)
                     cursor.execute(
                         f'DROP TRIGGER IF EXISTS "{entity.name}_kind_consistency" '
                         f'ON "{entity.name}"'

@@ -574,14 +574,13 @@ class TestSessionManager:
         assert "error" in result
 
     def test_camel_to_snake_conversion(self) -> None:
-        """Test CamelCase to snake_case conversion."""
-        graph = KnowledgeGraph(":memory:")
-        handlers = KnowledgeGraphHandlers(graph)
+        """Test CamelCase to snake_case conversion (shared core.strings rule)."""
+        from dazzle.core.strings import to_snake_case
 
-        assert handlers._population._camel_to_snake("AuthStore") == "auth_store"
-        assert handlers._population._camel_to_snake("HTTPClient") == "http_client"
-        assert handlers._population._camel_to_snake("MyClass") == "my_class"
-        assert handlers._population._camel_to_snake("A") == "a"
+        assert to_snake_case("AuthStore") == "auth_store"
+        assert to_snake_case("HTTPClient") == "http_client"
+        assert to_snake_case("MyClass") == "my_class"
+        assert to_snake_case("A") == "a"
 
     def test_infer_covered_modules(self) -> None:
         """Test inferring covered modules from test names."""

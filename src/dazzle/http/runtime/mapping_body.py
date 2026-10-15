@@ -55,3 +55,28 @@ def _grow(seq: list[Any], index: int) -> None:
 
 def _is_index(part: str) -> bool:
     return part.isascii() and part.isdigit()
+
+
+def resolve_expression(expr: Any, context: dict[str, Any]) -> Any:
+    """Read side: resolve a mapping ``Expression`` against a context dict.
+
+    ``expr.literal`` returns the literal; ``expr.path`` walks a dotted path
+    (``form.field``, ``self.name``, ``response.data.id``) through dicts or
+    attributes, returning ``None`` at the first missing segment.
+    """
+    if expr.literal is not None:
+        return expr.literal
+
+    if expr.path:
+        parts = expr.path.split(".")
+        current: Any = context
+        for part in parts:
+            if isinstance(current, dict):
+                current = current.get(part)
+            else:
+                current = getattr(current, part, None)
+            if current is None:
+                return None
+        return current
+
+    return None

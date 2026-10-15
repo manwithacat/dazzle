@@ -85,7 +85,7 @@ def enum_filter_options(values: Any) -> list[tuple[str, str]]:
     return out
 
 
-def _ref_detail_route(ref_entity: Any) -> str:
+def ref_detail_route(ref_entity: Any) -> str:
     """UI VIEW hub template for a ref/belongs_to column (``/app/<slug>/{id}``).
 
     Workspace kanban/detail/grid secondary fields render these as ``<a href>``.
@@ -323,7 +323,7 @@ def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str,
         if kind_val in ("ref", "belongs_to"):
             rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
             ref_entity = getattr(ft, "ref_entity", None)
-            ref_route = _ref_detail_route(ref_entity)
+            ref_route = ref_detail_route(ref_entity)
             # ref_entity / filter_ref_entity: Avatar default (user_chip) + hyperpart
             # opportunity scan need the target entity, not just ref_route.
             ref_col: dict[str, Any] = {
@@ -406,7 +406,7 @@ def _ref_entity_column(f: Any, ft: Any) -> dict[str, Any]:
     """Workspace column for ref/belongs_to — resolved display name + detail route."""
     rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
     ref_entity = getattr(ft, "ref_entity", None)
-    ref_route = _ref_detail_route(ref_entity)
+    ref_route = ref_detail_route(ref_entity)
     return {
         "key": rel_name,
         "label": _column_label(rel_name),

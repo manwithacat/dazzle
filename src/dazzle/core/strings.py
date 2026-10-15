@@ -147,6 +147,20 @@ def entity_slug(entity_name: str) -> str:
     return entity_name.lower().replace("_", "-")
 
 
+def to_snake_case(name: str) -> str:
+    """PascalCase / camelCase → snake_case (``AppSettings`` → ``app_settings``).
+
+    Acronym-aware: ``HTTPServer`` → ``http_server``.
+    """
+    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
+
+def snake_to_title(name: str) -> str:
+    """snake_case identifier → display title (``concept_name`` → ``Concept Name``)."""
+    return name.replace("_", " ").title()
+
+
 def normalize_role(role: str) -> str:
     """The canonical database-role → DSL-role name rule.
 

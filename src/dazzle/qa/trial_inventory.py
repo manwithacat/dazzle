@@ -14,6 +14,8 @@ import logging
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from dazzle.core.strings import entity_slug
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,12 +32,6 @@ class InventoryTarget:
 
     def to_json(self) -> dict[str, Any]:
         return asdict(self)
-
-
-def _entity_slug(name: str) -> str:
-    from dazzle.core.strings import entity_slug
-
-    return entity_slug(name)
 
 
 def _surface_mode(surface: Any) -> str:
@@ -58,7 +54,7 @@ def _surface_target(surface: Any) -> InventoryTarget | None:
     entity = getattr(surface, "entity_ref", None) or getattr(surface, "entity", None)
     if not entity:
         return None
-    slug = _entity_slug(str(entity))
+    slug = entity_slug(str(entity))
     mode = _surface_mode(surface)
     sname = str(getattr(surface, "name", "") or slug)
     if "list" in mode:

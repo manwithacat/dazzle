@@ -19,10 +19,8 @@ from unittest.mock import MagicMock
 
 from dazzle.core.ir.params import ParamRef
 from dazzle.core.ir.process import ScheduleSpec
-from dazzle.core.process.eventbus_adapter import (
-    EventBusProcessAdapter,
-    _resolve_param_ref,
-)
+from dazzle.core.process.adapter import resolve_param_ref as _resolve_param_ref
+from dazzle.core.process.eventbus_adapter import EventBusProcessAdapter
 
 # ---------------------------------------------------------------------------
 # _resolve_param_ref — pure helper

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir.workspaces import WorkspaceSpec
-from dazzle.core.strings import normalize_role
+from dazzle.core.strings import normalize_role, snake_to_title
 from dazzle.page.converters.workspace_converter import workspace_allowed_personas
 from dazzle.rbac.matrix import PolicyDecision  # runtime import (ui may import rbac)
 
@@ -68,10 +68,6 @@ def _route_for(appspec: AppSpec, target: str) -> str | None:
     return None
 
 
-def _titleize(name: str) -> str:
-    return name.replace("_", " ").title()
-
-
 def _label_for(appspec: AppSpec, target: str) -> str:
     """Human-friendly nav label for a target (entity or workspace name).
 
@@ -85,13 +81,13 @@ def _label_for(appspec: AppSpec, target: str) -> str:
     """
     ws = _workspace_for(appspec, target)
     if ws is not None:
-        return ws.title or _titleize(ws.name)
+        return ws.title or snake_to_title(ws.name)
     for surface in appspec.surfaces or []:
         if surface.mode.value == "list" and surface.entity_ref == target:
             if surface.title:
                 return surface.title
             break
-    return _titleize(target)
+    return snake_to_title(target)
 
 
 def _persona_can_list(matrix: AccessMatrix, role: str, entity: str) -> bool:

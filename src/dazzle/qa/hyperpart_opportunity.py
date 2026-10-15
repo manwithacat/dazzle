@@ -30,7 +30,13 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.core.appspec_loader import load_project_appspec
-from dazzle.qa.hyperpart_scenarios import catalogue_snapshot, scan_scenario_opportunities
+from dazzle.qa.hyperpart_scenarios import (
+    catalogue_snapshot,
+    entities_by_name,
+    field_type_kind,
+    scan_scenario_opportunities,
+    surface_mode,
+)
 from dazzle.qa.hyperpart_types import HyperpartOpportunity
 from dazzle.qa.trial_friction import is_auto_seed_eligible, normalize_friction_entry
 from dazzle.render.user_chip import looks_like_person_ref
@@ -60,13 +66,6 @@ _PLAIN_DISPLAYS = ("", "list", "table", "none")
 _REF_KINDS = frozenset({"ref", "belongs_to"})
 
 
-def _field_type_kind(ft: Any) -> str:
-    kind = getattr(ft, "kind", None)
-    if kind is None:
-        return ""
-    return str(getattr(kind, "value", kind) or "").lower()
-
-
 def _ref_entity(ft: Any) -> str:
     return str(getattr(ft, "ref_entity", None) or "").strip()
 
@@ -77,12 +76,6 @@ def _is_person_ref(field_name: str, ref_entity: str) -> bool:
     return looks_like_person_ref({"name": "probe"}, col)
 
 
-def _surface_mode(surface: Any) -> str:
-    return str(
-        getattr(getattr(surface, "mode", None), "value", getattr(surface, "mode", "")) or ""
-    ).lower()
-
-
 def _section_field_names(surface: Any) -> list[str]:
     names: list[str] = []
     for section in list(getattr(surface, "sections", None) or []):
@@ -91,12 +84,6 @@ def _section_field_names(surface: Any) -> list[str]:
             if fn:
                 names.append(fn)
     return names
-
-
-def _entity_by_name(appspec: Any) -> dict[str, Any]:
-    domain = getattr(appspec, "domain", None)
-    entities = list(getattr(domain, "entities", None) or []) if domain else []
-    return {str(getattr(e, "name", "") or ""): e for e in entities}
 
 
 def _person_ref_for_field(
@@ -110,7 +97,7 @@ def _person_ref_for_field(
     if not fspec:
         return None
     ft = getattr(fspec, "type", None)
-    if _field_type_kind(ft) not in _REF_KINDS:
+    if field_type_kind(ft) not in _REF_KINDS:
         return None
     ref_ent = _ref_entity(ft)
     if not _is_person_ref(fn, ref_ent):
@@ -146,7 +133,7 @@ def _field_names_for_surface(surface: Any, field_map: dict[str, Any], mode: str)
 def scan_person_ref_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
     """Every person-like ref on a list/detail surface field."""
     out: list[HyperpartOpportunity] = []
-    entity_by_name = _entity_by_name(appspec)
+    entity_by_name = entities_by_name(appspec)
 
     for surface in list(getattr(appspec, "surfaces", None) or []):
         sname = str(getattr(surface, "name", "") or "")
@@ -156,7 +143,7 @@ def scan_person_ref_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
         entity = entity_by_name.get(ent_name)
         if not entity:
             continue
-        mode = _surface_mode(surface)
+        mode = surface_mode(surface)
         # Avatar chip is a list/detail cell default — skip create/edit form fields.
         if any(x in mode for x in _FORM_MODES):
             continue
@@ -232,7 +219,7 @@ def scan_person_queue_meta_opportunities(appspec: Any) -> list[HyperpartOpportun
     full green for person refs that only cover list/detail.
     """
     out: list[HyperpartOpportunity] = []
-    entity_by_name = _entity_by_name(appspec)
+    entity_by_name = entities_by_name(appspec)
     for ws in list(getattr(appspec, "workspaces", None) or []):
         wname = str(getattr(ws, "name", "") or "")
         for region in list(getattr(ws, "regions", None) or []):
@@ -246,7 +233,7 @@ def scan_person_queue_meta_opportunities(appspec: Any) -> list[HyperpartOpportun
             field_map = {str(f.name): f for f in list(getattr(entity, "fields", None) or [])}
             for fn, fspec in field_map.items():
                 ft = getattr(fspec, "type", None)
-                if _field_type_kind(ft) not in _REF_KINDS:
+                if field_type_kind(ft) not in _REF_KINDS:
                     continue
                 ref_ent = _ref_entity(ft)
                 if not _is_person_ref(fn, ref_ent):
@@ -294,7 +281,7 @@ def _person_host_opportunity(
     description: str,
 ) -> HyperpartOpportunity | None:
     ft = getattr(fspec, "type", None)
-    if _field_type_kind(ft) not in _REF_KINDS:
+    if field_type_kind(ft) not in _REF_KINDS:
         return None
     ref_ent = _ref_entity(ft)
     if not _is_person_ref(fn, ref_ent):
@@ -326,7 +313,7 @@ def _scan_person_host_opportunities(
 ) -> list[HyperpartOpportunity]:
     """Person refs on workspace regions whose display is in *displays*."""
     out: list[HyperpartOpportunity] = []
-    entity_by_name = _entity_by_name(appspec)
+    entity_by_name = entities_by_name(appspec)
     for ws in list(getattr(appspec, "workspaces", None) or []):
         wname = str(getattr(ws, "name", "") or "")
         for region in list(getattr(ws, "regions", None) or []):

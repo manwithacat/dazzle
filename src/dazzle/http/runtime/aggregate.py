@@ -38,7 +38,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from dazzle.http.runtime.query_builder import QueryBuilder, quote_identifier
+from dazzle.db.sql import quote_identifier
+from dazzle.http.runtime.query_builder import QueryBuilder
 
 # Probe order for FK display fields. Mirrors `_bucket_key_label` in
 # workspace_rendering.py — same priorities, same fallback to id.

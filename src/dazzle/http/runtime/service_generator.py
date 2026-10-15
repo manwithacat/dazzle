@@ -19,6 +19,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel
 
 from dazzle.core.ir.params import ParamRef
+from dazzle.db.sql import quote_identifier
 from dazzle.http.runtime.model_generator import _create_date_factory, _is_date_expr
 from dazzle.http.specs.entity import EntitySpec, StateMachineSpec
 from dazzle.http.specs.service import (
@@ -635,8 +636,6 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
                     ref_id = str(ref_value) if not isinstance(ref_value, str) else ref_value
 
                     with db.connection() as conn:
-                        from dazzle.http.runtime.query_builder import quote_identifier
-
                         table = quote_identifier(ref_entity)
                         ph = db.placeholder
                         sql = f'SELECT 1 FROM {table} WHERE "id" = {ph} LIMIT 1'

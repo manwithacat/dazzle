@@ -18,6 +18,7 @@ from dazzle.core.condition_eval import evaluate_condition as _eval_vis
 from dazzle.core.ir import AggregateRef
 from dazzle.core.ir.workspaces import ComparisonOutlierSpec
 from dazzle.core.strings import normalize_role, to_api_plural
+from dazzle.db.sql import quote_identifier
 from dazzle.http.runtime.workspace_card_data import (
     _resolve_path,
 )
@@ -869,7 +870,7 @@ async def _batched_via_cohort_aggregate(
     shape.
     """
     from dazzle.http.runtime.aggregate import measure_to_sql
-    from dazzle.http.runtime.query_builder import QueryBuilder, quote_identifier
+    from dazzle.http.runtime.query_builder import QueryBuilder
     from dazzle.http.runtime.workspace_aggregation import _build_aggregate_filters
 
     subq_select_field, agg_filter_col, _direction = via_link
@@ -1034,7 +1035,7 @@ async def _batched_share_cohort_aggregate(
     :class:`LensAggregatePrimary` and the parse-time guard.
     """
     from dazzle.http.runtime.aggregate import measure_to_sql
-    from dazzle.http.runtime.query_builder import QueryBuilder, quote_identifier
+    from dazzle.http.runtime.query_builder import QueryBuilder
     from dazzle.http.runtime.workspace_aggregation import _build_aggregate_filters
 
     agg_to_pivot_fk, source_to_pivot_fk = share_link

@@ -47,6 +47,7 @@ from dazzle.render.fragment.region._shared import (
 from dazzle.render.fragment.renderer._related_conversation import (
     conversation_bubble_tone,
     conversation_channel_label,
+    conversation_initials,
     conversation_time_label,
 )
 from dazzle.render.presentation import present
@@ -203,13 +204,6 @@ def _conversation_time(item: dict[str, Any]) -> tuple[str, str]:
     return "", ""
 
 
-def _media_initials(author: str) -> str:
-    words = [w for w in author.strip().split() if w]
-    if not words:
-        return ""
-    return "".join(w[0] for w in words[:2]).upper()
-
-
 def _conversation_bubble_tone(item: dict[str, Any]) -> str:
     """Map customer_tone / escalation / note_phase / sentiment → Bubble danger.
 
@@ -262,7 +256,7 @@ def _conversation_message(
     author_s = author.strip()
     if not author_s:
         author_s = "Agent" if orient == "out" else "Customer"
-    media = media_label.strip() or _media_initials(author_s)
+    media = media_label.strip() or conversation_initials(author_s)
     return Message(
         bubble=bubble,
         author=author_s,

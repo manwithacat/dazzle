@@ -82,33 +82,6 @@ def _hx_attrs(
     return " ".join(parts)
 
 
-def _pagination_pages(current: int, total: int, window: int = 2) -> list[int | None]:
-    """Mirror of `dazzle.page.runtime.template_renderer._pagination_pages`
-    (#984). Returns a bounded ellipsis-collapsed page list.
-
-    Examples (window=2):
-        current=1,  total=5    → [1, 2, 3, 4, 5]
-        current=7,  total=120  → [1, None, 5, 6, 7, 8, 9, None, 120]
-    """
-    if total <= 0:
-        return []
-    if total == 1:
-        return [1]
-    explicit_count = 2 * window + 3
-    if total <= explicit_count + 2:
-        return list(range(1, total + 1))
-    pages: list[int | None] = [1]
-    win_start = max(2, current - window)
-    win_end = min(total - 1, current + window)
-    if win_start > 2:
-        pages.append(None)
-    pages.extend(range(win_start, win_end + 1))
-    if win_end < total - 1:
-        pages.append(None)
-    pages.append(total)
-    return pages
-
-
 def _render_references(
     block_class: str,
     reference_lines: tuple[ReferenceLine, ...],

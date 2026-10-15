@@ -11,17 +11,10 @@ from __future__ import annotations
 from typing import Any
 
 from dazzle.core import ir
-from dazzle.page.app_paths import detail_path, entity_slug
+from dazzle.http.runtime.workspace_columns import ref_detail_route
 from dazzle.render.breadcrumbs import clerk_form_submit_label
 from dazzle.render.fragment.form_field import field_context_to_dict
 from dazzle.render.fragment.format_cell import record_currency_code
-
-
-def _ref_route_for_entity(ref_entity: str) -> str:
-    """VIEW hub template for a ref target (parity with workspace columns)."""
-    if not ref_entity:
-        return ""
-    return detail_path("/app", entity_slug(str(ref_entity)))
 
 
 def _dispatch_ctx_from_table(
@@ -34,7 +27,7 @@ def _dispatch_ctx_from_table(
         ref_entity = getattr(col, "ref_entity", "") or filter_ref or ""
         ref_route = getattr(col, "ref_route", "") or ""
         if not ref_route and ref_entity:
-            ref_route = _ref_route_for_entity(ref_entity)
+            ref_route = ref_detail_route(ref_entity)
         columns_out.append(
             {
                 "key": getattr(col, "key", ""),
@@ -151,7 +144,7 @@ def _field_ref_route(f: Any) -> tuple[str, str]:
     ref_entity = str(getattr(f, "ref_entity", "") or "")
     ref_route = str(getattr(f, "ref_route", "") or "")
     if not ref_route and ref_entity:
-        ref_route = _ref_route_for_entity(ref_entity)
+        ref_route = ref_detail_route(ref_entity)
     return ref_entity, ref_route
 
 

@@ -214,27 +214,30 @@ def snapshot_dsl_constructs() -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def diff_against_baseline(snapshot: str | None = None) -> str:
-    """
-    Return a unified diff between the on-disk baseline and the live snapshot.
-    Empty string means no drift.
+def baseline_diff(baseline_path: Path, snapshot: str, surface: str) -> str:
+    """Unified diff between an API-surface baseline file and a live snapshot.
+
+    Empty string means no drift. ``surface`` names the ``dazzle inspect api``
+    target that rewrites the baseline.
     """
     import difflib
 
-    if snapshot is None:
-        snapshot = snapshot_dsl_constructs()
-    if not BASELINE_PATH.exists():
-        return (
-            f"(no baseline at {BASELINE_PATH} — run `dazzle inspect api dsl-constructs --write`)\n"
-        )
-    baseline = BASELINE_PATH.read_text(encoding="utf-8")
+    if not baseline_path.exists():
+        return f"(no baseline at {baseline_path} — run `dazzle inspect api {surface} --write`)\n"
+    baseline = baseline_path.read_text(encoding="utf-8")
     if baseline == snapshot:
         return ""
     diff = difflib.unified_diff(
         baseline.splitlines(keepends=True),
         snapshot.splitlines(keepends=True),
-        fromfile=str(BASELINE_PATH.relative_to(REPO_ROOT)),
+        fromfile=str(baseline_path.relative_to(REPO_ROOT)),
         tofile="(live)",
         n=3,
     )
     return "".join(diff)
+
+
+def diff_against_baseline(snapshot: str | None = None) -> str:
+    """Unified diff between baseline and live snapshot. Empty = no drift."""
+    live = snapshot if snapshot is not None else snapshot_dsl_constructs()
+    return baseline_diff(BASELINE_PATH, live, "dsl-constructs")

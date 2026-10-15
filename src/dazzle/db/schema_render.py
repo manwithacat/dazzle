@@ -53,7 +53,7 @@ from dazzle.db.schema_diff import (
     RenameTable,
     SchemaOp,
 )
-from dazzle.http.runtime.query_builder import quote_identifier
+from dazzle.db.sql import quote_identifier
 from dazzle.http.runtime.safe_casts import get_using_clause, is_safe_cast
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
-from .dispatch import KeywordParser, parse_block_with_dispatch
+from .dispatch import KeywordParser, kw_description, parse_block_with_dispatch
 
 
 class ScenarioParserMixin:
@@ -481,13 +481,6 @@ class _PersonaState:
 # ---------- Token-keyed keyword parsers ---------- #
 
 
-def _p_kw_description(parser: Any, state: _PersonaState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.description = parser.expect(TokenType.STRING).value
-    parser.skip_newlines()
-
-
 def _p_kw_goals(parser: Any, state: _PersonaState) -> None:
     """``goals: "goal1", "goal2"`` — list of quoted strings."""
     parser.advance()
@@ -600,7 +593,7 @@ def _p_kw_uses_nav(parser: Any, state: _PersonaState) -> None:
 
 
 _PERSONA_KEYWORDS: dict[TokenType, KeywordParser[_PersonaState]] = {
-    TokenType.DESCRIPTION: _p_kw_description,
+    TokenType.DESCRIPTION: kw_description,
     TokenType.GOALS: _p_kw_goals,
     TokenType.PROFICIENCY: _p_kw_proficiency,
     TokenType.USES: _p_kw_uses_nav,

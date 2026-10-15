@@ -428,6 +428,13 @@ def _humanize_filter(value: Any) -> str:
 _LEFTOVER_STAGE_TOKENS = frozenset({"zzz", "2abc", "1e2", "ghost"})
 
 
+def is_leftover_token(value: Any) -> bool:
+    """True when ``value`` is a leftover junk token (``zzz``/``ghost``…), not blank."""
+    if value is None or value == "":
+        return False
+    return str(value).strip().lower() in _LEFTOVER_STAGE_TOKENS
+
+
 _BOOL_STAGE_TOKENS: dict[str, str] = {"true": "Yes", "false": "No"}
 
 

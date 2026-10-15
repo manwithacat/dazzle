@@ -25,7 +25,7 @@ from dazzle.core.ir.test_design import (
 from dazzle.core.lint import lint_appspec
 from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
 from dazzle.core.project import load_project
-from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
+from dazzle.core.story_emitter import StoryIdAllocator, append_stories_to_dsl
 
 test_app = typer.Typer(
     help=(
@@ -1416,15 +1416,7 @@ def test_populate(
     # 1. Propose and auto-accept stories
     typer.secho("Step 1: Proposing stories from DSL...", bold=True)
 
-    base_id = get_next_story_id_from_appspec(appspec.stories)
-    base_num = int(base_id[3:])
-    story_count = 0
-
-    def next_story_id() -> str:
-        nonlocal story_count
-        result = f"ST-{base_num + story_count:03d}"
-        story_count += 1
-        return result
+    story_ids = StoryIdAllocator(appspec.stories)
 
     default_actor = "User"
     if appspec.personas:
@@ -1433,13 +1425,13 @@ def test_populate(
     stories: list[StorySpec] = []
 
     for entity in appspec.domain.entities:
-        if story_count >= max_stories:
+        if story_ids.issued >= max_stories:
             break
 
         # Create story
         stories.append(
             StorySpec(
-                story_id=next_story_id(),
+                story_id=story_ids.next(),
                 title=f"{default_actor} creates a new {entity.title or entity.name}",
                 persona=default_actor,
                 trigger=StoryTrigger.FORM_SUBMITTED,
@@ -1465,12 +1457,12 @@ def test_populate(
         # State machine transitions
         if entity.state_machine:
             for transition in entity.state_machine.transitions[:3]:
-                if story_count >= max_stories:
+                if story_ids.issued >= max_stories:
                     break
                 sm = entity.state_machine
                 stories.append(
                     StorySpec(
-                        story_id=next_story_id(),
+                        story_id=story_ids.next(),
                         title=(
                             f"{default_actor} changes {entity.name}"
                             f" from {transition.from_state}"

@@ -15,6 +15,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.strings import snake_to_title
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -219,11 +221,6 @@ def inject_readme_feature_table(readme_path: Path | None = None) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _concept_title(name: str) -> str:
-    """Convert concept_name to 'Concept Name'."""
-    return name.replace("_", " ").title()
-
-
 def _concept_anchor(name: str) -> str:
     """Convert concept_name to kebab-case anchor: 'concept-name'."""
     return name.replace("_", "-").lower()
@@ -260,7 +257,7 @@ def _render_concept(
 ) -> str:
     """Render a single concept as markdown."""
     lines: list[str] = []
-    title = _concept_title(name)
+    title = snake_to_title(name)
     lines.append(f"## {title}")
     lines.append("")
 
@@ -304,7 +301,7 @@ def _render_concept(
         rendered: list[str] = []
         for rel_name in related:
             rel_info = all_concepts.get(rel_name)
-            rel_title = _concept_title(rel_name)
+            rel_title = snake_to_title(rel_name)
             if rel_info and rel_info.get("doc_page"):
                 rel_page = rel_info["doc_page"]
                 rel_anchor = _concept_anchor(rel_name)
@@ -343,7 +340,7 @@ def _render_page(
          The intro from doc_pages.toml goes above the assembled concepts.
     """
     lines: list[str] = []
-    title = page_meta.get("title", _concept_title(slug))
+    title = page_meta.get("title", snake_to_title(slug))
     intro = page_meta.get("intro", "").strip()
     body = page_meta.get("body", "").strip()
     auto_source = page_meta.get("auto_source", "").strip()
@@ -536,7 +533,7 @@ def _render_index(pages: dict[str, dict[str, Any]]) -> str:
     handwritten = [(s, m) for s, m in sorted_pages if m.get("handwritten")]
 
     for slug, meta in generated:
-        title = meta.get("title", _concept_title(slug))
+        title = meta.get("title", snake_to_title(slug))
         desc = _first_sentence(meta.get("intro", "").strip())
         lines.append(f"| [{title}]({slug}.md) | {desc} |")
 
@@ -549,7 +546,7 @@ def _render_index(pages: dict[str, dict[str, Any]]) -> str:
         lines.append("| Page | Description |")
         lines.append("|------|-------------|")
         for slug, meta in handwritten:
-            title = meta.get("title", _concept_title(slug))
+            title = meta.get("title", snake_to_title(slug))
             desc = _first_sentence(meta.get("intro", "").strip())
             lines.append(f"| [{title}]({slug}.md) | {desc} |")
 
@@ -565,7 +562,7 @@ def _render_feature_table(pages: dict[str, dict[str, Any]]) -> str:
 
     sorted_pages = sorted(pages.items(), key=lambda p: p[1].get("order", 999))
     for slug, meta in sorted_pages:
-        title = meta.get("title", _concept_title(slug))
+        title = meta.get("title", snake_to_title(slug))
         intro = meta.get("intro", "").strip()
         desc = _first_sentence(intro)
         lines.append(f"| [{title}](docs/reference/{slug}.md) | {desc} |")

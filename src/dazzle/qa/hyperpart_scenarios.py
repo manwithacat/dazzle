@@ -145,20 +145,20 @@ def catalogue_snapshot() -> dict[str, Any]:
     }
 
 
-def _field_type_kind(ft: Any) -> str:
+def field_type_kind(ft: Any) -> str:
     kind = getattr(ft, "kind", None)
     if kind is None:
         return ""
     return str(getattr(kind, "value", kind) or "").lower()
 
 
-def _surface_mode(surface: Any) -> str:
+def surface_mode(surface: Any) -> str:
     return str(
         getattr(getattr(surface, "mode", None), "value", getattr(surface, "mode", "")) or ""
     ).lower()
 
 
-def _entity_by_name(appspec: Any) -> dict[str, Any]:
+def entities_by_name(appspec: Any) -> dict[str, Any]:
     domain = getattr(appspec, "domain", None)
     entities = list(getattr(domain, "entities", None) or []) if domain else []
     return {str(getattr(e, "name", "") or ""): e for e in entities}
@@ -317,7 +317,7 @@ def _iter_bool_fields(surface: Any, entity: Any) -> list[tuple[str, Any]]:
     out: list[tuple[str, Any]] = []
     for fn in candidates:
         fspec = field_map.get(fn)
-        if fspec and _is_bool_kind(_field_type_kind(getattr(fspec, "type", None))):
+        if fspec and _is_bool_kind(field_type_kind(getattr(fspec, "type", None))):
             out.append((fn, fspec))
     return out
 
@@ -347,12 +347,12 @@ def scan_boolean_switch(appspec: Any) -> list[Any]:
         return []
     sc = scenarios[0]
     out: list[Any] = []
-    entity_by_name = _entity_by_name(appspec)
+    entity_by_name = entities_by_name(appspec)
     seen: set[tuple[str, str, str]] = set()
 
     for surface in list(getattr(appspec, "surfaces", None) or []):
         sname = str(getattr(surface, "name", "") or "")
-        mode = _surface_mode(surface)
+        mode = surface_mode(surface)
         surface_settings = bool(_SETTINGSISH.search(sname))
         formish = mode in ("create", "edit", "form", "settings")
         headless = bool(getattr(surface, "headless", False))

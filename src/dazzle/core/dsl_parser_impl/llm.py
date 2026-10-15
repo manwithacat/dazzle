@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
-from .dispatch import KeywordParser, parse_block_with_dispatch
+from .dispatch import KeywordParser, kw_description, parse_block_with_dispatch
 
 
 class LLMParserMixin:
@@ -567,13 +567,6 @@ def _li_kw_prompt(parser: Any, state: _LLMIntentState) -> None:
     parser.skip_newlines()
 
 
-def _li_kw_description(parser: Any, state: _LLMIntentState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.description = parser.expect(TokenType.STRING).value
-    parser.skip_newlines()
-
-
 def _li_kw_output_schema(parser: Any, state: _LLMIntentState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
@@ -640,7 +633,7 @@ def _li_kw_model(parser: Any, state: _LLMIntentState) -> None:
 
 _LLM_INTENT_KEYWORDS: dict[TokenType, KeywordParser[_LLMIntentState]] = {
     TokenType.PROMPT: _li_kw_prompt,
-    TokenType.DESCRIPTION: _li_kw_description,
+    TokenType.DESCRIPTION: kw_description,
     TokenType.OUTPUT_SCHEMA: _li_kw_output_schema,
     TokenType.TIMEOUT: _li_kw_timeout,
     TokenType.MAX_TOKENS: _li_kw_max_tokens,

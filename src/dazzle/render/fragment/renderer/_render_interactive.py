@@ -41,6 +41,7 @@ from dazzle.render.breadcrumbs import (
     clerk_filter_all_label,
     clerk_pagination_rows_label,
 )
+from dazzle.render.filters import _pagination_pages
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.ingest import DateRange as DateRangeSeam
 from dazzle.render.fragment.ingest import Pagination as PaginationSeam
@@ -69,7 +70,7 @@ from dazzle.render.fragment.primitives import (
     SortHeader,
     Toolbar,
 )
-from dazzle.render.fragment.renderer._helpers import _hx_attrs, _pagination_pages
+from dazzle.render.fragment.renderer._helpers import _hx_attrs
 from dazzle.render.open_discovery import (
     confirm_action_open_attr_suffix,
     create_cta_open_attr_suffix,

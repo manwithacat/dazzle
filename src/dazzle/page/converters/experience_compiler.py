@@ -41,14 +41,6 @@ _EVENT_STYLES: dict[str, tuple[str, str]] = {
 }
 
 
-def _find_surface(appspec: AppSpec, name: str) -> SurfaceSpec | None:
-    """Look up a surface by name in the appspec."""
-    for surface in appspec.surfaces:
-        if surface.name == name:
-            return surface
-    return None
-
-
 def _find_entity(appspec: AppSpec, entity_ref: str) -> EntitySpec | None:
     """Look up an entity by name in the appspec domain."""
     if appspec.domain:
@@ -122,7 +114,7 @@ def compile_experience_context(
 
         if current_step.surface:
             # Existing path: step references a named surface
-            surface = _find_surface(appspec, current_step.surface)
+            surface = appspec.get_surface(current_step.surface)
             if surface:
                 entity = _find_entity(appspec, surface.entity_ref) if surface.entity_ref else None
         elif current_step.entity_ref:

@@ -1,5 +1,5 @@
 from . import ir
-from .archetype_expander import _to_snake_case, expand_archetypes, generate_archetype_surfaces
+from .archetype_expander import expand_archetypes, generate_archetype_surfaces
 from .errors import (
     E_SUBTYPE_DUPLICATE_PK,
     E_SUBTYPE_FIELD_NAME_OVERLAP,
@@ -32,6 +32,7 @@ from .linker_impl import (
     validate_module_access,
     validate_references,
 )
+from .strings import to_snake_case
 from .tenancy_inject import inject_partition_key
 
 
@@ -413,7 +414,7 @@ def _link_subtypes(
             name="kind",
             type=ir.FieldType(
                 kind=ir.FieldTypeKind.ENUM,
-                enum_values=[_to_snake_case(c) for c in children_sorted],
+                enum_values=[to_snake_case(c) for c in children_sorted],
             ),
             modifiers=[ir.FieldModifier.REQUIRED],
         )
@@ -442,7 +443,6 @@ def _validate_subtype_panels(
       omit one or more known subtypes — caller joins these into
       ``metadata['link_warnings']``.
     """
-    from .archetype_expander import _to_snake_case
     from .errors import E_SUBTYPE_PANEL_UNKNOWN_KIND, W_SUBTYPE_PANEL_INCOMPLETE
 
     by_name = {e.name: e for e in entities}
@@ -461,7 +461,7 @@ def _validate_subtype_panels(
                     f"polymorphic base. Add `subtype_of:` declarations to make "
                     f"it a base, or remove the subtype_panel block."
                 )
-            valid_kinds = {_to_snake_case(c) for c in base.subtype_children}
+            valid_kinds = {to_snake_case(c) for c in base.subtype_children}
             seen: set[str] = set()
             for branch in section.subtype_panel.branches:
                 if branch.when_kind not in valid_kinds:

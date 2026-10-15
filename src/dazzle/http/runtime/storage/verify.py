@@ -59,7 +59,7 @@ class StorageVerificationError(Exception):
         )
 
 
-def _expected_prefix_pattern(prefix_template: str, user_id: str) -> re.Pattern[str]:
+def expected_prefix_pattern(prefix_template: str, user_id: str) -> re.Pattern[str]:
     """Build a regex that matches every key the user's own
     upload-ticket flow can produce.
 
@@ -170,7 +170,7 @@ def verify_storage_field_keys(
 
             prefix_template = getattr(provider, "prefix_template", None)
             if prefix_template:
-                sandbox = _expected_prefix_pattern(prefix_template, user_id)
+                sandbox = expected_prefix_pattern(prefix_template, user_id)
                 if not sandbox.match(raw):
                     last_error = StorageVerificationError(
                         field=field_name,

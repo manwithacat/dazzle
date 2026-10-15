@@ -11,7 +11,14 @@ from typing import TYPE_CHECKING, Any
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
-from .dispatch import KeywordParser, parse_block_with_dispatch
+from .dispatch import (
+    KeywordParser,
+    kw_as,
+    kw_purpose,
+    kw_show,
+    kw_sort,
+    parse_block_with_dispatch,
+)
 
 
 class UXParserMixin:
@@ -420,20 +427,6 @@ def _pv_kw_scope(parser: Any, state: _PersonaVariantState) -> None:
     parser.skip_newlines()
 
 
-def _pv_kw_purpose(parser: Any, state: _PersonaVariantState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.purpose = parser.expect(TokenType.STRING).value
-    parser.skip_newlines()
-
-
-def _pv_kw_show(parser: Any, state: _PersonaVariantState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.show = parser.parse_field_list()
-    parser.skip_newlines()
-
-
 def _pv_kw_hide(parser: Any, state: _PersonaVariantState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
@@ -513,8 +506,8 @@ def _pv_kw_empty(parser: Any, state: _PersonaVariantState) -> None:
 
 _PERSONA_VARIANT_KEYWORDS: dict[TokenType, KeywordParser[_PersonaVariantState]] = {
     TokenType.SCOPE: _pv_kw_scope,
-    TokenType.PURPOSE: _pv_kw_purpose,
-    TokenType.SHOW: _pv_kw_show,
+    TokenType.PURPOSE: kw_purpose,
+    TokenType.SHOW: kw_show,
     TokenType.HIDE: _pv_kw_hide,
     TokenType.ACTION_PRIMARY: _pv_kw_action_primary,
     TokenType.READ_ONLY: _pv_kw_read_only,
@@ -570,27 +563,6 @@ class _UXState:
 
 
 # ---------- Keyword parsers ---------- #
-
-
-def _ux_kw_purpose(parser: Any, state: _UXState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.purpose = parser.expect(TokenType.STRING).value
-    parser.skip_newlines()
-
-
-def _ux_kw_show(parser: Any, state: _UXState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.show = parser.parse_field_list()
-    parser.skip_newlines()
-
-
-def _ux_kw_sort(parser: Any, state: _UXState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.sort = parser.parse_sort_list()
-    parser.skip_newlines()
 
 
 def _ux_kw_filter(parser: Any, state: _UXState) -> None:
@@ -649,11 +621,6 @@ def _ux_kw_attention(parser: Any, state: _UXState) -> None:
     state.attention_signals.append(parser.parse_attention_signal())
 
 
-def _ux_kw_as(parser: Any, state: _UXState) -> None:
-    """``as <persona>:`` — persona variant inside ux block (renamed from ``for``)."""
-    state.persona_variants.append(parser.parse_persona_variant())
-
-
 def _ux_kw_bulk_actions(parser: Any, state: _UXState) -> None:
     """``bulk_actions:`` — IDENT-keyed sub-block (helper consumes its own keyword)."""
     state.bulk_actions = parser.parse_bulk_actions_block()
@@ -687,15 +654,15 @@ def _ux_kw_measure(parser: Any, state: _UXState) -> None:
 
 
 _UX_KEYWORDS: dict[TokenType, KeywordParser[_UXState]] = {
-    TokenType.PURPOSE: _ux_kw_purpose,
-    TokenType.SHOW: _ux_kw_show,
-    TokenType.SORT: _ux_kw_sort,
+    TokenType.PURPOSE: kw_purpose,
+    TokenType.SHOW: kw_show,
+    TokenType.SORT: kw_sort,
     TokenType.FILTER: _ux_kw_filter,
     TokenType.SEARCH: _ux_kw_search,
     TokenType.EMPTY: _ux_kw_empty,
     TokenType.SEARCH_FIRST: _ux_kw_search_first,
     TokenType.ATTENTION: _ux_kw_attention,
-    TokenType.AS: _ux_kw_as,
+    TokenType.AS: kw_as,
 }
 
 

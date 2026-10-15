@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .expressions import FieldPath, InfixExpr, expr_field_dependencies
+
 if TYPE_CHECKING:
     from .expressions import Expr
 
@@ -45,7 +47,7 @@ class DurationUnit(StrEnum):
     YEARS = "years"
 
 
-class InvariantFieldRef(BaseModel):
+class InvariantFieldRef(FieldPath, BaseModel):
     """
     Reference to a field in an invariant expression.
 
@@ -55,9 +57,6 @@ class InvariantFieldRef(BaseModel):
     path: list[str] = Field(description="Field path (e.g., ['end_date'] or ['user', 'role'])")
 
     model_config = ConfigDict(frozen=True)
-
-    def __str__(self) -> str:
-        return ".".join(self.path)
 
 
 class InvariantLiteral(BaseModel):
@@ -95,7 +94,7 @@ class DurationExpr(BaseModel):
         return f"{self.value} {self.unit.value}"
 
 
-class ComparisonExpr(BaseModel):
+class ComparisonExpr(InfixExpr, BaseModel):
     """
     A comparison expression between two operands.
 
@@ -111,11 +110,8 @@ class ComparisonExpr(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    def __str__(self) -> str:
-        return f"({self.left} {self.operator.value} {self.right})"
 
-
-class LogicalExpr(BaseModel):
+class LogicalExpr(InfixExpr, BaseModel):
     """
     A logical expression combining two conditions.
 
@@ -129,9 +125,6 @@ class LogicalExpr(BaseModel):
     right: InvariantExpr = Field(description="Right condition")
 
     model_config = ConfigDict(frozen=True)
-
-    def __str__(self) -> str:
-        return f"({self.left} {self.operator.value} {self.right})"
 
 
 class NotExpr(BaseModel):
@@ -206,29 +199,8 @@ class InvariantSpec(BaseModel):
             Set of field path strings (e.g., {"start_date", "end_date"})
         """
         if self.invariant_expr is not None:
-            return self._collect_expr_dependencies(self.invariant_expr)
+            return expr_field_dependencies(self.invariant_expr)
         return self._collect_dependencies(self.expression)
-
-    def _collect_expr_dependencies(self, expr: Expr) -> set[str]:
-        """Collect field dependencies from unified Expr AST."""
-        from .expressions import BinaryExpr, FieldRef, FuncCall, InExpr, UnaryExpr
-
-        deps: set[str] = set()
-        if isinstance(expr, FieldRef):
-            deps.add(str(expr))
-        elif isinstance(expr, BinaryExpr):
-            deps.update(self._collect_expr_dependencies(expr.left))
-            deps.update(self._collect_expr_dependencies(expr.right))
-        elif isinstance(expr, UnaryExpr):
-            deps.update(self._collect_expr_dependencies(expr.operand))
-        elif isinstance(expr, FuncCall):
-            for arg in expr.args:
-                deps.update(self._collect_expr_dependencies(arg))
-        elif isinstance(expr, InExpr):
-            deps.update(self._collect_expr_dependencies(expr.value))
-            for item in expr.items:
-                deps.update(self._collect_expr_dependencies(item))
-        return deps
 
     def _collect_dependencies(self, expr: InvariantExpr | None) -> set[str]:
         """Recursively collect dependencies from legacy expression."""

@@ -11,7 +11,7 @@ from .cleanup import db_cleanup_impl
 from .connection import get_connection, resolve_db_url
 from .graph import build_dependency_graph, get_ref_fields, leaves_first, parents_first
 from .reset import db_reset_impl
-from .sql import quote_id
+from .sql import quote_identifier
 from .status import db_status_impl
 from .verify import db_verify_impl
 
@@ -25,6 +25,6 @@ __all__ = [
     "get_ref_fields",
     "leaves_first",
     "parents_first",
-    "quote_id",
+    "quote_identifier",
     "resolve_db_url",
 ]

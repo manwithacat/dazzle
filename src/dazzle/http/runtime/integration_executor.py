@@ -22,11 +22,12 @@ from typing import TYPE_CHECKING, Any
 
 from dazzle.core import ir
 from dazzle.core.http_client import async_retrying_request
+from dazzle.http.runtime.mapping_body import resolve_expression
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from dazzle.core.ir.integrations import Expression, IntegrationAction, MappingRule
+    from dazzle.core.ir.integrations import IntegrationAction, MappingRule
 
 
 # =============================================================================
@@ -107,30 +108,6 @@ class IntegrationExecutor:
 
         return ServiceConfig(base_url=base_url, headers=headers)
 
-    def evaluate_expression(self, expr: Expression, context: dict[str, Any]) -> Any:
-        """Resolve a single Expression against the provided context.
-
-        Supports:
-        - ``expr.literal`` → returns the literal value directly
-        - ``expr.path`` → dotted path resolution (``form.field``, ``entity.field``)
-        """
-        if expr.literal is not None:
-            return expr.literal
-
-        if expr.path:
-            parts = expr.path.split(".")
-            current: Any = context
-            for part in parts:
-                if isinstance(current, dict):
-                    current = current.get(part)
-                else:
-                    current = getattr(current, part, None)
-                if current is None:
-                    return None
-            return current
-
-        return None
-
     def apply_mapping(
         self,
         rules: list[MappingRule],
@@ -142,7 +119,7 @@ class IntegrationExecutor:
         """
         result: dict[str, Any] = {}
         for rule in rules:
-            value = self.evaluate_expression(rule.source, context)
+            value = resolve_expression(rule.source, context)
             result[rule.target_field] = value
         return result
 

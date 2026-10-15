@@ -799,14 +799,6 @@ class ProcessParserMixin:
         f.on_false = str(self.expect_identifier_or_keyword().value)
         self.skip_newlines()
 
-    def _parse_step_goto_field(self, f: _StepFields) -> None:
-        self.advance()
-        self.expect(TokenType.COLON)
-        # Could be on_true or on_false in condition context
-        # For now, treat as on_success
-        f.on_success = str(self.expect_identifier_or_keyword().value)
-        self.skip_newlines()
-
     def _parse_step_on_success_field(self, f: _StepFields) -> None:
         self.advance()
         self.expect(TokenType.COLON)
@@ -1526,10 +1518,6 @@ def _sf_on_false(p: Any, s: _StepFields) -> None:
     p._parse_step_on_false_field(s)
 
 
-def _sf_goto(p: Any, s: _StepFields) -> None:
-    p._parse_step_goto_field(s)
-
-
 def _sf_on_success(p: Any, s: _StepFields) -> None:
     p._parse_step_on_success_field(s)
 
@@ -1573,7 +1561,7 @@ _STEP_FIELD_KEYWORDS: dict[TokenType, KeywordParser[_StepFields]] = {
     TokenType.CONDITION: _sf_condition,
     TokenType.ON_TRUE: _sf_on_true,
     TokenType.ON_FALSE: _sf_on_false,
-    TokenType.GOTO: _sf_goto,
+    TokenType.GOTO: _sf_on_success,  # `goto:` is an alias of `on_success:`
     TokenType.ON_SUCCESS: _sf_on_success,
     TokenType.ON_FAILURE: _sf_on_failure,
     TokenType.COMPENSATE: _sf_compensate,

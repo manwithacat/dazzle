@@ -5,7 +5,7 @@ registry are known to be lossless and can be applied automatically during
 auto-migration. Unknown casts are skipped with a warning.
 """
 
-from dazzle.http.runtime.query_builder import quote_identifier
+from dazzle.db.sql import quote_identifier
 
 # (from_type, to_type) → USING template or "" for no-op widening.
 # Types are uppercase Postgres type names as returned by information_schema.

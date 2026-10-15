@@ -5,7 +5,7 @@ from typing import Any
 
 from .connection import fetchval
 from .graph import get_ref_fields
-from .sql import quote_id
+from .sql import quote_identifier
 from .verify import _build_orphan_query, unanchored_invariant_fields
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ def _unanchored_checks(entities: list[Any]) -> list[tuple[str, list[str]]]:
 
 
 def _unanchored_where(anchor_fields: list[str]) -> str:
-    return " AND ".join(f"{quote_id(f)} IS NULL" for f in anchor_fields)
+    return " AND ".join(f"{quote_identifier(f)} IS NULL" for f in anchor_fields)
 
 
 def _build_delete_orphans_query(
@@ -86,10 +86,10 @@ async def db_cleanup_impl(
         total_would_delete = 0
         findings: list[dict[str, Any]] = []
         for entity_name, field, ref_name in checks:
-            child_table = quote_id(entity_name)
-            parent_table = quote_id(ref_name)
-            fk_column = quote_id(field.name)
-            pk_column = quote_id("id")
+            child_table = quote_identifier(entity_name)
+            parent_table = quote_identifier(ref_name)
+            fk_column = quote_identifier(field.name)
+            pk_column = quote_identifier("id")
             sql = _build_orphan_query(
                 child_table=child_table,
                 fk_column=fk_column,
@@ -113,7 +113,7 @@ async def db_cleanup_impl(
 
         for entity_name, anchor_fields in unanchored_checks:
             sql = (
-                f"SELECT count(*) FROM {quote_id(entity_name)} "
+                f"SELECT count(*) FROM {quote_identifier(entity_name)} "
                 f"WHERE {_unanchored_where(anchor_fields)}"
             )
             try:
@@ -153,10 +153,10 @@ async def db_cleanup_impl(
         round_deleted = 0
 
         for entity_name, field, ref_name in checks:
-            child_table = quote_id(entity_name)
-            parent_table = quote_id(ref_name)
-            fk_column = quote_id(field.name)
-            pk_column = quote_id("id")
+            child_table = quote_identifier(entity_name)
+            parent_table = quote_identifier(ref_name)
+            fk_column = quote_identifier(field.name)
+            pk_column = quote_identifier("id")
 
             count_sql = _build_orphan_query(
                 child_table=child_table,
@@ -194,14 +194,14 @@ async def db_cleanup_impl(
         # next iteration's orphan pass then reaps.
         for entity_name, anchor_fields in unanchored_checks:
             where = _unanchored_where(anchor_fields)
-            count_sql = f"SELECT count(*) FROM {quote_id(entity_name)} WHERE {where}"
+            count_sql = f"SELECT count(*) FROM {quote_identifier(entity_name)} WHERE {where}"
             try:
                 count = await fetchval(conn, count_sql)
                 if count == 0:
                     continue
-                # table + column names are quote_id()-sanitised identifiers
+                # table + column names are quote_identifier()-sanitised identifiers
                 # (not bindable as params); no user-input values.
-                _del = f"DELETE FROM {quote_id(entity_name)} WHERE {where}"  # nosemgrep
+                _del = f"DELETE FROM {quote_identifier(entity_name)} WHERE {where}"  # nosemgrep
                 await conn.execute(_del)  # nosemgrep
                 round_deleted += count
                 all_deletions.append(

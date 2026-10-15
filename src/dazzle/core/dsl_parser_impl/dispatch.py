@@ -69,10 +69,13 @@ from __future__ import annotations
 import difflib
 from collections.abc import Callable
 from pathlib import Path
-from typing import Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 from dazzle.core.errors import make_parse_error
 from dazzle.core.lexer import Token, TokenType
+
+if TYPE_CHECKING:
+    from dazzle.core.ir import PersonaVariant, SortSpec
 
 StateT = TypeVar("StateT")
 
@@ -176,3 +179,94 @@ def _default_unknown_keyword(parser: _ParserLike, known: list[str] | None = None
         tok.line,
         tok.column,
     )
+
+
+# ---------- Shared keyword handlers ---------- #
+# One definition per ``<keyword>: <value>`` handler that several constructs'
+# keyword tables use with identical semantics (flense ship AH). Each is typed
+# against the one state field it writes, so any state dataclass carrying that
+# field satisfies it structurally.
+
+
+class _HasDescription(Protocol):
+    description: str | None
+
+
+class _HasEyebrow(Protocol):
+    eyebrow: str | None
+
+
+class _HasLimit(Protocol):
+    limit: int | None
+
+
+class _HasPurpose(Protocol):
+    purpose: str | None
+
+
+class _HasShow(Protocol):
+    show: list[str]
+
+
+class _HasSort(Protocol):
+    sort: list[SortSpec]
+
+
+class _HasPersonaVariants(Protocol):
+    persona_variants: list[PersonaVariant]
+
+
+def kw_description(parser: Any, state: _HasDescription) -> None:
+    """``description: "<str>"``."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.description = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def kw_eyebrow(parser: Any, state: _HasEyebrow) -> None:
+    """``eyebrow: "<str>"``."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.eyebrow = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def kw_limit(parser: Any, state: _HasLimit) -> None:
+    """``limit: <int>``."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.limit = int(parser.expect(TokenType.NUMBER).value)
+    parser.skip_newlines()
+
+
+def kw_purpose(parser: Any, state: _HasPurpose) -> None:
+    """``purpose: "<str>"``."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.purpose = parser.expect(TokenType.STRING).value
+    parser.skip_newlines()
+
+
+def kw_show(parser: Any, state: _HasShow) -> None:
+    """``show: <field>, <field>``."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.show = parser.parse_field_list()
+    parser.skip_newlines()
+
+
+def kw_sort(parser: Any, state: _HasSort) -> None:
+    """``sort: <field> [asc|desc], ...``."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.sort = parser.parse_sort_list()
+    parser.skip_newlines()
+
+
+def kw_as(parser: Any, state: _HasPersonaVariants) -> None:
+    """``as <persona>:`` — persona variant (renamed from ``for`` in #998).
+
+    The helper consumes its own keyword.
+    """
+    state.persona_variants.append(parser.parse_persona_variant())

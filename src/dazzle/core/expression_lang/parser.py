@@ -22,6 +22,7 @@ Grammar (precedence low to high):
 """
 
 from dazzle.core.expression_lang.tokenizer import (
+    ExpressionError,
     ExpressionTokenError,
     Token,
     TokenKind,
@@ -42,12 +43,8 @@ from dazzle.core.ir.expressions import (
 )
 
 
-class ExpressionParseError(Exception):
+class ExpressionParseError(ExpressionError):
     """Error during expression parsing."""
-
-    def __init__(self, message: str, pos: int = 0) -> None:
-        super().__init__(message)
-        self.pos = pos
 
 
 class _Parser:

@@ -33,7 +33,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from dazzle.http.runtime.query_builder import quote_identifier, validate_sql_identifier
+from dazzle.db.sql import quote_identifier
+from dazzle.http.runtime.query_builder import validate_sql_identifier
 
 logger = logging.getLogger(__name__)
 

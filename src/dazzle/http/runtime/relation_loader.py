@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from dazzle.http.runtime.query_builder import quote_identifier
+from dazzle.db.sql import quote_identifier
 
 if TYPE_CHECKING:
     from dazzle.http.specs.entity import EntitySpec, RelationSpec

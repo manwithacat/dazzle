@@ -23,7 +23,7 @@ from dazzle.core.ir.test_design import (
     TestDesignStep,
     TestDesignTrigger,
 )
-from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
+from dazzle.core.story_emitter import StoryIdAllocator, append_stories_to_dsl
 
 story_app = typer.Typer(
     help="Story-driven test generation. Propose stories from DSL, "
@@ -86,15 +86,7 @@ def propose_stories(
     typer.echo(f"Proposing stories for '{appspec.name}'...")
 
     # Get starting story ID
-    base_id = get_next_story_id_from_appspec(appspec.stories)
-    base_num = int(base_id[3:])
-    story_count = 0
-
-    def next_id() -> str:
-        nonlocal story_count
-        result = f"ST-{base_num + story_count:03d}"
-        story_count += 1
-        return result
+    story_ids = StoryIdAllocator(appspec.stories)
 
     # Default persona
     default_actor = "User"
@@ -108,7 +100,7 @@ def propose_stories(
         if entity_filter and entity.name not in entity_filter:
             continue
 
-        if story_count >= max_stories:
+        if story_ids.issued >= max_stories:
             break
 
         actor = default_actor
@@ -116,7 +108,7 @@ def propose_stories(
         # Story: Create entity via form
         stories.append(
             StorySpec(
-                story_id=next_id(),
+                story_id=story_ids.next(),
                 title=f"{actor} creates a new {entity.title or entity.name}",
                 persona=actor,
                 trigger=StoryTrigger.FORM_SUBMITTED,
@@ -136,15 +128,15 @@ def propose_stories(
         )
 
         # Story: State machine transitions
-        if entity.state_machine and story_count < max_stories:
+        if entity.state_machine and story_ids.issued < max_stories:
             sm = entity.state_machine
             for transition in sm.transitions[:3]:
-                if story_count >= max_stories:
+                if story_ids.issued >= max_stories:
                     break
 
                 stories.append(
                     StorySpec(
-                        story_id=next_id(),
+                        story_id=story_ids.next(),
                         title=(
                             f"{actor} changes {entity.name} "
                             f"from {transition.from_state} to {transition.to_state}"

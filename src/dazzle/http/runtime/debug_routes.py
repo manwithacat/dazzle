@@ -21,8 +21,9 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from dazzle.core import ir
+from dazzle.db.sql import quote_identifier
 from dazzle.http.runtime.pg_backend import PostgresBackend
-from dazzle.http.runtime.query_builder import quote_identifier, validate_sql_identifier
+from dazzle.http.runtime.query_builder import validate_sql_identifier
 from dazzle.http.specs.entity import EntitySpec
 
 logger = logging.getLogger(__name__)

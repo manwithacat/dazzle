@@ -15,6 +15,8 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
+from dazzle.db.sql import quote_identifier
+
 # Valid SQL identifier pattern (alphanumeric and underscore, not starting with digit)
 _VALID_IDENTIFIER_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
@@ -41,29 +43,6 @@ def validate_sql_identifier(name: str, context: str = "identifier") -> str:
             "and underscores, and cannot start with a digit"
         )
     return name
-
-
-def quote_identifier(name: str) -> str:
-    """
-    Quote a SQL identifier to handle reserved words safely.
-
-    Uses double quotes which is the SQL standard for identifiers.
-    SQLite, PostgreSQL, and most databases support this.
-
-    Examples:
-        quote_identifier("Order") -> '"Order"'
-        quote_identifier("user") -> '"user"'
-        quote_identifier("normal_name") -> '"normal_name"'
-
-    Args:
-        name: The identifier to quote
-
-    Returns:
-        Double-quoted identifier safe for SQL
-    """
-    # Escape any double quotes in the name by doubling them
-    escaped = name.replace('"', '""')
-    return f'"{escaped}"'
 
 
 class FilterOperator(StrEnum):

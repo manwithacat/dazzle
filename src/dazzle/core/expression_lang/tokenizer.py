@@ -98,12 +98,16 @@ _NUMBER_RE = re.compile(r"\d+(\.\d+)?")
 _IDENT_RE = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
 
 
-class ExpressionTokenError(Exception):
-    """Error during expression tokenization."""
+class ExpressionError(Exception):
+    """An expression-language error at a character offset in the source."""
 
-    def __init__(self, message: str, pos: int) -> None:
+    def __init__(self, message: str, pos: int = 0) -> None:
         super().__init__(message)
         self.pos = pos
+
+
+class ExpressionTokenError(ExpressionError):
+    """Error during expression tokenization."""
 
 
 def tokenize(source: str) -> list[Token]:

@@ -33,7 +33,7 @@ from dazzle.core.ir.predicates import (
     UserAttrCheck,
     ValueRef,
 )
-from dazzle.http.runtime.query_builder import quote_identifier
+from dazzle.db.sql import quote_identifier
 from dazzle.http.runtime.rls_schema import HOST_TENANT_GUC, USER_GUC_PREFIX
 
 # ---------------------------------------------------------------------------

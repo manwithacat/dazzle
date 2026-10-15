@@ -35,7 +35,7 @@ package: dazzle.http
   source: _LOADERS
   count: 7
   exports:
-  - AuthStore: class (bases=[UserStoreMixin, SessionStoreMixin, TwoFactorMixin]) (database_url: str, user_entity_table: str = '')
+  - AuthStore: class (bases=[UserStoreMixin, SessionStoreMixin, TwoFactorMixin, LazyPgStore]) (database_url: str, user_entity_table: str = '')
   - MigrationAction: class (bases=[StrEnum]) (*values)
   - PostgresBackend: class (database_url: str, search_path: str | None = None, *, isolation: str = 'none')
   - build_metadata: function (entities: 'list[EntitySpec]', surfaces: 'list[SurfaceSpec] | None' = None, *, partition_key: 'str | None' = None, tenant_scoped: 'set[str] | None' = None) -> 'sqlalchemy.MetaData'

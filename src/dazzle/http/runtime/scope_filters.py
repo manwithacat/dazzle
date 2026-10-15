@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException
 
 from dazzle.core.date_expr_eval import date_expr_filter_value
+from dazzle.db.sql import quote_identifier
 from dazzle.http.runtime.auth import AuthContext, effective_roles_of
 
 # Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
@@ -76,7 +77,6 @@ def _build_fk_path_subquery(
 
     Returns (fk_field, subquery_sql, params) or None if the path can't be resolved.
     """
-    from dazzle.http.runtime.query_builder import quote_identifier
 
     parts = field.split(".", 1)
     if len(parts) != 2:
@@ -124,7 +124,6 @@ def _build_via_subquery(
 
     Returns (entity_field, subquery_sql, params).
     """
-    from dazzle.http.runtime.query_builder import quote_identifier
 
     junction_table = quote_identifier(junction_entity)
     select_field = None

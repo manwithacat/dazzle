@@ -964,9 +964,8 @@ def _reset_db_for_trial(project_dir: Path) -> None:
     """
     import os
 
-    from dazzle.cli.db import _resolve_url, _run_with_connection
+    from dazzle.cli.db import _reset_entity_tables, _resolve_url
     from dazzle.cli.utils import load_project_appspec
-    from dazzle.db.reset import db_reset_impl
 
     old_cwd = Path.cwd()
     try:
@@ -975,10 +974,7 @@ def _reset_db_for_trial(project_dir: Path) -> None:
         entities = appspec.domain.entities
         url = _resolve_url("")
 
-        async def _run(conn: Any) -> Any:
-            return await db_reset_impl(entities=entities, conn=conn)
-
-        result = asyncio.run(_run_with_connection(project_dir, url, _run, schema=""))
+        result = _reset_entity_tables(project_dir, url, entities, schema="")
         typer.echo(
             f"Fresh DB: truncated {result['truncated']} tables "
             f"({result['total_rows']:,} rows removed). Auth preserved."

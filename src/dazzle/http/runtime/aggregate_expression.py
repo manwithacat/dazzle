@@ -33,7 +33,8 @@ from __future__ import annotations
 from typing import Any
 
 from dazzle.core.ir import AggregateExpr
-from dazzle.http.runtime.query_builder import quote_identifier, validate_sql_identifier
+from dazzle.db.sql import quote_identifier
+from dazzle.http.runtime.query_builder import validate_sql_identifier
 
 # Each cast target maps to a fixed Postgres type name. The IR validator
 # rejects anything outside this set; this dict is the runtime ground

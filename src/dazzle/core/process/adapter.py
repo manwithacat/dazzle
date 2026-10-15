@@ -7,8 +7,10 @@ backends must implement, allowing swappable runtime implementations.
 
 from __future__ import annotations  # required: forward reference
 
+import asyncio
+import logging
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -16,6 +18,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from dazzle.core.clock import utcnow
 from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
+
+logger = logging.getLogger(__name__)
 
 
 class ProcessStatus(StrEnum):
@@ -269,3 +273,102 @@ class ProcessAdapter(ABC):
             Number of active runs
         """
         pass
+
+
+def resolve_param_ref(value: Any) -> Any:
+    """Unwrap a ParamRef to its default (#1131 — sibling of #841).
+
+    ScheduleSpec fields like ``cron`` and ``interval_seconds`` are
+    typed ``Any`` so they accept either a literal or a ``ParamRef``.
+    The scheduler loop calls ``str.split`` / arithmetic on these
+    values; passing a raw ``ParamRef`` raises
+    ``AttributeError: 'ParamRef' object has no attribute 'split'``
+    (same shape as the original #841 SLA bug). Mirrors the
+    ``_tier_seconds`` resolution pattern in
+    ``dazzle.http.runtime.sla_manager``.
+    """
+    if hasattr(value, "default"):
+        return value.default
+    return value
+
+
+class ScheduledProcessAdapter(ProcessAdapter):
+    """In-process cron/interval scheduler shared by the event-bus and
+    Postgres adapters (Temporal schedules server-side and does not use it).
+
+    Subclasses own ``_shutdown_event``, ``_schedules`` (name → resolved
+    schedule dict) and ``_trigger_schedule``; ``_scheduler_label`` names the
+    loop in the start/stop log lines.
+    """
+
+    _scheduler_label = "Process"
+    _shutdown_event: asyncio.Event
+    _schedules: dict[str, dict[str, Any]]
+
+    @abstractmethod
+    async def _trigger_schedule(self, name: str, schedule: dict[str, Any]) -> None:
+        """Start one run of the scheduled process."""
+
+    async def _scheduler_loop(self) -> None:
+        """Background loop for cron/interval schedule triggers."""
+        logger.info("%s scheduler loop starting", self._scheduler_label)
+        last_check: dict[str, datetime] = {}
+
+        while not self._shutdown_event.is_set():
+            try:
+                now = datetime.now(UTC)
+                for name, schedule in self._schedules.items():
+                    interval = schedule.get("interval_seconds")
+                    if interval:
+                        last = last_check.get(name)
+                        if last is None or (now - last).total_seconds() >= interval:
+                            last_check[name] = now
+                            await self._trigger_schedule(name, schedule)
+
+                    cron = schedule.get("cron")
+                    if cron:
+                        if self._cron_matches(cron, now):
+                            last = last_check.get(name)
+                            if last is None or (now - last).total_seconds() >= 60:
+                                last_check[name] = now
+                                await self._trigger_schedule(name, schedule)
+
+                await asyncio.sleep(30.0)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                # #1131: log the traceback so production can pinpoint which
+                # schedule entry blew up and on which field. Bare-message
+                # logging hid the call site for the v0.71.23 ParamRef
+                # regression for hours of consumer log triage.
+                logger.warning("Scheduler loop error: %s", e, exc_info=True)
+                await asyncio.sleep(60.0)
+
+        logger.info("%s scheduler loop stopped", self._scheduler_label)
+
+    @staticmethod
+    def _cron_matches(cron: str, now: datetime) -> bool:
+        """Simple cron matching (minute hour dom month dow)."""
+        parts = cron.split()
+        if len(parts) < 5:
+            return False
+
+        def _match(pattern: str, value: int) -> bool:
+            if pattern == "*":
+                return True
+            if pattern.isdigit():
+                return int(pattern) == value
+            if "/" in pattern:
+                _, step = pattern.split("/", 1)
+                return value % int(step) == 0
+            if "," in pattern:
+                return str(value) in pattern.split(",")
+            return False
+
+        return (
+            _match(parts[0], now.minute)
+            and _match(parts[1], now.hour)
+            and _match(parts[2], now.day)
+            and _match(parts[3], now.month)
+            and _match(parts[4], now.weekday())
+        )

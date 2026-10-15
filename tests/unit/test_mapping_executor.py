@@ -21,6 +21,7 @@ from dazzle.core.ir.integrations import (
     MappingTriggerType,
 )
 from dazzle.http.runtime.event_bus import EntityEvent, EntityEventBus, EntityEventType
+from dazzle.http.runtime.mapping_body import resolve_expression
 from dazzle.http.runtime.mapping_executor import MappingExecutor
 
 # ---------------------------------------------------------------------------
@@ -933,37 +934,21 @@ class TestTransitionTrigger:
 
 class TestExpressionEvaluation:
     def test_path_resolution(self) -> None:
-        appspec = _make_appspec()
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
         expr = Expression(path="self.name")
-        assert executor._evaluate_expression(expr, {"self": {"name": "Acme"}}) == "Acme"
+        assert resolve_expression(expr, {"self": {"name": "Acme"}}) == "Acme"
 
     def test_literal_value(self) -> None:
-        appspec = _make_appspec()
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
         expr = Expression(literal=42)
-        assert executor._evaluate_expression(expr, {}) == 42
+        assert resolve_expression(expr, {}) == 42
 
     def test_nested_path(self) -> None:
-        appspec = _make_appspec()
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
         expr = Expression(path="response.data.id")
         ctx = {"response": {"data": {"id": "x-1"}}}
-        assert executor._evaluate_expression(expr, ctx) == "x-1"
+        assert resolve_expression(expr, ctx) == "x-1"
 
     def test_missing_path_returns_none(self) -> None:
-        appspec = _make_appspec()
-        bus = EntityEventBus()
-        executor = MappingExecutor(appspec, bus)
-
         expr = Expression(path="response.missing.field")
-        assert executor._evaluate_expression(expr, {"response": {}}) is None
+        assert resolve_expression(expr, {"response": {}}) is None
 
 
 # ---------------------------------------------------------------------------

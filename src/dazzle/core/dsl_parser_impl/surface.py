@@ -11,8 +11,14 @@ from .. import ir
 from ..errors import make_parse_error
 from ..ir.location import SourceLocation
 from ..lexer import TokenType
-from ._refresh import parse_refresh_interval_seconds
-from .dispatch import KeywordParser, parse_block_with_dispatch
+from ._refresh import kw_refresh
+from .dispatch import (
+    KeywordParser,
+    kw_as,
+    kw_eyebrow,
+    kw_limit,
+    parse_block_with_dispatch,
+)
 
 
 class SurfaceParserMixin:
@@ -866,20 +872,6 @@ def _kw_open(parser: Any, state: _SurfaceState) -> None:
     parser.skip_newlines()
 
 
-def _kw_refresh(parser: Any, state: _SurfaceState) -> None:
-    """``refresh: every Ns`` — declarative live-refresh poll interval (#1399).
-
-    Standalone-surface analogue of the workspace-region primitive (#1391): the
-    list table's HTMX-loaded ``<tbody>`` appends ``, every Ns`` to its trigger so
-    the existing list data endpoint re-renders on a poll. Shares the parser +
-    5s floor with the region surface (``_refresh.parse_refresh_interval_seconds``).
-    """
-    parser.advance()  # consume `refresh`
-    parser.expect(TokenType.COLON)
-    state.refresh_interval = parse_refresh_interval_seconds(parser)
-    parser.skip_newlines()
-
-
 def _kw_source(parser: Any, state: _SurfaceState) -> None:
     """``source: ViewName`` — view reference for field projection."""
     parser.advance()
@@ -935,15 +927,6 @@ def _kw_search(parser: Any, state: _SurfaceState) -> None:
     else:
         state.search_fields.append(parser.expect_identifier_or_keyword().value)
     parser.skip_newlines()
-
-
-def _kw_as(parser: Any, state: _SurfaceState) -> None:
-    """``as <persona>:`` — surface-level persona variant.
-
-    Renamed from ``for <persona>:`` in #998 — ``as`` is the canonical
-    persona binding introducer. The helper consumes its own keyword.
-    """
-    state.persona_variants.append(parser.parse_persona_variant())
 
 
 def _kw_related(parser: Any, state: _SurfaceState) -> None:
@@ -1022,7 +1005,7 @@ _SURFACE_KEYWORDS: dict[TokenType, KeywordParser[_SurfaceState]] = {
     TokenType.ACTION: _kw_action,
     TokenType.UX: _kw_ux,
     TokenType.SEARCH: _kw_search,
-    TokenType.AS: _kw_as,
+    TokenType.AS: kw_as,
     TokenType.RELATED: _kw_related,
     TokenType.COMPANION: _kw_companion,
     TokenType.DISPLAY: _kw_display,
@@ -1032,7 +1015,7 @@ _SURFACE_KEYWORDS: dict[TokenType, KeywordParser[_SurfaceState]] = {
 
 _SURFACE_IDENT_KEYWORDS: dict[str, KeywordParser[_SurfaceState]] = {
     "show_history": _kw_show_history,
-    "refresh": _kw_refresh,  # #1399 slice 3 — live-refresh poll interval
+    "refresh": kw_refresh,  # #1399 slice 3 — live-refresh poll interval
     "peek": _kw_peek,  # #1494 (2c) — action-proximate detail mode
     "open": _kw_open,  # #1603 — list row open via FK hop
 }
@@ -1143,13 +1126,6 @@ class _StopCompanionLoop(Exception):
 # ---------- Token-keyed keyword parsers ---------- #
 
 
-def _c_kw_eyebrow(parser: Any, state: _CompanionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.eyebrow = parser.expect(TokenType.STRING).value
-    parser.skip_newlines()
-
-
 def _c_kw_display(parser: Any, state: _CompanionState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
@@ -1161,13 +1137,6 @@ def _c_kw_source(parser: Any, state: _CompanionState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
     state.source = parser.expect_identifier_or_keyword().value
-    parser.skip_newlines()
-
-
-def _c_kw_limit(parser: Any, state: _CompanionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.limit = int(parser.expect(TokenType.NUMBER).value)
     parser.skip_newlines()
 
 
@@ -1220,10 +1189,10 @@ def _c_kw_title(parser: Any, state: _CompanionState) -> None:
 
 
 _COMPANION_KEYWORDS: dict[TokenType, KeywordParser[_CompanionState]] = {
-    TokenType.EYEBROW: _c_kw_eyebrow,
+    TokenType.EYEBROW: kw_eyebrow,
     TokenType.DISPLAY: _c_kw_display,
     TokenType.SOURCE: _c_kw_source,
-    TokenType.LIMIT: _c_kw_limit,
+    TokenType.LIMIT: kw_limit,
     TokenType.FILTER: _c_kw_filter,
     TokenType.AGGREGATE: _c_kw_aggregate,
     TokenType.ENTRIES: _c_kw_entries,

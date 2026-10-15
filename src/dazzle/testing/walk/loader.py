@@ -13,12 +13,16 @@ except ImportError:  # pragma: no cover — PyYAML is a hard runtime dep in prac
     yaml = None  # type: ignore[assignment]
 
 
-class WalkLoadError(ValueError):
-    """Walk file missing, unreadable, or structurally invalid."""
+class PathLoadError(ValueError):
+    """A YAML fixture under ``fixtures/`` failed to load; message is path-prefixed."""
 
     def __init__(self, path: Path | str, message: str) -> None:
         self.path = Path(path)
         super().__init__(f"{self.path}: {message}")
+
+
+class WalkLoadError(PathLoadError):
+    """Walk file missing, unreadable, or structurally invalid."""
 
 
 def _require_yaml() -> Any:

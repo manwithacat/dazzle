@@ -4,7 +4,7 @@
 from typing import Any
 
 from .connection import fetchval
-from .sql import quote_id
+from .sql import quote_identifier
 
 
 def _is_missing_relation(err: str) -> bool:
@@ -40,7 +40,7 @@ async def db_status_impl(
     not_materialized = 0
 
     for entity in entities:
-        table = quote_id(entity.name)
+        table = quote_identifier(entity.name)
         try:
             count = await fetchval(conn, f"SELECT count(*) FROM {table}")
             results.append(

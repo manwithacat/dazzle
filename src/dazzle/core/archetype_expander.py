@@ -10,6 +10,7 @@ v0.10.4: Added user and user_membership archetypes
 
 from . import ir
 from .linker_impl import SymbolTable
+from .strings import to_snake_case
 
 
 def expand_archetypes(
@@ -145,7 +146,7 @@ def _generate_settings_surface(entity: ir.EntitySpec) -> ir.SurfaceSpec:
     Returns:
         Auto-generated settings surface
     """
-    snake_name = _to_snake_case(entity.name)
+    snake_name = to_snake_case(entity.name)
 
     # Create elements for all non-PK fields
     elements = [
@@ -196,7 +197,7 @@ def _generate_tenant_admin_surface(entity: ir.EntitySpec) -> ir.SurfaceSpec:
     Returns:
         Auto-generated tenant management surface
     """
-    snake_name = _to_snake_case(entity.name)
+    snake_name = to_snake_case(entity.name)
 
     # Create elements for key fields (name, slug, etc. - non-PK, non-FK)
     elements = [
@@ -245,7 +246,7 @@ def _generate_tenant_settings_surface(entity: ir.EntitySpec) -> ir.SurfaceSpec:
     Returns:
         Auto-generated tenant settings surface
     """
-    snake_name = _to_snake_case(entity.name)
+    snake_name = to_snake_case(entity.name)
 
     # Create elements for non-PK, non-FK fields
     elements = [
@@ -277,23 +278,6 @@ def _generate_tenant_settings_surface(entity: ir.EntitySpec) -> ir.SurfaceSpec:
         actions=[],
         access=access,
     )
-
-
-def _to_snake_case(name: str) -> str:
-    """
-    Convert PascalCase to snake_case.
-
-    Args:
-        name: PascalCase name (e.g., "AppSettings")
-
-    Returns:
-        snake_case name (e.g., "app_settings")
-    """
-    import re
-
-    # Insert underscore before uppercase letters (except first)
-    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
-    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
 def _merge_archetype_fields(
@@ -378,12 +362,12 @@ def _apply_semantic_archetype(
     if not entity.archetype_kind:
         return entity
 
-    if entity.archetype_kind == ir.ArchetypeKind.SETTINGS:
+    if entity.archetype_kind in (ir.ArchetypeKind.SETTINGS, ir.ArchetypeKind.TENANT_SETTINGS):
+        # tenant_settings is a per-tenant singleton; tenant-admin access is
+        # resolved at runtime, so the IR expansion is the same as settings.
         return _expand_settings_archetype(entity)
     elif entity.archetype_kind == ir.ArchetypeKind.TENANT:
         return _expand_tenant_archetype(entity)
-    elif entity.archetype_kind == ir.ArchetypeKind.TENANT_SETTINGS:
-        return _expand_tenant_settings_archetype(entity)
     elif entity.archetype_kind == ir.ArchetypeKind.USER:
         return _expand_user_archetype(entity)
     elif entity.archetype_kind == ir.ArchetypeKind.USER_MEMBERSHIP:
@@ -460,33 +444,6 @@ def _expand_tenant_archetype(entity: ir.EntitySpec) -> ir.EntitySpec:
     return entity.model_copy(
         update={
             "is_tenant_root": True,
-        }
-    )
-
-
-def _expand_tenant_settings_archetype(entity: ir.EntitySpec) -> ir.EntitySpec:
-    """
-    Expand tenant_settings archetype:
-    - Set is_singleton = True (per-tenant singleton)
-    - Add tenant admin access rules if not present
-
-    Args:
-        entity: Tenant settings entity
-
-    Returns:
-        Expanded entity with singleton flag and tenant admin access
-    """
-    # For tenant settings, we use is_singleton but scoped to tenant
-    # Access rules should allow tenant admins, not just site admins
-    access = entity.access
-    if not access:
-        # For now, use admin-only access (tenant admin logic handled at runtime)
-        access = _create_admin_only_access()
-
-    return entity.model_copy(
-        update={
-            "is_singleton": True,
-            "access": access,
         }
     )
 
@@ -846,7 +803,7 @@ def _generate_user_management_surfaces(entity: ir.EntitySpec) -> list[ir.Surface
     Returns:
         List of auto-generated surfaces
     """
-    snake_name = _to_snake_case(entity.name)
+    snake_name = to_snake_case(entity.name)
 
     # Identify display fields (non-sensitive, non-PK)
     sensitive_fields = {
@@ -1000,7 +957,7 @@ def _generate_membership_surfaces(
     Returns:
         List of auto-generated surfaces
     """
-    snake_name = _to_snake_case(entity.name)
+    snake_name = to_snake_case(entity.name)
 
     # Display fields for list (non-PK, non-FK identity fields)
     list_fields = {"personas", "is_primary", "invited_at", "accepted_at"}

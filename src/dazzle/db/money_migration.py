@@ -35,7 +35,7 @@ from __future__ import annotations
 from typing import Any
 
 from .connection import fetchrow
-from .sql import quote_id
+from .sql import quote_identifier
 
 
 def _money_fields(entity: Any) -> list[tuple[str, str]]:
@@ -126,10 +126,10 @@ async def detect_money_drifts(conn: Any, entities: list[Any]) -> list[dict[str, 
 
 def _build_repair_sql(entity_name: str, field_name: str, currency: str) -> str:
     """Emit the 4-statement repair pattern for a single money field."""
-    table = quote_id(entity_name)
-    legacy = quote_id(field_name)
-    minor = quote_id(f"{field_name}_minor")
-    ccy = quote_id(f"{field_name}_currency")
+    table = quote_identifier(entity_name)
+    legacy = quote_identifier(field_name)
+    minor = quote_identifier(f"{field_name}_minor")
+    ccy = quote_identifier(f"{field_name}_currency")
     # Currency code is validated against a safe set in the DSL parser; still
     # enforce a length guard here so the literal is always safe to interpolate.
     ccy_literal = _safe_ccy_literal(currency)

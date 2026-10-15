@@ -83,11 +83,12 @@ if TYPE_CHECKING:
 
 from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
 from dazzle.core.process.adapter import (
-    ProcessAdapter,
     ProcessRun,
     ProcessStatus,
     ProcessTask,
+    ScheduledProcessAdapter,
     TaskStatus,
+    resolve_param_ref,
 )
 from dazzle.core.process.pg_state import PgProcessStateStore
 from dazzle.core.process.step_executor import check_task_timeout, execute_process_steps
@@ -98,14 +99,7 @@ logger = logging.getLogger(__name__)
 _NOTIFY_CHANNEL = "process_run"
 
 
-def _resolve_param_ref(value: Any) -> Any:
-    """Unwrap a ParamRef to its default (mirrors EventBusProcessAdapter)."""
-    if hasattr(value, "default"):
-        return value.default
-    return value
-
-
-class PostgresProcessAdapter(ProcessAdapter):
+class PostgresProcessAdapter(ScheduledProcessAdapter):
     """ProcessAdapter backed by Postgres claim/lease + optional NOTIFY hint.
 
     ``__init__(dsn, store=None)``
@@ -118,6 +112,8 @@ class PostgresProcessAdapter(ProcessAdapter):
     wrapped via ``asyncio.to_thread`` (same pattern as
     ``EventBusProcessAdapter``).
     """
+
+    _scheduler_label = "Postgres process"
 
     def __init__(
         self,
@@ -202,8 +198,8 @@ class PostgresProcessAdapter(ProcessAdapter):
         self._schedules[spec.name] = {
             "name": spec.name,
             "process_name": getattr(spec, "process_name", spec.name),
-            "cron": _resolve_param_ref(getattr(spec, "cron", None)),
-            "interval_seconds": _resolve_param_ref(getattr(spec, "interval_seconds", None)),
+            "cron": resolve_param_ref(getattr(spec, "cron", None)),
+            "interval_seconds": resolve_param_ref(getattr(spec, "interval_seconds", None)),
         }
         logger.debug("Registered schedule: %s", spec.name)
 
@@ -658,39 +654,6 @@ class PostgresProcessAdapter(ProcessAdapter):
     # Scheduler loop
     # -------------------------------------------------------------------------
 
-    async def _scheduler_loop(self) -> None:
-        """Background cron/interval schedule trigger loop."""
-        logger.info("Postgres process scheduler loop starting")
-        last_check: dict[str, datetime] = {}
-
-        while not self._shutdown_event.is_set():
-            try:
-                now = datetime.now(UTC)
-                for name, schedule in self._schedules.items():
-                    interval = schedule.get("interval_seconds")
-                    if interval:
-                        last = last_check.get(name)
-                        if last is None or (now - last).total_seconds() >= interval:
-                            last_check[name] = now
-                            await self._trigger_schedule(name, schedule)
-
-                    cron = schedule.get("cron")
-                    if cron:
-                        if self._cron_matches(cron, now):
-                            last = last_check.get(name)
-                            if last is None or (now - last).total_seconds() >= 60:
-                                last_check[name] = now
-                                await self._trigger_schedule(name, schedule)
-
-                await asyncio.sleep(30.0)
-            except asyncio.CancelledError:
-                break
-            except Exception as exc:
-                logger.warning("Scheduler loop error: %s", exc, exc_info=True)
-                await asyncio.sleep(60.0)
-
-        logger.info("Postgres process scheduler loop stopped")
-
     async def _trigger_schedule(self, name: str, schedule: dict[str, Any]) -> None:
         """Trigger a scheduled process by inserting a due run."""
         process_name = schedule.get("process_name", name)
@@ -710,30 +673,3 @@ class PostgresProcessAdapter(ProcessAdapter):
         await asyncio.to_thread(self._store.set_schedule_last_run, name, datetime.now(UTC))
         await self._notify()
         logger.info("Triggered scheduled process %s run %s", process_name, run_id)
-
-    @staticmethod
-    def _cron_matches(cron: str, now: datetime) -> bool:
-        """Simple cron matching (minute hour dom month dow)."""
-        parts = cron.split()
-        if len(parts) < 5:
-            return False
-
-        def _match(pattern: str, value: int) -> bool:
-            if pattern == "*":
-                return True
-            if pattern.isdigit():
-                return int(pattern) == value
-            if "/" in pattern:
-                _, step = pattern.split("/", 1)
-                return value % int(step) == 0
-            if "," in pattern:
-                return str(value) in pattern.split(",")
-            return False
-
-        return (
-            _match(parts[0], now.minute)
-            and _match(parts[1], now.hour)
-            and _match(parts[2], now.day)
-            and _match(parts[3], now.month)
-            and _match(parts[4], now.weekday())
-        )

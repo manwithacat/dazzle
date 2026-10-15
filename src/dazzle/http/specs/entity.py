@@ -12,6 +12,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from dazzle.core.ir import Constraint, TemporalSpec
+from dazzle.core.ir.state_machine import TransitionGraph, WildcardTransition
 
 from .auth import EntityAccessSpec
 
@@ -346,7 +347,7 @@ class AutoTransitionSpec(BaseModel):
             return self.delay_value * 86400
 
 
-class StateTransitionSpec(BaseModel):
+class StateTransitionSpec(WildcardTransition, BaseModel):
     """
     A single state transition definition.
 
@@ -366,13 +367,8 @@ class StateTransitionSpec(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    @property
-    def is_wildcard(self) -> bool:
-        """Check if this is a wildcard transition."""
-        return self.from_state == "*"
 
-
-class StateMachineSpec(BaseModel):
+class StateMachineSpec(BaseModel, TransitionGraph[StateTransitionSpec]):
     """
     Complete state machine specification for an entity.
 
@@ -389,42 +385,6 @@ class StateMachineSpec(BaseModel):
     )
 
     model_config = ConfigDict(frozen=True)
-
-    def get_transitions_from(self, state: str) -> list[StateTransitionSpec]:
-        """Get all transitions from a given state."""
-        result = []
-        for t in self.transitions:
-            if t.from_state == state or t.from_state == "*":
-                result.append(t)
-        return result
-
-    def get_allowed_targets(self, from_state: str) -> set[str]:
-        """Get all states reachable from a given state."""
-        targets = set()
-        for t in self.get_transitions_from(from_state):
-            targets.add(t.to_state)
-        return targets
-
-    def is_transition_allowed(self, from_state: str, to_state: str) -> bool:
-        """Check if a transition is allowed (ignoring guards)."""
-        return to_state in self.get_allowed_targets(from_state)
-
-    def terminal_states(self) -> set[str]:
-        """States with no outgoing transition to a *different* state (#1399 / #1626 R2).
-
-        Runtime ``http.specs.entity.StateMachineSpec`` must match the IR twin
-        used by HTMX region poll-stop (``_region_polling_complete``). Missing
-        this method 500s every HX-Target region fetch for SM entities — the
-        ops Command Center Active Alerts still bug.
-        """
-        return {s for s in self.states if not (self.get_allowed_targets(s) - {s})}
-
-    def get_transition(self, from_state: str, to_state: str) -> StateTransitionSpec | None:
-        """Get the transition definition between two states."""
-        for t in self.transitions:
-            if (t.from_state == from_state or t.from_state == "*") and t.to_state == to_state:
-                return t
-        return None
 
 
 # =============================================================================

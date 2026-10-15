@@ -95,6 +95,20 @@ def get_next_story_id_from_appspec(stories: list[StorySpec]) -> str:
     return f"ST-{max_num + 1:03d}"
 
 
+class StoryIdAllocator:
+    """Hands out sequential ``ST-NNN`` ids after the highest existing story."""
+
+    def __init__(self, stories: list[StorySpec]) -> None:
+        self._base = int(get_next_story_id_from_appspec(stories)[3:])
+        self.issued = 0
+
+    def next(self) -> str:
+        """The next unused story id."""
+        result = f"ST-{self._base + self.issued:03d}"
+        self.issued += 1
+        return result
+
+
 def append_stories_to_dsl(project_root: Path, stories: list[StorySpec]) -> Path:
     """Append story DSL blocks to ``dsl/stories.dsl``.
 

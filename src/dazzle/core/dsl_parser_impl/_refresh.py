@@ -12,7 +12,7 @@ consumes ``refresh`` + ``:`` itself, then delegates the value here.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Protocol
 
 from ..errors import make_parse_error
 from ..lexer import TokenType
@@ -71,3 +71,20 @@ def parse_refresh_interval_seconds(parser: Any) -> int:
             num_tok.column,
         )
     return seconds
+
+
+class _HasRefreshInterval(Protocol):
+    refresh_interval: int | None
+
+
+def kw_refresh(parser: Any, state: _HasRefreshInterval) -> None:
+    """``refresh: every Ns`` — the keyword handler both tables share.
+
+    Workspace regions (#1391) append ``, every Ns`` to the region card's HTMX
+    trigger; standalone list surfaces (#1399) append it to the list ``<tbody>``
+    trigger. Either way the existing fetch endpoint re-renders on a poll.
+    """
+    parser.advance()  # consume `refresh`
+    parser.expect(TokenType.COLON)
+    state.refresh_interval = parse_refresh_interval_seconds(parser)
+    parser.skip_newlines()

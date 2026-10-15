@@ -1,17 +1,21 @@
 # src/dazzle/db/sql.py
-"""SQL helpers for db operations.
+"""SQL helpers shared by the runtime and the ``dazzle db`` commands.
 
-Re-exports quote_identifier from the runtime and provides query builders.
-All SQL in this package goes through these helpers for safety.
+The one identifier-quoting rule lives here: ``dazzle.db`` depends only on
+``dazzle.core``, so the HTTP runtime's query builder and the db CLI helpers
+both import it without either pulling in the other.
 """
 
 
-def quote_id(name: str) -> str:
-    """Quote a SQL identifier (table or column name).
+def quote_identifier(name: str) -> str:
+    """Quote a SQL identifier (table or column name) to handle reserved words.
 
-    Dazzle uses PascalCase entity names as table names, quoted with double-quotes.
-    Re-implements the logic from dazzle.http.runtime.query_builder.quote_identifier
-    to avoid importing the runtime package (which has heavier dependencies).
+    Uses double quotes, the SQL standard. Dazzle uses PascalCase entity names
+    as table names, so every table reference goes through here.
+
+    Examples:
+        quote_identifier("Order") -> '"Order"'
+        quote_identifier('a"b') -> '"a""b"'   (embedded quotes are doubled)
     """
     escaped = name.replace('"', '""')
     return f'"{escaped}"'

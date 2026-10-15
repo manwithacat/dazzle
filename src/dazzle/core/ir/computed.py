@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .expressions import FieldPath, InfixExpr, expr_field_dependencies
+
 if TYPE_CHECKING:
     from .expressions import Expr
 
@@ -37,7 +39,7 @@ class ArithmeticOperator(StrEnum):
     DIVIDE = "/"
 
 
-class FieldReference(BaseModel):
+class FieldReference(FieldPath, BaseModel):
     """
     Reference to a field, possibly via a relation path.
 
@@ -49,19 +51,6 @@ class FieldReference(BaseModel):
     path: list[str] = Field(description="Field path (e.g., ['line_items', 'amount'])")
 
     model_config = ConfigDict(frozen=True)
-
-    def __str__(self) -> str:
-        return ".".join(self.path)
-
-    @property
-    def is_simple(self) -> bool:
-        """Check if this is a simple field (no relation traversal)."""
-        return len(self.path) == 1
-
-    @property
-    def field_name(self) -> str:
-        """Get the final field name."""
-        return self.path[-1]
 
     @property
     def relation_path(self) -> list[str]:
@@ -88,7 +77,7 @@ class AggregateCall(BaseModel):
         return f"{self.function.value}({self.field})"
 
 
-class ArithmeticExpr(BaseModel):
+class ArithmeticExpr(InfixExpr, BaseModel):
     """
     Binary arithmetic expression.
 
@@ -100,9 +89,6 @@ class ArithmeticExpr(BaseModel):
     right: ComputedExpr = Field(description="Right operand")
 
     model_config = ConfigDict(frozen=True)
-
-    def __str__(self) -> str:
-        return f"({self.left} {self.operator.value} {self.right})"
 
 
 class LiteralValue(BaseModel):
@@ -160,31 +146,10 @@ class ComputedFieldSpec(BaseModel):
             Set of field path strings (e.g., {"line_items.amount", "tax_rate"})
         """
         if self.computed_expr is not None:
-            return self._collect_expr_dependencies(self.computed_expr)
+            return expr_field_dependencies(self.computed_expr)
         if self.expression is not None:
             return self._collect_dependencies(self.expression)
         return set()
-
-    def _collect_expr_dependencies(self, expr: Expr) -> set[str]:
-        """Collect field dependencies from unified Expr AST."""
-        from .expressions import BinaryExpr, FieldRef, FuncCall, InExpr, UnaryExpr
-
-        deps: set[str] = set()
-        if isinstance(expr, FieldRef):
-            deps.add(str(expr))
-        elif isinstance(expr, BinaryExpr):
-            deps.update(self._collect_expr_dependencies(expr.left))
-            deps.update(self._collect_expr_dependencies(expr.right))
-        elif isinstance(expr, UnaryExpr):
-            deps.update(self._collect_expr_dependencies(expr.operand))
-        elif isinstance(expr, FuncCall):
-            for arg in expr.args:
-                deps.update(self._collect_expr_dependencies(arg))
-        elif isinstance(expr, InExpr):
-            deps.update(self._collect_expr_dependencies(expr.value))
-            for item in expr.items:
-                deps.update(self._collect_expr_dependencies(item))
-        return deps
 
     def _collect_dependencies(self, expr: ComputedExpr) -> set[str]:
         """Recursively collect dependencies from legacy expression."""

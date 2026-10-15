@@ -25,7 +25,7 @@ from .. import ir
 from ..errors import make_parse_error
 from ..ir.grants import GrantApprovalMode, GrantExpiryMode, GrantRelationSpec, GrantSchemaSpec
 from ..lexer import TokenType
-from .dispatch import KeywordParser, parse_block_with_dispatch
+from .dispatch import KeywordParser, kw_description, parse_block_with_dispatch
 
 
 class GrantParserMixin:
@@ -221,13 +221,6 @@ class _GrantRelationState:
 # ---------- IDENT-text-matched keyword parsers ---------- #
 
 
-def _gr_kw_description(parser: Any, state: _GrantRelationState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.description = parser.expect(TokenType.STRING).value
-    parser.skip_newlines()
-
-
 def _gr_kw_principal_label(parser: Any, state: _GrantRelationState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
@@ -302,7 +295,7 @@ def _gr_kw_max_duration(parser: Any, state: _GrantRelationState) -> None:
 # dispatch helper finds them before falling through to the IDENT lookup.
 # The remaining 7 are plain identifiers — they live in the IDENT table.
 _GRANT_RELATION_KEYWORDS: dict[TokenType, KeywordParser[_GrantRelationState]] = {
-    TokenType.DESCRIPTION: _gr_kw_description,
+    TokenType.DESCRIPTION: kw_description,
     TokenType.APPROVAL: _gr_kw_approval,
 }
 

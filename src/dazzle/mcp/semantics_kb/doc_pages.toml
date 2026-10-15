@@ -530,17 +530,17 @@ cluster must also carry a family classification
 (`tests/unit/fixtures/clone_families.json`), enforced by
 `test_every_exact_cluster_is_classified`.
 
-Twenty-one families. Two of them are deliberate *shape* rather than missed
-extraction: `dataclass-and-store-boilerplate` (`__init__`, `__aenter__`,
-`asdict`) and `per-class-constant-accessors` (each returns a different constant;
-only the body shape matches). The rest name a retire-when condition, and three
-of them name a specific pair still to extract with its paths — so the next pass
-does not rediscover them.
+Fourteen families. Two are deliberate *shape*, not missed extraction:
+`dataclass-and-store-boilerplate` (`__init__`, `__aenter__`, `asdict`) and
+`per-class-constant-accessors` (only the body shape matches). Two are detector
+artefacts: `ir-facade-accessors` and `consolidated-tool-wrappers` import a
+*different* function under one local alias, and the exact-body serialiser drops
+import names. `auth-domain-and-connection-helpers` lives in the enterprise-auth
+and two-factor modules that ships AD and AG park.
 
-Fixed in this pass: the clock. Fifteen modules defined their own
-`datetime.now(UTC)` helper under four different names; they are now one
-`dazzle.core.clock.utcnow()`, with a test that fails if a second definition
-appears. A test that freezes time patches one name now, not fifteen.
+Fixed: the clock (one `dazzle.core.clock.utcnow()`, gated); flense ship AH: 35 of
+76 exact and 19 of 62 structural clusters (parser keyword handlers, naming, cron,
+SQL quoting, the state-machine twin, the lazy Postgres store).
 
 Full page: `docs/reference/clone-residue.md`.
 '''

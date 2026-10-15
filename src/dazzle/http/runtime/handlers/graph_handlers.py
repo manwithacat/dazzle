@@ -25,6 +25,7 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, Query, Request
 
+from dazzle.db.sql import quote_identifier
 from dazzle.http.runtime.auth import AuthContext
 
 if TYPE_CHECKING:
@@ -80,12 +81,11 @@ def _build_graph_filter_sql(
     """
     if not filters:
         return ""
-    from dazzle.http.runtime.query_builder import quote_identifier as _qi
 
     clauses: list[str] = []
     for i, (field, value) in enumerate(filters.items()):
         param_name = f"_f{i}"
-        clauses.append(f"{_qi(field)} = %({param_name})s")
+        clauses.append(f"{quote_identifier(field)} = %({param_name})s")
         params[param_name] = value
     return " WHERE " + " AND ".join(clauses)
 
@@ -102,7 +102,6 @@ async def _materialize_graph(
     Returns (nx_graph, node_dicts, edge_dicts).
     """
     from dazzle.http.runtime.graph_materializer import GraphMaterializer
-    from dazzle.http.runtime.query_builder import quote_identifier
 
     filter_params: dict[str, Any] = {}
     filter_sql: str = _build_graph_filter_sql(filters, filter_params)

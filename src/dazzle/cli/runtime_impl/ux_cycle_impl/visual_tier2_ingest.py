@@ -24,6 +24,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from dazzle.qa.trial_report import jaccard
+
 _LANE_HEADING = "## Lane: example-apps"
 _LANE_END_SENTINEL = re.compile(r"^---\s*$")
 _LANE_NEXT_HEADING = re.compile(r"^## Lane: ")
@@ -109,12 +111,6 @@ def _content_signature(text: str) -> frozenset[str]:
     when the exact ``(app, category, location_prefix)`` key misses."""
     tokens = _TOKEN_RE.findall(text.lower())
     return frozenset(t for t in tokens if t not in _STOPWORDS and len(t) > 2)
-
-
-def _jaccard(a: frozenset[str], b: frozenset[str]) -> float:
-    if not a or not b:
-        return 0.0
-    return len(a & b) / len(a | b)
 
 
 @dataclass
@@ -205,7 +201,7 @@ def _find_fuzzy_match(
     for key, sig in sigs:
         if key.app != app or key.category != category:
             continue
-        score = _jaccard(finding_sig, sig)
+        score = jaccard(finding_sig, sig)
         if score > best_score:
             best_score = score
             best_key = key

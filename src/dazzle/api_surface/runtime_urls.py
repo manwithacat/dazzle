@@ -18,7 +18,7 @@ snapshot.
 import ast
 from pathlib import Path
 
-from .dsl_constructs import REPO_ROOT
+from .dsl_constructs import REPO_ROOT, baseline_diff
 
 BASELINE_PATH = REPO_ROOT / "docs" / "api-surface" / "runtime-urls.txt"
 
@@ -173,23 +173,8 @@ def snapshot_runtime_urls() -> str:
 
 def diff_against_baseline(snapshot: str | None = None) -> str:
     """Unified diff between baseline and live snapshot. Empty = no drift."""
-    import difflib
-
-    if snapshot is None:
-        snapshot = snapshot_runtime_urls()
-    if not BASELINE_PATH.exists():
-        return f"(no baseline at {BASELINE_PATH} — run `dazzle inspect api runtime-urls --write`)\n"
-    baseline = BASELINE_PATH.read_text(encoding="utf-8")
-    if baseline == snapshot:
-        return ""
-    diff = difflib.unified_diff(
-        baseline.splitlines(keepends=True),
-        snapshot.splitlines(keepends=True),
-        fromfile=str(BASELINE_PATH.relative_to(REPO_ROOT)),
-        tofile="(live)",
-        n=3,
-    )
-    return "".join(diff)
+    live = snapshot if snapshot is not None else snapshot_runtime_urls()
+    return baseline_diff(BASELINE_PATH, live, "runtime-urls")
 
 
 __all__ = [

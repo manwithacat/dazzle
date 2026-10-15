@@ -44,7 +44,6 @@ to encode that decision per-field.
 from __future__ import annotations
 
 import logging
-import re
 from typing import TYPE_CHECKING, Any
 
 # Module-scope FastAPI imports: route handlers built by closure
@@ -56,6 +55,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, Request, Response
 
 from dazzle.http.runtime.auth import current_user_id
+from dazzle.http.runtime.storage.verify import expected_prefix_pattern
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -66,18 +66,6 @@ if TYPE_CHECKING:
 
 
 log = logging.getLogger(__name__)
-
-
-def _expected_prefix_pattern(prefix_template: str, user_id: str) -> re.Pattern[str]:
-    """Same prefix-sandbox pattern builder as
-    ``verify._expected_prefix_pattern`` — duplicated here to keep the
-    two surfaces (write-side verify, read-side proxy) decoupled. If a
-    third surface needs the same regex, lift this into a shared
-    helper."""
-    pattern = re.escape(prefix_template)
-    pattern = pattern.replace(re.escape("{user_id}"), re.escape(user_id))
-    pattern = re.sub(r"\\\{[a-zA-Z_]+\\\}", "[^/]+", pattern)
-    return re.compile("^" + pattern)
 
 
 def _build_proxy_handler(*, storage_name: str, registry: StorageRegistry) -> Any:
@@ -111,7 +99,7 @@ def _build_proxy_handler(*, storage_name: str, registry: StorageRegistry) -> Any
 
         prefix_template = getattr(provider, "prefix_template", None)
         if prefix_template:
-            sandbox = _expected_prefix_pattern(prefix_template, str(user_id))
+            sandbox = expected_prefix_pattern(prefix_template, str(user_id))
             if not sandbox.match(key):
                 raise HTTPException(
                     status_code=403,

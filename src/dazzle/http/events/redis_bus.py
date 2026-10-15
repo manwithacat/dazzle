@@ -600,9 +600,6 @@ class RedisBus(BaseEventBus):
 
     # Consumer loop methods
 
-    async def start_consumer_loop(self, poll_interval: float | None = None) -> None:
-        await super().start_consumer_loop(poll_interval)
-
     async def _create_consumer_task(  # type: ignore[override]
         self,
         sub: ActiveSubscription,

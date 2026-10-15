@@ -240,9 +240,9 @@ class TestPostgresGetConnection:
         # doesn't trigger schema init — isolates the connect-call assertion.
         store._initialized = True
 
-        with patch("dazzle.http.runtime.auth.store.psycopg") as patched_pg:
+        with patch("dazzle.http.runtime.lazy_pg_store.psycopg") as patched_pg:
             patched_pg.connect.return_value = mock_conn
-            from dazzle.http.runtime.auth.store import dict_row
+            from dazzle.http.runtime.lazy_pg_store import dict_row
 
             store._get_connection()
 

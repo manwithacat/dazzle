@@ -23,11 +23,12 @@ from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
 from dazzle.core.process.adapter import (
-    ProcessAdapter,
     ProcessRun,
     ProcessStatus,
     ProcessTask,
+    ScheduledProcessAdapter,
     TaskStatus,
+    resolve_param_ref,
 )
 from dazzle.core.process.process_state import ProcessStateStore
 
@@ -35,23 +36,6 @@ if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
 
 logger = logging.getLogger(__name__)
-
-
-def _resolve_param_ref(value: Any) -> Any:
-    """Unwrap a ParamRef to its default (#1131 — sibling of #841).
-
-    ScheduleSpec fields like ``cron`` and ``interval_seconds`` are
-    typed ``Any`` so they accept either a literal or a ``ParamRef``.
-    The scheduler loop calls ``str.split`` / arithmetic on these
-    values; passing a raw ``ParamRef`` raises
-    ``AttributeError: 'ParamRef' object has no attribute 'split'``
-    (same shape as the original #841 SLA bug). Mirrors the
-    ``_tier_seconds`` resolution pattern in
-    ``dazzle.http.runtime.sla_manager``.
-    """
-    if hasattr(value, "default"):
-        return value.default
-    return value
 
 
 # Event type constants
@@ -62,7 +46,7 @@ TASK_COMPLETED = "process.task.completed"
 SCHEDULE_TRIGGER = "process.schedule.triggered"
 
 
-class EventBusProcessAdapter(ProcessAdapter):
+class EventBusProcessAdapter(ScheduledProcessAdapter):
     """ProcessAdapter using the native Dazzle event bus.
 
     This adapter publishes events to drive process execution.
@@ -134,8 +118,8 @@ class EventBusProcessAdapter(ProcessAdapter):
         self._schedules[spec.name] = {
             "name": spec.name,
             "process_name": getattr(spec, "process_name", spec.name),
-            "cron": _resolve_param_ref(getattr(spec, "cron", None)),
-            "interval_seconds": _resolve_param_ref(getattr(spec, "interval_seconds", None)),
+            "cron": resolve_param_ref(getattr(spec, "cron", None)),
+            "interval_seconds": resolve_param_ref(getattr(spec, "interval_seconds", None)),
         }
         logger.debug("Registered schedule: %s", spec.name)
 
@@ -348,8 +332,8 @@ class EventBusProcessAdapter(ProcessAdapter):
             self._schedules[schedule.name] = {
                 "name": schedule.name,
                 "process_name": getattr(schedule, "process_name", schedule.name),
-                "cron": _resolve_param_ref(getattr(schedule, "cron", None)),
-                "interval_seconds": _resolve_param_ref(getattr(schedule, "interval_seconds", None)),
+                "cron": resolve_param_ref(getattr(schedule, "cron", None)),
+                "interval_seconds": resolve_param_ref(getattr(schedule, "interval_seconds", None)),
             }
             logger.info("Registered schedule '%s'", schedule.name)
             count += 1
@@ -525,43 +509,6 @@ class EventBusProcessAdapter(ProcessAdapter):
     # Scheduler loop
     # -----------------------------------------------------------------------
 
-    async def _scheduler_loop(self) -> None:
-        """Background loop for cron/interval schedule triggers."""
-        logger.info("Process scheduler loop starting")
-        last_check: dict[str, datetime] = {}
-
-        while not self._shutdown_event.is_set():
-            try:
-                now = datetime.now(UTC)
-                for name, schedule in self._schedules.items():
-                    interval = schedule.get("interval_seconds")
-                    if interval:
-                        last = last_check.get(name)
-                        if last is None or (now - last).total_seconds() >= interval:
-                            last_check[name] = now
-                            await self._trigger_schedule(name, schedule)
-
-                    cron = schedule.get("cron")
-                    if cron:
-                        if self._cron_matches(cron, now):
-                            last = last_check.get(name)
-                            if last is None or (now - last).total_seconds() >= 60:
-                                last_check[name] = now
-                                await self._trigger_schedule(name, schedule)
-
-                await asyncio.sleep(30.0)
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                # #1131: log the traceback so production can pinpoint which
-                # schedule entry blew up and on which field. Bare-message
-                # logging hid the call site for the v0.71.23 ParamRef
-                # regression for hours of consumer log triage.
-                logger.warning("Scheduler loop error: %s", e, exc_info=True)
-                await asyncio.sleep(60.0)
-
-        logger.info("Process scheduler loop stopped")
-
     async def _trigger_schedule(self, name: str, schedule: dict[str, Any]) -> None:
         """Trigger a scheduled process."""
         process_name = schedule.get("process_name", name)
@@ -582,33 +529,6 @@ class EventBusProcessAdapter(ProcessAdapter):
 
         await self._publish_event(PROCESS_EXECUTE, run_id, {"run_id": run_id})
         logger.info("Triggered scheduled process %s run %s", process_name, run_id)
-
-    @staticmethod
-    def _cron_matches(cron: str, now: datetime) -> bool:
-        """Simple cron matching (minute hour dom month dow)."""
-        parts = cron.split()
-        if len(parts) < 5:
-            return False
-
-        def _match(pattern: str, value: int) -> bool:
-            if pattern == "*":
-                return True
-            if pattern.isdigit():
-                return int(pattern) == value
-            if "/" in pattern:
-                _, step = pattern.split("/", 1)
-                return value % int(step) == 0
-            if "," in pattern:
-                return str(value) in pattern.split(",")
-            return False
-
-        return (
-            _match(parts[0], now.minute)
-            and _match(parts[1], now.hour)
-            and _match(parts[2], now.day)
-            and _match(parts[3], now.month)
-            and _match(parts[4], now.weekday())
-        )
 
     # -----------------------------------------------------------------------
     # Sync execution helpers (run in thread pool)

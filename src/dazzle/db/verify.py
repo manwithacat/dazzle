@@ -4,7 +4,7 @@ from typing import Any
 
 from .connection import fetchval
 from .graph import get_ref_fields
-from .sql import quote_id
+from .sql import quote_identifier
 
 
 def unanchored_invariant_fields(invariant: Any) -> list[str] | None:
@@ -53,10 +53,12 @@ def unanchored_invariant_fields(invariant: Any) -> list[str] | None:
 def exclusive_conflict_sql(table_quoted: str, fields: list[str]) -> str:
     """SQL count of rows with more than one exclusive-anchor FK set (#1617).
 
-    ``table_quoted`` is a quote_id()'d table name; ``fields`` are raw column
+    ``table_quoted`` is a quote_identifier()'d table name; ``fields`` are raw column
     names (quoted inside). Portable CASE sum works on Postgres.
     """
-    parts = " + ".join(f"(CASE WHEN {quote_id(f)} IS NOT NULL THEN 1 ELSE 0 END)" for f in fields)
+    parts = " + ".join(
+        f"(CASE WHEN {quote_identifier(f)} IS NOT NULL THEN 1 ELSE 0 END)" for f in fields
+    )
     return f"SELECT count(*) FROM {table_quoted} WHERE ({parts}) > 1"
 
 
@@ -115,15 +117,15 @@ async def db_verify_impl(
             if ref_name not in entity_map:
                 continue  # external ref, skip
 
-            child_table = quote_id(entity.name)
-            parent_table = quote_id(ref_name)
-            fk_column = quote_id(field.name)
+            child_table = quote_identifier(entity.name)
+            parent_table = quote_identifier(ref_name)
+            fk_column = quote_identifier(field.name)
 
             sql = _build_orphan_query(
                 child_table=child_table,
                 fk_column=fk_column,
                 parent_table=parent_table,
-                pk_column=quote_id("id"),
+                pk_column=quote_identifier("id"),
             )
 
             try:
@@ -169,9 +171,7 @@ async def db_verify_impl(
         for field in get_ref_fields(entity):
             if not getattr(field, "is_required", False):
                 continue
-            sql = (
-                f"SELECT count(*) FROM {quote_id(entity.name)} WHERE {quote_id(field.name)} IS NULL"
-            )
+            sql = f"SELECT count(*) FROM {quote_identifier(entity.name)} WHERE {quote_identifier(field.name)} IS NULL"
             try:
                 null_count = await fetchval(conn, sql)
                 checks.append(
@@ -208,9 +208,9 @@ async def db_verify_impl(
             anchor_fields = unanchored_invariant_fields(invariant)
             if anchor_fields is None:
                 continue
-            table_q = quote_id(entity.name)
+            table_q = quote_identifier(entity.name)
             field_label = " / ".join(anchor_fields)
-            null_conds = " AND ".join(f"{quote_id(f)} IS NULL" for f in anchor_fields)
+            null_conds = " AND ".join(f"{quote_identifier(f)} IS NULL" for f in anchor_fields)
             sql_unanchored = f"SELECT count(*) FROM {table_q} WHERE {null_conds}"
             sql_exclusive = exclusive_conflict_sql(table_q, anchor_fields)
             try:

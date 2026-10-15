@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Any
 import yaml
 from pydantic import ValidationError
 
+from dazzle.core.strings import entity_slug
+
 if TYPE_CHECKING:
     from .ir.appspec import AppSpec
 
@@ -806,17 +808,11 @@ def _derive_dsl_routes(appspec: AppSpec, sitespec: SiteSpec) -> list[str]:
             seen.add(route)
             routes.append(route)
 
-    def _entity_slug(name: str) -> str:
-        """Match template_compiler slugification: singular, lowercase, hyphens."""
-        from dazzle.core.strings import entity_slug
-
-        return entity_slug(name)
-
     # 1. Surface-derived routes — flat (no workspace prefix), matching
     #    the template compiler's route_map format.
     for surface in appspec.surfaces:
         entity_name = surface.entity_ref or "general"
-        slug = _entity_slug(entity_name)
+        slug = entity_slug(entity_name)
         base = f"{mount}/{slug}"
         mode = surface.mode.value
 
@@ -832,7 +828,7 @@ def _derive_dsl_routes(appspec: AppSpec, sitespec: SiteSpec) -> list[str]:
     # 2. Standalone entity routes (for entities that may not have
     #    explicit surfaces but get auto-generated CRUD pages).
     for entity in appspec.domain.entities:
-        slug = _entity_slug(entity.name)
+        slug = entity_slug(entity.name)
         _add(f"{mount}/{slug}")
 
     # 3. Workspace routes

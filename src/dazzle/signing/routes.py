@@ -44,11 +44,11 @@ from pydantic import BaseModel
 from dazzle.core.clock import utcnow
 from dazzle.core.ir import EntitySpec
 from dazzle.core.strings import entity_slug
+from dazzle.db.sql import quote_identifier
 from dazzle.http.runtime.byte_serving import AccessDecision, serve_bytes
 from dazzle.http.runtime.document_routes import _extract_file_id
 from dazzle.http.runtime.file_storage import FileMetadata
 from dazzle.http.runtime.http_errors import require_found
-from dazzle.http.runtime.query_builder import quote_identifier
 from dazzle.http.runtime.tenant.metrics import note_rls_unbound
 from dazzle.http.runtime.tenant_isolation import (
     _current_tenant_id,

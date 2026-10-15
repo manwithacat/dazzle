@@ -12,7 +12,7 @@ removals, and signature changes all fire the drift gate.
 import inspect
 import types
 
-from .dsl_constructs import REPO_ROOT, _format_annotation
+from .dsl_constructs import REPO_ROOT, _format_annotation, baseline_diff
 
 BASELINE_PATH = REPO_ROOT / "docs" / "api-surface" / "public-helpers.txt"
 
@@ -156,25 +156,8 @@ def snapshot_public_helpers() -> str:
 
 def diff_against_baseline(snapshot: str | None = None) -> str:
     """Unified diff between baseline and live snapshot. Empty = no drift."""
-    import difflib
-
-    if snapshot is None:
-        snapshot = snapshot_public_helpers()
-    if not BASELINE_PATH.exists():
-        return (
-            f"(no baseline at {BASELINE_PATH} — run `dazzle inspect api public-helpers --write`)\n"
-        )
-    baseline = BASELINE_PATH.read_text(encoding="utf-8")
-    if baseline == snapshot:
-        return ""
-    diff = difflib.unified_diff(
-        baseline.splitlines(keepends=True),
-        snapshot.splitlines(keepends=True),
-        fromfile=str(BASELINE_PATH.relative_to(REPO_ROOT)),
-        tofile="(live)",
-        n=3,
-    )
-    return "".join(diff)
+    live = snapshot if snapshot is not None else snapshot_public_helpers()
+    return baseline_diff(BASELINE_PATH, live, "public-helpers")
 
 
 __all__ = [

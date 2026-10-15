@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 from pydantic import BaseModel
 
 from dazzle.db.connection import fetchall
-from dazzle.db.sql import quote_id
+from dazzle.db.sql import quote_identifier
 from dazzle.http.runtime.richtext_field import clean_rich_text, rich_text_fields_by_entity
 
 if TYPE_CHECKING:
@@ -150,7 +150,7 @@ class PgRichTextStore:
 
     Reads in primary-key order with keyset pagination, so a large table is
     never held in memory at once. Identifiers come from the AppSpec and are
-    quoted with :func:`quote_id`; values are always bound parameters.
+    quoted with :func:`quote_identifier`; values are always bound parameters.
     """
 
     def __init__(self, conn: Any, *, batch_size: int = _BATCH_SIZE) -> None:
@@ -158,7 +158,7 @@ class PgRichTextStore:
         self._batch_size = batch_size
 
     async def iter_values(self, entity: str, field: str) -> AsyncIterator[tuple[Any, Any]]:
-        table, col, pk = quote_id(entity), quote_id(field), quote_id(_PK)
+        table, col, pk = quote_identifier(entity), quote_identifier(field), quote_identifier(_PK)
         base = f"SELECT {pk} AS row_id, {col} AS value FROM {table} WHERE {col} IS NOT NULL"
         last: Any = None
         while True:
@@ -176,5 +176,5 @@ class PgRichTextStore:
             last = rows[-1]["row_id"]
 
     async def write_value(self, entity: str, field: str, row_id: Any, value: str | None) -> None:
-        sql = f"UPDATE {quote_id(entity)} SET {quote_id(field)} = %s WHERE {quote_id(_PK)} = %s"
+        sql = f"UPDATE {quote_identifier(entity)} SET {quote_identifier(field)} = %s WHERE {quote_identifier(_PK)} = %s"
         await self._conn.execute(sql, (value, row_id))  # nosemgrep

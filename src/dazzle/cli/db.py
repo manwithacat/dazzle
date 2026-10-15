@@ -1891,14 +1891,8 @@ def reset_command(
     url = _resolve_url(database_url)
     schema = _resolve_tenant_schema(tenant) if tenant else ""
 
-    from dazzle.db.reset import db_reset_impl
-
     if dry_run:
-
-        async def _run_dry(conn: Any) -> Any:
-            return await db_reset_impl(entities=entities, conn=conn, dry_run=True)
-
-        result = asyncio.run(_run_with_connection(project_root, url, _run_dry, schema=schema))
+        result = _reset_entity_tables(project_root, url, entities, schema=schema, dry_run=True)
 
         if as_json:
             console.print(json_mod.dumps(result, indent=2))
@@ -1920,10 +1914,7 @@ def reset_command(
             console.print("[yellow]Aborted.[/yellow]")
             raise typer.Exit(0)
 
-    async def _run(conn: Any) -> Any:
-        return await db_reset_impl(entities=entities, conn=conn)
-
-    result = asyncio.run(_run_with_connection(project_root, url, _run, schema=schema))
+    result = _reset_entity_tables(project_root, url, entities, schema=schema)
 
     if as_json:
         console.print(json_mod.dumps(result, indent=2))
@@ -2364,3 +2355,26 @@ def explain_scope_command(
             console.print("[green]verdict:[/green] RLS")
         except ValueError as exc:
             console.print(f"[yellow]verdict:[/yellow] app-layer (degraded: {exc})")
+
+
+def _reset_entity_tables(
+    project_root: Path,
+    url: str,
+    entities: list[Any],
+    *,
+    schema: str,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Truncate (or, with ``dry_run``, count) entity tables; auth is preserved.
+
+    Shared by ``dazzle db reset`` and the ``dazzle qa trial --fresh-db`` pre-step.
+    """
+    from dazzle.db.reset import db_reset_impl
+
+    async def _run(conn: Any) -> Any:
+        return await db_reset_impl(entities=entities, conn=conn, dry_run=dry_run)
+
+    result: dict[str, Any] = asyncio.run(
+        _run_with_connection(project_root, url, _run, schema=schema)
+    )
+    return result

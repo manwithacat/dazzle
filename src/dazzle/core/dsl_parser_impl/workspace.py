@@ -17,8 +17,14 @@ from typing import TYPE_CHECKING, Any
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
-from ._refresh import parse_refresh_interval_seconds
-from .dispatch import KeywordParser, parse_block_with_dispatch
+from ._refresh import kw_refresh
+from .dispatch import (
+    KeywordParser,
+    kw_eyebrow,
+    kw_limit,
+    kw_sort,
+    parse_block_with_dispatch,
+)
 
 if TYPE_CHECKING:
     pass
@@ -473,7 +479,9 @@ class WorkspaceParserMixin:
                 tok.column,
             )
         self.advance()  # consume `-`
-        label_str = self._parse_pipeline_stage_label()
+        self._expect_entry_head("label", "pipeline stages")
+        label_str: str = self.expect(TokenType.STRING).value
+        self.skip_newlines()
         caption_str, value_payload, progress_payload = self._parse_pipeline_stage_kv_block()
         return ir.PipelineStageSpec(
             label=label_str,
@@ -482,21 +490,23 @@ class WorkspaceParserMixin:
             progress=progress_payload,
         )
 
-    def _parse_pipeline_stage_label(self) -> str:
-        """Consume ``label: "<str>"`` — the required first key after the dash."""
-        label_kw = self.expect_identifier_or_keyword().value
-        if label_kw != "label":
+    def _expect_entry_head(self, key: str, entry: str) -> None:
+        """Consume the required ``<key>:`` first key after an entry's dash.
+
+        Shared by the ``- label:`` pipeline stage, ``- source:`` task-inbox
+        source, ``- name:`` entity-card section and ``- title:`` status entry
+        lists; the caller reads the value, whose token type differs.
+        """
+        head_kw = self.expect_identifier_or_keyword().value
+        if head_kw != key:
             tok = self.current_token()
             raise make_parse_error(
-                f"pipeline stages entry must start with `label:`, got {label_kw!r}",
+                f"{entry} entry must start with `{key}:`, got {head_kw!r}",
                 self.file,
                 tok.line,
                 tok.column,
             )
         self.expect(TokenType.COLON)
-        label_str: str = self.expect(TokenType.STRING).value
-        self.skip_newlines()
-        return label_str
 
     def _parse_pipeline_stage_kv_block(
         self,
@@ -1306,7 +1316,9 @@ class WorkspaceParserMixin:
                 tok.column,
             )
         self.advance()  # consume MINUS
-        source_str = self._parse_task_inbox_source_head()
+        self._expect_entry_head("source", "sources")
+        source_str: str = self.expect_identifier_or_keyword().value
+        self.skip_newlines()
         filter_expr, as_task, count_as_str = self._parse_task_inbox_source_kv_block()
         self._validate_task_inbox_source_mutex(source_str, as_task, count_as_str)
         return ir.TaskSource(
@@ -1315,22 +1327,6 @@ class WorkspaceParserMixin:
             as_task=as_task,
             count_as=count_as_str,
         )
-
-    def _parse_task_inbox_source_head(self) -> str:
-        """Consume the required ``source: <EntityName>`` first key after the dash."""
-        head_kw = self.expect_identifier_or_keyword().value
-        if head_kw != "source":
-            tok = self.current_token()
-            raise make_parse_error(
-                f"sources entry must start with `source:`, got {head_kw!r}",
-                self.file,
-                tok.line,
-                tok.column,
-            )
-        self.expect(TokenType.COLON)
-        source_str: str = self.expect_identifier_or_keyword().value
-        self.skip_newlines()
-        return source_str
 
     def _parse_task_inbox_source_kv_block(
         self,
@@ -1580,7 +1576,9 @@ class WorkspaceParserMixin:
                 tok.column,
             )
         self.advance()
-        name_str = self._parse_entity_card_section_head()
+        self._expect_entry_head("name", "sections")
+        name_str: str = self.expect_identifier_or_keyword().value
+        self.skip_newlines()
         kv = self._parse_entity_card_section_kv_block(name_str)
         mode_val, source_str, filter_expr, limit_val, fields_list, actions_list = kv
         if mode_val is None:
@@ -1600,22 +1598,6 @@ class WorkspaceParserMixin:
             fields=fields_list,
             actions=actions_list,
         )
-
-    def _parse_entity_card_section_head(self) -> str:
-        """Consume the required ``name: <id>`` first key after the dash."""
-        head_kw = self.expect_identifier_or_keyword().value
-        if head_kw != "name":
-            tok = self.current_token()
-            raise make_parse_error(
-                f"sections entry must start with `name:`, got {head_kw!r}",
-                self.file,
-                tok.line,
-                tok.column,
-            )
-        self.expect(TokenType.COLON)
-        name_str: str = self.expect_identifier_or_keyword().value
-        self.skip_newlines()
-        return name_str
 
     def _parse_entity_card_section_kv_block(
         self, name_str: str
@@ -1736,7 +1718,9 @@ class WorkspaceParserMixin:
                 tok.column,
             )
         self.advance()  # consume MINUS
-        title_str = self._parse_status_entry_title()
+        self._expect_entry_head("title", "status_list")
+        title_str: str = self.expect(TokenType.STRING).value
+        self.skip_newlines()
         caption_str, icon_str, state_str = self._parse_status_entry_kv_block(title_str)
         return ir.StatusListEntrySpec(
             title=title_str,
@@ -1744,22 +1728,6 @@ class WorkspaceParserMixin:
             icon=icon_str,
             state=state_str,
         )
-
-    def _parse_status_entry_title(self) -> str:
-        """Consume the required ``title: "<str>"`` first key after the dash."""
-        title_kw = self.expect_identifier_or_keyword().value
-        if title_kw != "title":
-            tok = self.current_token()
-            raise make_parse_error(
-                f"status_list entry must start with `title:`, got {title_kw!r}",
-                self.file,
-                tok.line,
-                tok.column,
-            )
-        self.expect(TokenType.COLON)
-        title_str: str = self.expect(TokenType.STRING).value
-        self.skip_newlines()
-        return title_str
 
     def _parse_status_entry_kv_block(self, title_str: str) -> tuple[str, str, str]:
         """Consume the optional indented caption/icon/state block.
@@ -2731,20 +2699,6 @@ def _kw_filter(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.skip_newlines()
 
 
-def _kw_sort(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.sort = parser.parse_sort_list()
-    parser.skip_newlines()
-
-
-def _kw_limit(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.limit = int(parser.expect(TokenType.NUMBER).value)
-    parser.skip_newlines()
-
-
 def _kw_display(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
@@ -2892,13 +2846,6 @@ def _kw_css_class(parser: Any, state: _WorkspaceRegionState) -> None:
         state.css_class = parser.advance().value
     else:
         state.css_class = parser.expect_identifier_or_keyword().value
-    parser.skip_newlines()
-
-
-def _kw_eyebrow(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    state.eyebrow = parser.expect(TokenType.STRING).value
     parser.skip_newlines()
 
 
@@ -3304,8 +3251,8 @@ _WORKSPACE_REGION_KEYWORDS: dict[TokenType, KeywordParser[_WorkspaceRegionState]
     TokenType.SOURCE: _kw_source,
     TokenType.FILTER_MAP: _kw_filter_map,
     TokenType.FILTER: _kw_filter,
-    TokenType.SORT: _kw_sort,
-    TokenType.LIMIT: _kw_limit,
+    TokenType.SORT: kw_sort,
+    TokenType.LIMIT: kw_limit,
     TokenType.DISPLAY: _kw_display,
     TokenType.RENDER: _kw_render,
     TokenType.ACTION: _kw_action,
@@ -3319,7 +3266,7 @@ _WORKSPACE_REGION_KEYWORDS: dict[TokenType, KeywordParser[_WorkspaceRegionState]
     TokenType.REFERENCE_LINES: _kw_reference_lines,
     TokenType.REFERENCE_BANDS: _kw_reference_bands,
     TokenType.CSS_CLASS: _kw_css_class,
-    TokenType.EYEBROW: _kw_eyebrow,
+    TokenType.EYEBROW: kw_eyebrow,
     TokenType.WIDTH: _kw_width,
     TokenType.TONES: _kw_tones,
     TokenType.NOTICE: _kw_notice,
@@ -3333,25 +3280,6 @@ _WORKSPACE_REGION_KEYWORDS: dict[TokenType, KeywordParser[_WorkspaceRegionState]
 }
 
 
-def _kw_refresh(parser: Any, state: _WorkspaceRegionState) -> None:
-    """#1391: ``refresh: every Ns`` — declarative live-refresh poll interval.
-
-    Accepted forms: ``refresh: every 30s`` / ``refresh: every 30`` /
-    ``refresh: 30s`` / ``refresh: 30`` (bare number = seconds). Stored as
-    seconds; the region's dashboard card appends ``, every Ns`` to its HTMX
-    trigger so the existing region-fetch endpoint re-renders on a poll.
-
-    Seconds only in v1 — a non-``s`` unit (``5m``/``2h``) is a directed parse
-    error pointing at seconds. Minimum 5s (load/cost floor, see
-    docs/architecture/model-driven-failure-modes.md); a smaller value errors.
-    """
-    parser.advance()  # consume `refresh`
-    parser.expect(TokenType.COLON)
-    # Shared with the surface-refresh parser (#1399) so both stay in lockstep.
-    state.refresh_interval = parse_refresh_interval_seconds(parser)
-    parser.skip_newlines()
-
-
 _WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]] = {
     "title": _kw_title,
     "primary_action": _kw_primary_action,
@@ -3362,7 +3290,7 @@ _WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]
     "entity_card_config": _kw_entity_card_config,
     "row_action": _kw_row_action,  # #1148
     "drill": _kw_drill,  # #1303
-    "refresh": _kw_refresh,  # #1391
+    "refresh": kw_refresh,  # #1391
     "rank_by": _kw_rank_by,  # #1470
     "outlier_on": _kw_outlier_on,  # #1470
     "rag_on": _kw_rag_on,  # #1470

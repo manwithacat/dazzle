@@ -29,6 +29,7 @@ items become issues and which are "correct by design."
 from __future__ import annotations
 
 import re
+from collections.abc import Set as AbstractSet
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from difflib import SequenceMatcher
@@ -122,7 +123,8 @@ def _token_set(text: str) -> set[str]:
     return {t for t in tokens if len(t) > 2 and t not in _STOPWORDS}
 
 
-def _jaccard(a: set[str], b: set[str]) -> float:
+def jaccard(a: AbstractSet[str], b: AbstractSet[str]) -> float:
+    """Jaccard similarity of two token sets; 0.0 when either is empty."""
     if not a or not b:
         return 0.0
     return len(a & b) / len(a | b)
@@ -141,7 +143,7 @@ def _descriptions_similar(a: str, b: str, *, category: str) -> bool:
     if SequenceMatcher(None, a_n, b_n).ratio() >= thr:
         return True
     j_thr = _PRAISE_TOKEN_JACCARD_THRESHOLD if category == "praise" else _TOKEN_JACCARD_THRESHOLD
-    return _jaccard(_token_set(a_n), _token_set(b_n)) >= j_thr
+    return jaccard(_token_set(a_n), _token_set(b_n)) >= j_thr
 
 
 def _evidence_similar(a: str, b: str) -> bool:

@@ -2,7 +2,6 @@
 
 import logging
 import secrets
-import threading
 from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
@@ -10,6 +9,8 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from dazzle.core.environment import skip_boot_schema_ddl
+from dazzle.db.sql import quote_identifier
+from dazzle.http.runtime.lazy_pg_store import LazyPgStore
 
 if TYPE_CHECKING:
     from dazzle.http.runtime.auth.connections import (
@@ -34,7 +35,6 @@ except ImportError:
     dict_row = None  # type: ignore[assignment]
     PSYCOPG_AVAILABLE = False
 
-from dazzle.core.db_url import normalise_postgres_scheme
 from dazzle.http.runtime.auth.partition_root import resolve_partition_root
 
 from .crypto import hash_password, verify_password
@@ -495,8 +495,6 @@ class SessionStoreMixin:
         if not self._user_entity_table:
             return {}
         try:
-            from dazzle.http.runtime.query_builder import quote_identifier
-
             table = quote_identifier(self._user_entity_table)
             rows = self._execute(
                 f"SELECT * FROM {table} WHERE email = %s LIMIT 1",  # nosemgrep
@@ -2434,7 +2432,7 @@ def ensure_auth_core_tables(cur: Any) -> None:
     cur.execute("CREATE INDEX IF NOT EXISTS idx_user_prefs_user ON user_preferences(user_id)")
 
 
-class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
+class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin, LazyPgStore):
     """
     Authentication store using PostgreSQL.
 
@@ -2458,8 +2456,9 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                 into auth_context.preferences during session validation,
                 so scope rules like ``current_user.school`` resolve.
         """
-        # Normalize Heroku's postgres:// to postgresql://
-        self._database_url = normalise_postgres_scheme(database_url)
+        # Pure construction — no I/O; schema init is deferred to first use (or an
+        # explicit ensure_initialized() at boot). See LazyPgStore.
+        LazyPgStore.__init__(self, database_url)
         self._user_entity_table = user_entity_table
         # #1463: the tenant-host parent graph used to resolve a membership's
         # partition root at write time. None = flat tenancy (no `parent:` edges),
@@ -2467,12 +2466,6 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
         # server from the AppSpec (set_partition_hierarchy); stays None for the
         # many AuthStores built directly in tests / flat apps.
         self._partition_hierarchy: PartitionHierarchy | None = None
-
-        # Construction is pure — no I/O. Schema init is deferred to first use
-        # (or an explicit ensure_initialized() at boot) so the store can be
-        # built without a live database. See ensure_initialized().
-        self._initialized = False
-        self._init_lock = threading.Lock()
 
     def set_partition_hierarchy(self, hierarchy: "PartitionHierarchy | None") -> None:  # noqa: F821
         """Install the tenant-host parent graph (#1463) for partition-root resolution.
@@ -2670,38 +2663,6 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             conn.commit()
         finally:
             conn.close()
-
-    def ensure_initialized(self) -> None:
-        """Run first-use schema initialization (idempotent, thread-safe).
-
-        Construction is pure (no I/O) so the store can be built without a live
-        database; the table DDL is deferred here. Triggered lazily on the first
-        connection acquisition, and called explicitly at server boot to preserve
-        eager-DDL / fail-fast behavior.
-
-        Concurrency (review #1504 follow-up): double-checked locking makes the
-        flag flip atomic, and ``_initialized`` is set only AFTER ``_init_db``
-        completes — so a concurrent caller either waits on the lock or sees the
-        store fully initialized, never a half-built schema. ``_init_db`` uses
-        ``_connect_raw`` (not ``_get_connection``) so it never re-enters this
-        method under the lock. On failure the flag stays False → retryable.
-        """
-        if self._initialized:
-            return
-        with self._init_lock:
-            if self._initialized:
-                return
-            self._init_db()
-            self._initialized = True
-
-    def _connect_raw(self) -> psycopg.Connection[dict[str, Any]]:
-        """A connection that does NOT trigger lazy init — used only by _init_db."""
-        return psycopg.connect(self._database_url, row_factory=dict_row)
-
-    def _get_connection(self) -> psycopg.Connection[dict[str, Any]]:
-        """Get a PostgreSQL database connection (lazily initializing schema)."""
-        self.ensure_initialized()
-        return self._connect_raw()
 
     def _init_db(self) -> None:
         """Initialize database tables.

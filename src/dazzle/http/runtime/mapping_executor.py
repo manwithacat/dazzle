@@ -43,7 +43,7 @@ from dazzle.core.ir.integrations import (
     MappingTriggerType,
 )
 from dazzle.http.runtime.event_bus import EntityEvent, EntityEventType
-from dazzle.http.runtime.mapping_body import set_nested_value
+from dazzle.http.runtime.mapping_body import resolve_expression, set_nested_value
 from dazzle.http.runtime.mapping_transport import (
     AppTransportRequest,
     invoke_app_transport,
@@ -64,7 +64,6 @@ if TYPE_CHECKING:
     from dazzle.core.ir.integrations import (
         AuthSpec,
         ErrorStrategy,
-        Expression,
         IntegrationMapping,
         IntegrationSpec,
         MappingRule,
@@ -672,7 +671,7 @@ class MappingExecutor:
         context = {"self": entity_data}
         result: dict[str, Any] = {}
         for rule in rules:
-            value = self._evaluate_expression(rule.source, context)
+            value = resolve_expression(rule.source, context)
             # Support dotted target fields (e.g., fixedInfo.firstName)
             self._set_nested_value(result, rule.target_field, value)
         return result
@@ -686,28 +685,9 @@ class MappingExecutor:
         context = {"response": response_data}
         result: dict[str, Any] = {}
         for rule in rules:
-            value = self._evaluate_expression(rule.source, context)
+            value = resolve_expression(rule.source, context)
             result[rule.target_field] = value
         return result
-
-    def _evaluate_expression(self, expr: Expression, context: dict[str, Any]) -> Any:
-        """Evaluate a mapping expression against a context dict."""
-        if expr.literal is not None:
-            return expr.literal
-
-        if expr.path:
-            parts = expr.path.split(".")
-            current: Any = context
-            for part in parts:
-                if isinstance(current, dict):
-                    current = current.get(part)
-                else:
-                    current = getattr(current, part, None)
-                if current is None:
-                    return None
-            return current
-
-        return None
 
     @staticmethod
     def _set_nested_value(d: dict[str, Any], key: str, value: Any) -> None:

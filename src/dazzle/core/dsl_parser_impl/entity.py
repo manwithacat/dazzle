@@ -148,8 +148,8 @@ class EntityParserMixin:
         result: str = self.expect(TokenType.STRING).value
         return result
 
-    def _parse_entity_domain(self) -> str:
-        """Parse ``domain: name`` declaration."""
+    def _parse_entity_ident_value(self) -> str:
+        """Parse ``<keyword>: <identifier>`` (``domain:``, ``display_field:``)."""
         self.advance()
         self.expect(TokenType.COLON)
         result: str = self.expect_identifier_or_keyword().value
@@ -358,28 +358,14 @@ class EntityParserMixin:
             tok.column,
         )
 
-    def _parse_entity_signing_validator(self) -> str:
-        """Parse ``signing_validator: dotted.path.to.callable`` (#1283).
+    def _parse_entity_dotted_path(self) -> str:
+        """Parse ``<keyword>: dotted.path.to.callable`` (#1283).
 
-        Dotted-path string identifying a pre-sign hook that can raise
-        ``SigningError(...)`` to block the signature. Resolved lazily at
-        request time so the framework does not import project code at
-        parse time.
-        """
-        self.advance()
-        self.expect(TokenType.COLON)
-        parts: list[str] = [self.expect_identifier_or_keyword().value]
-        while self.match(TokenType.DOT):
-            self.advance()
-            parts.append(self.expect_identifier_or_keyword().value)
-        return ".".join(parts)
-
-    def _parse_entity_signing_template(self) -> str:
-        """Parse ``signing_template: dotted.path.to.callable`` (#1283 phase 6a).
-
-        Dotted-path identifying a project-supplied callable that returns
-        the document body HTML. Signature: ``(entity, row) -> str``.
-        Resolved lazily at request time alongside ``signing_validator``.
+        Used by ``signing_validator:`` (a pre-sign hook that can raise
+        ``SigningError(...)`` to block the signature) and ``signing_template:``
+        (phase 6a — returns the document body HTML, ``(entity, row) -> str``).
+        Both resolve lazily at request time so the framework does not import
+        project code at parse time.
         """
         self.advance()
         self.expect(TokenType.COLON)
@@ -946,13 +932,6 @@ class EntityParserMixin:
             self,  # type: ignore[arg-type]
             declared_field_names,
         )
-
-    def _parse_entity_display_field(self) -> str:
-        """Parse ``display_field: name`` declaration (v0.44.0)."""
-        self.advance()
-        self.expect(TokenType.COLON)
-        result: str = self.expect_identifier_or_keyword().value
-        return result
 
     _TENANT_HOST_ALLOWED_KEYS: frozenset[str] = frozenset(
         {
@@ -2886,7 +2865,7 @@ def _kw_intent(p: Any, s: _EntityParseContext) -> None:
 
 
 def _kw_domain(p: Any, s: _EntityParseContext) -> None:
-    s.domain = p._parse_entity_domain()
+    s.domain = p._parse_entity_ident_value()
 
 
 def _kw_patterns(p: Any, s: _EntityParseContext) -> None:
@@ -2956,11 +2935,11 @@ def _kw_signable(p: Any, s: _EntityParseContext) -> None:
 
 
 def _kw_signing_validator(p: Any, s: _EntityParseContext) -> None:
-    s.signing_validator = p._parse_entity_signing_validator()
+    s.signing_validator = p._parse_entity_dotted_path()
 
 
 def _kw_signing_template(p: Any, s: _EntityParseContext) -> None:
-    s.signing_template = p._parse_entity_signing_template()
+    s.signing_template = p._parse_entity_dotted_path()
 
 
 def _kw_temporal(p: Any, s: _EntityParseContext) -> None:
@@ -3004,7 +2983,7 @@ def _kw_fitness(p: Any, s: _EntityParseContext) -> None:
 
 
 def _kw_display_field(p: Any, s: _EntityParseContext) -> None:
-    s.display_field = p._parse_entity_display_field()
+    s.display_field = p._parse_entity_ident_value()
 
 
 def _kw_tenant_host(p: Any, s: _EntityParseContext) -> None:

@@ -18,7 +18,7 @@ Example DSL:
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -126,65 +126,39 @@ class AutoTransitionSpec(BaseModel):
             return self.delay_value * SECONDS_PER_DAY
 
 
-class StateTransition(BaseModel):
-    """
-    A single state transition definition.
-
-    Attributes:
-        from_state: State to transition from ("*" means any state)
-        to_state: State to transition to
-        trigger: How the transition is triggered (manual or auto)
-        guards: Conditions that must be met for the transition
-        auto_spec: Specification for automatic transitions
-        effects: post-commit side-effects (create/update) fired on the transition
-    """
-
+class _TransitionEdge(Protocol):
     from_state: str
     to_state: str
-    trigger: TransitionTrigger = TransitionTrigger.MANUAL
-    guards: list[TransitionGuard] = Field(default_factory=list)
-    auto_spec: AutoTransitionSpec | None = None
-    effects: list[StepEffect] = Field(default_factory=list)
 
-    model_config = ConfigDict(frozen=True)
+
+class WildcardTransition:
+    """``is_wildcard`` for a transition — shared by :class:`StateTransition`
+    and its runtime twin ``dazzle.http.specs.entity.StateTransitionSpec``."""
+
+    if TYPE_CHECKING:
+        from_state: str
 
     @property
     def is_wildcard(self) -> bool:
         """Check if this is a wildcard transition (from any state)."""
         return self.from_state == "*"
 
-    @property
-    def is_auto(self) -> bool:
-        """Check if this is an automatic transition."""
-        return self.trigger == TransitionTrigger.AUTO
 
-    @property
-    def has_guards(self) -> bool:
-        """Check if this transition has any guards."""
-        return len(self.guards) > 0
+class TransitionGraph[EdgeT: _TransitionEdge]:
+    """Transition queries over ``states`` + ``transitions``.
 
-
-class StateMachineSpec(BaseModel):
-    """
-    Complete state machine specification for an entity.
-
-    Attributes:
-        status_field: Name of the field that holds the state
-        states: List of valid states (from enum definition)
-        transitions: List of allowed state transitions
+    One definition for :class:`StateMachineSpec` and its runtime twin
+    ``dazzle.http.specs.entity.StateMachineSpec``. The twin once lacked
+    ``terminal_states`` and 500'd every HX-Target region fetch for
+    state-machine entities (#1626 R2); sharing the queries makes that drift
+    impossible.
     """
 
-    status_field: str
-    states: list[str] = Field(default_factory=list)
-    transitions: list[StateTransition] = Field(default_factory=list)
+    if TYPE_CHECKING:
+        states: list[str]
+        transitions: list[EdgeT]
 
-    model_config = ConfigDict(frozen=True)
-
-    def state_names(self) -> list[str]:
-        """The states as plain name strings (via :func:`state_name`)."""
-        return [state_name(s) for s in self.states]
-
-    def get_transitions_from(self, state: str) -> list[StateTransition]:
+    def get_transitions_from(self, state: str) -> list[EdgeT]:
         """Get all transitions from a given state."""
         result = []
         for t in self.transitions:
@@ -211,16 +185,71 @@ class StateMachineSpec(BaseModel):
         ``* -> archived`` wildcard (which makes ``archived`` reachable from
         every state, including itself) doesn't spuriously mark ``archived``
         non-terminal. With no transitions defined at all, every state is
-        terminal.
+        terminal. HTMX region poll-stop (``_region_polling_complete``) reads
+        it on the runtime twin.
         """
         return {s for s in self.states if not (self.get_allowed_targets(s) - {s})}
 
-    def get_transition(self, from_state: str, to_state: str) -> StateTransition | None:
+    def get_transition(self, from_state: str, to_state: str) -> EdgeT | None:
         """Get the transition definition between two states."""
         for t in self.transitions:
             if (t.from_state == from_state or t.from_state == "*") and t.to_state == to_state:
                 return t
         return None
+
+
+class StateTransition(WildcardTransition, BaseModel):
+    """
+    A single state transition definition.
+
+    Attributes:
+        from_state: State to transition from ("*" means any state)
+        to_state: State to transition to
+        trigger: How the transition is triggered (manual or auto)
+        guards: Conditions that must be met for the transition
+        auto_spec: Specification for automatic transitions
+        effects: post-commit side-effects (create/update) fired on the transition
+    """
+
+    from_state: str
+    to_state: str
+    trigger: TransitionTrigger = TransitionTrigger.MANUAL
+    guards: list[TransitionGuard] = Field(default_factory=list)
+    auto_spec: AutoTransitionSpec | None = None
+    effects: list[StepEffect] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+    @property
+    def is_auto(self) -> bool:
+        """Check if this is an automatic transition."""
+        return self.trigger == TransitionTrigger.AUTO
+
+    @property
+    def has_guards(self) -> bool:
+        """Check if this transition has any guards."""
+        return len(self.guards) > 0
+
+
+class StateMachineSpec(BaseModel, TransitionGraph[StateTransition]):
+    """
+    Complete state machine specification for an entity.
+
+    Attributes:
+        status_field: Name of the field that holds the state
+        states: List of valid states (from enum definition)
+        transitions: List of allowed state transitions
+    """
+
+    status_field: str
+    states: list[str] = Field(default_factory=list)
+    transitions: list[StateTransition] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+    def state_names(self) -> list[str]:
+        """The states as plain name strings (via :func:`state_name`)."""
+        return [state_name(s) for s in self.states]
 
 
 def _rebuild_transition_guard() -> None:

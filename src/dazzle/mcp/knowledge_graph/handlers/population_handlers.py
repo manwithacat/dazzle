@@ -16,6 +16,7 @@ from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
+from dazzle.core.strings import to_snake_case
 
 if TYPE_CHECKING:
     from ..store import KnowledgeGraph
@@ -755,19 +756,11 @@ class PopulationHandlers:
                 # Convert TestAuthStore -> auth_store
                 name = class_name[4:]  # Remove "Test"
                 # Convert CamelCase to snake_case
-                snake_name = self._camel_to_snake(name)
+                snake_name = to_snake_case(name)
                 if snake_name:
                     covered.add(snake_name)
 
         return list(covered)
-
-    def _camel_to_snake(self, name: str) -> str:
-        """Convert CamelCase to snake_case."""
-        import re
-
-        # Insert underscore before uppercase letters and lowercase everything
-        s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
-        return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
     # =========================================================================
     # Private Helpers — Code File Population

@@ -19,6 +19,7 @@ Supports:
 from __future__ import annotations  # required: Expr forward-references in BinaryExpr/UnaryExpr
 
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -56,6 +57,47 @@ class UnaryOp(StrEnum):
 
 
 # ---------------------------------------------------------------------------
+# Shared node behaviour
+# ---------------------------------------------------------------------------
+
+
+class FieldPath:
+    """Behaviour of a dotted field reference, shared by :class:`FieldRef` and
+    the legacy computed-field / invariant references.
+
+    A plain mixin, not a model: each subclass declares its own ``path`` field.
+    """
+
+    if TYPE_CHECKING:
+        path: list[str]
+
+    def __str__(self) -> str:
+        return ".".join(self.path)
+
+    @property
+    def is_simple(self) -> bool:
+        """Single field, no relation traversal."""
+        return len(self.path) == 1
+
+    @property
+    def field_name(self) -> str:
+        """The final field name."""
+        return self.path[-1]
+
+
+class InfixExpr:
+    """``(left op right)`` rendering, shared by the legacy binary expressions."""
+
+    if TYPE_CHECKING:
+        left: object
+        operator: StrEnum
+        right: object
+
+    def __str__(self) -> str:
+        return f"({self.left} {self.operator.value} {self.right})"
+
+
+# ---------------------------------------------------------------------------
 # AST node types
 # ---------------------------------------------------------------------------
 
@@ -77,7 +119,7 @@ class Literal(BaseModel):
         return str(self.value)
 
 
-class FieldRef(BaseModel):
+class FieldRef(FieldPath, BaseModel):
     """
     Reference to a field, possibly through relations.
 
@@ -90,19 +132,6 @@ class FieldRef(BaseModel):
     path: list[str] = Field(description="Field path segments")
 
     model_config = ConfigDict(frozen=True)
-
-    def __str__(self) -> str:
-        return ".".join(self.path)
-
-    @property
-    def is_simple(self) -> bool:
-        """Single field, no relation traversal."""
-        return len(self.path) == 1
-
-    @property
-    def field_name(self) -> str:
-        """The final field name."""
-        return self.path[-1]
 
 
 class DurationLiteral(BaseModel):
@@ -216,6 +245,27 @@ class IfExpr(BaseModel):
 # ---------------------------------------------------------------------------
 
 Expr = Literal | FieldRef | DurationLiteral | BinaryExpr | UnaryExpr | FuncCall | InExpr | IfExpr
+
+
+def expr_field_dependencies(expr: Expr) -> set[str]:
+    """Every field path an expression reads (computed fields, invariants)."""
+    deps: set[str] = set()
+    if isinstance(expr, FieldRef):
+        deps.add(str(expr))
+    elif isinstance(expr, BinaryExpr):
+        deps.update(expr_field_dependencies(expr.left))
+        deps.update(expr_field_dependencies(expr.right))
+    elif isinstance(expr, UnaryExpr):
+        deps.update(expr_field_dependencies(expr.operand))
+    elif isinstance(expr, FuncCall):
+        for arg in expr.args:
+            deps.update(expr_field_dependencies(arg))
+    elif isinstance(expr, InExpr):
+        deps.update(expr_field_dependencies(expr.value))
+        for item in expr.items:
+            deps.update(expr_field_dependencies(item))
+    return deps
+
 
 # Rebuild models for recursive forward references
 BinaryExpr.model_rebuild()

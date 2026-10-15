@@ -11,7 +11,7 @@ from __future__ import annotations
 from html import escape as _html_escape
 from typing import Any
 
-from dazzle.render.filters import _LEFTOVER_STAGE_TOKENS
+from dazzle.render.filters import is_leftover_token
 
 _IBAN_FIELD_KEYS = frozenset({"iban", "iban_number"})
 _IBAN_MIN_LEN = 15
@@ -28,15 +28,9 @@ def iban_field_name(name: Any) -> bool:
     return key.endswith("_iban")
 
 
-def _leftover_iban(value: Any) -> bool:
-    if value is None or value == "":
-        return False
-    return str(value).strip().lower() in _LEFTOVER_STAGE_TOKENS
-
-
 def clerk_iban_compact(value: Any) -> str | None:
     """Electronic IBAN (no spaces) when the value is ISO-shaped, else None."""
-    if value is None or value == "" or _leftover_iban(value):
+    if value is None or value == "" or is_leftover_token(value):
         return None
     if isinstance(value, bool) or isinstance(value, (int, float)):
         return None
@@ -66,7 +60,7 @@ def clerk_iban_cell_html(value: Any) -> str:
     """Read-only grouped IBAN. Empty invents nothing. Leftover ``zzz`` stays put."""
     if value is None or value == "":
         return ""
-    if _leftover_iban(value):
+    if is_leftover_token(value):
         return _html_escape(str(value).strip())
     compact = clerk_iban_compact(value)
     if compact is None:

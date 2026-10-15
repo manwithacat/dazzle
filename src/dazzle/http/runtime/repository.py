@@ -19,9 +19,10 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ValidationError
 
 from dazzle.core import ir
-from dazzle.core.archetype_expander import _to_snake_case
 from dazzle.core.ir import FieldTypeKind
-from dazzle.http.runtime.query_builder import QueryBuilder, quote_identifier
+from dazzle.core.strings import to_snake_case
+from dazzle.db.sql import quote_identifier
+from dazzle.http.runtime.query_builder import QueryBuilder
 from dazzle.http.specs.entity import (
     ComputedFieldSpec,
     EntitySpec,
@@ -85,7 +86,6 @@ def _resolve_latest_one_fields(
     cohort_strip-class workloads already do per-region fan-out at similar
     granularity.
     """
-    from dazzle.http.runtime.query_builder import quote_identifier
 
     if not rows or entity_spec is None:
         return rows
@@ -444,7 +444,6 @@ def _build_temporal_as_of_predicate(
     Returns ``(sql, params)`` ready to plug into QueryBuilder's
     ``__scope_predicate`` slot (or AND-compose with an existing one).
     """
-    from dazzle.http.runtime.query_builder import quote_identifier
 
     s = quote_identifier(start_field)
     e = quote_identifier(end_field)
@@ -1826,7 +1825,7 @@ def create_subtype(
     # and pg_backend.py's child-table mapping (~line 461).
     new_id = uuid4()
     base_payload["id"] = new_id
-    base_payload["kind"] = _to_snake_case(child_spec.name)
+    base_payload["kind"] = to_snake_case(child_spec.name)
     child_payload["id"] = new_id
 
     base_db = _convert_payload_for_db(base_payload, base_spec)
