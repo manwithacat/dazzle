@@ -1,4 +1,4 @@
-# Test Suite Taxonomy — Pass 1 (16,814 test functions)
+# Test Suite Taxonomy — Pass 1 (16,384 test functions)
 
 Static classification per `docs/proposals/Suite Distillation Strategy.md`. No execution; AST + import-shape heuristics only. Confidence < 0.8 means the classifier could be wrong; see rationale field.
 
@@ -6,21 +6,21 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 
 | Archetype | Count | % | High-confidence count |
 |---|---:|---:|---:|
-| contract | 13,889 | 82.6% | 0 |
-| smoke | 1,862 | 11.1% | 862 |
-| parametric_cluster | 477 | 2.8% | 477 |
-| regression_pin | 446 | 2.7% | 446 |
-| implementation_mirror | 74 | 0.4% | 0 |
+| contract | 13,490 | 82.3% | 0 |
+| smoke | 1,795 | 11.0% | 809 |
+| parametric_cluster | 521 | 3.2% | 521 |
+| regression_pin | 438 | 2.7% | 438 |
+| implementation_mirror | 74 | 0.5% | 0 |
 | property_based | 51 | 0.3% | 51 |
 | snapshot | 9 | 0.1% | 9 |
 | belt_and_braces | 6 | 0.0% | 0 |
 
 ## Action thresholds
 
-- **Definitely keep**: 14,872 (contract + regression_pin + parametric + snapshot + property_based)
+- **Definitely keep**: 14,509 (contract + regression_pin + parametric + snapshot + property_based)
 - **Property-based (fuzzable; the target archetype)**: 51
 - **Review for collapse/rewrite**: 80 (implementation_mirror + belt_and_braces)
-- **Smoke tests** (canary; keep but never as sole coverage): 1,862
+- **Smoke tests** (canary; keep but never as sole coverage): 1,795
 
 ## Top 10 implementation-mirror files
 
@@ -41,8 +41,8 @@ Static classification per `docs/proposals/Suite Distillation Strategy.md`. No ex
 - `tests/unit/test_parser.py` — 19 smoke tests
 - `tests/unit/test_expression_lang.py` — 18 smoke tests
 - `tests/unit/test_invariant_evaluator.py` — 18 smoke tests
-- `tests/unit/http_runtime/test_auth.py` — 17 smoke tests
 - `tests/unit/test_csrf_origin_gate_phase2.py` — 17 smoke tests
+- `tests/unit/http_runtime/test_auth.py` — 16 smoke tests
 - `tests/unit/test_aggregate_expression_l3.py` — 15 smoke tests
 - `tests/unit/test_llm_driver.py` — 15 smoke tests
 - `tests/unit/test_tenant_config.py` — 14 smoke tests

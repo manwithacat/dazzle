@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 989
-- **Tests inside those clusters**: 3,899
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,910 tests** (≈ 20.4% of the suite)
+- **Clusters of ≥3**: 942
+- **Tests inside those clusters**: 3,646
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,704 tests** (≈ 18.9% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -14,21 +14,18 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 
 | Size | Clusters |
 |---|---:|
-| 20+ | 3 |
-| 10-19 | 13 |
-| 5-9 | 175 |
-| 3-4 | 798 |
+| 20+ | 2 |
+| 10-19 | 9 |
+| 5-9 | 161 |
+| 3-4 | 770 |
 
 ## Top 30 largest clusters
 
 | File | Class | Size | Sample test names |
 |---|---|---:|---|
-| `tests/unit/test_region_adapter.py` | `(module)` | 28 | test_list_csv_export_filename_override, test_grid_clamps_column_count_to_valid_range, test_metrics_summary_alias_dispatches_same_path… |
 | `tests/unit/test_datatable_handler.py` | `TestListHandlerFilter` | 21 | test_handler_leftover_filter_does_not_invent, test_handler_leftover_filter_value_does_not_invent, test_handler_valid_filter_enum_value_rides… |
 | `tests/unit/test_auth_connection_cli.py` | `(module)` | 20 | test_verify_domain_not_found_prints_record, test_show_verification, test_doctor_ready_exit_0… |
-| `tests/unit/render/fragment/test_data_primitives.py` | `(module)` | 17 | test_table_columns_and_rows, test_kpi_basic, test_bar_chart_buckets… |
 | `tests/unit/test_hm_contract_dom_conformance.py` | `(module)` | 15 | test_money_field_fixed_conforms_to_money_contract, test_search_result_row_conforms_to_result_contract, test_metric_tile_emission_conforms_to_metrics_contract… |
-| `tests/unit/test_region_adapter.py` | `(module)` | 14 | test_grid_uses_label_field_override, test_metrics_invalid_tone_coerced_to_default, test_metrics_no_delta_omits_delta_block… |
 | `tests/unit/test_auth_error_leftover.py` | `(module)` | 12 | test_valid_login_error_still_renders_banner, test_declared_sso_no_connection_rides, test_declared_sso_unavailable_rides… |
 | `tests/unit/test_form_widget_showcase_phase3.py` | `(module)` | 12 | test_combobox_controller_leftover_does_not_invent, test_grid_controller_rejects_whitespace_query, test_search_box_controller_rejects_empty_query… |
 | `tests/integration/test_scim_routes.py` | `(module)` | 11 | test_no_bearer_is_401, test_bad_bearer_is_401, test_create_user_unverified_domain_is_400… |
@@ -36,9 +33,7 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_dedup_footgun_gates.py` | `(module)` | 11 | test_no_inline_entity_slug, test_no_inline_404_guard, test_logger_uses_dunder_name_not_string_bucket… |
 | `tests/unit/test_document_routes.py` | `(module)` | 11 | test_unknown_entity_is_opaque_404, test_missing_record_is_opaque_404, test_invalid_entity_id_is_404… |
 | `tests/integration/test_saml_routes.py` | `(module)` | 10 | test_login_redirects_to_idp, test_login_resolves_by_verified_email_domain, test_sls_kills_only_the_connections_org_sessions… |
-| `tests/unit/render/fragment/test_htmx_types.py` | `(module)` | 10 | test_url_accepts_relative_path, test_target_selector_id_form, test_hx_trigger_simple_event… |
 | `tests/unit/test_goal_b_coat.py` | `(module)` | 10 | test_stamp_pair_grids_saturate_media, test_note_kind_chrome_saturates_conversation, test_tree_people_org_saturates… |
-| `tests/unit/test_region_adapter.py` | `(module)` | 10 | test_timeline_overflow_line_renders_when_total_exceeds_items, test_kanban_display_sibling_still_emits_avatar, test_list_with_csv_export_renders_button… |
 | `tests/integration/test_scim_routes.py` | `(module)` | 9 | test_service_provider_config_requires_bearer, test_leftover_users_filter_is_invalid_filter, test_delete_user… |
 | `tests/unit/http_runtime/test_query_builder.py` | `TestFilterCondition` | 9 | test_to_sql_equality, test_to_sql_contains, test_to_sql_startswith… |
 | `tests/unit/test_auth_views_password_reset.py` | `(module)` | 9 | test_forgot_password_view_posts_to_submit_endpoint, test_forgot_password_view_uses_product_name_in_brand, test_forgot_password_view_links_back_to_login… |
@@ -53,14 +48,17 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_session_manager.py` | `TestSessionTokenFromLoginResponse` | 9 | test_legacy_dazzle_session, test_host_cookie, test_apex_cookie… |
 | `tests/unit/test_two_factor_views.py` | `(module)` | 9 | test_totp_mode_posts_to_verify_submit, test_totp_mode_default_subtitle, test_totp_mode_offers_email_otp_link_when_enabled… |
 | `tests/integration/test_connection_admin_routes.py` | `(module)` | 8 | test_page_forbidden_without_session, test_page_forbidden_for_non_admin, test_page_forbidden_when_no_admin_roles_configured… |
+| `tests/integration/test_connection_admin_routes.py` | `(module)` | 8 | test_page_only_shows_active_orgs_connections, test_page_shows_rotation_history, test_page_shows_grace_window_when_active… |
+| `tests/integration/test_examples_fragment_http.py` | `(module)` | 8 | test_simple_task_create_form_str_field_renders_as_text_input, test_fragment_chrome_emits_dz_page_body_class, test_fragment_chrome_default_off_unchanged_behaviour… |
+| `tests/unit/test_cohort_strip_tone_bands_1144.py` | `(module)` | 8 | test_value_clears_highest_band_takes_that_tone, test_value_falls_to_middle_band, test_value_below_all_bands_stays_neutral… |
+| `tests/unit/test_csrf_disposition_phase3.py` | `TestCsrfDisposition` | 8 | test_bearer_is_na_bearer, test_webhook_is_na_signature, test_sign_route_is_na_signature… |
+| `tests/unit/test_csrf_disposition_phase3.py` | `TestProtectedPathOverrides` | 8 | test_switch_org_is_protected_session, test_select_org_is_protected_session, test_logout_is_protected_session… |
 
 ## Top 10 files by collapse-saving potential
 
 | File | Tests that could collapse |
 |---|---:|
-| `tests/unit/test_region_adapter.py` | 72 |
 | `tests/unit/test_auth_connection_cli.py` | 27 |
-| `tests/unit/render/fragment/test_data_primitives.py` | 27 |
 | `tests/unit/http_runtime/test_query_builder.py` | 27 |
 | `tests/unit/test_expression_lang.py` | 27 |
 | `tests/unit/test_schema_diff.py` | 25 |
@@ -68,12 +66,14 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_hm_contract_dom_conformance.py` | 24 |
 | `tests/integration/test_connection_admin_routes.py` | 23 |
 | `tests/unit/test_datatable_handler.py` | 20 |
+| `tests/integration/test_scim_routes.py` | 20 |
+| `tests/unit/test_entity_card_data_resolution.py` | 20 |
 
 ## Fuzz-target worklist (property/fuzz-candidate clusters)
 
 Clusters whose subject is an input-boundary surface (parser/validator/crypto/…). Each is a candidate to collapse into ONE property test (input space → invariant) — which then becomes a fuzz target — rather than a fixed `@pytest.mark.parametrize` list. Path-based hint; confirm by reading the cluster. (#1342)
 
-- **Property/fuzz-candidate clusters**: 124
+- **Property/fuzz-candidate clusters**: 123
 
 | File | Class | Size | Form | Why |
 |---|---|---:|---|---|
@@ -85,7 +85,6 @@ Clusters whose subject is an input-boundary surface (parser/validator/crypto/…
 | `tests/unit/test_tenant_host_validator.py` | `(module)` | 8 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_scope_create_eval.py` | `(module)` | 7 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/integration/test_saml_routes.py` | `(module)` | 6 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
-| `tests/unit/render/fragment/test_renderer_asset_url_1137.py` | `(module)` | 6 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_predicate_policy_mode.py` | `TestInlineLiteral` | 6 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_validator.py` | `TestValidateNavCuration` | 6 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_comparison_validation.py` | `(module)` | 5 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
@@ -107,6 +106,7 @@ Clusters whose subject is an input-boundary surface (parser/validator/crypto/…
 | `tests/unit/test_db_url.py` | `TestAddPsycopgDriver` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_entity_card_config_parser.py` | `(module)` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_expression_lang.py` | `TestParserFieldRef` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
+| `tests/unit/test_expression_lang.py` | `TestParserArithmetic` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 
 ## How to act on this
 

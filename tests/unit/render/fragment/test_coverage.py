@@ -1,5 +1,9 @@
 """Unit tests for the Fragment coverage audit."""
 
+import json
+
+import pytest
+
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.domain import DomainSpec, EntitySpec
 from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
@@ -20,12 +24,13 @@ from dazzle.render.fragment.coverage import (
 )
 
 
-def _make_appspec(surfaces: list[SurfaceSpec]) -> AppSpec:
-    """Build a minimal AppSpec — the audit only consults surfaces."""
+def _make_appspec(surfaces: list[SurfaceSpec], entities: list[EntitySpec] | None = None) -> AppSpec:
+    """Build a minimal AppSpec — the audit only consults surfaces (+ entities
+    for field-type resolution)."""
     return AppSpec(
         name="test",
         title="Test App",
-        domain=DomainSpec(entities=[]),
+        domain=DomainSpec(entities=entities or []),
         surfaces=surfaces,
     )
 
@@ -42,72 +47,139 @@ def test_blocker_kind_enum_values() -> None:
     assert {k.value for k in BlockerKind} == expected
 
 
-def test_blocker_dataclass() -> None:
-    b = Blocker(kind=BlockerKind.UNSUPPORTED_MODE, detail="VIEW")
-    assert b.kind == BlockerKind.UNSUPPORTED_MODE
-    assert b.detail == "VIEW"
+@pytest.mark.parametrize(
+    ("blockers", "ready"),
+    [
+        pytest.param((), True, id="no-blockers-ready"),
+        pytest.param(
+            (Blocker(kind=BlockerKind.UNSUPPORTED_MODE, detail="VIEW"),),
+            False,
+            id="blockers-present-not-ready",
+        ),
+    ],
+)
+def test_surface_coverage_is_ready(blockers: tuple[Blocker, ...], ready: bool) -> None:
+    assert SurfaceCoverage(name="s", mode="LIST", blockers=blockers).is_ready is ready
 
 
-def test_surface_coverage_ready_when_no_blockers() -> None:
-    sc = SurfaceCoverage(name="task_list", mode="LIST", blockers=())
-    assert sc.is_ready
-
-
-def test_surface_coverage_blocked_when_blockers_present() -> None:
-    sc = SurfaceCoverage(
-        name="task_detail",
-        mode="VIEW",
-        blockers=(Blocker(kind=BlockerKind.UNSUPPORTED_MODE, detail="VIEW"),),
-    )
-    assert not sc.is_ready
-
-
-def test_audit_marks_simple_list_as_ready() -> None:
-    """A LIST-mode surface with no related_groups, no companions is renderable."""
-    surface = SurfaceSpec(name="task_list", mode=SurfaceMode.LIST)
-    report = audit_appspec(_make_appspec([surface]))
-    assert report.ready_count == 1
-    assert report.blocked_count == 0
-    assert report.surfaces[0].is_ready
-
-
-def test_audit_marks_custom_mode_as_blocked() -> None:
-    """Plan 9 added CREATE+EDIT; CUSTOM remains unsupported (Plan 9 closure)."""
-    surface = SurfaceSpec(name="task_custom", mode=SurfaceMode.CUSTOM)
-    report = audit_appspec(_make_appspec([surface]))
-    assert report.ready_count == 0
-    assert report.blocked_count == 1
-    blockers = report.surfaces[0].blockers
-    assert any(b.kind.value == "unsupported_mode" and b.detail == "CUSTOM" for b in blockers)
-
-
-def test_audit_marks_view_mode_as_ready() -> None:
-    """Plan 8 — VIEW mode is now supported, so a VIEW surface with no
-    other blockers is ready to flip."""
-    surface = SurfaceSpec(name="task_detail", mode=SurfaceMode.VIEW)
-    report = audit_appspec(_make_appspec([surface]))
-    assert report.ready_count == 1
-    assert report.blocked_count == 0
-
-
-def test_audit_treats_related_groups_as_supported() -> None:
-    """Plan 10 — related_groups is now supported; surfaces with it
-    are not blocked on this feature alone."""
-    surface = SurfaceSpec(
-        name="x",
-        mode=SurfaceMode.LIST,
-        related_groups=[
-            RelatedGroup(
-                name="comments",
-                entity_ref="Comment",
-                display=RelatedDisplayMode.TABLE,
-                show=[],
-            ),
+def _task_with_file_field() -> EntitySpec:
+    return EntitySpec(
+        name="Task",
+        fields=[
+            FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
+            FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
+            FieldSpec(name="attachment", type=FieldType(kind=FieldTypeKind.FILE)),
         ],
     )
-    report = audit_appspec(_make_appspec([surface]))
-    assert report.ready_count == 1
-    assert report.blocked_count == 0
+
+
+@pytest.mark.parametrize(
+    ("surface", "entities", "expected_blocker"),
+    [
+        # A LIST surface with no display / related_groups / companions renders;
+        # an unset `display:` uses the mode's natural rendering (LIST → Table).
+        pytest.param(SurfaceSpec(name="task_list", mode=SurfaceMode.LIST), [], None, id="list"),
+        # `display: list` is the explicit form of the default.
+        pytest.param(
+            SurfaceSpec(name="task_list", mode=SurfaceMode.LIST, display="list"),
+            [],
+            None,
+            id="explicit-list-display",
+        ),
+        # Plan 8: VIEW mode is supported.
+        pytest.param(
+            SurfaceSpec(name="task_detail", mode=SurfaceMode.VIEW), [], None, id="view-mode"
+        ),
+        # Plan 10: related_groups are supported.
+        pytest.param(
+            SurfaceSpec(
+                name="x",
+                mode=SurfaceMode.LIST,
+                related_groups=[
+                    RelatedGroup(
+                        name="comments",
+                        entity_ref="Comment",
+                        display=RelatedDisplayMode.TABLE,
+                        show=[],
+                    ),
+                ],
+            ),
+            [],
+            None,
+            id="related-groups",
+        ),
+        # No entity_ref → field-type resolution is skipped, not raised.
+        pytest.param(
+            SurfaceSpec(name="dashboard", mode=SurfaceMode.LIST, entity_ref=None, sections=[]),
+            [],
+            None,
+            id="no-entity-ref-skips-field-resolution",
+        ),
+        # A stale entity_ref must not crash the audit (the linker flags it).
+        pytest.param(
+            SurfaceSpec(
+                name="x",
+                mode=SurfaceMode.LIST,
+                entity_ref="NoSuchEntity",
+                sections=[
+                    SurfaceSection(
+                        name="main", elements=[SurfaceElement(field_name="any", label="Any")]
+                    ),
+                ],
+            ),
+            [],
+            None,
+            id="unknown-entity-ref-skips-field-resolution",
+        ),
+        # #1033 (v0.66.140): the `file` field type renders via FileUpload.
+        pytest.param(
+            SurfaceSpec(
+                name="task_create",
+                mode=SurfaceMode.CREATE,
+                entity_ref="Task",
+                sections=[
+                    SurfaceSection(
+                        name="main",
+                        elements=[
+                            SurfaceElement(field_name="title", label="Title"),
+                            SurfaceElement(field_name="attachment", label="Attachment"),
+                        ],
+                    )
+                ],
+            ),
+            [_task_with_file_field()],
+            None,
+            id="file-field-supported-1033",
+        ),
+        # Plan 9 added CREATE+EDIT; CUSTOM remains unsupported.
+        pytest.param(
+            SurfaceSpec(name="task_custom", mode=SurfaceMode.CUSTOM),
+            [],
+            ("unsupported_mode", "CUSTOM"),
+            id="custom-mode-blocked",
+        ),
+        # Phase 4A: an undispatched `display:` is flagged instead of silently
+        # rendering as a Table (Plan-13-class under-reporting).
+        pytest.param(
+            SurfaceSpec(name="metrics_chart", mode=SurfaceMode.LIST, display="not_a_real_mode"),
+            [],
+            ("unsupported_display", "not_a_real_mode"),
+            id="unknown-display-blocked",
+        ),
+    ],
+)
+def test_audit_single_surface(
+    surface: SurfaceSpec,
+    entities: list[EntitySpec],
+    expected_blocker: tuple[str, str] | None,
+) -> None:
+    report = audit_appspec(_make_appspec([surface], entities))
+    blockers = [(b.kind.value, b.detail) for b in report.surfaces[0].blockers]
+    if expected_blocker is None:
+        assert (report.ready_count, report.blocked_count, blockers) == (1, 0, [])
+    else:
+        assert (report.ready_count, report.blocked_count) == (0, 1)
+        assert expected_blocker in blockers
 
 
 def test_audit_aggregates_across_surfaces() -> None:
@@ -162,8 +234,6 @@ def test_coverage_report_to_text_basic_shape() -> None:
 
 
 def test_coverage_report_to_json_shape() -> None:
-    import json
-
     surfaces = [
         SurfaceSpec(name="task_list", mode=SurfaceMode.LIST),
         SurfaceSpec(name="task_custom", mode=SurfaceMode.CUSTOM),
@@ -187,150 +257,17 @@ def test_coverage_report_to_json_shape() -> None:
     }
 
 
-# ─────────────────── Plan 13 — entity-ref field resolution ───────────────────
-
-
-def test_audit_marks_file_fields_as_supported() -> None:
-    """Issue #1033 (v0.66.140): the `file` field type is now
-    supported via the FileUpload primitive. A surface with a file
-    field should be in `ready_count`, not `blocked_count`. Pre-fix
-    this test asserted the opposite — `file` was in
-    `_UNSUPPORTED_FIELD_TYPES` and produced a blocker; that constant
-    is now empty so this test inverts to confirm the closure."""
-    task = EntitySpec(
-        name="Task",
-        fields=[
-            FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
-            FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
-            FieldSpec(
-                name="attachment",
-                type=FieldType(kind=FieldTypeKind.FILE),
-            ),
-        ],
-    )
-    surface = SurfaceSpec(
-        name="task_create",
-        mode=SurfaceMode.CREATE,
-        entity_ref="Task",
-        sections=[
-            SurfaceSection(
-                name="main",
-                elements=[
-                    SurfaceElement(field_name="title", label="Title"),
-                    SurfaceElement(field_name="attachment", label="Attachment"),
-                ],
-            )
-        ],
-    )
-    appspec = AppSpec(
-        name="t",
-        title="T",
-        domain=DomainSpec(entities=[task]),
-        surfaces=[surface],
-    )
-    report = audit_appspec(appspec)
-    assert report.ready_count == 1
-    assert report.blocked_count == 0
-    assert report.surfaces[0].blockers == ()
-
-
-def test_audit_skips_field_resolution_when_no_entity_ref() -> None:
-    """A surface without entity_ref can't be checked against an entity.
-    The audit must skip field-type resolution rather than raising."""
-    surface = SurfaceSpec(
-        name="dashboard",
-        mode=SurfaceMode.LIST,
-        entity_ref=None,
-        sections=[],
-    )
-    appspec = _make_appspec([surface])
-    report = audit_appspec(appspec)
-    assert report.ready_count == 1
-
-
-def test_audit_skips_field_resolution_when_entity_not_found() -> None:
-    """Stale entity_ref pointing at a non-existent entity must not crash
-    the audit. The linker would have flagged this earlier; the audit's
-    job is to be robust to malformed input, not validate it."""
-    surface = SurfaceSpec(
-        name="x",
-        mode=SurfaceMode.LIST,
-        entity_ref="NoSuchEntity",
-        sections=[
-            SurfaceSection(
-                name="main",
-                elements=[SurfaceElement(field_name="any", label="Any")],
-            ),
-        ],
-    )
-    appspec = _make_appspec([surface])
-    report = audit_appspec(appspec)
-    assert report.ready_count == 1
-
-
-def test_audit_marks_admin_surface_as_framework_injected() -> None:
+def test_audit_classifies_framework_injected_surfaces() -> None:
     """Cyfuture pilot ask: distinguish declared surfaces from framework-
-    injected ones. Names starting with `_admin_` or `_platform_` are
-    auto-injected by the framework (see admin_builder.py:744)."""
+    injected ones (`_admin_` / `_platform_` names, see admin_builder.py).
+    The JSON carries `source` so consumers can filter framework noise."""
     declared = SurfaceSpec(name="task_list", mode=SurfaceMode.LIST)
     injected = SurfaceSpec(name="_admin_health", mode=SurfaceMode.LIST)
-    appspec = _make_appspec([declared, injected])
-    report = audit_appspec(appspec)
-    by_name = {s.name: s for s in report.surfaces}
-    assert by_name["task_list"].source == "declared"
-    assert by_name["_admin_health"].source == "framework_injected"
-
-
-def test_coverage_report_to_json_includes_source_field() -> None:
-    """JSON shape carries `source` per surface so consumers can filter
-    framework noise out of their own coverage stats."""
-    import json
-
-    declared = SurfaceSpec(name="task_list", mode=SurfaceMode.LIST)
-    injected = SurfaceSpec(name="_admin_health", mode=SurfaceMode.LIST)
-    appspec = _make_appspec([declared, injected])
-    report = audit_appspec(appspec)
+    report = audit_appspec(_make_appspec([declared, injected]))
+    expected = {"task_list": "declared", "_admin_health": "framework_injected"}
+    assert {s.name: s.source for s in report.surfaces} == expected
     payload = json.loads(report.to_json())
-    by_name = {s["name"]: s for s in payload["surfaces"]}
-    assert by_name["task_list"]["source"] == "declared"
-    assert by_name["_admin_health"]["source"] == "framework_injected"
-
-
-def test_audit_flags_unsupported_display_mode() -> None:
-    """Phase 4A: surfaces with `display:` set to a value the adapter
-    doesn't dispatch on are flagged. `display: kanban` on a list-mode
-    surface previously rendered as a Table silently — exactly the
-    Plan-13-class silent under-reporting."""
-    surface = SurfaceSpec(
-        name="metrics_chart",
-        mode=SurfaceMode.LIST,
-        display="not_a_real_mode",
-    )
-    appspec = _make_appspec([surface])
-    report = audit_appspec(appspec)
-    assert report.blocked_count == 1
-    blockers = report.surfaces[0].blockers
-    assert any(
-        b.kind.value == "unsupported_display" and b.detail == "not_a_real_mode" for b in blockers
-    ), f"Expected not_a_real_mode blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
-
-
-def test_audit_does_not_flag_empty_display() -> None:
-    """The default — no `display:` set — uses the surface mode's
-    natural rendering (LIST → Table). No blocker."""
-    surface = SurfaceSpec(name="task_list", mode=SurfaceMode.LIST)
-    appspec = _make_appspec([surface])
-    report = audit_appspec(appspec)
-    assert report.ready_count == 1
-
-
-def test_audit_does_not_flag_explicit_list_display() -> None:
-    """`display: list` is the explicit form of the default — also
-    supported."""
-    surface = SurfaceSpec(name="task_list", mode=SurfaceMode.LIST, display="list")
-    appspec = _make_appspec([surface])
-    report = audit_appspec(appspec)
-    assert report.ready_count == 1
+    assert {s["name"]: s["source"] for s in payload["surfaces"]} == expected
 
 
 # ─────── Workspace-region walking (Phase 4A) ─────────────────────

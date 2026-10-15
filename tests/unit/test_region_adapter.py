@@ -1,7 +1,17 @@
-"""WorkspaceRegionAdapter tests (Phase 4A)."""
+"""WorkspaceRegionAdapter tests (Phase 4A).
+
+Most adapter behaviour is "this region config + this ctx renders HTML that
+contains / omits these substrings"; that shape lives in ONE table-driven test
+(`test_region_renders`) whose case ids name the behaviour — and carry the issue
+number when a case is a regression pin. Tests that pin structure (fragment
+types, card buckets, active-lens selection) stay as their own tests.
+"""
+
+import re
 
 import pytest
 
+from dazzle.core.ir import AggregateRef, DerivedMetricExpr
 from dazzle.render.fragment import Region, Surface
 from dazzle.render.fragment.region import WorkspaceRegionAdapter
 from dazzle.render.fragment.renderer import FragmentRenderer
@@ -29,7 +39,90 @@ def _render(node: object) -> str:
     return FragmentRenderer().render(node)
 
 
-# ───────────────── Dispatch ────────────────────────
+def _cohort_region(
+    *,
+    member_via: str = "profile",
+    lenses: list[dict] | None = None,
+    default_lens: str = "",
+    empty_message: str | None = None,
+) -> object:
+    """Region exposing a CohortStripConfig (#1018) — duck-typed."""
+    from dazzle.core.ir.workspaces import CohortStripConfig, CohortStripLens
+
+    lens_data = (
+        lenses
+        if lenses is not None
+        else [
+            {"id": "attainment", "label": "Attainment", "primary": "score"},
+            {"id": "attendance", "label": "Attendance", "primary": "att_pct"},
+        ]
+    )
+    cfg = CohortStripConfig(
+        member_via=member_via,
+        lenses=[CohortStripLens(**spec) for spec in lens_data],
+        default_lens=default_lens,
+    )
+
+    class _Region:
+        name = "cohort"
+        title = None
+        display = "cohort_strip"
+        cohort_strip_config = cfg
+
+    r = _Region()
+    r.empty_message = empty_message  # type: ignore[attr-defined]
+    return r
+
+
+def _day_timeline_region(*, empty_message: str | None = None) -> object:
+    """Region exposing a DayTimelineConfig (#1016) — duck-typed."""
+    from dazzle.core.ir.workspaces import DayTimelineConfig
+
+    class _Region:
+        name = "today"
+        title = None
+        display = "day_timeline"
+        cohort_strip_config = None
+
+    r = _Region()
+    r.empty_message = empty_message  # type: ignore[attr-defined]
+    r.day_timeline_config = DayTimelineConfig(  # type: ignore[attr-defined]
+        starts_at="period_start", ends_at="period_end", card="lesson_card"
+    )
+    return r
+
+
+def _task_inbox_region(*, empty_state: str = "All caught up.") -> object:
+    """Region exposing a TaskInboxConfig (#1015) — duck-typed."""
+    from dazzle.core.ir.workspaces import TaskInboxConfig
+
+    class _Region:
+        name = "today"
+        title = None
+        display = "task_inbox"
+        empty_message = None
+
+    r = _Region()
+    r.task_inbox_config = TaskInboxConfig(sources=[], empty_state=empty_state)  # type: ignore[attr-defined]
+    return r
+
+
+def _entity_card_region() -> object:
+    """Region exposing an EntityCardConfig (#1017) — duck-typed."""
+    from dazzle.core.ir.workspaces import EntityCardConfig
+
+    class _Region:
+        name = "card"
+        title = None
+        display = "entity_card"
+        empty_message = None
+
+    r = _Region()
+    r.entity_card_config = EntityCardConfig(sections=[])  # type: ignore[attr-defined]
+    return r
+
+
+# ───────────────── Structural pins ────────────────────────
 
 
 def test_unsupported_display_raises_with_actionable_hint() -> None:
@@ -46,17 +139,24 @@ def test_unsupported_display_raises_with_actionable_hint() -> None:
         adapter.build(_FakeRegion("r", display=deferred), {})
 
 
-# ───────────────── Timeline ───────────────────────
+@pytest.mark.parametrize("display", ["", "list"], ids=["default-empty", "explicit-list"])
+def test_list_display_routes_to_list_region(display: str) -> None:
+    """Default display (empty string) and `display: list` are the list view."""
+    fragment = WorkspaceRegionAdapter().build(
+        _FakeRegion("task_list", display=display, title="Tasks"),
+        {"items": [], "columns": []},
+    )
+    assert isinstance(fragment, Surface)
+    assert isinstance(fragment.body, Region)
+    assert fragment.body.kind == "list"
 
 
 def test_timeline_renders_rich_event_shape() -> None:
-    """Phase 4B.4 wave 2 (v0.66.108): Timeline now uses rich
-    `TimelineEvent` instances with title + date_label (timeago-
-    formatted) + secondary fields. Adapter consumes columns +
-    display_key (matches production runtime ctx)."""
+    """Phase 4B.4 wave 2 (v0.66.108): Timeline uses rich `TimelineEvent`
+    instances with title + date_label (timeago-formatted) + secondary
+    fields. Adapter consumes columns + display_key (production ctx)."""
     from dazzle.render.fragment import Timeline, TimelineEvent
 
-    adapter = WorkspaceRegionAdapter()
     ctx = {
         "items": [
             {"title": "Login", "created_at": "2026-05-08T12:00:00", "actor": "Alice"},
@@ -68,2368 +168,294 @@ def test_timeline_renders_rich_event_shape() -> None:
         ],
         "display_key": "title",
     }
-    fragment = adapter.build(_FakeRegion("activity", display="timeline"), ctx)
+    fragment = WorkspaceRegionAdapter().build(_FakeRegion("activity", display="timeline"), ctx)
     timeline = fragment.body.body
     assert isinstance(timeline, Timeline)
     assert len(timeline.events) == 1
     evt = timeline.events[0]
     assert isinstance(evt, TimelineEvent)
     assert evt.title == "Login"
-    # date_label produced via timeago — non-empty (exact value
-    # depends on test execution time).
-    assert evt.date_label
-    # Actor field appears as a secondary field, date column does NOT.
+    assert evt.date_label  # timeago — exact value depends on the clock
+    # Actor appears as a secondary field; the date column does NOT.
     assert any(label == "Actor" for label, _ in evt.fields)
     assert not any(label == "When" for label, _ in evt.fields)
 
 
-def test_timeline_overflow_line_renders_when_total_exceeds_items() -> None:
-    """Legacy `<p class="dz-timeline-overflow">Showing N of M</p>`
-    appears when ctx total > items length."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {"title": "X", "created_at": "2026-05-08T12:00:00"},
-        ],
-        "columns": [
-            {"key": "title", "label": "T"},
-            {"key": "created_at", "label": "W", "type": "date"},
-        ],
-        "display_key": "title",
-        "total": 5,
-    }
-    html = _render(adapter.build(_FakeRegion("e", display="timeline"), ctx))
-    assert "Showing 1 of 5" in html
-    assert "dz-timeline-overflow" in html
-
-
-def test_empty_display_routes_to_list_path() -> None:
-    """Default display (empty string) is the list view."""
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("task_list", title="Tasks"),
-        {"items": [], "columns": []},
-    )
-    assert isinstance(fragment, Surface)
-    region = fragment.body
-    assert isinstance(region, Region)
-    assert region.kind == "list"
-
-
-def test_explicit_list_display_routes_to_list_path() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("r", display="list"),
-        {"items": [], "columns": []},
-    )
-    assert isinstance(fragment, Surface)
-    assert fragment.body.kind == "list"
-
-
-# ───────────────── Kanban ─────────────────────────
-
-
-def test_kanban_with_items_grouped_into_columns() -> None:
-    """v0.66.112: KANBAN now uses KanbanRegion (workspace-shape) with
-    KanbanColumn instances. Items bucket by `group_by`; declared
-    `kanban_columns` set the column order."""
+@pytest.mark.parametrize(
+    ("statuses", "kanban_columns", "expected_cards"),
+    [
+        pytest.param(
+            ["todo", "doing", "todo", "done"],
+            ["todo", "doing", "done"],
+            {"todo": 2, "doing": 1, "done": 1},
+            id="items-bucket-by-group_by-in-declared-order",
+        ),
+        # Items under a key not in `kanban_columns` drop (legacy template
+        # `selectattr equalto` excluded off-board items; no Other column).
+        pytest.param(
+            ["blocked", "todo"],
+            ["todo", "doing"],
+            {"todo": 1, "doing": 0},
+            id="unknown-group-key-dropped",
+        ),
+        # A declared key with zero items still renders as an empty column.
+        pytest.param(
+            ["todo"],
+            ["todo", "doing", "done"],
+            {"todo": 1, "doing": 0, "done": 0},
+            id="empty-declared-columns-still-render",
+        ),
+    ],
+)
+def test_kanban_buckets_cards_into_declared_columns(
+    statuses: list[str], kanban_columns: list[str], expected_cards: dict[str, int]
+) -> None:
+    """v0.66.112: KANBAN uses KanbanRegion with KanbanColumn instances."""
     from dazzle.render.fragment import KanbanRegion
 
-    adapter = WorkspaceRegionAdapter()
-    region = _FakeRegion("task_board", display="kanban", title="Task Board")
     ctx = {
-        "items": [
-            {"id": "1", "title": "Buy milk", "status": "todo"},
-            {"id": "2", "title": "Walk dog", "status": "doing"},
-            {"id": "3", "title": "Read book", "status": "todo"},
-            {"id": "4", "title": "Stretch", "status": "done"},
-        ],
-        "kanban_columns": ["todo", "doing", "done"],
+        "items": [{"id": str(i), "title": f"T{i}", "status": s} for i, s in enumerate(statuses)],
+        "kanban_columns": kanban_columns,
         "group_by": "status",
         "display_key": "title",
     }
-    fragment = adapter.build(region, ctx)
-    assert isinstance(fragment, Surface)
-    assert isinstance(fragment.body, Region)
+    fragment = WorkspaceRegionAdapter().build(_FakeRegion("b", display="kanban"), ctx)
     assert fragment.body.kind == "kanban"
     board = fragment.body.body
     assert isinstance(board, KanbanRegion)
-    labels = [c.label for c in board.columns]
-    assert labels == ["todo", "doing", "done"]
-    by_label = {c.label: c for c in board.columns}
-    assert len(by_label["todo"].cards) == 2
-    assert len(by_label["doing"].cards) == 1
-    assert len(by_label["done"].cards) == 1
-
-
-def test_kanban_unknown_group_keys_drop() -> None:
-    """v0.66.112: items grouped under a key not in `kanban_columns` are
-    silently dropped (the legacy template uses `selectattr equalto`
-    which excludes off-board items rather than synthesising an Other
-    column)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {"id": "1", "title": "X", "status": "blocked"},  # not in keys
-            {"id": "2", "title": "Y", "status": "todo"},
-        ],
-        "kanban_columns": ["todo", "doing"],
-        "group_by": "status",
-        "display_key": "title",
-    }
-    fragment = adapter.build(_FakeRegion("b", display="kanban"), ctx)
-    board = fragment.body.body
-    by_label = {c.label: c for c in board.columns}
-    # "blocked" doesn't appear in kanban_columns → dropped from the board.
-    assert set(by_label.keys()) == {"todo", "doing"}
-    assert len(by_label["todo"].cards) == 1
-    assert len(by_label["doing"].cards) == 0
-
-
-def test_kanban_empty_columns_still_render() -> None:
-    """A column with declared key but zero items still renders as an
-    empty column — important UX so authors see all states."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [{"id": "1", "title": "X", "status": "todo"}],
-        "kanban_columns": ["todo", "doing", "done"],
-        "group_by": "status",
-        "display_key": "title",
-    }
-    fragment = adapter.build(_FakeRegion("b", display="kanban"), ctx)
-    board = fragment.body.body
-    by_label = {c.label: c for c in board.columns}
-    assert by_label["doing"].cards == ()
-    assert by_label["done"].cards == ()
-
-
-def test_kanban_no_items_renders_empty_state_or_minimal_board() -> None:
-    """Edge case: no items AND no group_keys — empty state."""
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("b", display="kanban", empty_message="No tasks yet."),
-        {},
-    )
-    # Surface body is a Region containing either EmptyState or a
-    # placeholder KanbanBoard — both are acceptable; what matters
-    # is no crash and meaningful output.
-    html = _render(fragment)
-    # One of these strings should appear
-    assert "No tasks yet." in html or "All" in html or "dz-kanban" in html
-
-
-def test_kanban_person_ref_emits_avatar() -> None:
-    """person × kanban_field: resolved person-ref dict emits Avatar."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {
-                "id": "1",
-                "title": "Triage login",
-                "status": "todo",
-                "assigned_to": {
-                    "id": "u1",
-                    "name": "Alex Agent",
-                    "email": "alex@demo.dazzle.local",
-                },
-            }
-        ],
-        "kanban_columns": ["todo"],
-        "group_by": "status",
-        "display_key": "title",
-        "columns": [
-            {"key": "title", "label": "Title", "type": "text"},
-            {
-                "key": "assigned_to",
-                "label": "Assigned To",
-                "type": "ref",
-                "ref_entity": "User",
-            },
-        ],
-    }
-    html = _render(adapter.build(_FakeRegion("board", display="kanban"), ctx))
-    assert "Triage login" in html
-    assert "dz-avatar" in html
-    assert "Alex Agent" in html
-    assert "{'id':" not in html
-
-
-def test_kanban_scalar_leftover_does_not_invent_chip() -> None:
-    """Bare leftover (`Ada` / `System`) must stay field text — no Avatar.
-
-    Same invent class as activity-feed actor leftover (oral #43): do not
-    mint a chip from a scalar string (cycle 2161).
-    """
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {
-                "id": "1",
-                "title": "Triage login",
-                "status": "todo",
-                "assigned_to": "Ada",
-            },
-            {
-                "id": "2",
-                "title": "Nightly sweep",
-                "status": "todo",
-                "assigned_to": "System",
-            },
-        ],
-        "kanban_columns": ["todo"],
-        "group_by": "status",
-        "display_key": "title",
-        "columns": [
-            {"key": "title", "label": "Title", "type": "text"},
-            {
-                "key": "assigned_to",
-                "label": "Assigned To",
-                "type": "ref",
-                "ref_entity": "User",
-            },
-        ],
-    }
-    html = _render(adapter.build(_FakeRegion("board", display="kanban"), ctx))
-    assert "Triage login" in html
-    assert "Nightly sweep" in html
-    assert "Ada" in html
-    assert "System" in html
-    assert "dz-avatar" not in html
-    assert "dz-user-chip" not in html
-
-
-def test_kanban_display_sibling_still_emits_avatar() -> None:
-    """Resolved ``{key}_display`` + id is honest — still Avatar."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {
-                "id": "1",
-                "title": "Triage login",
-                "status": "todo",
-                "assigned_to": "u1",
-                "assigned_to_display": "Alex Agent",
-            }
-        ],
-        "kanban_columns": ["todo"],
-        "group_by": "status",
-        "display_key": "title",
-        "columns": [
-            {"key": "title", "label": "Title", "type": "text"},
-            {
-                "key": "assigned_to",
-                "label": "Assigned To",
-                "type": "ref",
-                "ref_entity": "User",
-            },
-        ],
-    }
-    html = _render(adapter.build(_FakeRegion("board", display="kanban"), ctx))
-    assert "dz-avatar" in html
-    assert "Alex Agent" in html
-
-
-# ───────────────── End-to-end render ──────────────
-
-
-def test_list_renders_with_table() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [{"name": "Alice"}, {"name": "Bob"}],
-        "columns": [{"key": "name", "label": "Name"}],
-    }
-    fragment = adapter.build(_FakeRegion("users", display="list"), ctx)
-    html = _render(fragment)
-    assert "<table" in html
-    assert "Alice" in html
-    assert "Bob" in html
-
-
-def test_list_with_filter_columns_renders_filter_bar() -> None:
-    """Phase 4B.1.e: when ctx supplies `endpoint` + `filter_columns`,
-    the adapter composes a FilterBar above the table."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [{"name": "X"}],
-        "columns": [{"key": "name", "label": "Name"}],
-        "endpoint": "/api/regions/r",
-        "region_name": "r",
-        "filter_columns": [
-            {
-                "key": "status",
-                "label": "Status",
-                "options": [("open", "Open"), ("closed", "Closed")],
-            },
-        ],
-        "active_filters": {"status": "open"},
-    }
-    html = _render(adapter.build(_FakeRegion("r", display="list"), ctx))
-    assert "filter-bar" in html
-    assert 'name="filter_status"' in html
-    assert 'value="open" selected>' in html
-    assert "<table" in html
-
-
-def test_list_with_search_fields_renders_q_input() -> None:
-    """Workspace list free-text search filters the table via ?q= (not FTS panel).
-
-    dual_pane directories declare surface ux.search but previously only offered
-    display:search_box results panels; agent acceptance scored find-by-name
-    as broken when the A–Z list never shrank.
-    """
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [{"name": "Ruth Griffiths"}, {"name": "Ada Lovelace"}],
-        "columns": [{"key": "name", "label": "Name"}],
-        "endpoint": "/api/workspaces/contacts/regions/contact_list",
-        "region_name": "contact_list",
-        "search_fields": ["first_name", "last_name", "email", "company"],
-        "active_search": "Griff",
-    }
-    html = _render(adapter.build(_FakeRegion("contact_list", display="list"), ctx))
-    assert 'name="q"' in html
-    assert "dz-list-q-contact_list" in html
-    assert 'value="Griff"' in html
-    assert "data-dz-list-search" in html
-    assert 'hx-get="/api/workspaces/contacts/regions/contact_list"' in html
-    # Visible find-by-name label from search_fields (not FTS results panel).
-    assert "Find by First Name" in html
-    assert "dz-list-search-label" in html
-    assert "filter-label" in html
-    # Swap target must resolve on dual_pane list bodies (data-dz-region) and
-    # dashboard cards alike — closest region chrome, not a bare #region- id.
-    assert 'hx-target="closest [data-dz-region]"' in html
-    # Must not be the FTS results-panel search_box path.
-    assert "dz-search-results-contact_list" not in html
-
-
-def test_list_with_date_range_renders_picker() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [],
-        "endpoint": "/api/x",
-        "region_name": "r",
-        "date_range": True,
-        "date_from": "2026-01-01",
-        "date_to": "2026-12-31",
-    }
-    html = _render(adapter.build(_FakeRegion("r", display="list"), ctx))
-    assert "date-range-bar" in html
-    assert 'value="2026-01-01"' in html
-    assert 'value="2026-12-31"' in html
-
-
-def test_list_with_csv_export_renders_button() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [{"name": "X"}],
-        "columns": [{"key": "name", "label": "Name"}],
-        "endpoint": "/api/x",
-        "region_name": "tickets",
-        "csv_export": True,
-    }
-    html = _render(adapter.build(_FakeRegion("r", display="list"), ctx))
-    assert "dz-list-csv-button" in html
-    assert 'data-dz-csv-filename="tickets.csv"' in html  # default = region_name + ".csv"
-
-
-def test_list_csv_export_filename_override() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [],
-        "endpoint": "/api/x",
-        "region_name": "r",
-        "csv_export": True,
-        "csv_filename": "custom-export.csv",
-    }
-    html = _render(adapter.build(_FakeRegion("r", display="list"), ctx))
-    assert 'data-dz-csv-filename="custom-export.csv"' in html
-
-
-def test_list_without_endpoint_skips_filter_chrome() -> None:
-    """Without `endpoint` ctx key, FilterBar / DateRangePicker chrome
-    rendering is skipped — they all need an endpoint URL for HTMX
-    wiring. v0.66.109: The CSV button is now always emitted (legacy
-    behaviour) inside the dz-list-region wrapper, so we no longer
-    assert its absence."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [{"name": "X"}],
-        "columns": [{"key": "name", "label": "Name"}],
-        "filter_columns": [{"key": "k", "label": "K", "options": []}],
-        "csv_export": True,
-        "date_range": True,
-    }
-    html = _render(adapter.build(_FakeRegion("r", display="list"), ctx))
-    assert "filter-bar" not in html
-    assert "date-range-bar" not in html
-    assert "<table" in html  # body still renders
-    # CSV button is always emitted (legacy behaviour); check that the
-    # endpoint attr is empty when no endpoint was supplied.
-    assert "dz-list-csv-button" in html
-    assert 'data-dz-csv-endpoint=""' in html
-
-
-def test_list_drops_malformed_filter_columns() -> None:
-    """Filter columns missing key, non-dict entries, and duplicates
-    silently drop rather than crashing FilterBar's strict invariants."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [],
-        "endpoint": "/api/x",
-        "region_name": "r",
-        "filter_columns": [
-            None,
-            42,
-            {"label": "no key"},
-            {"key": "valid", "label": "Valid", "options": []},
-            {"key": "valid", "label": "Dup"},  # duplicate
-        ],
-    }
-    html = _render(adapter.build(_FakeRegion("r", display="list"), ctx))
-    assert "filter-bar" in html
-    assert ">All Valid<" in html
-    assert "Dup" not in html
-
-
-# ───────────────── Grid ────────────────────────────
-
-
-def test_grid_renders_cards_in_columns() -> None:
-    """Grid display materialises one Card per item, in N columns."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [{"title": "Alpha"}, {"title": "Beta"}, {"title": "Gamma"}],
-        "columns": 2,
-    }
-    fragment = adapter.build(_FakeRegion("cards", display="grid", title="Cards"), ctx)
-    html = _render(fragment)
-    assert "Alpha" in html and "Beta" in html and "Gamma" in html
-    assert "Cards" in html
-
-
-def test_grid_uses_label_field_override() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [{"label": "Custom", "title": "Ignored"}],
-        "label_field": "label",
-    }
-    fragment = adapter.build(_FakeRegion("c", display="grid"), ctx)
-    html = _render(fragment)
-    assert "Custom" in html
-    assert "Ignored" not in html
-
-
-def test_grid_clamps_column_count_to_valid_range() -> None:
-    """columns=0 → 1; columns=999 → 12 (Grid primitive constraints)."""
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("c", display="grid"),
-        {"items": [{"title": "x"}], "columns": 999},
-    )
-    # Smoke: render doesn't blow up on the clamp
-    assert "x" in _render(fragment)
-
-
-def test_grid_person_ref_emits_card_meta_avatar() -> None:
-    """display: grid person refs use present(person, card_meta) Avatar."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {
-                "title": "Storefront refresh",
-                "owner": {
-                    "id": "u1",
-                    "name": "Ada Owner",
-                    "email": "ada@demo.dazzle.local",
-                },
-            }
-        ],
-        "display_key": "title",
-        "columns": [
-            {"key": "title", "label": "Title", "type": "text"},
-            {
-                "key": "owner",
-                "label": "Owner",
-                "type": "ref",
-                "ref_entity": "User",
-            },
-        ],
-    }
-    html = _render(adapter.build(_FakeRegion("cards", display="grid"), ctx))
-    assert "Storefront refresh" in html
-    assert "dz-avatar" in html
-    assert "Ada Owner" in html
-    assert "{'id':" not in html
-    assert "UUID(" not in html
-
-
-# ───────────────── Metrics ─────────────────────────
-
-
-def test_metrics_renders_kpi_tiles_with_pre_computed_values() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "metrics": [
-            {"label": "Open", "value": "42", "trend": "up", "delta": "+5"},
-            {"label": "Closed", "value": "18", "trend": "flat"},
-        ],
-    }
-    fragment = adapter.build(_FakeRegion("kpis", display="metrics"), ctx)
-    html = _render(fragment)
-    assert "Open" in html and "42" in html
-    assert "Closed" in html and "18" in html
-
-
-def test_metrics_falls_back_to_aggregates_dict() -> None:
-    """Without a `metrics` list, ctx['aggregates'] (legacy shape)
-    is mapped to KPIs label-cased from the dict keys."""
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("kpis", display="metrics"),
-        {"aggregates": {"total_open": 7, "total_closed": 3}},
-    )
-    html = _render(fragment)
-    assert "Total Open" in html
-    assert "7" in html
-
-
-def test_metrics_scope_denied_aggregates_render_empty_state_not_raw_ir() -> None:
-    """#1425: on scope-denial the orchestrator leaves `metrics` empty but
-    ctx['aggregates'] still holds the *raw* IR (AggregateRef /
-    DerivedMetricExpr). The fallback must drop unresolved IR rather than
-    stringify its Pydantic repr (which leaks the where-clause of an entity
-    the user can't read) — it should render the clean empty state."""
-    from dazzle.core.ir import AggregateRef, DerivedMetricExpr
-
-    adapter = WorkspaceRegionAdapter()
-    raw_agg = {
-        "total_secret": AggregateRef(func="count", entity="SecretEntity"),
-        "ratio": DerivedMetricExpr(metric_name="ratio"),
-    }
-    fragment = adapter.build(
-        _FakeRegion("kpis", display="metrics", empty_message="No access."),
-        {"aggregates": raw_agg},
-    )
-    html = _render(fragment)
-    # The clean empty state renders…
-    assert "No access." in html
-    # …and none of the raw IR repr leaks into the tile.
-    assert "func=" not in html
-    assert "entity=" not in html
-    assert "SecretEntity" not in html
-    assert "metric_name=" not in html
-
-
-def test_metrics_summary_alias_dispatches_same_path() -> None:
-    """`display: summary` reuses the metrics adapter — they're spelt
-    differently in DSL but render identically."""
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("k", display="summary"),
-        {"metrics": [{"label": "X", "value": "1"}]},
-    )
-    assert "X" in _render(fragment)
-
-
-def test_metrics_invalid_tone_coerced_to_default() -> None:
-    """Defensive: garbage tone values shouldn't crash the MetricTile primitive."""
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("k", display="metrics"),
-        {"metrics": [{"label": "X", "value": "1", "tone": "garbage"}]},
-    )
-    html = _render(fragment)
-    assert "X" in html
-    assert 'data-dz-tone="garbage"' not in html  # garbage stripped
-
-
-def test_metrics_extended_deltas_render_full_block() -> None:
-    """Phase 4B.1.a: `_build_metrics` now produces MetricTile primitives
-    so the legacy delta block (delta_pct, delta_period_label,
-    delta_sentiment, delta_direction, sign, arrow) is preserved."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "metrics": [
-            {
-                "label": "Open Tickets",
-                "value": 1234,
-                "tone": "warning",
-                "delta_direction": "up",
-                "delta_sentiment": "positive_down",  # up = bad
-                "delta": "42",
-                "delta_pct": 12.5,
-                "delta_period_label": "last week",
-            }
-        ]
-    }
-    html = _render(adapter.build(_FakeRegion("k", display="metrics"), ctx))
-    assert 'data-dz-metric-key="open_tickets"' in html
-    assert 'data-dz-tone="warning"' in html
-    assert 'data-dz-delta-tone="destructive"' in html  # up + positive_down = bad
-    assert "1,234" in html  # metric_number applied (thousands separator)
-    assert "↑" in html and "+42" in html
-    assert "(12.5%)" in html
-    assert "vs last week" in html
-
-
-def test_metrics_delta_sentiment_positive_up_renders_good() -> None:
-    """`up` direction + `positive_up` sentiment = good = positive tone."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "metrics": [
-            {
-                "label": "Revenue",
-                "value": 50000,
-                "delta_direction": "up",
-                "delta_sentiment": "positive_up",
-                "delta": "5000",
-                "delta_period_label": "last month",
-            }
-        ]
-    }
-    html = _render(adapter.build(_FakeRegion("k", display="metrics"), ctx))
-    assert 'data-dz-delta-tone="positive"' in html
-
-
-def test_metrics_no_delta_omits_delta_block() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {"metrics": [{"label": "Total", "value": 42}]}
-    html = _render(adapter.build(_FakeRegion("k", display="metrics"), ctx))
-    assert "dz-metric-delta" not in html
-    assert ">42<" in html  # plain value with no thousands separator
-
-
-def test_metrics_value_passes_through_metric_number_filter() -> None:
-    """Integers get thousands separators; bools become Yes/No;
-    None becomes "0"."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "metrics": [
-            {"label": "Big", "value": 1500000},
-            {"label": "Bool", "value": True},
-            {"label": "Null", "value": None},
-        ]
-    }
-    html = _render(adapter.build(_FakeRegion("k", display="metrics"), ctx))
-    assert "1,500,000" in html
-    assert ">Yes<" in html
-    assert ">0<" in html  # None → "0"
-
-
-def test_metrics_sub_one_float_rounds_to_2dp_no_leak() -> None:
-    """#1479: a sub-1.0 float aggregate (e.g. avg(confidence)) rounds to
-    2dp instead of leaking full precision (0.8850441412520064)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {"metrics": [{"label": "Avg Confidence", "value": 0.8850441412520064}]}
-    html = _render(adapter.build(_FakeRegion("k", display="metrics"), ctx))
-    assert "0.89" in html
-    assert "0.8850441412520064" not in html
-
-
-def test_metrics_person_value_refused_not_invented() -> None:
-    """Person dict on a KPI tile is refused — no str(dict) / name prose."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "metrics": [
-            {"label": "Open", "value": 12},
-            {
-                "label": "Assignee",
-                "key": "assigned_to",
-                "type": "ref",
-                "ref_entity": "User",
-                "value": {
-                    "id": "u1",
-                    "name": "Support Agent",
-                    "email": "agent@demo.dazzle.local",
-                },
-            },
-        ]
-    }
-    html = _render(adapter.build(_FakeRegion("k", display="metrics"), ctx))
-    assert "Open" in html
-    assert ">12<" in html
-    assert "Support Agent" not in html
-    assert "Assignee" not in html
-    assert "{'id':" not in html
-    assert "dz-avatar" not in html
-
-
-# ───────────────── Bar chart ───────────────────────
-
-
-def test_bar_chart_renders_buckets() -> None:
-    """v0.66.110: bucket labels go through `render_status_badge` macro
-    via humanize filter — "low" → "Low", etc."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {"buckets": [("low", 3), ("medium", 7), ("high", 2)]}
-    fragment = adapter.build(_FakeRegion("severity", display="bar_chart"), ctx)
-    html = _render(fragment)
-    assert "Low" in html
-    assert "Medium" in html
-    assert "High" in html
-
-
-def test_bar_chart_skips_malformed_entries() -> None:
-    """A bucket missing a usable key/value silently drops; pure garbage
-    leaves an empty bucket list → EmptyState."""
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("c", display="bar_chart", empty_message="No data."),
-        {"buckets": [None, 42, "string"]},
-    )
-    assert "No data." in _render(fragment)
-
-
-def test_bar_chart_uses_chart_label_override() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {"buckets": [("a", 1)], "chart_label": "Custom Chart"}
-    fragment = adapter.build(_FakeRegion("c", display="bar_chart"), ctx)
-    # The label should appear somewhere in the rendered output
-    html = _render(fragment)
-    assert "a" in html  # smoke; label rendering is BarChart's concern
-
-
-def test_bar_chart_renders_with_reference_overlays_supplied() -> None:
-    """v0.66.110: BAR_CHART chrome stripped — the Phase 4B-only
-    `<dl class="dz-bar-chart__references">` annotation block has no
-    legacy counterpart and was dropped. Reference overlays are silently
-    ignored in the bar chart body (legacy doesn't render them either
-    in the bucketed_metrics primary branch)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "buckets": [("low", 3), ("high", 9)],
-        "reference_lines": [{"value": 10, "label": "SLA", "style": "dashed"}],
-        "reference_bands": [{"from": 0, "to": 5, "label": "Healthy", "color": "positive"}],
-    }
-    html = _render(adapter.build(_FakeRegion("c", display="bar_chart"), ctx))
-    # Bars still render; reference overlays no longer carry to the typed output.
-    assert "Low" in html and "High" in html
-    assert "dz-bar-chart-region" in html
-
-
-# ───────────────── Pivot table ─────────────────────
-
-
-def test_pivot_table_renders_rows_and_columns() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "rows": ["low", "high"],
-        "columns": ["open", "closed"],
-        "cells": {("low", "open"): 3, ("high", "closed"): 7},
-    }
-    fragment = adapter.build(_FakeRegion("p", display="pivot_table"), ctx)
-    html = _render(fragment)
-    assert "low" in html and "high" in html
-    assert "open" in html and "closed" in html
-    assert "3" in html and "7" in html
-
-
-def test_pivot_table_drops_cells_with_unknown_dimensions() -> None:
-    """Defensive: cells whose row or column isn't declared get
-    silently dropped (PivotTable raises if they're passed in)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "rows": ["a"],
-        "columns": ["x"],
-        "cells": {("a", "x"): 1, ("z", "x"): 99},  # ('z', 'x') is bogus
-    }
-    fragment = adapter.build(_FakeRegion("p", display="pivot_table"), ctx)
-    html = _render(fragment)
-    assert "1" in html
-    assert "99" not in html
-
-
-# ───────────────── Tabbed list ─────────────────────
-
-
-def test_tabbed_list_renders_tabs_with_tables() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "tabs": [
-            {
-                "key": "open",
-                "label": "Open",
-                "items": [{"name": "Alpha"}],
-                "columns": [{"key": "name", "label": "Name"}],
-            },
-            {
-                "key": "closed",
-                "label": "Closed",
-                "items": [{"name": "Beta"}],
-                "columns": [{"key": "name", "label": "Name"}],
-            },
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("t", display="tabbed_list"), ctx)
-    html = _render(fragment)
-    assert "Alpha" in html
-    assert "Beta" in html
-
-
-def test_tabbed_list_legacy_slices_alias_works() -> None:
-    """ctx['slices'] is accepted as alias for ctx['tabs']."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "slices": [
-            {
-                "key": "k",
-                "items": [{"x": "1"}],
-                "columns": [{"key": "x", "label": "X"}],
-            }
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("t", display="tabbed_list"), ctx)
-    assert "1" in _render(fragment)
-
-
-def test_tabbed_list_dedupes_duplicate_tab_keys() -> None:
-    """Tabs primitive raises on duplicate keys; the adapter dedups
-    silently (first key wins)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "tabs": [
-            {
-                "key": "k",
-                "items": [{"x": "FirstValue"}],
-                "columns": [{"key": "x", "label": "X"}],
-            },
-            {
-                "key": "k",  # duplicate
-                "items": [{"x": "SecondValue"}],
-                "columns": [{"key": "x", "label": "X"}],
-            },
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("t", display="tabbed_list"), ctx)
-    html = _render(fragment)
-    assert "FirstValue" in html
-    assert "SecondValue" not in html
-
-
-def test_tabbed_list_source_tabs_produces_lazy_tab_panel() -> None:
-    """Phase 4B.1.d: when ctx supplies `source_tabs` with HTMX endpoints,
-    the adapter builds a LazyTabPanel that lazy-loads each tab via
-    hx-get. Matches the legacy `tabbed_list.html` runtime shape."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "region_name": "ticket_tabs",
-        "source_tabs": [
-            {
-                "key": "github",
-                "label": "GitHub",
-                "endpoint": "/api/workspaces/admin/regions/ticket_tabs/github",
-            },
-            {
-                "key": "slack",
-                "label": "Slack",
-                "endpoint": "/api/workspaces/admin/regions/ticket_tabs/slack",
-            },
-        ],
-    }
-    html = _render(adapter.build(_FakeRegion("t", display="tabbed_list"), ctx))
-    # Honest link-strip (HM tabs Hyperpart): buttons + aria-current, NOT a
-    # role=tablist it can't back with roving-tabindex/arrow-key navigation.
-    assert 'role="tablist"' not in html
-    assert 'class="dz-tabs"' in html
-    assert 'id="tabs-ticket_tabs"' in html
-    assert 'class="dz-tabs__tab"' in html
-    assert 'aria-current="true"' in html  # first tab is active
-    assert 'data-dz-tab-target="tab-ticket_tabs-github"' in html
-    assert 'hx-get="/api/workspaces/admin/regions/ticket_tabs/github"' in html
-    # First tab eager (load), second tab lazy (intersect once)
-    assert 'hx-trigger="load"' in html
-    assert 'hx-trigger="intersect once"' in html
-
-
-def test_tabbed_list_falls_back_to_eager_tabs_when_no_source_tabs() -> None:
-    """Pre-Phase-4B.1.d ctx shape `{tabs: [{key, label, items, columns}]}`
-    is still accepted — produces the eager Tabs primitive. The runtime
-    will switch to source_tabs ahead of the Phase 4B.2 translator."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "tabs": [
-            {
-                "key": "a",
-                "label": "Alpha",
-                "items": [{"name": "Item One"}],
-                "columns": [{"key": "name", "label": "Name"}],
-            }
-        ]
-    }
-    html = _render(adapter.build(_FakeRegion("t", display="tabbed_list"), ctx))
-    assert 'class="dz-tabs"' in html
-    assert "Item One" in html
-    # Distinguishes eager-vs-lazy by hx-get presence (both use the unified
-    # `.dz-tabs*` markup now): eager tabs render their content inline, no hx-get.
-    assert "hx-get" not in html
-
-
-def test_tabbed_list_source_tabs_drops_malformed_entries() -> None:
-    """Tabs missing key or endpoint silently drop; duplicate keys
-    silently drop too (LazyTabPanel rejects dupes)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "region_name": "r",
-        "source_tabs": [
-            None,
-            {"key": "valid", "label": "Valid", "endpoint": "/api/valid"},
-            {"label": "Missing key", "endpoint": "/api/x"},  # no key
-            {"key": "missing-endpoint"},  # no endpoint
-            {
-                "key": "valid",  # duplicate
-                "label": "Dup",
-                "endpoint": "/api/other",
-            },
-        ],
-    }
-    html = _render(adapter.build(_FakeRegion("t", display="tabbed_list"), ctx))
-    assert ">Valid<" in html
-    assert "Missing key" not in html
-    assert "Dup" not in html
-
-
-def test_tabbed_list_source_tabs_uses_region_name_for_dom_ids() -> None:
-    """`region_name` ctx key namespaces the DOM ids; falls back to the
-    region's `name` attribute when absent."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "source_tabs": [
-            {"key": "x", "label": "X", "endpoint": "/api/x"},
-        ]
-    }
-    # No region_name in ctx; the _FakeRegion's name attribute should be used
-    html = _render(adapter.build(_FakeRegion("my_region", display="tabbed_list"), ctx))
-    assert "tabs-my_region" in html
-
-
-def test_tabbed_list_eager_flag_overrides_position_default() -> None:
-    """When tab.eager is True, the panel fires hx-trigger=load even if
-    it isn't the first tab. Default behaviour: only first is eager."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "region_name": "r",
-        "source_tabs": [
-            {"key": "a", "label": "A", "endpoint": "/a"},
-            {"key": "b", "label": "B", "endpoint": "/b", "eager": True},
-            {"key": "c", "label": "C", "endpoint": "/c"},
-        ],
-    }
-    html = _render(adapter.build(_FakeRegion("t", display="tabbed_list"), ctx))
-    # Both first and explicit-eager tab fire load
-    assert html.count('hx-trigger="load"') >= 2
-    assert 'hx-trigger="intersect once"' in html  # third tab
-
-
-# ───────────────── Detail ─────────────────────────
-
-
-# ───────────────── Activity feed ──────────────────
-
-
-def test_radar_with_fewer_than_three_axes_degrades_to_empty_state() -> None:
-    """Adapter is permissive — Radar's __post_init__ raises on <3 axes;
-    the adapter returns EmptyState rather than crashing."""
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("r", display="radar", empty_message="Need 3+ axes."),
-        {"axes": [("A", 1), ("B", 2)]},
-    )
-    assert "Need 3+ axes." in _render(fragment)
-
-
-def test_time_series_skips_malformed_points() -> None:
-    """Points that can't be coerced silently drop; pure garbage leaves
-    an empty point list → EmptyState."""
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("c", display="line_chart", empty_message="No data."),
-        {"points": [None, 42, "string"]},
-    )
-    assert "No data." in _render(fragment)
-
-
-def test_time_series_carries_reference_lines() -> None:
-    """v0.66.110: ctx['reference_lines'] flows through to the
-    TimeSeries primitive and renders as `<line>` overlays inside
-    the SVG (legacy parity). Phase 4B-only `<dl>` annotation block
-    was dropped to byte-match."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "points": [("Jan", 50), ("Feb", 75)],
-        "reference_lines": [
-            {"value": 100, "label": "Target", "style": "dashed"},
-            {"value": 50, "label": "Min", "style": "wavy"},  # unknown → solid
-        ],
-    }
-    html = _render(adapter.build(_FakeRegion("c", display="line_chart"), ctx))
-    # Reference lines render inside the SVG with stroke-dasharray.
-    assert 'stroke-dasharray="4,3"' in html  # dashed
-    assert "<title>Target: 100" in html
-    assert "<title>Min: 50" in html
-
-
-def test_time_series_carries_reference_bands_with_alt_keys() -> None:
-    """v0.66.110: bands render inside the SVG as `<rect>` overlays.
-    Adapter accepts both `from`/`to` and `from_value`/`to_value`
-    key shapes; bands with from > to silently drop."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "points": [("a", 1), ("b", 2)],
-        "reference_bands": [
-            {"from": 80, "to": 120, "label": "Healthy", "color": "positive"},
-            {"from": 200, "to": 100, "label": "Bad order"},  # drop
-            {"from_value": 0, "to_value": 30, "label": "Danger", "color": "destructive"},
-        ],
-    }
-    html = _render(adapter.build(_FakeRegion("c", display="line_chart"), ctx))
-    assert "<title>Healthy:" in html
-    assert "hsl(145, 55%, 45%)" in html  # positive colour
-    assert "<title>Danger:" in html
-    assert "var(--colour-danger)" in html
-    assert "Bad order" not in html
-
-
-def test_time_series_no_references_omits_block() -> None:
-    """When neither reference_lines nor reference_bands are supplied,
-    the renderer omits the `<dl class=\"dz-timeseries__references\">`
-    wrapper entirely (backward compat with Phase 4A renders)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {"points": [("a", 1)]}
-    html = _render(adapter.build(_FakeRegion("c", display="line_chart"), ctx))
-    assert "dz-timeseries__references" not in html
-
-
-def test_diagram_drops_edges_with_unknown_endpoints() -> None:
-    """Diagram's __post_init__ rejects edges whose endpoints aren't in
-    the node list; the adapter silently drops them rather than crashing."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "nodes": ["A"],
-        "edges": [("A", "ZZZ"), ("A", "A")],  # ZZZ unknown; A→A self-loop ok
-    }
-    fragment = adapter.build(_FakeRegion("d", display="diagram"), ctx)
-    html = _render(fragment)
-    assert "ZZZ" not in html
-    # Self-loop A→A still rendered
-    assert html.count("A") >= 2
-
-
-def test_diagram_empty_renders_legacy_hardcoded_message() -> None:
-    """v0.66.118: empty diagram emits `<p class="dz-diagram-empty">…</p>`
-    matching the legacy template's hardcoded copy. region.empty_message
-    is no longer threaded through — the legacy template hardcodes the
-    string and we match it for byte-equivalence."""
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("d", display="diagram", empty_message="ignored"),
-        {"nodes": []},
-    )
-    html = _render(fragment)
-    assert "dz-diagram-empty" in html
-    assert "No entity relationships to display." in html
-    assert "ignored" not in html  # region.empty_message is intentionally ignored
-
-
-def test_confirm_action_panel_legacy_prompt_ctx_renders_synthetic_checklist() -> None:
-    """Phase 4A fallback: ctx with `prompt` + `action_label` (the
-    pre-Phase-4B.1.d shape) is converted into a synthetic single-item
-    ConfirmGate. The prompt becomes the checklist title; the panel
-    renders in the off state. Mainly for tests; runtime should use
-    state_value + confirmations."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {"prompt": "This will permanently delete 5 items.", "action_label": "Delete"}
-    fragment = adapter.build(
-        _FakeRegion("c", display="confirm_action_panel", title="Confirm Delete"), ctx
-    )
-    html = _render(fragment)
-    assert "Confirm Delete" in html
-    assert "permanently delete 5 items" in html
-    # No more bracketed-text placeholder — replaced by the typed ConfirmGate
-    assert "dz-confirm-panel" in html
-    assert "&quot;" not in html  # No broken HTML escapes
-
-
-def test_confirm_action_panel_off_state_renders_hm_gated_checklist() -> None:
-    """state_value=off + confirmations[] produces an HM
-    `data-dz-confirm-gate` checklist with `data-dz-required-count`
-    matching the count of `required: true` items, plus dual-button
-    primary (gated state-in-DOM: aria-disabled + href parked in
-    data-dz-confirm-href, armed by dz-confirm-gate.js) + secondary
-    (always enabled). Replaces the Alpine dzConfirmGate island."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "state_value": "off",
-        "confirmations": [
-            {
-                "title": "I have reviewed the data",
-                "caption": "All records will be synced",
-                "required": True,
-            },
-            {"title": "I have legal authority", "required": True},
-            {"title": "Optional: notify the team"},
-        ],
-        "primary_action_url": "/admin/sync/confirm",
-        "secondary_action_url": "/admin/sync/draft",
-        "audit_enabled": True,
-    }
-    html = _render(adapter.build(_FakeRegion("c", display="confirm_action_panel"), ctx))
-    assert 'data-dz-state-value="off"' in html
-    assert "data-dz-confirm-gate" in html
-    assert "x-data" not in html  # Alpine island retired
-    assert 'data-dz-required-count="2"' in html
-    assert "I have reviewed the data" in html
-    assert "All records will be synced" in html
-    assert 'data-dz-confirm-href="/admin/sync/confirm"' in html
-    assert 'aria-disabled="true"' in html  # disarmed at SSR (2 required)
-    # note the leading space: bare href= would substring-match the
-    # data-dz-confirm-href attribute itself
-    assert ' href="/admin/sync/confirm"' not in html  # href parked until armed
-    assert "/admin/sync/draft" in html
-    assert "dz-confirm-audit" in html
-
-
-def test_confirm_action_panel_live_state_renders_summary_and_revoke() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "state_value": "live",
-        "revoke_url": "/admin/sync/revoke",
-    }
-    html = _render(adapter.build(_FakeRegion("c", display="confirm_action_panel"), ctx))
-    assert "Currently live" in html
-    assert "/admin/sync/revoke" in html
-    assert "dz-confirm-revoke" in html
-    assert "dz-confirm-checklist" not in html  # no checklist in live state
-
-
-def test_confirm_action_panel_revoked_state_offers_re_enable() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "state_value": "revoked",
-        "primary_action_url": "/admin/sync/reenable",
-    }
-    html = _render(adapter.build(_FakeRegion("c", display="confirm_action_panel"), ctx))
-    assert "revoked" in html.lower()
-    assert "Re-enable" in html
-    assert "/admin/sync/reenable" in html
-
-
-def test_confirm_action_panel_drops_malformed_confirmations() -> None:
-    """Confirmations with empty titles or non-dict entries silently drop."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "state_value": "off",
-        "confirmations": [
-            None,
-            42,
-            {"title": ""},  # empty title
-            {"title": "Valid item", "required": True},
-        ],
-        "primary_action_url": "/x",
-    }
-    html = _render(adapter.build(_FakeRegion("c", display="confirm_action_panel"), ctx))
-    assert "Valid item" in html
-    assert 'data-dz-required-count="1"' in html  # only valid items count
-    assert "data-dz-confirm-gate" in html
-
-
-def test_search_box_renders_typed_search_box_primitive() -> None:
-    """Phase 4B.1.d: `_build_search_box` now produces the typed
-    `SearchBox` primitive — HTMX FTS input + lazy result panel + a
-    pure-CSS coaching toggle (`:has(:not(:placeholder-shown))` hides the
-    coaching line once the user types — the Alpine q-island retired in
-    Tier F3). Replaced the prior plain-Field rendering."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "source_entity": "Manuscript",
-        "placeholder": "Find a manuscript",
-        "coaching_message": "Type a title or keyword",
-    }
-    fragment = adapter.build(_FakeRegion("manuscript_search", display="search_box"), ctx)
-    html = _render(fragment)
-    assert "dz-search-box-region" in html
-    assert 'hx-get="/_dazzle/fts/Manuscript?html=1"' in html
-    assert "this.value.trim().length>0" in html
-    assert 'aria-live="polite"' in html
-    assert "x-show" not in html  # coaching visibility is CSS-only now
-    assert "x-data" not in html
-    assert "x-model" not in html
-    assert "dz-search-box-empty" in html
-    assert "Type a title or keyword" in html
-
-
-def test_search_box_uses_region_name_as_endpoint_fallback() -> None:
-    """When `source_entity` is missing from ctx, the adapter falls
-    back to `/_dazzle/fts/<region.name>?html=1`. Mainly for tests; the
-    runtime always supplies source_entity."""
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("ticket_search", display="search_box"),
-        {"placeholder": "Find tickets…"},
-    )
-    html = _render(fragment)
-    assert 'hx-get="/_dazzle/fts/ticket_search?html=1"' in html
-    assert "Find tickets" in html
-
-
-def test_search_box_default_coaching_message() -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(
-        _FakeRegion("s", display="search_box"),
-        {"source_entity": "Item"},
-    )
-    assert "Type to search" in _render(fragment)
-
-
-def test_search_box_placeholder_uses_author_title() -> None:
-    """Visible input chrome should surface author title (results-panel
-    coaching) so pilots do not treat FTS as a silent list filter."""
-    adapter = WorkspaceRegionAdapter()
-    region = _FakeRegion(
-        "contact_search",
-        display="search_box",
-        title="Find a contact — results appear below",
-        empty_message="Results appear below as you type. The A–Z list is not filtered.",
-    )
-    html = _render(
-        adapter.build(region, {"source_entity": "Contact"}),
-    )
-    assert 'placeholder="Find a contact — results appear below"' in html
-    assert "Results appear below as you type" in html
-
-
-def test_search_box_placeholder_falls_back_to_empty_clause() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _FakeRegion(
-        "find_contact",
-        display="search_box",
-        empty_message="Results appear below as you type (name, company, or email).",
-    )
-    html = _render(adapter.build(region, {"source_entity": "Contact"}))
-    assert 'placeholder="Results appear below as you type (name, company, or email)"' in html
-
-
-def test_search_box_results_div_uses_unique_dom_id_per_region() -> None:
-    """Multiple SearchBoxes on one page must have distinct results
-    panels. The panel id is derived from the `name` ctx key (or the
-    region name as fallback)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx_a = {"source_entity": "A", "name": "search_a"}
-    ctx_b = {"source_entity": "B", "name": "search_b"}
-    html_a = _render(adapter.build(_FakeRegion("r", display="search_box"), ctx_a))
-    html_b = _render(adapter.build(_FakeRegion("r", display="search_box"), ctx_b))
-    assert "dz-search-results-search_a" in html_a
-    assert "dz-search-results-search_b" in html_b
-
-
-def test_pipeline_steps_renders_row_of_cards() -> None:
-    """Each step becomes a Card with a Heading and optional Text
-    description, arranged in a horizontal Row."""
-    adapter = WorkspaceRegionAdapter()
-    # v0.66.106: adapter consumes the authored `pipeline_stage_data`
-    # shape directly (matches production runtime ctx) instead of the
-    # Phase 4A `steps` shape. Caption renders alongside label + value
-    # in the legacy `dz-pipeline-stage` row.
-    ctx = {
-        "pipeline_stage_data": [
-            {"label": "Plan", "value": 1, "caption": "Scope locked"},
-            {"label": "Build", "value": 2},
-            {"label": "Ship", "value": None, "caption": "Pending"},
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("p", display="pipeline_steps"), ctx)
-    html = _render(fragment)
-    assert "Plan" in html and "Build" in html and "Ship" in html
-    assert "Scope locked" in html
-    assert "Pending" in html
-    # Last stage with value=None renders as "—".
-    assert "—" in html
-    # 3 stages → 2 connector pairs (last omits).
-    assert html.count('class="dz-pipeline-connector"') == 2
-
-
-def test_status_list_renders_authored_entries() -> None:
-    """Phase 4B.4 wave 1 (v0.66.104): adapter consumes `status_entries`
-    (authored shape) directly and emits the legacy `dz-status-list`
-    structure byte-for-byte. The prior items+status_variants shape was
-    a Phase 4A workaround that didn't match production ctx; runtime
-    now supplies authored entries per v0.61.69's design."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "status_entries": [
-            {
-                "title": "Service A",
-                "state": "positive",
-                "caption": "All systems normal",
-            },
-            {"title": "Service B", "state": "destructive", "icon": "alert-triangle"},
-        ],
-    }
-    fragment = adapter.build(_FakeRegion("s", display="status_list"), ctx)
-    html = _render(fragment)
-    assert "Service A" in html and "Service B" in html
-    assert 'data-dz-state="positive"' in html
-    assert 'data-dz-state="destructive"' in html
-    assert "All systems normal" in html
-    assert 'data-lucide="alert-triangle"' in html
-
-
-def test_status_list_unknown_state_falls_back_to_neutral() -> None:
-    """A `state` value outside the allowed set silently coerces to
-    'neutral' (matching the legacy template's `state | default('neutral')`)
-    rather than crashing the StatusListEntry primitive's invariant."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "status_entries": [
-            {"title": "Mystery", "state": "purple"},  # not a real state
-        ],
-    }
-    fragment = adapter.build(_FakeRegion("s", display="status_list"), ctx)
-    html = _render(fragment)
-    # Coerced to neutral → no pill, spacer icon column.
-    assert 'data-dz-state="neutral"' in html
-    assert "dz-status-list-pill" not in html
-
-
-def test_queue_renders_minimal_items() -> None:
-    """v0.66.117: QUEUE now uses dedicated QueueRegion primitive
-    matching `dz-queue-region` byte-for-byte. With `display_key=title`
-    and items having `title`, the row title falls back to title via
-    the (display+_display → display → id) chain."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {"id": 1, "title": "Item One", "title_display": "Item One", "status": "open"},
-            {"id": 2, "title": "Item Two", "title_display": "Item Two", "status": "open"},
-        ],
-        "columns": [{"key": "title", "label": "Title"}],
-        "display_key": "title",
-    }
-    fragment = adapter.build(_FakeRegion("q", display="queue"), ctx)
-    html = _render(fragment)
-    assert "Item One" in html and "Item Two" in html
-    assert "dz-queue-region" in html
-
-
-def test_grid_emits_app_shell_drill_not_api_plural() -> None:
-    """Dashboard grid cells must open VIEW hubs at ``/app/<slug>/{id}``.
-
-    Without detail_url_template, trial agents invent ``/brands/{id}`` and
-    hit 404s (design_studio qa-trial critical friction).
-    """
-    adapter = WorkspaceRegionAdapter()
-    bid = "a267b2db-ada2-4314-9172-c2c293207acb"
-    ctx = {
-        "items": [{"id": bid, "name": "Palmer Group"}],
-        "columns": [{"key": "name", "label": "Name", "type": "text"}],
-        "display_key": "name",
-        "detail_url_template": "/app/brand/{id}",
-    }
-    html = _render(adapter.build(_FakeRegion("brands", display="grid"), ctx))
-    assert f"/app/brand/{bid}" in html
-    assert "data-dz-grid-drill" in html
-    assert "/brands/" not in html
-    assert "Palmer Group" in html
-
-
-def test_queue_emits_app_shell_drill_for_hub() -> None:
-    """Queue titles link to ``/app/ticket/{id}`` so related groups render."""
-    adapter = WorkspaceRegionAdapter()
-    tid = "5f122722-3193-476c-8f98-34b41f792d4d"
-    ctx = {
-        "items": [{"id": tid, "subject": "Double charged on monthly invoice", "status": "open"}],
-        "columns": [
-            {"key": "subject", "type": "text"},
-            {"key": "status", "type": "badge"},
-        ],
-        "display_key": "subject",
-        "detail_url_template": "/app/ticket/{id}",
-    }
-    html = _render(adapter.build(_FakeRegion("open_queue", display="queue"), ctx))
-    assert f"/app/ticket/{tid}" in html
-    assert "data-dz-queue-drill" in html
-    assert "/tickets/" not in html
-    assert "Double charged" in html
-    # Cycle 1606: dual-open discovery on queue drill (table-row parity)
-    assert 'data-dz-open-entity="Ticket"' in html
-    assert 'data-dz-open-role="primary"' in html
-    assert f'data-dz-open-chain="/app/ticket/{tid}"' in html
-
-
-def test_queue_title_uses_display_field_without_fk_display_suffix() -> None:
-    """Non-FK display_field (Ticket.subject) has no ``subject_display``.
-
-    Missing ``*_display`` must fall through to the primary field — not
-    empty title or bare UUID (qa-trial llm_ticket_classifier friction).
-    """
-    adapter = WorkspaceRegionAdapter()
-    subject = "Cannot login to my account"
-    row_id = "70193944-6955-4d6d-9a6a-4d076a6e033f"
-    ctx = {
-        "items": [
-            {
-                "id": row_id,
-                "subject": subject,
-                "customer_email": "user@example.com",
-                "status": "open",
-            },
-        ],
-        "columns": [
-            {"key": "subject", "label": "Subject", "type": "text"},
-            {"key": "status", "label": "Status", "type": "badge"},
-        ],
-        "display_key": "subject",
-    }
-    html = _render(adapter.build(_FakeRegion("open_queue", display="queue"), ctx))
-    assert subject in html
-    assert row_id not in html  # UUID must not be the primary card label
-
-
-def test_queue_title_falls_back_to_id_only_when_display_key_missing() -> None:
-    """Without display_key, id remains the last-resort title."""
-    adapter = WorkspaceRegionAdapter()
-    row_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-    ctx = {
-        "items": [{"id": row_id, "subject": "Hidden subject", "status": "open"}],
-        "columns": [{"key": "status", "label": "Status", "type": "badge"}],
-        # display_key deliberately omitted
-    }
-    html = _render(adapter.build(_FakeRegion("q", display="queue"), ctx))
-    assert row_id in html
-
-
-def test_queue_renders_transition_buttons_when_supplied() -> None:
-    """Phase 4B.1.d: queue_transitions + status_field + api_endpoint
-    produce per-row Button primitives with hx_put + hx_vals + hx_ext.
-    Buttons matching the item's current state are skipped."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {"id": 42, "title": "Bug A", "status": "open"},
-        ],
-        "endpoint": "/api/regions/tickets",
-        "region_name": "tickets",
-        "queue_transitions": [
-            {"label": "Resolve", "to_state": "resolved"},
-            {"label": "Close", "to_state": "closed"},
-            {"label": "Reopen", "to_state": "open"},  # matches current — should skip
-        ],
-        "queue_status_field": "status",
-        "queue_api_endpoint": "/api/tickets",
-    }
-    html = _render(adapter.build(_FakeRegion("q", display="queue"), ctx))
-    assert 'hx-put="/api/tickets/42"' in html
-    assert "Resolve" in html
-    assert "Close" in html
-    assert "Reopen" not in html  # skipped — current state already 'open'
-    # htmx 4: json-enc dropped — queue transition PUTs go url-encoded and the
-    # server's tolerant body parser handles them (no hx-ext needed).
-
-
-def test_queue_count_metrics_overflow_render_via_dedicated_primitive() -> None:
-    """v0.66.117: Queue chrome is now part of the dedicated QueueRegion
-    primitive. Filter bar / CSV export are deferred (legacy renders
-    them but the typed QueueRegion doesn't yet thread them through).
-    Count row, metrics, and overflow line render via the primitive."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [{"id": 1, "title": "X", "status": "open"}],
-        "metrics": [
-            {"label": "Open", "value": 12},
-            {"label": "Closed", "value": 88},
-        ],
-        "endpoint": "/api/regions/r",
-        "region_name": "r",
-        "total": 100,
-    }
-    html = _render(adapter.build(_FakeRegion("r", display="queue"), ctx))
-    assert "dz-queue-count" in html  # count row
-    assert "100" in html  # total in count row
-    assert "dz-queue-metric" in html  # metrics row
-    assert "Showing 1 of 100" in html  # overflow line
-
-
-def test_queue_omits_redundant_count_when_all_rows_are_visible() -> None:
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [{"id": 1, "title": "First"}, {"id": 2, "title": "Second"}],
-        "endpoint": "/api/regions/r",
-        "region_name": "r",
-        "total": 2,
-        "columns": [{"key": "title", "label": "Title", "type": "text"}],
-        "display_key": "title",
-    }
-    html = _render(adapter.build(_FakeRegion("r", display="queue"), ctx))
-    assert "dz-queue-count-row" not in html
-    assert "First" in html and "Second" in html
-
-
-def test_queue_skips_transitions_when_required_ctx_keys_missing() -> None:
-    """Transition rendering requires queue_status_field + queue_api_endpoint
-    + an item.id. Missing any of these silently skips transition
-    buttons rather than crashing — the row still renders."""
-    adapter = WorkspaceRegionAdapter()
-    # Missing queue_api_endpoint
-    ctx = {
-        "items": [{"id": 1, "title": "X", "title_display": "X", "status": "open"}],
-        "display_key": "title",
-        "queue_transitions": [{"label": "Close", "to_state": "closed"}],
-        "queue_status_field": "status",
-        # queue_api_endpoint deliberately missing
-    }
-    html = _render(adapter.build(_FakeRegion("q", display="queue"), ctx))
-    assert "hx-put" not in html
-    assert "X" in html  # item still renders
-
-
-def test_queue_transition_to_current_state_silently_skipped() -> None:
-    """A transition whose to_state matches the item's current value
-    is filtered out — preserves the legacy 'don't offer transition
-    to your current state' UX."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [{"id": 1, "title": "X", "status": "open"}],
-        "endpoint": "/api/r",
-        "region_name": "r",
-        "queue_transitions": [
-            {"label": "Reopen", "to_state": "open"},  # matches current — skip
-            {"label": "Close", "to_state": "closed"},  # different — render
-        ],
-        "queue_status_field": "status",
-        "queue_api_endpoint": "/api/items",
-    }
-    html = _render(adapter.build(_FakeRegion("q", display="queue"), ctx))
-    assert "Close" in html
-    assert "Reopen" not in html
-
-
-def test_activity_feed_dispatches_through_timeline() -> None:
-    """`display: activity_feed` reuses the Timeline renderer — feeds
-    are timelines spelt differently in DSL."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {"title": "Logged in", "created_at": "2026-05-07T09:00:00"},
-            {"title": "Saved record", "created_at": "2026-05-07T09:01:00"},
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("feed", display="activity_feed"), ctx)
-    html = _render(fragment)
-    assert "Logged in" in html
-    assert "Saved record" in html
-
-
-def test_activity_feed_accepts_comment_content_field() -> None:
-    """TR-8 / #852: Comment rows use `content` not `description`/`title`.
-
-    Empty description previously raised ActivityRow validation and soft-failed
-    the whole region as "Typed primitive render failed".
-    """
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {
-                "content": "Customer asked about SLA credit",
-                "created_at": "2026-05-07T09:00:00",
-                "author": {"name": "Alex Agent"},
-            },
-            {
-                "content": "  ",  # blank — skipped, must not crash region
-                "created_at": "2026-05-07T09:05:00",
-            },
-            {
-                "body": "Internal note only",
-                "created_at": "2026-05-07T09:10:00",
-                "user": "Sam Manager",
-            },
-        ]
-    }
-    fragment = adapter.build(_FakeRegion("comment_activity", display="activity_feed"), ctx)
-    html = _render(fragment)
-    assert "Typed primitive render failed" not in html
-    assert "Customer asked about SLA credit" in html
-    assert "Internal note only" in html
-    assert "Alex Agent" in html
-    assert "dz-avatar" in html
-    assert "Sam Manager" in html
-    # Scalar leftover actor must not invent a chip (oral #43).
-    assert 'class="dz-activity-actor">Sam Manager<' in html
-
-
-def test_activity_feed_detail_url_template_drill() -> None:
-    """#1303 / cycle 1415: activity_feed honors detail_url_template hub drills."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {
-                "id": "evt-1",
-                "title": "Ticket reopened",
-                "created_at": "2026-05-07T09:00:00",
-                "actor": "Ada",
-            },
-            {
-                "id": "evt-2",
-                "description": "Status changed",
-                "created_at": "2026-05-07T09:01:00",
-            },
-        ],
-        "detail_url_template": "/app/ticket/{id}",
-    }
-    fragment = adapter.build(_FakeRegion("feed", display="activity_feed"), ctx)
-    html = _render(fragment)
-    assert 'href="/app/ticket/evt-1"' in html
-    assert 'href="/app/ticket/evt-2"' in html
-    assert "data-dz-activity-drill" in html
-    assert "Ticket reopened" in html
-    assert "Status changed" in html
-
-
-def test_activity_feed_without_drill_stays_plain_text() -> None:
-    """Empty detail_url_template must stay byte-stable (no empty anchors)."""
-    adapter = WorkspaceRegionAdapter()
-    ctx = {
-        "items": [
-            {"title": "Logged in", "created_at": "2026-05-07T09:00:00", "actor": "Ada"},
-        ],
-    }
-    fragment = adapter.build(_FakeRegion("feed", display="activity_feed"), ctx)
-    html = _render(fragment)
-    assert "data-dz-activity-drill" not in html
-    assert "Logged in" in html
-    assert "<a " not in html or "data-dz-activity-drill" not in html
-    assert "dz-avatar" not in html
-    assert 'class="dz-activity-actor">Ada<' in html
-
-
-# ───────────────── CohortStrip (#1018, v0.67.7) ───────────────────
-
-
-def _cohort_region(
-    *,
-    member_via: str = "profile",
-    lenses: list[dict] | None = None,
-    default_lens: str = "",
-) -> object:
-    """Build a region object exposing a CohortStripConfig — duck-
-    typed so the unit test doesn't need a full WorkspaceRegion."""
-    from dazzle.core.ir.workspaces import CohortStripConfig, CohortStripLens
-
-    lens_data = lenses or [
-        {"id": "attainment", "label": "Attainment", "primary": "score"},
-        {"id": "attendance", "label": "Attendance", "primary": "att_pct"},
-    ]
-    cfg = CohortStripConfig(
-        member_via=member_via,
-        lenses=[CohortStripLens(**spec) for spec in lens_data],
-        default_lens=default_lens,
-    )
-
-    class _Region:
-        name = "cohort"
-        title = None
-        display = "cohort_strip"
-        empty_message = None
-        cohort_strip_config = cfg
-
-    return _Region()
-
-
-def test_cohort_strip_dispatches_to_builder() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _cohort_region()
-    surface = adapter.build(region, {"cohort_cells": [], "cohort_endpoint": "/r/cohort"})
-    assert isinstance(surface, Surface)
-    html = _render(surface)
-    assert 'class="dz-cohort-strip-region"' in html
-
-
-def test_cohort_strip_emits_lens_toggle_with_active_from_default() -> None:
-    """When ctx omits `cohort_active_lens`, the config's
-    default_lens drives the active highlight."""
-    adapter = WorkspaceRegionAdapter()
-    region = _cohort_region(default_lens="attendance")
-    surface = adapter.build(region, {"cohort_cells": [], "cohort_endpoint": "/r/cohort"})
-    html = _render(surface)
-    # Two tabs, one active.
+    assert [c.label for c in board.columns] == kanban_columns
+    assert {c.label: len(c.cards) for c in board.columns} == expected_cards
+
+
+@pytest.mark.parametrize(
+    ("default_lens", "active_lens", "expected_active"),
+    [
+        pytest.param("attendance", None, "Attendance", id="config-default-lens"),
+        # Explicit ctx lens (the `?lens=<id>` URL-param flow) wins.
+        pytest.param("attendance", "attainment", "Attainment", id="ctx-lens-wins-over-default"),
+        # Junk `?lens=ghost` with no default restores the first declared lens.
+        pytest.param("", "ghost-lens", "Attainment", id="unknown-lens-falls-back-to-first"),
+    ],
+)
+def test_cohort_strip_active_lens(
+    default_lens: str, active_lens: str | None, expected_active: str
+) -> None:
+    ctx: dict = {"cohort_cells": [], "cohort_endpoint": "/r/cohort"}
+    if active_lens is not None:
+        ctx["cohort_active_lens"] = active_lens
+    html = _render(WorkspaceRegionAdapter().build(_cohort_region(default_lens=default_lens), ctx))
     assert html.count('aria-pressed="true"') == 1
     assert html.count('aria-pressed="false"') == 1
-    # The active one is "Attendance" (matches default_lens).
-    import re
-
     match = re.search(r'aria-pressed="true"[^>]*>([^<]+)</button>', html)
     assert match is not None
-    assert "Attendance" in match.group(1)
+    assert expected_active in match.group(1)
 
 
-def test_cohort_strip_active_lens_from_ctx_wins_over_default() -> None:
-    """Explicit `cohort_active_lens` in ctx overrides the config
-    default — supports the `?lens=<id>` URL-param flow."""
-    adapter = WorkspaceRegionAdapter()
-    region = _cohort_region(default_lens="attendance")
-    surface = adapter.build(
-        region,
-        {
-            "cohort_cells": [],
-            "cohort_endpoint": "/r/cohort",
-            "cohort_active_lens": "attainment",
-        },
-    )
-    html = _render(surface)
-    import re
-
-    match = re.search(r'aria-pressed="true"[^>]*>([^<]+)</button>', html)
-    assert match is not None
-    assert "Attainment" in match.group(1)
+# ───────────────── Render table ────────────────────────
 
 
-def test_cohort_strip_unknown_active_lens_falls_back_to_first() -> None:
-    """Leftover-honest rest when default_lens is unset: junk
-    ``?lens=ghost`` restores the first declared lens (rest), it
-    does not crash. When default_lens is set, rest is that
-    default — see test_cohort_strip_lens_catalog_leftover."""
-    adapter = WorkspaceRegionAdapter()
-    region = _cohort_region()  # default unset
-    surface = adapter.build(
-        region,
-        {
-            "cohort_cells": [],
-            "cohort_endpoint": "/r/cohort",
-            "cohort_active_lens": "ghost-lens",
-        },
-    )
-    html = _render(surface)
-    # Active is the first config lens (attainment).
-    import re
-
-    match = re.search(r'aria-pressed="true"[^>]*>([^<]+)</button>', html)
-    assert match is not None
-    assert "Attainment" in match.group(1)
-
-
-def test_cohort_strip_empty_cells_renders_empty_state() -> None:
-    """With zero ctx cells, the strip renders the configured
-    empty_message — lens toggle still present so the user can swap."""
-
-    class _Region:
-        name = "cohort"
-        title = None
-        display = "cohort_strip"
-        empty_message = "Nobody here yet."
-        cohort_strip_config = _cohort_region().cohort_strip_config
-
-    adapter = WorkspaceRegionAdapter()
-    surface = adapter.build(_Region(), {"cohort_endpoint": "/r/cohort"})
-    html = _render(surface)
-    assert "Nobody here yet." in html
-    assert 'class="dz-cohort-strip-empty"' in html
-    assert 'role="tablist"' in html  # toggle still rendered
-
-
-def test_cohort_strip_builds_cells_from_ctx_dicts() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _cohort_region()
-    cells_data = [
-        {
-            "member_id": "p1",
-            "member_name": "Alice",
-            "primary_value": "78",
-            "subtitle": "9G",
-            "tone": "good",
-            "drill_url": "/m/p1",
-        },
-        {
-            "member_id": "p2",
-            "member_name": "Bob",
-            "primary_value": "62",
-            "subtitle": "9G",
-            "tone": "warn",
-        },
-    ]
-    surface = adapter.build(region, {"cohort_cells": cells_data, "cohort_endpoint": "/r/cohort"})
-    html = _render(surface)
-    assert 'data-member-id="p1"' in html
-    assert 'data-member-id="p2"' in html
-    assert "Alice" in html
-    assert "Bob" in html
-    assert 'data-dz-tone="good"' in html
-    assert 'data-dz-tone="warn"' in html
-
-
-def test_cohort_strip_skips_cells_with_missing_member_id() -> None:
-    """Defensive: an upstream resolver that produces a row with no
-    member_id (FK miss?) shouldn't crash the primitive."""
-    adapter = WorkspaceRegionAdapter()
-    region = _cohort_region()
-    cells_data = [
-        {"member_id": "p1", "member_name": "OK", "primary_value": "1"},
-        {"member_id": "", "member_name": "Bad", "primary_value": "?"},
-        {"member_name": "Missing key", "primary_value": "?"},
-    ]
-    surface = adapter.build(region, {"cohort_cells": cells_data, "cohort_endpoint": "/r/cohort"})
-    html = _render(surface)
-    assert 'data-member-id="p1"' in html
-    assert "Bad" not in html
-    assert "Missing key" not in html
-
-
-def test_cohort_strip_no_lenses_renders_empty_state_surface() -> None:
-    """A misconfigured region with zero lenses degrades to an
-    EmptyState rather than crashing the primitive's at-least-one-
-    lens invariant."""
-    from dazzle.core.ir.workspaces import CohortStripConfig
-
-    class _Region:
-        name = "cohort"
-        title = None
-        display = "cohort_strip"
-        empty_message = None
-        cohort_strip_config = CohortStripConfig(member_via="x", lenses=[])
-
-    adapter = WorkspaceRegionAdapter()
-    surface = adapter.build(_Region(), {})
-    html = _render(surface)
-    assert "Cohort strip not configured" in html
-
-
-def test_cohort_strip_unknown_tone_coerces_to_neutral() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _cohort_region()
-    surface = adapter.build(
-        region,
-        {
-            "cohort_cells": [
-                {"member_id": "p1", "member_name": "A", "primary_value": "1", "tone": "rainbow"},
-            ],
-            "cohort_endpoint": "/r/cohort",
-        },
-    )
-    html = _render(surface)
-    assert 'data-dz-tone="neutral"' in html
-    assert "rainbow" not in html
-
-
-def test_cohort_strip_endpoint_falls_back_to_region_url() -> None:
-    """If `cohort_endpoint` isn't supplied, ctx['region_url'] is used —
-    matches the convention for hx-target endpoints in this codebase."""
-    adapter = WorkspaceRegionAdapter()
-    region = _cohort_region()
-    surface = adapter.build(region, {"cohort_cells": [], "region_url": "/api/regions/cohort"})
-    html = _render(surface)
-    assert 'hx-get="/api/regions/cohort?lens=' in html
-
-
-# ───────────────── DayTimeline (#1016, v0.67.8) ───────────────────
-
-
-def _day_timeline_region(
-    *,
-    starts_at: str = "period_start",
-    ends_at: str = "period_end",
-    card: str = "lesson_card",
-    empty_message: str | None = None,
+def _case(
+    case_id: str,
+    region: object,
+    ctx: dict,
+    present: tuple[str, ...] = (),
+    absent: tuple[str, ...] = (),
+    counts: dict[str, int] | None = None,
 ) -> object:
-    """Build a region object exposing a DayTimelineConfig — duck-
-    typed so the unit test doesn't need a full WorkspaceRegion."""
-    from dazzle.core.ir.workspaces import DayTimelineConfig
+    return pytest.param(region, ctx, present, absent, counts or {}, id=case_id)
 
-    cfg = DayTimelineConfig(starts_at=starts_at, ends_at=ends_at, card=card)
 
-    class _Region:
-        name = "today"
-        title = None
-        display = "day_timeline"
-        cohort_strip_config = None
+def _r(display: str, name: str = "r", title: str | None = None, empty: str | None = None):
+    return _FakeRegion(name, display=display, title=title, empty_message=empty)
 
-    r = _Region()
-    r.empty_message = empty_message  # type: ignore[attr-defined]
-    r.day_timeline_config = cfg  # type: ignore[attr-defined]
-    return r
 
-
-def test_day_timeline_dispatches_to_builder() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _day_timeline_region()
-    surface = adapter.build(region, {})
-    assert isinstance(surface, Surface)
-    html = _render(surface)
-    assert 'class="dz-day-timeline-region"' in html
-
-
-def test_day_timeline_empty_slots_renders_empty_state() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _day_timeline_region(empty_message="No periods today.")
-    surface = adapter.build(region, {"day_timeline_slots": []})
-    html = _render(surface)
-    assert 'class="dz-day-timeline-empty"' in html
-    assert "No periods today." in html
-
-
-def test_day_timeline_builds_slots_with_positions() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _day_timeline_region()
-    slots_data = [
-        {"slot_id": "p1", "label": "Period 1 — 09:00", "position": "before"},
-        {"slot_id": "p2", "label": "Period 2 — 10:00", "position": "active"},
-        {"slot_id": "p3", "label": "Period 3 — 11:00", "position": "after"},
-    ]
-    surface = adapter.build(region, {"day_timeline_slots": slots_data})
-    html = _render(surface)
-    assert 'data-slot-id="p1"' in html
-    assert "is-before" in html
-    assert "is-active" in html
-    assert "is-after" in html
-    assert html.count('data-dz-position="active"') == 1
-
-
-def test_day_timeline_unknown_position_falls_through_to_after() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _day_timeline_region()
-    surface = adapter.build(
-        region,
-        {
-            "day_timeline_slots": [
-                {"slot_id": "p1", "label": "P1", "position": "weird"},
-            ],
-        },
-    )
-    html = _render(surface)
-    assert "is-after" in html
-
-
-def test_day_timeline_collapses_multiple_active_slots() -> None:
-    """Defensive: if the resolver mis-classifies two slots as active
-    (clock-edge race? overlapping windows?) the adapter keeps the
-    first and downgrades the rest rather than crashing the
-    at-most-one-active invariant."""
-    adapter = WorkspaceRegionAdapter()
-    region = _day_timeline_region()
-    surface = adapter.build(
-        region,
-        {
-            "day_timeline_slots": [
-                {"slot_id": "p1", "label": "P1", "position": "active"},
-                {"slot_id": "p2", "label": "P2", "position": "active"},
-                {"slot_id": "p3", "label": "P3", "position": "active"},
-            ],
-        },
-    )
-    html = _render(surface)
-    assert html.count('data-dz-position="active"') == 1
-
-
-def test_day_timeline_skips_slots_with_missing_id() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _day_timeline_region()
-    surface = adapter.build(
-        region,
-        {
-            "day_timeline_slots": [
-                {"slot_id": "p1", "label": "OK"},
-                {"slot_id": "", "label": "Bad"},
-                {"label": "Missing key"},
-            ],
-        },
-    )
-    html = _render(surface)
-    assert 'data-slot-id="p1"' in html
-    assert "Bad" not in html
-    assert "Missing key" not in html
-
-
-def test_day_timeline_drill_url_wraps_slot_in_anchor() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _day_timeline_region()
-    surface = adapter.build(
-        region,
-        {
-            "day_timeline_slots": [
-                {"slot_id": "p1", "label": "P1", "drill_url": "/lessons/123"},
-            ],
-        },
-    )
-    html = _render(surface)
-    assert 'href="/lessons/123"' in html
-
-
-def test_day_timeline_passes_through_pre_rendered_body() -> None:
-    """`body` is pre-rendered HTML from the data resolution layer;
-    the adapter passes it through and the primitive renders it as-is
-    (escape responsibility lives with whoever produced the body)."""
-    adapter = WorkspaceRegionAdapter()
-    region = _day_timeline_region()
-    body_html = '<span class="lesson-card">Year 8 Maths — Room B12</span>'
-    surface = adapter.build(
-        region,
-        {
-            "day_timeline_slots": [
-                {"slot_id": "p1", "label": "P1", "body": body_html},
-            ],
-        },
-    )
-    html = _render(surface)
-    assert body_html in html
-
-
-# ───────────────── TaskInbox (#1015, v0.67.8) ───────────────────
-
-
-def _task_inbox_region(*, empty_state: str = "All caught up.") -> object:
-    """Build a region object exposing a TaskInboxConfig — duck-typed."""
-    from dazzle.core.ir.workspaces import TaskInboxConfig
-
-    cfg = TaskInboxConfig(sources=[], empty_state=empty_state)
-
-    class _Region:
-        name = "today"
-        title = None
-        display = "task_inbox"
-        empty_message = None
-
-    r = _Region()
-    r.task_inbox_config = cfg  # type: ignore[attr-defined]
-    return r
-
-
-def test_task_inbox_dispatches_to_builder() -> None:
-    adapter = WorkspaceRegionAdapter()
-    surface = adapter.build(_task_inbox_region(), {})
-    assert isinstance(surface, Surface)
-    html = _render(surface)
-    assert 'class="dz-task-inbox-region"' in html
-
-
-def test_task_inbox_uses_config_empty_state_when_region_empty() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _task_inbox_region(empty_state="Nothing to do.")
-    surface = adapter.build(region, {})
-    html = _render(surface)
-    assert "Nothing to do." in html
-
-
-def test_task_inbox_builds_items_with_urgency() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _task_inbox_region()
-    items = [
-        {
-            "item_id": "i1",
-            "icon": "register",
-            "title": "Register 8X",
-            "meta": "Period 1",
-            "urgency": "due",
-            "drill_url": "/r/i1",
-        },
-        {
-            "item_id": "i2",
-            "icon": "message",
-            "title": "Reply",
-            "urgency": "overdue",
-        },
-    ]
-    surface = adapter.build(region, {"task_inbox_items": items})
-    html = _render(surface)
-    assert 'data-dz-item-id="i1"' in html
-    assert 'data-dz-urgency="due"' in html
-    assert 'data-dz-urgency="overdue"' in html
-    assert 'data-lucide="register"' in html  # unknown name -> client-hydration fallback
-    assert 'href="/r/i1"' in html
-
-
-def test_task_inbox_builds_summary_chips() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _task_inbox_region()
-    chips = [
-        {"chip_id": "c1", "count": 7, "label": "manuscripts ready", "drill_url": "/m"},
-        {"chip_id": "c2", "count": 3, "label": "drafts in review"},
-    ]
-    surface = adapter.build(region, {"task_inbox_chips": chips})
-    html = _render(surface)
-    assert 'class="dz-task-inbox-chips"' in html
-    assert ">7<" in html
-    assert "manuscripts ready" in html
-    assert 'href="/m"' in html
-
-
-def test_task_inbox_skips_items_with_missing_id() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _task_inbox_region()
-    items = [
-        {"item_id": "i1", "icon": "x", "title": "ok"},
-        {"item_id": "", "icon": "x", "title": "bad"},
-    ]
-    surface = adapter.build(region, {"task_inbox_items": items})
-    html = _render(surface)
-    assert 'data-dz-item-id="i1"' in html
-    assert "bad" not in html
-
-
-def test_task_inbox_unknown_urgency_falls_through_to_later() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _task_inbox_region()
-    surface = adapter.build(
-        region,
-        {"task_inbox_items": [{"item_id": "i", "icon": "x", "title": "t", "urgency": "weird"}]},
-    )
-    html = _render(surface)
-    assert 'data-dz-urgency="later"' in html
-
-
-def test_task_inbox_negative_chip_count_coerces_to_zero() -> None:
-    """Defensive: a buggy resolver producing count=-1 would trip the
-    primitive's invariant. The adapter clamps to 0."""
-    adapter = WorkspaceRegionAdapter()
-    region = _task_inbox_region()
-    surface = adapter.build(
-        region, {"task_inbox_chips": [{"chip_id": "c", "count": -5, "label": "x"}]}
-    )
-    html = _render(surface)
-    assert ">0<" in html
-
-
-def test_task_inbox_non_int_chip_count_coerces_to_zero() -> None:
-    adapter = WorkspaceRegionAdapter()
-    region = _task_inbox_region()
-    surface = adapter.build(
-        region, {"task_inbox_chips": [{"chip_id": "c", "count": "??", "label": "x"}]}
-    )
-    html = _render(surface)
-    assert ">0<" in html
-
-
-# ───────────────── EntityCard (#1017, v0.67.8) ───────────────────
-
-
-def _entity_card_region() -> object:
-    """Build a region object exposing an EntityCardConfig — duck-typed."""
-    from dazzle.core.ir.workspaces import EntityCardConfig
-
-    cfg = EntityCardConfig(sections=[])
-
-    class _Region:
-        name = "card"
-        title = None
-        display = "entity_card"
-        empty_message = None
-
-    r = _Region()
-    r.entity_card_config = cfg  # type: ignore[attr-defined]
-    return r
-
-
-def test_entity_card_dispatches_to_builder() -> None:
-    adapter = WorkspaceRegionAdapter()
-    surface = adapter.build(_entity_card_region(), {})
-    assert isinstance(surface, Surface)
-    html = _render(surface)
-    assert 'class="dz-entity-card-region"' in html
-
-
-def test_entity_card_renders_record_label_when_set() -> None:
-    adapter = WorkspaceRegionAdapter()
-    surface = adapter.build(
-        _entity_card_region(),
-        {
-            "entity_card_record_label": "Alice Wong · Year 9",
-            "entity_card_sections": [
-                {"section_id": "s", "label": "Halo", "body": "<p>x</p>"},
-            ],
-        },
-    )
-    html = _render(surface)
-    assert "Alice Wong" in html
-
-
-def test_entity_card_omits_record_label_heading_when_empty() -> None:
-    adapter = WorkspaceRegionAdapter()
-    surface = adapter.build(
-        _entity_card_region(),
-        {"entity_card_sections": [{"section_id": "s", "label": "L"}]},
-    )
-    html = _render(surface)
-    assert "dz-entity-card-heading" not in html
-
-
-def test_entity_card_builds_sections_with_modes() -> None:
-    adapter = WorkspaceRegionAdapter()
-    sections_data = [
-        {
-            "section_id": "halo",
-            "label": "Halo",
-            "mode": "halo",
-            "column": "main",
-            "body": "<div>halo body</div>",
-        },
-        {
-            "section_id": "flags",
-            "label": "Flags",
-            "mode": "flags",
-            "column": "sidebar",
-        },
-        {
-            "section_id": "marks",
-            "label": "Marks",
-            "mode": "mini_bars",
-            "column": "main",
-        },
-    ]
-    surface = adapter.build(_entity_card_region(), {"entity_card_sections": sections_data})
-    html = _render(surface)
-    assert 'data-section-id="halo"' in html
-    assert 'data-dz-mode="flags"' in html
-    assert 'data-dz-mode="mini_bars"' in html
-    assert 'data-dz-column="sidebar"' in html
-
-
-def test_entity_card_skips_omitted_sections() -> None:
-    adapter = WorkspaceRegionAdapter()
-    sections_data = [
-        {"section_id": "shown", "label": "Shown"},
-        {"section_id": "hidden", "label": "Hidden", "is_omitted": True},
-    ]
-    surface = adapter.build(_entity_card_region(), {"entity_card_sections": sections_data})
-    html = _render(surface)
-    assert 'data-section-id="shown"' in html
-    assert 'data-section-id="hidden"' not in html
-
-
-def test_entity_card_unknown_mode_falls_through_to_halo() -> None:
-    adapter = WorkspaceRegionAdapter()
-    surface = adapter.build(
-        _entity_card_region(),
-        {"entity_card_sections": [{"section_id": "s", "label": "L", "mode": "weird"}]},
-    )
-    html = _render(surface)
-    assert 'data-dz-mode="halo"' in html
-
-
-def test_entity_card_unknown_column_falls_through_to_main() -> None:
-    adapter = WorkspaceRegionAdapter()
-    surface = adapter.build(
-        _entity_card_region(),
-        {"entity_card_sections": [{"section_id": "s", "label": "L", "column": "weird"}]},
-    )
-    html = _render(surface)
-    assert 'data-dz-column="main"' in html
-
-
-def test_entity_card_skips_sections_with_missing_id() -> None:
-    adapter = WorkspaceRegionAdapter()
-    sections_data = [
-        {"section_id": "ok", "label": "OK"},
-        {"section_id": "", "label": "Bad"},
-    ]
-    surface = adapter.build(_entity_card_region(), {"entity_card_sections": sections_data})
-    html = _render(surface)
-    assert 'data-section-id="ok"' in html
-    assert "Bad" not in html
-
-
-# ───────────────── Cross-display parametrized families (#1530) ─────────────
-# Three assertion-shape families collapsed from named per-display tests.
-# Membership is deliberately conservative: config-driven displays
-# (cohort_strip, day_timeline, task_inbox, entity_card) stay named above
-# because their empty paths flow through builder functions — not the
-# generic EmptyState arm — and some also pin chrome persistence
-# (role="tablist"). Also kept named: metrics scope-denial (#1425 non-leak),
-# the kanban either-of-three-outputs test, the radar <3-axes degrade test,
-# the diagram legacy hardcoded-message test (v0.66.118 — empty_message is
-# intentionally *ignored* there), and any smoke test that pins structure (isinstance, viewBox,
-# counts) rather than substrings.
-
-
-# Family 1: empty data + region.empty_message → the message renders via
-# the generic EmptyState arm. One row per display; assertion is exactly
-# "message in rendered output".
-_EMPTY_STATE_CASES: list[tuple[str, dict, str]] = [
-    ("timeline", {}, "No events yet."),
-    ("list", {"items": [], "columns": []}, "No users."),
-    ("grid", {"items": []}, "Nothing here."),
-    ("metrics", {}, "None yet."),
-    ("bar_chart", {"buckets": []}, "None."),
-    ("pivot_table", {"rows": [], "columns": ["x"]}, "No data."),
-    ("tabbed_list", {}, "No tabs."),
-    ("pipeline_steps", {"pipeline_stage_data": []}, "No steps."),
-    ("status_list", {"items": []}, "All clear."),
-    ("queue", {"items": []}, "Queue is empty."),
+_PERSON_REF_COLUMNS = [
+    {"key": "title", "label": "Title", "type": "text"},
+    {"key": "assigned_to", "label": "Assigned To", "type": "ref", "ref_entity": "User"},
 ]
 
-
-@pytest.mark.parametrize(
-    ("display", "ctx", "message"),
-    _EMPTY_STATE_CASES,
-    ids=[case[0] for case in _EMPTY_STATE_CASES],
-)
-def test_empty_data_with_empty_message_renders_empty_state(
-    display: str, ctx: dict, message: str
-) -> None:
-    adapter = WorkspaceRegionAdapter()
-    fragment = adapter.build(_FakeRegion("r", display=display, empty_message=message), ctx)
-    assert message in _render(fragment)
-
-
-# Family 2: alternative dict item shapes normalize to the same render as
-# the primary tuple shape. Per-row rationale:
-# - bar_chart: buckets as {label, value} or {key, count} dicts; labels
-#   humanized via render_status_badge (v0.66.110) — "open" → "Open".
-# - radar: axes as {axis, value} or {label, value} dicts.
-# - line_chart (TimeSeries): points as {x, y} or {label, value} dicts.
-# - diagram: edges as {from, to} (or {source, target}) dicts.
-_ALT_DICT_SHAPE_CASES: list[tuple[str, dict, tuple[str, ...]]] = [
-    (
-        "bar_chart",
-        {"buckets": [{"label": "open", "value": 5}, {"key": "closed", "count": 9}]},
-        ("Open", "Closed"),
+_RENDER_CASES = [
+    # ── empty data + region.empty_message → generic EmptyState arm (#1530) ──
+    *(
+        _case(f"empty-state-{display}", _r(display, empty=message), ctx, (message,))
+        for display, ctx, message in [
+            ("timeline", {}, "No events yet."),
+            ("list", {"items": [], "columns": []}, "No users."),
+            ("grid", {"items": []}, "Nothing here."),
+            ("metrics", {}, "None yet."),
+            ("bar_chart", {"buckets": []}, "None."),
+            ("pivot_table", {"rows": [], "columns": ["x"]}, "No data."),
+            ("tabbed_list", {}, "No tabs."),
+            ("pipeline_steps", {"pipeline_stage_data": []}, "No steps."),
+            ("status_list", {"items": []}, "All clear."),
+            ("queue", {"items": []}, "Queue is empty."),
+            ("kanban", {}, "No tasks yet."),
+            # Bar chart: a bucket missing a usable key/value drops; pure garbage → empty.
+            ("bar_chart", {"buckets": [None, 42, "string"]}, "No data."),
+            # Radar's __post_init__ raises on <3 axes; the adapter degrades instead.
+            ("radar", {"axes": [("A", 1), ("B", 2)]}, "Need 3+ axes."),
+            # Uncoercible time-series points drop; pure garbage → empty.
+            ("line_chart", {"points": [None, 42, "string"]}, "No points."),
+        ]
     ),
-    (
-        "radar",
+    # ── timeline / activity feed ──
+    _case(
+        "timeline-overflow-line-when-total-exceeds-items",
+        _r("timeline"),
         {
-            "axes": [
-                {"axis": "X", "value": 1},
-                {"label": "Y", "value": 2},
-                {"axis": "Z", "value": 3},
+            "items": [{"title": "X", "created_at": "2026-05-08T12:00:00"}],
+            "columns": [
+                {"key": "title", "label": "T"},
+                {"key": "created_at", "label": "W", "type": "date"},
+            ],
+            "display_key": "title",
+            "total": 5,
+        },
+        ("Showing 1 of 5", "dz-timeline-overflow"),
+    ),
+    _case(
+        "activity-feed-dispatches-through-timeline",
+        _r("activity_feed"),
+        {
+            "items": [
+                {"title": "Logged in", "created_at": "2026-05-07T09:00:00"},
+                {"title": "Saved record", "created_at": "2026-05-07T09:01:00"},
             ]
         },
-        ("X", "Y", "Z"),
+        ("Logged in", "Saved record"),
     ),
-    (
-        "line_chart",
-        {"points": [{"x": "Jan", "y": 10}, {"label": "Feb", "value": 20}]},
-        ("Jan", "Feb"),
+    # TR-8 / #852: Comment rows use `content`/`body`; a blank row is skipped
+    # rather than soft-failing the region. Scalar actor stays text (oral #43).
+    _case(
+        "activity-feed-comment-content-field-852",
+        _r("activity_feed", name="comment_activity"),
+        {
+            "items": [
+                {
+                    "content": "Customer asked about SLA credit",
+                    "created_at": "2026-05-07T09:00:00",
+                    "author": {"name": "Alex Agent"},
+                },
+                {"content": "  ", "created_at": "2026-05-07T09:05:00"},
+                {
+                    "body": "Internal note only",
+                    "created_at": "2026-05-07T09:10:00",
+                    "user": "Sam Manager",
+                },
+            ]
+        },
+        (
+            "Customer asked about SLA credit",
+            "Internal note only",
+            "Alex Agent",
+            "dz-avatar",
+            'class="dz-activity-actor">Sam Manager<',
+        ),
+        ("Typed primitive render failed",),
     ),
-    (
-        "diagram",
-        {"nodes": ["A", "B"], "edges": [{"from": "A", "to": "B"}]},
-        ("A", "B"),
+    _case(
+        "activity-feed-detail-url-template-drill-1303",
+        _r("activity_feed"),
+        {
+            "items": [
+                {
+                    "id": "evt-1",
+                    "title": "Ticket reopened",
+                    "created_at": "2026-05-07T09:00:00",
+                    "actor": "Ada",
+                },
+                {
+                    "id": "evt-2",
+                    "description": "Status changed",
+                    "created_at": "2026-05-07T09:01:00",
+                },
+            ],
+            "detail_url_template": "/app/ticket/{id}",
+        },
+        (
+            'href="/app/ticket/evt-1"',
+            'href="/app/ticket/evt-2"',
+            "data-dz-activity-drill",
+            "Ticket reopened",
+            "Status changed",
+        ),
     ),
-]
-
-
-@pytest.mark.parametrize(
-    ("display", "ctx", "expected"),
-    _ALT_DICT_SHAPE_CASES,
-    ids=[case[0] for case in _ALT_DICT_SHAPE_CASES],
-)
-def test_alternative_dict_item_shape_normalizes_to_same_render(
-    display: str, ctx: dict, expected: tuple[str, ...]
-) -> None:
-    adapter = WorkspaceRegionAdapter()
-    html = _render(adapter.build(_FakeRegion("r", display=display), ctx))
-    for substring in expected:
-        assert substring in html
-
-
-# Family 3: render smoke — each display emits its dz-* marker plus the
-# item content (substring assertions only; structural assertions stay in
-# named tests). Per-row rationale:
-# - kanban: `dz-kanban` CSS hook so workspace layout CSS can target the
-#   column structure; title + card content render.
-# - radar: polar axes labels render inside dz-radar.
-# - line_chart: v0.66.110 — legacy region wrapper class is
-#   `dz-line-chart-region` (chrome stripping).
-# - diagram: nodes + edges render as paired UL lists with the → arrow.
-_RENDER_SMOKE_CASES: list[tuple[str, str | None, dict, tuple[str, ...]]] = [
-    (
-        "kanban",
-        "Tasks",
+    # Empty detail_url_template stays byte-stable: no anchors, scalar actor as text.
+    _case(
+        "activity-feed-without-drill-stays-plain-text",
+        _r("activity_feed"),
+        {"items": [{"title": "Logged in", "created_at": "2026-05-07T09:00:00", "actor": "Ada"}]},
+        ("Logged in", 'class="dz-activity-actor">Ada<'),
+        ("data-dz-activity-drill", "dz-avatar"),
+    ),
+    # ── kanban ──
+    _case(
+        "kanban-person-ref-dict-emits-avatar",
+        _r("kanban", name="board"),
+        {
+            "items": [
+                {
+                    "id": "1",
+                    "title": "Triage login",
+                    "status": "todo",
+                    "assigned_to": {
+                        "id": "u1",
+                        "name": "Alex Agent",
+                        "email": "alex@demo.dazzle.local",
+                    },
+                }
+            ],
+            "kanban_columns": ["todo"],
+            "group_by": "status",
+            "display_key": "title",
+            "columns": _PERSON_REF_COLUMNS,
+        },
+        ("Triage login", "dz-avatar", "Alex Agent"),
+        ("{'id':",),
+    ),
+    # Bare scalar leftover (`Ada` / `System`) stays field text — no chip is
+    # minted from a string (oral #43, cycle 2161).
+    _case(
+        "kanban-scalar-leftover-does-not-invent-chip",
+        _r("kanban", name="board"),
+        {
+            "items": [
+                {"id": "1", "title": "Triage login", "status": "todo", "assigned_to": "Ada"},
+                {"id": "2", "title": "Nightly sweep", "status": "todo", "assigned_to": "System"},
+            ],
+            "kanban_columns": ["todo"],
+            "group_by": "status",
+            "display_key": "title",
+            "columns": _PERSON_REF_COLUMNS,
+        },
+        ("Triage login", "Nightly sweep", "Ada", "System"),
+        ("dz-avatar", "dz-user-chip"),
+    ),
+    # Resolved `{key}_display` sibling + id is honest — still an Avatar.
+    _case(
+        "kanban-display-sibling-emits-avatar",
+        _r("kanban", name="board"),
+        {
+            "items": [
+                {
+                    "id": "1",
+                    "title": "Triage login",
+                    "status": "todo",
+                    "assigned_to": "u1",
+                    "assigned_to_display": "Alex Agent",
+                }
+            ],
+            "kanban_columns": ["todo"],
+            "group_by": "status",
+            "display_key": "title",
+            "columns": _PERSON_REF_COLUMNS,
+        },
+        ("dz-avatar", "Alex Agent"),
+    ),
+    # `dz-kanban` CSS hook + title + card content (legacy ctx key spelling).
+    _case(
+        "kanban-render-smoke",
+        _r("kanban", title="Tasks"),
         {
             "items": [{"id": "1", "title": "Buy milk", "status": "todo"}],
             "group_keys": ["todo", "doing", "done"],
@@ -2437,39 +463,1243 @@ _RENDER_SMOKE_CASES: list[tuple[str, str | None, dict, tuple[str, ...]]] = [
         },
         ("dz-kanban", "Tasks", "Buy milk"),
     ),
-    (
-        "radar",
-        None,
+    # ── list ──
+    _case(
+        "list-renders-table",
+        _r("list", name="users"),
+        {
+            "items": [{"name": "Alice"}, {"name": "Bob"}],
+            "columns": [{"key": "name", "label": "Name"}],
+        },
+        ("<table", "Alice", "Bob"),
+    ),
+    # Phase 4B.1.e: endpoint + filter_columns compose a FilterBar above the table.
+    _case(
+        "list-filter-columns-render-filter-bar",
+        _r("list"),
+        {
+            "items": [{"name": "X"}],
+            "columns": [{"key": "name", "label": "Name"}],
+            "endpoint": "/api/regions/r",
+            "region_name": "r",
+            "filter_columns": [
+                {
+                    "key": "status",
+                    "label": "Status",
+                    "options": [("open", "Open"), ("closed", "Closed")],
+                },
+            ],
+            "active_filters": {"status": "open"},
+        },
+        ("filter-bar", 'name="filter_status"', 'value="open" selected>', "<table"),
+    ),
+    # Workspace list free-text search filters via ?q= (not the FTS results
+    # panel): dual_pane directories scored find-by-name broken when the A–Z
+    # list never shrank. Swap target is the closest region chrome.
+    _case(
+        "list-search-fields-render-q-input",
+        _r("list", name="contact_list"),
+        {
+            "items": [{"name": "Ruth Griffiths"}, {"name": "Ada Lovelace"}],
+            "columns": [{"key": "name", "label": "Name"}],
+            "endpoint": "/api/workspaces/contacts/regions/contact_list",
+            "region_name": "contact_list",
+            "search_fields": ["first_name", "last_name", "email", "company"],
+            "active_search": "Griff",
+        },
+        (
+            'name="q"',
+            "dz-list-q-contact_list",
+            'value="Griff"',
+            "data-dz-list-search",
+            'hx-get="/api/workspaces/contacts/regions/contact_list"',
+            "Find by First Name",
+            "dz-list-search-label",
+            "filter-label",
+            'hx-target="closest [data-dz-region]"',
+        ),
+        ("dz-search-results-contact_list",),
+    ),
+    _case(
+        "list-date-range-renders-picker",
+        _r("list"),
+        {
+            "items": [],
+            "endpoint": "/api/x",
+            "region_name": "r",
+            "date_range": True,
+            "date_from": "2026-01-01",
+            "date_to": "2026-12-31",
+        },
+        ("date-range-bar", 'value="2026-01-01"', 'value="2026-12-31"'),
+    ),
+    _case(
+        "list-csv-export-default-filename-is-region-name",
+        _r("list"),
+        {
+            "items": [{"name": "X"}],
+            "columns": [{"key": "name", "label": "Name"}],
+            "endpoint": "/api/x",
+            "region_name": "tickets",
+            "csv_export": True,
+        },
+        ("dz-list-csv-button", 'data-dz-csv-filename="tickets.csv"'),
+    ),
+    _case(
+        "list-csv-export-filename-override",
+        _r("list"),
+        {
+            "items": [],
+            "endpoint": "/api/x",
+            "region_name": "r",
+            "csv_export": True,
+            "csv_filename": "custom-export.csv",
+        },
+        ('data-dz-csv-filename="custom-export.csv"',),
+    ),
+    # Without `endpoint`, FilterBar / DateRangePicker chrome is skipped (both
+    # need an HTMX URL); the CSV button is always emitted with an empty endpoint.
+    _case(
+        "list-without-endpoint-skips-filter-chrome",
+        _r("list"),
+        {
+            "items": [{"name": "X"}],
+            "columns": [{"key": "name", "label": "Name"}],
+            "filter_columns": [{"key": "k", "label": "K", "options": []}],
+            "csv_export": True,
+            "date_range": True,
+        },
+        ("<table", "dz-list-csv-button", 'data-dz-csv-endpoint=""'),
+        ("filter-bar", "date-range-bar"),
+    ),
+    # Missing key, non-dict and duplicate filter columns drop rather than
+    # tripping FilterBar's strict invariants.
+    _case(
+        "list-drops-malformed-filter-columns",
+        _r("list"),
+        {
+            "items": [],
+            "endpoint": "/api/x",
+            "region_name": "r",
+            "filter_columns": [
+                None,
+                42,
+                {"label": "no key"},
+                {"key": "valid", "label": "Valid", "options": []},
+                {"key": "valid", "label": "Dup"},
+            ],
+        },
+        ("filter-bar", ">All Valid<"),
+        ("Dup",),
+    ),
+    # ── grid ──
+    _case(
+        "grid-renders-one-card-per-item",
+        _r("grid", name="cards", title="Cards"),
+        {"items": [{"title": "Alpha"}, {"title": "Beta"}, {"title": "Gamma"}], "columns": 2},
+        ("Alpha", "Beta", "Gamma", "Cards"),
+    ),
+    _case(
+        "grid-label-field-override",
+        _r("grid"),
+        {"items": [{"label": "Custom", "title": "Ignored"}], "label_field": "label"},
+        ("Custom",),
+        ("Ignored",),
+    ),
+    # columns=999 is clamped to the Grid primitive's range instead of raising.
+    _case(
+        "grid-clamps-column-count",
+        _r("grid"),
+        {"items": [{"title": "Clamp me"}], "columns": 999},
+        ("Clamp me",),
+    ),
+    _case(
+        "grid-person-ref-emits-card-meta-avatar",
+        _r("grid", name="cards"),
+        {
+            "items": [
+                {
+                    "title": "Storefront refresh",
+                    "owner": {"id": "u1", "name": "Ada Owner", "email": "ada@demo.dazzle.local"},
+                }
+            ],
+            "display_key": "title",
+            "columns": [
+                {"key": "title", "label": "Title", "type": "text"},
+                {"key": "owner", "label": "Owner", "type": "ref", "ref_entity": "User"},
+            ],
+        },
+        ("Storefront refresh", "dz-avatar", "Ada Owner"),
+        ("{'id':", "UUID("),
+    ),
+    # Dashboard grid cells open VIEW hubs at /app/<slug>/{id}; without the
+    # template trial agents invented /brands/{id} and hit 404s.
+    _case(
+        "grid-drills-to-app-shell-hub-not-api-plural",
+        _r("grid", name="brands"),
+        {
+            "items": [{"id": "a267b2db-ada2-4314-9172-c2c293207acb", "name": "Palmer Group"}],
+            "columns": [{"key": "name", "label": "Name", "type": "text"}],
+            "display_key": "name",
+            "detail_url_template": "/app/brand/{id}",
+        },
+        ("/app/brand/a267b2db-ada2-4314-9172-c2c293207acb", "data-dz-grid-drill", "Palmer Group"),
+        ("/brands/",),
+    ),
+    # ── metrics ──
+    _case(
+        "metrics-renders-pre-computed-kpi-tiles",
+        _r("metrics", name="kpis"),
+        {
+            "metrics": [
+                {"label": "Open", "value": "42", "trend": "up", "delta": "+5"},
+                {"label": "Closed", "value": "18", "trend": "flat"},
+            ]
+        },
+        ("Open", "42", "Closed", "18"),
+    ),
+    # Legacy shape: ctx['aggregates'] maps to KPIs label-cased from the keys.
+    _case(
+        "metrics-falls-back-to-aggregates-dict",
+        _r("metrics", name="kpis"),
+        {"aggregates": {"total_open": 7, "total_closed": 3}},
+        ("Total Open", "7"),
+    ),
+    # `display: summary` reuses the metrics adapter.
+    _case(
+        "metrics-summary-alias",
+        _r("summary"),
+        {"metrics": [{"label": "Revenue", "value": "1"}]},
+        ("Revenue", "dz-metric"),
+    ),
+    _case(
+        "metrics-invalid-tone-stripped",
+        _r("metrics"),
+        {"metrics": [{"label": "X", "value": "1", "tone": "garbage"}]},
+        ("X",),
+        ('data-dz-tone="garbage"',),
+    ),
+    # Phase 4B.1.a: MetricTile keeps the legacy delta block; up + positive_down = bad.
+    _case(
+        "metrics-extended-deltas-render-full-block",
+        _r("metrics"),
+        {
+            "metrics": [
+                {
+                    "label": "Open Tickets",
+                    "value": 1234,
+                    "tone": "warning",
+                    "delta_direction": "up",
+                    "delta_sentiment": "positive_down",
+                    "delta": "42",
+                    "delta_pct": 12.5,
+                    "delta_period_label": "last week",
+                }
+            ]
+        },
+        (
+            'data-dz-metric-key="open_tickets"',
+            'data-dz-tone="warning"',
+            'data-dz-delta-tone="destructive"',
+            "1,234",
+            "↑",
+            "+42",
+            "(12.5%)",
+            "vs last week",
+        ),
+    ),
+    _case(
+        "metrics-delta-up-positive_up-renders-good",
+        _r("metrics"),
+        {
+            "metrics": [
+                {
+                    "label": "Revenue",
+                    "value": 50000,
+                    "delta_direction": "up",
+                    "delta_sentiment": "positive_up",
+                    "delta": "5000",
+                    "delta_period_label": "last month",
+                }
+            ]
+        },
+        ('data-dz-delta-tone="positive"',),
+    ),
+    _case(
+        "metrics-no-delta-omits-delta-block",
+        _r("metrics"),
+        {"metrics": [{"label": "Total", "value": 42}]},
+        (">42<",),
+        ("dz-metric-delta",),
+    ),
+    # metric_number: thousands separators, bools → Yes/No, None → "0".
+    _case(
+        "metrics-value-through-metric-number-filter",
+        _r("metrics"),
+        {
+            "metrics": [
+                {"label": "Big", "value": 1500000},
+                {"label": "Bool", "value": True},
+                {"label": "Null", "value": None},
+            ]
+        },
+        ("1,500,000", ">Yes<", ">0<"),
+    ),
+    _case(
+        "metrics-sub-one-float-rounds-to-2dp-1479",
+        _r("metrics"),
+        {"metrics": [{"label": "Avg Confidence", "value": 0.8850441412520064}]},
+        ("0.89",),
+        ("0.8850441412520064",),
+    ),
+    # On scope-denial ctx['aggregates'] still holds raw IR; the fallback drops
+    # it instead of stringifying a repr that leaks the where-clause.
+    _case(
+        "metrics-scope-denied-raw-ir-not-leaked-1425",
+        _r("metrics", name="kpis", empty="No access."),
+        {
+            "aggregates": {
+                "total_secret": AggregateRef(func="count", entity="SecretEntity"),
+                "ratio": DerivedMetricExpr(metric_name="ratio"),
+            }
+        },
+        ("No access.",),
+        ("func=", "entity=", "SecretEntity", "metric_name="),
+    ),
+    # A person dict on a KPI tile is refused — no str(dict) / name prose.
+    _case(
+        "metrics-person-value-refused-not-invented",
+        _r("metrics"),
+        {
+            "metrics": [
+                {"label": "Open", "value": 12},
+                {
+                    "label": "Assignee",
+                    "key": "assigned_to",
+                    "type": "ref",
+                    "ref_entity": "User",
+                    "value": {
+                        "id": "u1",
+                        "name": "Support Agent",
+                        "email": "agent@demo.dazzle.local",
+                    },
+                },
+            ]
+        },
+        ("Open", ">12<"),
+        ("Support Agent", "Assignee", "{'id':", "dz-avatar"),
+    ),
+    # ── bar chart ──
+    # v0.66.110: bucket labels humanized via render_status_badge.
+    _case(
+        "bar-chart-renders-humanized-buckets",
+        _r("bar_chart", name="severity"),
+        {"buckets": [("low", 3), ("medium", 7), ("high", 2)]},
+        ("Low", "Medium", "High"),
+    ),
+    # Reference overlays are ignored in the bucketed bar chart (legacy parity).
+    _case(
+        "bar-chart-ignores-reference-overlays",
+        _r("bar_chart"),
+        {
+            "buckets": [("low", 3), ("high", 9)],
+            "reference_lines": [{"value": 10, "label": "SLA", "style": "dashed"}],
+            "reference_bands": [{"from": 0, "to": 5, "label": "Healthy", "color": "positive"}],
+        },
+        ("Low", "High", "dz-bar-chart-region"),
+    ),
+    _case(
+        "bar-chart-alt-dict-bucket-shapes",
+        _r("bar_chart"),
+        {"buckets": [{"label": "open", "value": 5}, {"key": "closed", "count": 9}]},
+        ("Open", "Closed"),
+    ),
+    # ── pivot table ──
+    _case(
+        "pivot-table-renders-rows-and-columns",
+        _r("pivot_table"),
+        {
+            "rows": ["low", "high"],
+            "columns": ["open", "closed"],
+            "cells": {("low", "open"): 3, ("high", "closed"): 7},
+        },
+        ("low", "high", "open", "closed", ">3<", ">7<"),
+    ),
+    # Cells naming an undeclared row/column drop (PivotTable would raise).
+    _case(
+        "pivot-table-drops-cells-with-unknown-dimensions",
+        _r("pivot_table"),
+        {"rows": ["a"], "columns": ["x"], "cells": {("a", "x"): 1, ("z", "x"): 99}},
+        (">1<",),
+        ("99",),
+    ),
+    # ── tabbed list ──
+    # Eager `{tabs: [...]}` shape renders content inline — no hx-get.
+    _case(
+        "tabbed-list-eager-tabs-render-inline",
+        _r("tabbed_list"),
+        {
+            "tabs": [
+                {
+                    "key": "open",
+                    "label": "Open",
+                    "items": [{"name": "Alpha"}],
+                    "columns": [{"key": "name", "label": "Name"}],
+                },
+                {
+                    "key": "closed",
+                    "label": "Closed",
+                    "items": [{"name": "Beta"}],
+                    "columns": [{"key": "name", "label": "Name"}],
+                },
+            ]
+        },
+        ('class="dz-tabs"', "Alpha", "Beta"),
+        ("hx-get",),
+    ),
+    _case(
+        "tabbed-list-legacy-slices-alias",
+        _r("tabbed_list"),
+        {
+            "slices": [
+                {
+                    "key": "k",
+                    "items": [{"x": "SliceValue"}],
+                    "columns": [{"key": "x", "label": "X"}],
+                }
+            ]
+        },
+        ("SliceValue",),
+    ),
+    # Tabs raises on duplicate keys; the adapter dedups (first wins).
+    _case(
+        "tabbed-list-dedupes-duplicate-tab-keys",
+        _r("tabbed_list"),
+        {
+            "tabs": [
+                {
+                    "key": "k",
+                    "items": [{"x": "FirstValue"}],
+                    "columns": [{"key": "x", "label": "X"}],
+                },
+                {
+                    "key": "k",
+                    "items": [{"x": "SecondValue"}],
+                    "columns": [{"key": "x", "label": "X"}],
+                },
+            ]
+        },
+        ("FirstValue",),
+        ("SecondValue",),
+    ),
+    # Phase 4B.1.d: source_tabs build a lazy panel; honest HM link-strip (no
+    # role=tablist it can't back); first tab loads, the rest on intersect.
+    _case(
+        "tabbed-list-source-tabs-lazy-panel",
+        _r("tabbed_list", name="t"),
+        {
+            "region_name": "ticket_tabs",
+            "source_tabs": [
+                {
+                    "key": "github",
+                    "label": "GitHub",
+                    "endpoint": "/api/workspaces/admin/regions/ticket_tabs/github",
+                },
+                {
+                    "key": "slack",
+                    "label": "Slack",
+                    "endpoint": "/api/workspaces/admin/regions/ticket_tabs/slack",
+                },
+            ],
+        },
+        (
+            'class="dz-tabs"',
+            'id="tabs-ticket_tabs"',
+            'class="dz-tabs__tab"',
+            'aria-current="true"',
+            'data-dz-tab-target="tab-ticket_tabs-github"',
+            'hx-get="/api/workspaces/admin/regions/ticket_tabs/github"',
+            'hx-trigger="load"',
+            'hx-trigger="intersect once"',
+        ),
+        ('role="tablist"',),
+    ),
+    _case(
+        "tabbed-list-source-tabs-drop-malformed-entries",
+        _r("tabbed_list"),
+        {
+            "region_name": "r",
+            "source_tabs": [
+                None,
+                {"key": "valid", "label": "Valid", "endpoint": "/api/valid"},
+                {"label": "Missing key", "endpoint": "/api/x"},
+                {"key": "missing-endpoint"},
+                {"key": "valid", "label": "Dup", "endpoint": "/api/other"},
+            ],
+        },
+        (">Valid<",),
+        ("Missing key", "Dup"),
+    ),
+    # Without ctx region_name, DOM ids are namespaced by the region's name.
+    _case(
+        "tabbed-list-source-tabs-dom-ids-fall-back-to-region-name",
+        _r("tabbed_list", name="my_region"),
+        {"source_tabs": [{"key": "x", "label": "X", "endpoint": "/api/x"}]},
+        ("tabs-my_region",),
+    ),
+    # tab.eager fires hx-trigger=load even off the first position.
+    _case(
+        "tabbed-list-eager-flag-overrides-position-default",
+        _r("tabbed_list"),
+        {
+            "region_name": "r",
+            "source_tabs": [
+                {"key": "a", "label": "A", "endpoint": "/a"},
+                {"key": "b", "label": "B", "endpoint": "/b", "eager": True},
+                {"key": "c", "label": "C", "endpoint": "/c"},
+            ],
+        },
+        counts={'hx-trigger="load"': 2, 'hx-trigger="intersect once"': 1},
+    ),
+    # ── radar / line chart / diagram ──
+    _case(
+        "radar-render-smoke",
+        _r("radar"),
         {"axes": [("Python", 9), ("Go", 7), ("Rust", 5), ("JavaScript", 6)]},
         ("dz-radar", "Python", "Go", "Rust"),
     ),
-    (
-        "line_chart",
-        None,
+    _case(
+        "radar-alt-dict-axis-shapes",
+        _r("radar"),
+        {
+            "axes": [
+                {"axis": "Xaxis", "value": 1},
+                {"label": "Yaxis", "value": 2},
+                {"axis": "Zaxis", "value": 3},
+            ]
+        },
+        ("Xaxis", "Yaxis", "Zaxis"),
+    ),
+    # v0.66.110: legacy region wrapper class is dz-line-chart-region.
+    _case(
+        "line-chart-render-smoke",
+        _r("line_chart"),
         {"points": [("Jan", 5), ("Feb", 8), ("Mar", 12)]},
         ("dz-line-chart-region", "Jan", "Feb", "Mar"),
+        ("dz-timeseries__references",),
     ),
-    (
-        "diagram",
-        None,
+    _case(
+        "line-chart-alt-dict-point-shapes",
+        _r("line_chart"),
+        {"points": [{"x": "Jan", "y": 10}, {"label": "Feb", "value": 20}]},
+        ("Jan", "Feb"),
+    ),
+    # v0.66.110: reference lines render as SVG overlays; unknown style → solid.
+    _case(
+        "line-chart-carries-reference-lines",
+        _r("line_chart"),
+        {
+            "points": [("Jan", 50), ("Feb", 75)],
+            "reference_lines": [
+                {"value": 100, "label": "Target", "style": "dashed"},
+                {"value": 50, "label": "Min", "style": "wavy"},
+            ],
+        },
+        ('stroke-dasharray="4,3"', "<title>Target: 100", "<title>Min: 50"),
+    ),
+    # Bands accept from/to and from_value/to_value; from > to drops.
+    _case(
+        "line-chart-carries-reference-bands-with-alt-keys",
+        _r("line_chart"),
+        {
+            "points": [("a", 1), ("b", 2)],
+            "reference_bands": [
+                {"from": 80, "to": 120, "label": "Healthy", "color": "positive"},
+                {"from": 200, "to": 100, "label": "Bad order"},
+                {"from_value": 0, "to_value": 30, "label": "Danger", "color": "destructive"},
+            ],
+        },
+        ("<title>Healthy:", "hsl(145, 55%, 45%)", "<title>Danger:", "var(--colour-danger)"),
+        ("Bad order",),
+    ),
+    _case(
+        "diagram-render-smoke",
+        _r("diagram"),
         {
             "nodes": ["Device", "Tester", "IssueReport"],
             "edges": [("Device", "Tester"), ("Device", "IssueReport")],
         },
         ("dz-diagram", "Device", "Tester", "IssueReport", "→"),
     ),
+    _case(
+        "diagram-alt-dict-edge-shape",
+        _r("diagram"),
+        {"nodes": ["Aa", "Bb"], "edges": [{"from": "Aa", "to": "Bb"}]},
+        ('dz-diagram__edge-from">Aa', 'dz-diagram__edge-to">Bb'),
+    ),
+    # Edges with unknown endpoints drop (Diagram would raise); self-loops stay.
+    _case(
+        "diagram-drops-edges-with-unknown-endpoints",
+        _r("diagram"),
+        {"nodes": ["Alpha"], "edges": [("Alpha", "ZZZ"), ("Alpha", "Alpha")]},
+        ('dz-diagram__edge-from">Alpha', 'dz-diagram__edge-to">Alpha'),
+        ("ZZZ",),
+    ),
+    # v0.66.118: empty diagram uses the legacy hardcoded copy; empty_message is ignored.
+    _case(
+        "diagram-empty-renders-legacy-hardcoded-message",
+        _r("diagram", empty="ignored"),
+        {"nodes": []},
+        ("dz-diagram-empty", "No entity relationships to display."),
+        ("ignored",),
+    ),
+    # ── confirm action panel ──
+    # Phase 4A fallback: prompt + action_label become a synthetic single-item gate.
+    _case(
+        "confirm-panel-legacy-prompt-ctx-synthetic-checklist",
+        _r("confirm_action_panel", title="Confirm Delete"),
+        {"prompt": "This will permanently delete 5 items.", "action_label": "Delete"},
+        ("Confirm Delete", "permanently delete 5 items", "dz-confirm-panel"),
+        ("&quot;",),
+    ),
+    # HM data-dz-confirm-gate checklist: required-count, primary parked in
+    # data-dz-confirm-href + aria-disabled until armed (Alpine island retired).
+    _case(
+        "confirm-panel-off-state-hm-gated-checklist",
+        _r("confirm_action_panel"),
+        {
+            "state_value": "off",
+            "confirmations": [
+                {
+                    "title": "I have reviewed the data",
+                    "caption": "All records will be synced",
+                    "required": True,
+                },
+                {"title": "I have legal authority", "required": True},
+                {"title": "Optional: notify the team"},
+            ],
+            "primary_action_url": "/admin/sync/confirm",
+            "secondary_action_url": "/admin/sync/draft",
+            "audit_enabled": True,
+        },
+        (
+            'data-dz-state-value="off"',
+            "data-dz-confirm-gate",
+            'data-dz-required-count="2"',
+            "I have reviewed the data",
+            "All records will be synced",
+            'data-dz-confirm-href="/admin/sync/confirm"',
+            'aria-disabled="true"',
+            "/admin/sync/draft",
+            "dz-confirm-audit",
+        ),
+        # Leading space: a bare href= would substring-match data-dz-confirm-href.
+        ("x-data", ' href="/admin/sync/confirm"'),
+    ),
+    _case(
+        "confirm-panel-live-state-summary-and-revoke",
+        _r("confirm_action_panel"),
+        {"state_value": "live", "revoke_url": "/admin/sync/revoke"},
+        ("Currently live", "/admin/sync/revoke", "dz-confirm-revoke"),
+        ("dz-confirm-checklist",),
+    ),
+    _case(
+        "confirm-panel-revoked-state-offers-re-enable",
+        _r("confirm_action_panel"),
+        {"state_value": "revoked", "primary_action_url": "/admin/sync/reenable"},
+        ("revoked", "Re-enable", "/admin/sync/reenable"),
+    ),
+    _case(
+        "confirm-panel-drops-malformed-confirmations",
+        _r("confirm_action_panel"),
+        {
+            "state_value": "off",
+            "confirmations": [None, 42, {"title": ""}, {"title": "Valid item", "required": True}],
+            "primary_action_url": "/x",
+        },
+        ("Valid item", 'data-dz-required-count="1"', "data-dz-confirm-gate"),
+    ),
+    # ── search box ──
+    # Phase 4B.1.d: typed SearchBox — FTS input + lazy results + CSS-only
+    # coaching toggle (Alpine q-island retired in Tier F3).
+    _case(
+        "search-box-typed-primitive",
+        _r("search_box", name="manuscript_search"),
+        {
+            "source_entity": "Manuscript",
+            "placeholder": "Find a manuscript",
+            "coaching_message": "Type a title or keyword",
+        },
+        (
+            "dz-search-box-region",
+            'hx-get="/_dazzle/fts/Manuscript?html=1"',
+            "this.value.trim().length>0",
+            'aria-live="polite"',
+            "dz-search-box-empty",
+            "Type a title or keyword",
+        ),
+        ("x-show", "x-data", "x-model"),
+    ),
+    _case(
+        "search-box-endpoint-falls-back-to-region-name",
+        _r("search_box", name="ticket_search"),
+        {"placeholder": "Find tickets…"},
+        ('hx-get="/_dazzle/fts/ticket_search?html=1"', "Find tickets"),
+    ),
+    _case(
+        "search-box-default-coaching-message",
+        _r("search_box", name="s"),
+        {"source_entity": "Item"},
+        ("Type to search",),
+    ),
+    # Visible chrome surfaces the author title so FTS isn't mistaken for a list filter.
+    _case(
+        "search-box-placeholder-uses-author-title",
+        _r(
+            "search_box",
+            name="contact_search",
+            title="Find a contact — results appear below",
+            empty="Results appear below as you type. The A–Z list is not filtered.",
+        ),
+        {"source_entity": "Contact"},
+        ('placeholder="Find a contact — results appear below"', "Results appear below as you type"),
+    ),
+    _case(
+        "search-box-placeholder-falls-back-to-empty-clause",
+        _r(
+            "search_box",
+            name="find_contact",
+            empty="Results appear below as you type (name, company, or email).",
+        ),
+        {"source_entity": "Contact"},
+        ('placeholder="Results appear below as you type (name, company, or email)"',),
+    ),
+    # Several SearchBoxes on one page need distinct result panels (ctx `name`).
+    *(
+        _case(
+            f"search-box-results-panel-id-{name}",
+            _r("search_box"),
+            {"source_entity": entity, "name": name},
+            (f"dz-search-results-{name}",),
+        )
+        for entity, name in [("A", "search_a"), ("B", "search_b")]
+    ),
+    # ── pipeline steps / status list ──
+    # v0.66.106: authored pipeline_stage_data; None value → "—"; last stage has no connector.
+    _case(
+        "pipeline-steps-render-stages-with-connectors",
+        _r("pipeline_steps"),
+        {
+            "pipeline_stage_data": [
+                {"label": "Plan", "value": 1, "caption": "Scope locked"},
+                {"label": "Build", "value": 2},
+                {"label": "Ship", "value": None, "caption": "Pending"},
+            ]
+        },
+        ("Plan", "Build", "Ship", "Scope locked", "Pending", "—"),
+        counts={'class="dz-pipeline-connector"': 2},
+    ),
+    # v0.66.104: authored status_entries emit the legacy dz-status-list structure.
+    _case(
+        "status-list-renders-authored-entries",
+        _r("status_list"),
+        {
+            "status_entries": [
+                {"title": "Service A", "state": "positive", "caption": "All systems normal"},
+                {"title": "Service B", "state": "destructive", "icon": "alert-triangle"},
+            ]
+        },
+        (
+            "Service A",
+            "Service B",
+            'data-dz-state="positive"',
+            'data-dz-state="destructive"',
+            "All systems normal",
+            'data-lucide="alert-triangle"',
+        ),
+    ),
+    # Unknown state coerces to neutral (legacy `state | default('neutral')`).
+    _case(
+        "status-list-unknown-state-falls-back-to-neutral",
+        _r("status_list"),
+        {"status_entries": [{"title": "Mystery", "state": "purple"}]},
+        ('data-dz-state="neutral"',),
+        ("dz-status-list-pill",),
+    ),
+    # ── queue ──
+    # v0.66.117: dedicated QueueRegion; title via display+_display → display → id.
+    _case(
+        "queue-renders-minimal-items",
+        _r("queue"),
+        {
+            "items": [
+                {"id": 1, "title": "Item One", "title_display": "Item One", "status": "open"},
+                {"id": 2, "title": "Item Two", "title_display": "Item Two", "status": "open"},
+            ],
+            "columns": [{"key": "title", "label": "Title"}],
+            "display_key": "title",
+        },
+        ("Item One", "Item Two", "dz-queue-region"),
+    ),
+    # Queue titles drill to /app/ticket/{id} with dual-open discovery (cycle 1606).
+    _case(
+        "queue-drills-to-app-shell-hub",
+        _r("queue", name="open_queue"),
+        {
+            "items": [
+                {
+                    "id": "5f122722-3193-476c-8f98-34b41f792d4d",
+                    "subject": "Double charged on monthly invoice",
+                    "status": "open",
+                }
+            ],
+            "columns": [{"key": "subject", "type": "text"}, {"key": "status", "type": "badge"}],
+            "display_key": "subject",
+            "detail_url_template": "/app/ticket/{id}",
+        },
+        (
+            "/app/ticket/5f122722-3193-476c-8f98-34b41f792d4d",
+            "data-dz-queue-drill",
+            "Double charged",
+            'data-dz-open-entity="Ticket"',
+            'data-dz-open-role="primary"',
+            'data-dz-open-chain="/app/ticket/5f122722-3193-476c-8f98-34b41f792d4d"',
+        ),
+        ("/tickets/",),
+    ),
+    # A non-FK display_field has no `*_display`; fall through to the field, not the UUID.
+    _case(
+        "queue-title-uses-display-field-without-fk-display-suffix",
+        _r("queue", name="open_queue"),
+        {
+            "items": [
+                {
+                    "id": "70193944-6955-4d6d-9a6a-4d076a6e033f",
+                    "subject": "Cannot login to my account",
+                    "customer_email": "user@example.com",
+                    "status": "open",
+                }
+            ],
+            "columns": [
+                {"key": "subject", "label": "Subject", "type": "text"},
+                {"key": "status", "label": "Status", "type": "badge"},
+            ],
+            "display_key": "subject",
+        },
+        ("Cannot login to my account",),
+        ("70193944-6955-4d6d-9a6a-4d076a6e033f",),
+    ),
+    _case(
+        "queue-title-falls-back-to-id-without-display-key",
+        _r("queue"),
+        {
+            "items": [
+                {
+                    "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                    "subject": "Hidden subject",
+                    "status": "open",
+                }
+            ],
+            "columns": [{"key": "status", "label": "Status", "type": "badge"}],
+        },
+        ("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",),
+    ),
+    # Phase 4B.1.d: per-row hx-put transition buttons; the transition to the
+    # current state is skipped (legacy "don't offer your current state" UX).
+    _case(
+        "queue-transition-buttons-skip-current-state",
+        _r("queue"),
+        {
+            "items": [{"id": 42, "title": "Bug A", "status": "open"}],
+            "endpoint": "/api/regions/tickets",
+            "region_name": "tickets",
+            "queue_transitions": [
+                {"label": "Resolve", "to_state": "resolved"},
+                {"label": "Close", "to_state": "closed"},
+                {"label": "Reopen", "to_state": "open"},
+            ],
+            "queue_status_field": "status",
+            "queue_api_endpoint": "/api/tickets",
+        },
+        ('hx-put="/api/tickets/42"', "Resolve", "Close"),
+        ("Reopen",),
+    ),
+    # Missing queue_api_endpoint skips the buttons; the row still renders.
+    _case(
+        "queue-skips-transitions-without-required-ctx",
+        _r("queue"),
+        {
+            "items": [{"id": 1, "title": "Row X", "title_display": "Row X", "status": "open"}],
+            "display_key": "title",
+            "queue_transitions": [{"label": "Close", "to_state": "closed"}],
+            "queue_status_field": "status",
+        },
+        ("Row X",),
+        ("hx-put",),
+    ),
+    _case(
+        "queue-count-metrics-overflow",
+        _r("queue"),
+        {
+            "items": [{"id": 1, "title": "X", "status": "open"}],
+            "metrics": [{"label": "Open", "value": 12}, {"label": "Closed", "value": 88}],
+            "endpoint": "/api/regions/r",
+            "region_name": "r",
+            "total": 100,
+        },
+        ("dz-queue-count", "100", "dz-queue-metric", "Showing 1 of 100"),
+    ),
+    _case(
+        "queue-omits-redundant-count-when-all-rows-visible",
+        _r("queue"),
+        {
+            "items": [{"id": 1, "title": "First"}, {"id": 2, "title": "Second"}],
+            "endpoint": "/api/regions/r",
+            "region_name": "r",
+            "total": 2,
+            "columns": [{"key": "title", "label": "Title", "type": "text"}],
+            "display_key": "title",
+        },
+        ("First", "Second"),
+        ("dz-queue-count-row",),
+    ),
+    # ── cohort strip (#1018) ──
+    _case(
+        "cohort-strip-dispatches-to-builder",
+        _cohort_region(),
+        {"cohort_cells": [], "cohort_endpoint": "/r/cohort"},
+        ('class="dz-cohort-strip-region"',),
+    ),
+    # Zero cells render the empty message; the lens toggle stays so users can swap.
+    _case(
+        "cohort-strip-empty-cells-keep-lens-toggle",
+        _cohort_region(empty_message="Nobody here yet."),
+        {"cohort_endpoint": "/r/cohort"},
+        ("Nobody here yet.", 'class="dz-cohort-strip-empty"', 'role="tablist"'),
+    ),
+    _case(
+        "cohort-strip-builds-cells-from-ctx-dicts",
+        _cohort_region(),
+        {
+            "cohort_cells": [
+                {
+                    "member_id": "p1",
+                    "member_name": "Alice",
+                    "primary_value": "78",
+                    "subtitle": "9G",
+                    "tone": "good",
+                    "drill_url": "/m/p1",
+                },
+                {
+                    "member_id": "p2",
+                    "member_name": "Bob",
+                    "primary_value": "62",
+                    "subtitle": "9G",
+                    "tone": "warn",
+                },
+            ],
+            "cohort_endpoint": "/r/cohort",
+        },
+        (
+            'data-member-id="p1"',
+            'data-member-id="p2"',
+            "Alice",
+            "Bob",
+            'data-dz-tone="good"',
+            'data-dz-tone="warn"',
+        ),
+    ),
+    _case(
+        "cohort-strip-skips-cells-with-missing-member-id",
+        _cohort_region(),
+        {
+            "cohort_cells": [
+                {"member_id": "p1", "member_name": "OK", "primary_value": "1"},
+                {"member_id": "", "member_name": "Bad", "primary_value": "?"},
+                {"member_name": "Missing key", "primary_value": "?"},
+            ],
+            "cohort_endpoint": "/r/cohort",
+        },
+        ('data-member-id="p1"',),
+        ("Bad", "Missing key"),
+    ),
+    # Zero lenses degrade to an EmptyState instead of the at-least-one-lens raise.
+    _case(
+        "cohort-strip-no-lenses-renders-not-configured",
+        _cohort_region(member_via="x", lenses=[]),
+        {},
+        ("Cohort strip not configured",),
+    ),
+    _case(
+        "cohort-strip-unknown-tone-coerces-to-neutral",
+        _cohort_region(),
+        {
+            "cohort_cells": [
+                {"member_id": "p1", "member_name": "A", "primary_value": "1", "tone": "rainbow"}
+            ],
+            "cohort_endpoint": "/r/cohort",
+        },
+        ('data-dz-tone="neutral"',),
+        ("rainbow",),
+    ),
+    _case(
+        "cohort-strip-endpoint-falls-back-to-region-url",
+        _cohort_region(),
+        {"cohort_cells": [], "region_url": "/api/regions/cohort"},
+        ('hx-get="/api/regions/cohort?lens=',),
+    ),
+    # ── day timeline (#1016) ──
+    _case(
+        "day-timeline-dispatches-to-builder",
+        _day_timeline_region(),
+        {},
+        ('class="dz-day-timeline-region"',),
+    ),
+    _case(
+        "day-timeline-empty-slots-render-empty-state",
+        _day_timeline_region(empty_message="No periods today."),
+        {"day_timeline_slots": []},
+        ('class="dz-day-timeline-empty"', "No periods today."),
+    ),
+    _case(
+        "day-timeline-builds-slots-with-positions",
+        _day_timeline_region(),
+        {
+            "day_timeline_slots": [
+                {"slot_id": "p1", "label": "Period 1 — 09:00", "position": "before"},
+                {"slot_id": "p2", "label": "Period 2 — 10:00", "position": "active"},
+                {"slot_id": "p3", "label": "Period 3 — 11:00", "position": "after"},
+            ]
+        },
+        ('data-slot-id="p1"', "is-before", "is-active", "is-after"),
+        counts={'data-dz-position="active"': 1},
+    ),
+    _case(
+        "day-timeline-unknown-position-falls-through-to-after",
+        _day_timeline_region(),
+        {"day_timeline_slots": [{"slot_id": "p1", "label": "P1", "position": "weird"}]},
+        ("is-after",),
+    ),
+    # A resolver that mis-classifies several slots as active keeps the first.
+    _case(
+        "day-timeline-collapses-multiple-active-slots",
+        _day_timeline_region(),
+        {
+            "day_timeline_slots": [
+                {"slot_id": f"p{i}", "label": f"P{i}", "position": "active"} for i in (1, 2, 3)
+            ]
+        },
+        counts={'data-dz-position="active"': 1},
+    ),
+    _case(
+        "day-timeline-skips-slots-with-missing-id",
+        _day_timeline_region(),
+        {
+            "day_timeline_slots": [
+                {"slot_id": "p1", "label": "OK"},
+                {"slot_id": "", "label": "Bad"},
+                {"label": "Missing key"},
+            ]
+        },
+        ('data-slot-id="p1"',),
+        ("Bad", "Missing key"),
+    ),
+    _case(
+        "day-timeline-drill-url-wraps-slot-in-anchor",
+        _day_timeline_region(),
+        {"day_timeline_slots": [{"slot_id": "p1", "label": "P1", "drill_url": "/lessons/123"}]},
+        ('href="/lessons/123"',),
+    ),
+    # `body` is pre-rendered HTML from data resolution; passed through as-is.
+    _case(
+        "day-timeline-passes-through-pre-rendered-body",
+        _day_timeline_region(),
+        {
+            "day_timeline_slots": [
+                {
+                    "slot_id": "p1",
+                    "label": "P1",
+                    "body": '<span class="lesson-card">Year 8 Maths — Room B12</span>',
+                }
+            ]
+        },
+        ('<span class="lesson-card">Year 8 Maths — Room B12</span>',),
+    ),
+    # ── task inbox (#1015) ──
+    _case(
+        "task-inbox-dispatches-to-builder",
+        _task_inbox_region(),
+        {},
+        ('class="dz-task-inbox-region"',),
+    ),
+    _case(
+        "task-inbox-uses-config-empty-state",
+        _task_inbox_region(empty_state="Nothing to do."),
+        {},
+        ("Nothing to do.",),
+    ),
+    # Unknown icon names keep the authored value for client hydration.
+    _case(
+        "task-inbox-builds-items-with-urgency",
+        _task_inbox_region(),
+        {
+            "task_inbox_items": [
+                {
+                    "item_id": "i1",
+                    "icon": "register",
+                    "title": "Register 8X",
+                    "meta": "Period 1",
+                    "urgency": "due",
+                    "drill_url": "/r/i1",
+                },
+                {"item_id": "i2", "icon": "message", "title": "Reply", "urgency": "overdue"},
+            ]
+        },
+        (
+            'data-dz-item-id="i1"',
+            'data-dz-urgency="due"',
+            'data-dz-urgency="overdue"',
+            'data-lucide="register"',
+            'href="/r/i1"',
+        ),
+    ),
+    _case(
+        "task-inbox-builds-summary-chips",
+        _task_inbox_region(),
+        {
+            "task_inbox_chips": [
+                {"chip_id": "c1", "count": 7, "label": "manuscripts ready", "drill_url": "/m"},
+                {"chip_id": "c2", "count": 3, "label": "drafts in review"},
+            ]
+        },
+        ('class="dz-task-inbox-chips"', ">7<", "manuscripts ready", 'href="/m"'),
+    ),
+    _case(
+        "task-inbox-skips-items-with-missing-id",
+        _task_inbox_region(),
+        {
+            "task_inbox_items": [
+                {"item_id": "i1", "icon": "x", "title": "ok"},
+                {"item_id": "", "icon": "x", "title": "bad"},
+            ]
+        },
+        ('data-dz-item-id="i1"',),
+        ("bad",),
+    ),
+    _case(
+        "task-inbox-unknown-urgency-falls-through-to-later",
+        _task_inbox_region(),
+        {"task_inbox_items": [{"item_id": "i", "icon": "x", "title": "t", "urgency": "weird"}]},
+        ('data-dz-urgency="later"',),
+    ),
+    # A buggy resolver's negative / non-int chip count clamps to 0.
+    *(
+        _case(
+            f"task-inbox-{label}-chip-count-coerces-to-zero",
+            _task_inbox_region(),
+            {"task_inbox_chips": [{"chip_id": "c", "count": count, "label": "x"}]},
+            (">0<",),
+        )
+        for label, count in [("negative", -5), ("non-int", "??")]
+    ),
+    # ── entity card (#1017) ──
+    _case(
+        "entity-card-dispatches-to-builder",
+        _entity_card_region(),
+        {},
+        ('class="dz-entity-card-region"',),
+    ),
+    _case(
+        "entity-card-renders-record-label",
+        _entity_card_region(),
+        {
+            "entity_card_record_label": "Alice Wong · Year 9",
+            "entity_card_sections": [{"section_id": "s", "label": "Halo", "body": "<p>x</p>"}],
+        },
+        ("Alice Wong",),
+    ),
+    _case(
+        "entity-card-omits-record-label-heading-when-empty",
+        _entity_card_region(),
+        {"entity_card_sections": [{"section_id": "s", "label": "L"}]},
+        absent=("dz-entity-card-heading",),
+    ),
+    _case(
+        "entity-card-builds-sections-with-modes",
+        _entity_card_region(),
+        {
+            "entity_card_sections": [
+                {
+                    "section_id": "halo",
+                    "label": "Halo",
+                    "mode": "halo",
+                    "column": "main",
+                    "body": "<div>halo body</div>",
+                },
+                {"section_id": "flags", "label": "Flags", "mode": "flags", "column": "sidebar"},
+                {"section_id": "marks", "label": "Marks", "mode": "mini_bars", "column": "main"},
+            ]
+        },
+        (
+            'data-section-id="halo"',
+            'data-dz-mode="flags"',
+            'data-dz-mode="mini_bars"',
+            'data-dz-column="sidebar"',
+        ),
+    ),
+    _case(
+        "entity-card-skips-omitted-sections",
+        _entity_card_region(),
+        {
+            "entity_card_sections": [
+                {"section_id": "shown", "label": "Shown"},
+                {"section_id": "hidden", "label": "Hidden", "is_omitted": True},
+            ]
+        },
+        ('data-section-id="shown"',),
+        ('data-section-id="hidden"',),
+    ),
+    _case(
+        "entity-card-unknown-mode-falls-through-to-halo",
+        _entity_card_region(),
+        {"entity_card_sections": [{"section_id": "s", "label": "L", "mode": "weird"}]},
+        ('data-dz-mode="halo"',),
+    ),
+    _case(
+        "entity-card-unknown-column-falls-through-to-main",
+        _entity_card_region(),
+        {"entity_card_sections": [{"section_id": "s", "label": "L", "column": "weird"}]},
+        ('data-dz-column="main"',),
+    ),
+    _case(
+        "entity-card-skips-sections-with-missing-id",
+        _entity_card_region(),
+        {
+            "entity_card_sections": [
+                {"section_id": "ok", "label": "OK"},
+                {"section_id": "", "label": "Bad"},
+            ]
+        },
+        ('data-section-id="ok"',),
+        ("Bad",),
+    ),
 ]
 
 
-@pytest.mark.parametrize(
-    ("display", "title", "ctx", "expected"),
-    _RENDER_SMOKE_CASES,
-    ids=[case[0] for case in _RENDER_SMOKE_CASES],
-)
-def test_display_renders_dz_marker_and_item_content(
-    display: str, title: str | None, ctx: dict, expected: tuple[str, ...]
+@pytest.mark.parametrize(("region", "ctx", "present", "absent", "counts"), _RENDER_CASES)
+def test_region_renders(
+    region: object,
+    ctx: dict,
+    present: tuple[str, ...],
+    absent: tuple[str, ...],
+    counts: dict[str, int],
 ) -> None:
-    adapter = WorkspaceRegionAdapter()
-    html = _render(adapter.build(_FakeRegion("r", display=display, title=title), ctx))
-    for substring in expected:
-        assert substring in html
+    fragment = WorkspaceRegionAdapter().build(region, ctx)
+    assert isinstance(fragment, Surface)
+    html = _render(fragment)
+    missing = [s for s in present if s not in html]
+    leaked = [s for s in absent if s in html]
+    miscounted = {s: html.count(s) for s, n in counts.items() if html.count(s) != n}
+    assert not (missing or leaked or miscounted), (
+        f"missing={missing} leaked={leaked} miscounted={miscounted}"
+    )

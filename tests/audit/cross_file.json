@@ -211,6 +211,26 @@
     },
     {
       "class_name": "(module)",
+      "assertion_shape": "('eq',)",
+      "public_target": [
+        "dazzle.core.dsl_parser_impl.parse_dsl"
+      ],
+      "files": [
+        "tests/unit/test_emits_parsing.py",
+        "tests/unit/test_rhythm_parser.py"
+      ],
+      "size": 6,
+      "samples": [
+        "tests/unit/test_emits_parsing.py::test_emits_clause_parses_into_tuple",
+        "tests/unit/test_emits_parsing.py::test_absent_emits_defaults_empty",
+        "tests/unit/test_rhythm_parser.py::test_parse_rhythm_with_cadence",
+        "tests/unit/test_rhythm_parser.py::test_parse_scene_compound_story_id_unquoted",
+        "tests/unit/test_rhythm_parser.py::test_parse_scene_story_as_string",
+        "tests/unit/test_rhythm_parser.py::test_parse_scene_story_as_identifier"
+      ]
+    },
+    {
+      "class_name": "(module)",
       "assertion_shape": "('eq', 'in')",
       "public_target": [
         "dazzle.http.runtime.auth.magic_link_routes.create_magic_link_routes",
@@ -270,6 +290,26 @@
         "tests/unit/test_dispatch_ctx_list_empty_state.py::test_pick_empty_state_falls_back_to_framework_default",
         "tests/unit/test_dispatch_ctx_list_empty_state.py::test_pick_empty_state_unknown_kind_treated_as_collection",
         "tests/unit/test_dispatch_ctx_list_search_filter.py::test_dispatch_ctx_region_name_falls_back_to_table_id_without_surface_name"
+      ]
+    },
+    {
+      "class_name": "(module)",
+      "assertion_shape": "('is',)",
+      "public_target": [
+        "dazzle.core.dsl_parser_impl.parse_dsl"
+      ],
+      "files": [
+        "tests/unit/test_fitness_repr_parser.py",
+        "tests/unit/test_lifecycle_parser.py",
+        "tests/unit/test_rhythm_parser.py"
+      ],
+      "size": 5,
+      "samples": [
+        "tests/unit/test_fitness_repr_parser.py::test_entity_without_fitness_block_parses",
+        "tests/unit/test_lifecycle_parser.py::test_entity_without_lifecycle_has_none",
+        "tests/unit/test_rhythm_parser.py::test_parse_phase_without_kind_is_none",
+        "tests/unit/test_rhythm_parser.py::test_parse_phase_invalid_kind_ignored",
+        "tests/unit/test_rhythm_parser.py::test_parse_phase_cadence_none_by_default"
       ]
     },
     {
@@ -374,6 +414,24 @@
         "tests/unit/test_perf_cli_trace.py::test_traceable_page_urls_filters_to_getable_pages",
         "tests/unit/test_perf_cli_trace.py::test_trace_all_surfaces_alone_is_valid",
         "tests/unit/test_perf_cli_trace.py::test_stamp_run_ended_does_not_overwrite"
+      ]
+    },
+    {
+      "class_name": "(module)",
+      "assertion_shape": "('eq', 'isnot')",
+      "public_target": [
+        "dazzle.core.dsl_parser_impl.parse_dsl"
+      ],
+      "files": [
+        "tests/unit/test_fitness_repr_parser.py",
+        "tests/unit/test_rhythm_parser.py"
+      ],
+      "size": 4,
+      "samples": [
+        "tests/unit/test_fitness_repr_parser.py::test_entity_with_fitness_repr_fields_parses",
+        "tests/unit/test_rhythm_parser.py::test_parse_phase_with_kind",
+        "tests/unit/test_rhythm_parser.py::test_parse_phase_kind_all_values",
+        "tests/unit/test_rhythm_parser.py::test_parse_phase_kind_gate"
       ]
     },
     {
@@ -554,28 +612,12 @@
   ],
   "twin_pairs": [
     {
-      "file_a": "tests/unit/test_pdf_viewer_component.py",
-      "file_b": "tests/unit/test_region_adapter.py",
-      "tests_a": 52,
-      "tests_b": 121,
-      "shared_shape_count": 38,
-      "overlap_ratio": 0.73
-    },
-    {
       "file_a": "tests/unit/test_parser.py",
       "file_b": "tests/unit/test_rbac_verifier.py",
       "tests_a": 130,
       "tests_b": 43,
       "shared_shape_count": 36,
       "overlap_ratio": 0.84
-    },
-    {
-      "file_a": "tests/unit/render/fragment/test_data_primitives.py",
-      "file_b": "tests/unit/test_parser.py",
-      "tests_a": 37,
-      "tests_b": 130,
-      "shared_shape_count": 34,
-      "overlap_ratio": 0.92
     },
     {
       "file_a": "tests/unit/test_fidelity_scorer.py",
@@ -592,14 +634,6 @@
       "tests_b": 130,
       "shared_shape_count": 31,
       "overlap_ratio": 0.7
-    },
-    {
-      "file_a": "tests/unit/test_region_adapter.py",
-      "file_b": "tests/unit/test_two_factor_views.py",
-      "tests_a": 121,
-      "tests_b": 35,
-      "shared_shape_count": 31,
-      "overlap_ratio": 0.89
     },
     {
       "file_a": "tests/unit/test_fidelity_scorer.py",
@@ -632,14 +666,6 @@
       "tests_b": 32,
       "shared_shape_count": 27,
       "overlap_ratio": 0.84
-    },
-    {
-      "file_a": "tests/unit/render/fragment/test_data_primitives.py",
-      "file_b": "tests/unit/test_expression_lang.py",
-      "tests_a": 37,
-      "tests_b": 82,
-      "shared_shape_count": 26,
-      "overlap_ratio": 0.7
     },
     {
       "file_a": "tests/unit/sentinel/test_agent_performance_resource.py",
@@ -738,17 +764,9 @@
       "overlap_ratio": 0.83
     },
     {
-      "file_a": "tests/unit/test_predicate_compiler.py",
-      "file_b": "tests/unit/test_region_adapter.py",
-      "tests_a": 34,
-      "tests_b": 121,
-      "shared_shape_count": 25,
-      "overlap_ratio": 0.74
-    },
-    {
       "file_a": "tests/unit/http_runtime/test_auth.py",
       "file_b": "tests/unit/test_rbac_ui_fixes.py",
-      "tests_a": 78,
+      "tests_a": 73,
       "tests_b": 30,
       "shared_shape_count": 24,
       "overlap_ratio": 0.8
@@ -756,18 +774,10 @@
     {
       "file_a": "tests/unit/http_runtime/test_auth.py",
       "file_b": "tests/unit/test_structured_content.py",
-      "tests_a": 78,
+      "tests_a": 73,
       "tests_b": 32,
       "shared_shape_count": 24,
       "overlap_ratio": 0.75
-    },
-    {
-      "file_a": "tests/unit/render/fragment/test_data_primitives.py",
-      "file_b": "tests/unit/test_workspace_layout_prefs.py",
-      "tests_a": 37,
-      "tests_b": 31,
-      "shared_shape_count": 24,
-      "overlap_ratio": 0.77
     },
     {
       "file_a": "tests/unit/sentinel/test_agent_auth.py",
@@ -818,14 +828,6 @@
       "overlap_ratio": 0.73
     },
     {
-      "file_a": "tests/unit/test_curl_test_generator.py",
-      "file_b": "tests/unit/test_region_adapter.py",
-      "tests_a": 28,
-      "tests_b": 121,
-      "shared_shape_count": 24,
-      "overlap_ratio": 0.86
-    },
-    {
       "file_a": "tests/unit/test_parser.py",
       "file_b": "tests/unit/test_ses_adapter.py",
       "tests_a": 130,
@@ -844,7 +846,7 @@
     {
       "file_a": "tests/unit/http_runtime/test_auth.py",
       "file_b": "tests/unit/test_otp_store.py",
-      "tests_a": 78,
+      "tests_a": 73,
       "tests_b": 28,
       "shared_shape_count": 23,
       "overlap_ratio": 0.82
@@ -900,7 +902,7 @@
     {
       "file_a": "tests/unit/http_runtime/test_auth.py",
       "file_b": "tests/unit/test_session_manager.py",
-      "tests_a": 78,
+      "tests_a": 73,
       "tests_b": 26,
       "shared_shape_count": 22,
       "overlap_ratio": 0.85
@@ -952,6 +954,62 @@
       "tests_b": 30,
       "shared_shape_count": 22,
       "overlap_ratio": 0.73
+    },
+    {
+      "file_a": "tests/unit/test_curl_test_generator.py",
+      "file_b": "tests/unit/test_pdf_viewer_component.py",
+      "tests_a": 28,
+      "tests_b": 52,
+      "shared_shape_count": 22,
+      "overlap_ratio": 0.79
+    },
+    {
+      "file_a": "tests/unit/test_datatable_handler.py",
+      "file_b": "tests/unit/test_ux_contract_checker.py",
+      "tests_a": 30,
+      "tests_b": 36,
+      "shared_shape_count": 22,
+      "overlap_ratio": 0.73
+    },
+    {
+      "file_a": "tests/unit/test_expression_lang.py",
+      "file_b": "tests/unit/test_otp_store.py",
+      "tests_a": 82,
+      "tests_b": 28,
+      "shared_shape_count": 22,
+      "overlap_ratio": 0.79
+    },
+    {
+      "file_a": "tests/unit/test_expression_lang.py",
+      "file_b": "tests/unit/test_workspace_layout_prefs.py",
+      "tests_a": 82,
+      "tests_b": 31,
+      "shared_shape_count": 22,
+      "overlap_ratio": 0.71
+    },
+    {
+      "file_a": "tests/unit/test_onboarding_renderer.py",
+      "file_b": "tests/unit/test_pdf_viewer_component.py",
+      "tests_a": 25,
+      "tests_b": 52,
+      "shared_shape_count": 22,
+      "overlap_ratio": 0.88
+    },
+    {
+      "file_a": "tests/unit/test_parser.py",
+      "file_b": "tests/unit/test_session_manager.py",
+      "tests_a": 130,
+      "tests_b": 26,
+      "shared_shape_count": 22,
+      "overlap_ratio": 0.85
+    },
+    {
+      "file_a": "tests/unit/test_parser.py",
+      "file_b": "tests/unit/test_vendor_mock_generator.py",
+      "tests_a": 130,
+      "tests_b": 27,
+      "shared_shape_count": 22,
+      "overlap_ratio": 0.81
     }
   ]
 }

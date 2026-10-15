@@ -6,10 +6,10 @@ Three structural views the per-file Pass-2 redundancy report doesn't capture.
 
 Tests sharing the same `(class_name, assertion_shape, public_target)` across multiple files — same assert shape AND the same deduped set of public dazzle callables. A cluster here is a genuinely copy-pasted pattern that one shared parametrised helper could replace. (Pre-#1530 this view keyed on shape alone, which matched hundreds of unrelated files; the target discriminator makes the numbers actionable.)
 
-- **Clusters of size ≥4 across ≥2 files**: 21
-- **Tests inside cross-file clusters**: 205
-- **Theoretical saving**: ~184 if each cluster collapses to one parametric test
-- **Skipped (no attributable public target)**: 1,274 tests — shape matches without a shared target are not actionable
+- **Clusters of size ≥4 across ≥2 files**: 24
+- **Tests inside cross-file clusters**: 220
+- **Theoretical saving**: ~196 if each cluster collapses to one parametric test
+- **Skipped (no attributable public target)**: 1,269 tests — shape matches without a shared target are not actionable
 
 ### Top 25 cross-file clusters
 
@@ -24,14 +24,17 @@ Tests sharing the same `(class_name, assertion_shape, public_target)` across mul
 | `(module)` | 11 | TYPED_SECTION_TYPES, render_typed_section | `test_site_section_final_builders.py`, `test_site_section_hero_builder.py`, `test_site_section_medium_builders.py` (+1 more) | test_pricing_omits_cta_when_absent, test_hero_omits_subhead_p_when_absent… |
 | `(module)` | 10 | app | `test_cli.py`, `test_cli_inspect.py`, `test_inspect_rls.py` (+2 more) | test_validate_command_success, test_inspect_help_lists_all_subcommands… |
 | `(module)` | 7 | load_manifest | `test_manifest_admin_capabilities.py`, `test_manifest_app_scripts.py`, `test_manifest_capabilities.py` (+1 more) | test_admin_capabilities_default_empty, test_admin_capabilities_parsed… |
+| `(module)` | 6 | parse_dsl | `test_emits_parsing.py`, `test_rhythm_parser.py` | test_emits_clause_parses_into_tuple, test_absent_emits_defaults_empty… |
 | `(module)` | 5 | create_magic_link_routes, create_auth_page_routes | `test_auth_login_magic_link_chrome_gate.py`, `test_auth_signup_magic_link_chrome_gate.py` | test_get_login_chrome_off_now_also_renders_typed_view, test_get_login_threads_next_param… |
 | `(module)` | 5 | create_magic_link_routes, create_auth_page_routes | `test_auth_login_magic_link_chrome_gate.py`, `test_auth_signup_magic_link_chrome_gate.py` | test_post_magic_link_threads_next_param_through_redirect, test_post_magic_link_normalises_email_case… |
 | `(module)` | 5 | SurfaceMode, FragmentSurfaceAdapter, ColumnContext | `test_dispatch_ctx_list_empty_state.py`, `test_dispatch_ctx_list_search_filter.py` | test_dispatch_ctx_defaults_empty_kind_to_collection, test_pick_empty_state_falls_back_to_empty_message_when_typed_unset… |
+| `(module)` | 5 | parse_dsl | `test_fitness_repr_parser.py`, `test_lifecycle_parser.py`, `test_rhythm_parser.py` | test_entity_without_fitness_block_parses, test_entity_without_lifecycle_has_none… |
 | `(module)` | 5 | FragmentRenderer | `test_form_field_parity_phase3b.py`, `test_raw_data_honesty_1d.py` | test_number_default_seeds_value_on_create, test_enum_default_selects_option_on_create… |
 | `(module)` | 5 | PythonAuditAgent | `test_python_audit_exceptions.py`, `test_python_audit_magic_string_typing.py`, `test_python_audit_n_plus_one.py` (+2 more) | test_heuristic_yields_finding_with_catalogue_entry, test_heuristic_yields_finding_with_catalogue_entry… |
 | `(module)` | 5 | TYPED_SECTION_TYPES, render_typed_section | `test_site_section_final_builders.py`, `test_site_section_hero_builder.py`, `test_site_section_medium_builders.py` (+2 more) | test_pricing_cta_variant_override_wins_over_default_1263, test_hero_cta_falls_back_to_default_href_and_label… |
 | `(module)` | 4 | load_project_appspec, create_page_routes, register_default_renderers | `test_simple_task_chrome_smoke.py`, `test_simple_task_no_jinja_when_chrome_on.py` | test_simple_task_chrome_workspace_routes_dont_crash, test_primary_surface_routes_render_zero_jinja_templates… |
 | `(module)` | 4 | app | `test_cli_inspect.py`, `test_perf_cli_trace.py` | test_inspect_renderers_exits_2_when_no_dazzle_toml, test_traceable_page_urls_filters_to_getable_pages… |
+| `(module)` | 4 | parse_dsl | `test_fitness_repr_parser.py`, `test_rhythm_parser.py` | test_entity_with_fitness_repr_fields_parses, test_parse_phase_with_kind… |
 | `(module)` | 4 | FragmentRenderer | `test_form_field_parity_phase3b.py`, `test_raw_data_honesty_1d.py` | test_required_enum_has_disabled_placeholder_selected, test_edit_value_wins_over_default… |
 | `(module)` | 4 | FragmentRenderer | `test_form_field_parity_phase3b.py`, `test_raw_data_honesty_1d.py` | test_enum_with_value_does_not_select_placeholder, test_help_renders_hint_paragraph_and_describedby… |
 | `(module)` | 4 | ir | `test_ir.py`, `test_repository_temporal_retry.py`, `test_rhythm_ir_integration.py` | test_api, test_end_date_fallback_resolves_after_rollback… |
@@ -64,23 +67,19 @@ Files dominated by tests that pin internal call shapes (high mocks, short body, 
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 11764
+- **Twin pairs**: 10434
 
 ### Top 30 twin pairs
 
 | File A | File B | A | B | Shared | Overlap |
 |---|---|---:|---:|---:|---:|
-| `test_pdf_viewer_component.py` | `test_region_adapter.py` | 52 | 121 | 38 | 0.73 |
 | `test_parser.py` | `test_rbac_verifier.py` | 130 | 43 | 36 | 0.84 |
-| `test_data_primitives.py` | `test_parser.py` | 37 | 130 | 34 | 0.92 |
 | `test_fidelity_scorer.py` | `test_parser.py` | 39 | 130 | 34 | 0.87 |
 | `test_query_builder.py` | `test_parser.py` | 44 | 130 | 31 | 0.7 |
-| `test_region_adapter.py` | `test_two_factor_views.py` | 121 | 35 | 31 | 0.89 |
 | `test_fidelity_scorer.py` | `test_rbac_verifier.py` | 39 | 43 | 29 | 0.74 |
 | `test_parser.py` | `test_workspace_layout_prefs.py` | 130 | 31 | 29 | 0.94 |
 | `test_datatable_handler.py` | `test_parser.py` | 30 | 130 | 28 | 0.93 |
 | `test_parser.py` | `test_structured_content.py` | 130 | 32 | 27 | 0.84 |
-| `test_data_primitives.py` | `test_expression_lang.py` | 37 | 82 | 26 | 0.7 |
 | `test_agent_performance_resource.py` | `test_persona_journey.py` | 33 | 55 | 26 | 0.79 |
 | `test_datatable_handler.py` | `test_mapping_executor.py` | 30 | 53 | 26 | 0.87 |
 | `test_events.py` | `test_parser.py` | 36 | 130 | 26 | 0.72 |
@@ -93,10 +92,14 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_datatable_handler.py` | `test_expression_lang.py` | 30 | 82 | 25 | 0.83 |
 | `test_datatable_handler.py` | `test_rbac_verifier.py` | 30 | 43 | 25 | 0.83 |
 | `test_parser.py` | `test_rbac_ui_fixes.py` | 130 | 30 | 25 | 0.83 |
-| `test_predicate_compiler.py` | `test_region_adapter.py` | 34 | 121 | 25 | 0.74 |
-| `test_auth.py` | `test_rbac_ui_fixes.py` | 78 | 30 | 24 | 0.8 |
-| `test_auth.py` | `test_structured_content.py` | 78 | 32 | 24 | 0.75 |
-| `test_data_primitives.py` | `test_workspace_layout_prefs.py` | 37 | 31 | 24 | 0.77 |
+| `test_auth.py` | `test_rbac_ui_fixes.py` | 73 | 30 | 24 | 0.8 |
+| `test_auth.py` | `test_structured_content.py` | 73 | 32 | 24 | 0.75 |
 | `test_agent_auth.py` | `test_ux_contract_checker.py` | 26 | 36 | 24 | 0.92 |
 | `test_agent_data_integrity.py` | `test_parser.py` | 26 | 130 | 24 | 0.92 |
 | `test_agent_data_integrity.py` | `test_persona_journey.py` | 26 | 55 | 24 | 0.92 |
+| `test_agent_performance_resource.py` | `test_mapping_executor.py` | 33 | 53 | 24 | 0.73 |
+| `test_agent_performance_resource.py` | `test_parser.py` | 33 | 130 | 24 | 0.73 |
+| `test_agent_performance_resource.py` | `test_rbac_verifier.py` | 33 | 43 | 24 | 0.73 |
+| `test_parser.py` | `test_ses_adapter.py` | 130 | 31 | 24 | 0.77 |
+| `test_parser.py` | `test_sla_manager.py` | 130 | 32 | 24 | 0.75 |
+| `test_auth.py` | `test_otp_store.py` | 73 | 28 | 23 | 0.82 |

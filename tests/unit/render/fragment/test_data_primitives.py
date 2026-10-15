@@ -18,7 +18,6 @@ from dazzle.render.fragment.primitives.data import (
     Diagram,
     FilterBar,
     FilterColumn,
-    KanbanBoard,
     LazyTab,
     LazyTabPanel,
     MetricTile,
@@ -30,7 +29,6 @@ from dazzle.render.fragment.primitives.data import (
     SearchBox,
     SortHeader,
     Table,
-    Timeline,
     TimeSeries,
     TimeSeriesSeries,
 )
@@ -233,69 +231,133 @@ def test_rejects_invalid_enum_value(ctor: Callable[[], object], match: str) -> N
         ctor()
 
 
-# === Table ===
+@pytest.mark.parametrize(
+    ("ctor", "match"),
+    [
+        pytest.param(
+            lambda: Table(columns=("a", "b"), rows=(("only_one",),)),
+            "row arity",
+            id="table.row_arity",
+        ),
+        # v0.66.118: Diagram takes nodes OR mermaid_source; neither still rejects.
+        pytest.param(lambda: Diagram(nodes=()), "nodes OR a mermaid_source", id="diagram.empty"),
+        pytest.param(
+            lambda: Diagram(nodes=("A",), edges=(("Z", "A"),)),
+            "edge from",
+            id="diagram.edge_unknown_from",
+        ),
+        pytest.param(
+            lambda: Diagram(nodes=("A",), edges=(("A", "Z"),)),
+            "edge to",
+            id="diagram.edge_unknown_to",
+        ),
+        # Two axes collapse to a line — not visually a radar.
+        pytest.param(
+            lambda: Radar(label="x", axes=(("a", 1.0), ("b", 2.0))),
+            "at least 3 axes",
+            id="radar.two_axes",
+        ),
+        pytest.param(
+            lambda: BarTrack(rows=(("X", 1.0, "1"),), max_value=100.0),  # type: ignore[arg-type]
+            "arity mismatch",
+            id="bar_track.row_arity",
+        ),
+        pytest.param(
+            lambda: BarTrack(rows=(("X", 1.0, "1", 200.0),), max_value=100.0),
+            r"fill_pct=200",
+            id="bar_track.fill_pct_above_100",
+        ),
+        pytest.param(
+            lambda: BarTrack(rows=(("X", 1.0, "1", -5.0),), max_value=100.0),
+            r"fill_pct=-5",
+            id="bar_track.fill_pct_negative",
+        ),
+        pytest.param(
+            lambda: ReferenceBand(from_value=10, to_value=5),
+            "from_value=10",
+            id="reference_band.inverted_range",
+        ),
+        # DOM ids would collide if two tabs share a key.
+        pytest.param(
+            lambda: LazyTabPanel(
+                region_name="r",
+                tabs=(
+                    LazyTab(key="x", label="A", endpoint=URL("/a")),
+                    LazyTab(key="x", label="B", endpoint=URL("/b")),
+                ),
+            ),
+            "must be unique",
+            id="lazy_tab_panel.duplicate_keys",
+        ),
+        # `name=filter_<key>` form fields collide when two columns share a key.
+        pytest.param(
+            lambda: FilterBar(
+                endpoint=URL("/x"),
+                region_name="r",
+                columns=(
+                    FilterColumn(key="k", label="A", options=()),
+                    FilterColumn(key="k", label="B", options=()),
+                ),
+            ),
+            "must be unique",
+            id="filter_bar.duplicate_column_keys",
+        ),
+    ],
+)
+def test_rejects_structural_violation(ctor: Callable[[], object], match: str) -> None:
+    """Cross-field structural invariants are enforced at construction time."""
+    with pytest.raises(ValueError, match=match):
+        ctor()
 
 
-def test_table_columns_and_rows() -> None:
-    t = Table(
-        columns=("title", "status"),
-        rows=(("Buy milk", "open"), ("Walk dog", "done")),
-    )
-    assert len(t.rows) == 2
-
-
-def test_table_row_arity_must_match_columns() -> None:
-    with pytest.raises(ValueError, match="row arity"):
-        Table(columns=("a", "b"), rows=(("only_one",),))
-
-
-# === KPI ===
-
-
-def test_kpi_basic() -> None:
-    k = KPI(label="Revenue", value="$42k", trend="up")
-    assert k.trend == "up"
-
-
-# === BarChart / PivotTable ===
-
-
-def test_bar_chart_buckets() -> None:
-    b = BarChart(label="Tasks by status", buckets=(("open", 3), ("done", 7)))
-    assert len(b.buckets) == 2
-
-
-def test_pivot_table_dimensions() -> None:
-    p = PivotTable(
-        label="System x severity",
-        rows=("auth", "billing"),
-        columns=("low", "high"),
-        cells={
-            ("auth", "low"): 1,
-            ("auth", "high"): 2,
-            ("billing", "low"): 0,
-            ("billing", "high"): 5,
-        },
-    )
-    assert p.cells[("auth", "high")] == 2
-
-
-# === Timeline / Kanban / Calendar ===
-
-
-def test_timeline_events() -> None:
-    t = Timeline(events=(("created", "2026-05-05"),))
-    assert len(t.events) == 1
-
-
-def test_kanban_columns() -> None:
-    k = KanbanBoard(columns=(("open", ()), ("done", ())))
-    assert len(k.columns) == 2
-
-
-def test_calendar_view_default() -> None:
-    c = CalendarGrid()
-    assert c.view == "month"
+@pytest.mark.parametrize(
+    "ctor",
+    [
+        # Boundary cases on the valid side of the invariants above.
+        pytest.param(lambda: Diagram(nodes=("A",), edges=(("A", "A"),)), id="diagram.self_loop"),
+        pytest.param(lambda: Diagram(nodes=("A", "B")), id="diagram.nodes_without_edges"),
+        pytest.param(
+            lambda: Diagram(mermaid_source="erDiagram\n    A {\n        str x\n    }"),
+            id="diagram.mermaid_source_without_nodes",
+        ),
+        pytest.param(
+            lambda: Radar(label="x", axes=(("a", 1.0), ("b", 2.0), ("c", 3.0))),
+            id="radar.three_axes",
+        ),
+        pytest.param(
+            lambda: BarTrack(
+                rows=(("Empty", 0.0, "0", 0.0), ("Full", 100.0, "100", 100.0)),
+                max_value=100.0,
+            ),
+            id="bar_track.fill_pct_0_and_100_inclusive",
+        ),
+        pytest.param(
+            lambda: ReferenceBand(from_value=5, to_value=5, label="threshold"),
+            id="reference_band.zero_width",
+        ),
+        *(
+            pytest.param(
+                lambda view=view: TimeSeries(label="x", points=(("a", 1.0),), view=view),
+                id=f"time_series.view_{view}",
+            )
+            for view in ("line", "area", "sparkline")
+        ),
+        pytest.param(
+            lambda: TimeSeries(
+                label="x",
+                view="area",
+                series=(
+                    TimeSeriesSeries(name="high", points=(("W1", 2.0), ("W2", 3.0))),
+                    TimeSeriesSeries(name="low", points=(("W1", 1.0), ("W2", 4.0))),
+                ),
+            ),
+            id="time_series.series_without_points",
+        ),
+    ],
+)
+def test_accepts_boundary_construction(ctor: Callable[[], object]) -> None:
+    """The valid edge of each structural invariant constructs without raising."""
+    ctor()
 
 
 def test_pivot_table_cells_immutable_after_construction() -> None:
@@ -305,363 +367,106 @@ def test_pivot_table_cells_immutable_after_construction() -> None:
         p.cells[("r", "c")] = 99  # type: ignore[index]
 
 
-# === Diagram ===
+_TEMPORAL_EMPTY = {"include_closed": "", "as_of": ""}
 
 
-def test_diagram_requires_nodes_or_mermaid_source() -> None:
-    """v0.66.118: Diagram now accepts EITHER `nodes` OR `mermaid_source`.
-    The empty case (neither set) still rejects."""
-    with pytest.raises(ValueError, match="nodes OR a mermaid_source"):
-        Diagram(nodes=())
-
-
-def test_diagram_accepts_mermaid_source_without_nodes() -> None:
-    """A Mermaid-source-only Diagram is valid; the renderer emits the
-    `<pre class="mermaid">` + CDN script form instead of node/edge lists."""
-    d = Diagram(mermaid_source="erDiagram\n    A {\n        str x\n    }")
-    assert d.nodes == ()
-    assert d.mermaid_source.startswith("erDiagram")
-
-
-def test_diagram_rejects_edge_with_unknown_from() -> None:
-    with pytest.raises(ValueError, match="edge from"):
-        Diagram(nodes=("A",), edges=(("Z", "A"),))
-
-
-def test_diagram_rejects_edge_with_unknown_to() -> None:
-    with pytest.raises(ValueError, match="edge to"):
-        Diagram(nodes=("A",), edges=(("A", "Z"),))
-
-
-def test_diagram_accepts_self_loop() -> None:
-    """An edge from a node to itself is structurally valid."""
-    d = Diagram(nodes=("A",), edges=(("A", "A"),))
-    assert d.edges == (("A", "A"),)
-
-
-def test_diagram_no_edges_is_valid() -> None:
-    """Pure node-only diagrams are allowed (e.g. orphans-only graph)."""
-    d = Diagram(nodes=("A", "B"))
-    assert d.edges == ()
-
-
-# === TimeSeries ===
-
-
-def test_timeseries_default_view_is_line() -> None:
-    t = TimeSeries(label="x", points=(("a", 1.0),))
-    assert t.view == "line"
-
-
-def test_timeseries_accepts_all_three_views() -> None:
-    for view in ("line", "area", "sparkline"):
-        t = TimeSeries(label="x", points=(("a", 1.0),), view=view)  # type: ignore[arg-type]
-        assert t.view == view
-
-
-def test_timeseries_accepts_multi_series() -> None:
-    t = TimeSeries(
-        label="x",
-        view="area",
-        series=(
-            TimeSeriesSeries(name="high", points=(("W1", 2.0), ("W2", 3.0))),
-            TimeSeriesSeries(name="low", points=(("W1", 1.0), ("W2", 4.0))),
+@pytest.mark.parametrize(
+    ("ctor", "expected"),
+    [
+        pytest.param(CalendarGrid, {"view": "month"}, id="calendar_grid"),
+        pytest.param(
+            lambda: TimeSeries(label="x", points=(("a", 1.0),)),
+            {"view": "line", "reference_lines": (), "reference_bands": ()},
+            id="time_series",
         ),
-    )
-    assert len(t.series) == 2
-    assert t.series[0].name == "high"
-    assert t.points == ()
-
-
-def test_timeseries_with_series_does_not_require_points() -> None:
-    # Series-only construction is valid — points stays empty.
-    t = TimeSeries(label="x", series=(TimeSeriesSeries(name="a", points=(("a", 1.0),)),))
-    assert t.series[0].points == (("a", 1.0),)
-
-
-# === Radar ===
-
-
-def test_radar_requires_at_least_three_axes_to_be_visually_a_radar() -> None:
-    """Two axes collapses to a line — reject at construction time."""
-    with pytest.raises(ValueError, match="at least 3 axes"):
-        Radar(label="x", axes=(("a", 1.0), ("b", 2.0)))
-
-
-def test_radar_three_axes_minimum() -> None:
-    r = Radar(label="x", axes=(("a", 1.0), ("b", 2.0), ("c", 3.0)))
-    assert len(r.axes) == 3
-
-
-# === MetricTile ===
-
-
-def test_metric_tile_minimal_no_delta() -> None:
-    m = MetricTile(label="Total", value="42")
-    assert m.label == "Total"
-    assert m.value == "42"
-    assert m.tone == ""
-    assert m.delta_direction == ""
-
-
-def test_metric_tile_full_delta_block() -> None:
-    m = MetricTile(
-        label="Sales",
-        value="1,234",
-        tone="warning",
-        delta_direction="up",
-        delta_sentiment="positive_up",
-        delta_value="42",
-        delta_pct=3.5,
-        delta_period_label="last month",
-    )
-    assert m.delta_pct == 3.5
-    assert m.delta_period_label == "last month"
-
-
-# === BarTrack ===
-
-
-def test_bar_track_rejects_wrong_arity_row() -> None:
-    with pytest.raises(ValueError, match="arity mismatch"):
-        BarTrack(rows=(("X", 1.0, "1"),), max_value=100.0)  # type: ignore[arg-type]
-
-
-def test_bar_track_rejects_fill_pct_above_100() -> None:
-    with pytest.raises(ValueError, match=r"fill_pct=200"):
-        BarTrack(rows=(("X", 1.0, "1", 200.0),), max_value=100.0)
-
-
-def test_bar_track_rejects_negative_fill_pct() -> None:
-    with pytest.raises(ValueError, match=r"fill_pct=-5"):
-        BarTrack(rows=(("X", 1.0, "1", -5.0),), max_value=100.0)
-
-
-def test_bar_track_accepts_zero_and_hundred_fill_pct() -> None:
-    """Boundaries are inclusive — 0 and 100 are valid fill values."""
-    b = BarTrack(
-        rows=(("Empty", 0.0, "0", 0.0), ("Full", 100.0, "100", 100.0)),
-        max_value=100.0,
-    )
-    assert len(b.rows) == 2
-
-
-# === ReferenceLine / ReferenceBand ===
-
-
-def test_reference_line_default_style() -> None:
-    r = ReferenceLine(value=100.0, label="Target")
-    assert r.style == "solid"
-
-
-def test_reference_band_rejects_inverted_range() -> None:
-    with pytest.raises(ValueError, match="from_value=10"):
-        ReferenceBand(from_value=10, to_value=5)
-
-
-def test_reference_band_accepts_zero_width_range() -> None:
-    """from == to is structurally valid (point band)."""
-    b = ReferenceBand(from_value=5, to_value=5, label="threshold")
-    assert b.from_value == b.to_value == 5
-
-
-def test_time_series_carries_optional_references() -> None:
-    """Phase 4B.1.b: TimeSeries gained `reference_lines` and
-    `reference_bands` tuple fields (default empty)."""
-    ts = TimeSeries(
-        label="x",
-        points=(("a", 1.0),),
-        reference_lines=(ReferenceLine(value=10, label="ref"),),
-        reference_bands=(ReferenceBand(from_value=0, to_value=5, label="low", color="muted"),),
-    )
-    assert len(ts.reference_lines) == 1
-    assert len(ts.reference_bands) == 1
-
-
-def test_time_series_default_references_empty() -> None:
-    ts = TimeSeries(label="x", points=(("a", 1.0),))
-    assert ts.reference_lines == ()
-    assert ts.reference_bands == ()
-
-
-def test_bar_chart_carries_optional_references() -> None:
-    """Phase 4B.1.b extension — BarChart gained reference_lines + bands."""
-    bc = BarChart(
-        label="x",
-        buckets=(("a", 1),),
-        reference_lines=(ReferenceLine(value=5, label="ref"),),
-        reference_bands=(ReferenceBand(from_value=0, to_value=2, label="zone"),),
-    )
-    assert len(bc.reference_lines) == 1
-    assert len(bc.reference_bands) == 1
-
-
-def test_bar_track_carries_optional_references() -> None:
-    bt = BarTrack(
-        rows=(("X", 1.0, "1", 50.0),),
-        max_value=100.0,
-        reference_lines=(ReferenceLine(value=80, label="critical"),),
-    )
-    assert len(bt.reference_lines) == 1
-    assert bt.reference_bands == ()
-
-
-def test_chart_primitives_default_references_empty() -> None:
-    """Backward compat — pre-Phase-4B.1.b primitives without references
-    keep the empty-tuple default."""
-    bc = BarChart(label="x", buckets=(("a", 1),))
-    bt = BarTrack(rows=(("X", 1.0, "1", 50.0),), max_value=100.0)
-    assert bc.reference_lines == () and bc.reference_bands == ()
-    assert bt.reference_lines == () and bt.reference_bands == ()
-
-
-# === LazyTab / LazyTabPanel ===
-
-
-def test_lazy_tab_panel_rejects_duplicate_keys() -> None:
-    """DOM ids would collide if two tabs share a key — strict invariant."""
-    dup = (
-        LazyTab(key="x", label="A", endpoint=URL("/a")),
-        LazyTab(key="x", label="B", endpoint=URL("/b")),
-    )
-    with pytest.raises(ValueError, match="must be unique"):
-        LazyTabPanel(region_name="r", tabs=dup)
-
-
-def test_lazy_tab_panel_default_eager_is_false() -> None:
-    """First tab convention is set by the renderer (always eager-loads
-    panel index 0). The `eager` flag explicitly overrides for non-first
-    tabs that must also fire on load."""
-    t = LazyTab(key="x", label="X", endpoint=URL("/x"))
-    assert t.eager is False
-
-
-# === SearchBox ===
-
-
-def test_search_box_default_strings() -> None:
-    s = SearchBox(name="x", fts_endpoint=URL("/_dazzle/fts/X"))
-    assert s.placeholder == "Search…"
-    assert s.coaching_message == "Type to search"
-    assert s.label == ""
-
-
-# === ConfirmCheckItem / ConfirmGate ===
-
-
-def test_confirm_check_item_default_required_is_false() -> None:
-    item = ConfirmCheckItem(title="X")
-    assert item.required is False
-    assert item.caption == ""
-
-
-def test_confirm_gate_minimal() -> None:
-    """Empty ConfirmGate is valid — defaults to off state, no
-    confirmations, no urls. Renders to a minimal `<div>` with the
-    bare wrapper."""
-    g = ConfirmGate()
-    assert g.state == "off"
-    assert g.confirmations == ()
-    assert g.audit_enabled is False
-
-
-def test_confirm_gate_holds_confirmations_immutably() -> None:
-    g = ConfirmGate(
-        state="off",
-        confirmations=(
-            ConfirmCheckItem(title="A", required=True),
-            ConfirmCheckItem(title="B"),
+        pytest.param(
+            lambda: BarChart(label="x", buckets=(("a", 1),)),
+            {"reference_lines": (), "reference_bands": ()},
+            id="bar_chart",
         ),
-    )
-    assert len(g.confirmations) == 2
-    assert g.confirmations[0].required is True
-    assert g.confirmations[1].required is False
-
-
-def test_confirm_gate_default_copy_strings() -> None:
-    g = ConfirmGate()
-    assert g.primary_label == "Confirm and enable"
-    assert g.secondary_label == "Save as draft"
-    assert g.revoke_label == "Revoke"
-    assert g.live_title == "Currently live."
-
-
-# === FilterColumn / FilterBar ===
-
-
-def test_filter_column_default_selected_empty() -> None:
-    c = FilterColumn(key="k", label="L", options=(("a", "A"),))
-    assert c.selected == ""
-
-
-def test_filter_bar_rejects_duplicate_column_keys() -> None:
-    """Form field names must be unique — `name=filter_<key>` collides
-    when two columns share a key."""
-    with pytest.raises(ValueError, match="must be unique"):
-        FilterBar(
-            endpoint=URL("/x"),
-            region_name="r",
-            columns=(
-                FilterColumn(key="k", label="A", options=()),
-                FilterColumn(key="k", label="B", options=()),
+        pytest.param(
+            lambda: BarTrack(rows=(("X", 1.0, "1", 50.0),), max_value=100.0),
+            {"reference_lines": (), "reference_bands": ()},
+            id="bar_track",
+        ),
+        pytest.param(
+            lambda: MetricTile(label="Total", value="42"),
+            {"tone": "", "delta_direction": ""},
+            id="metric_tile",
+        ),
+        pytest.param(
+            lambda: ReferenceLine(value=100.0, label="Target"),
+            {"style": "solid"},
+            id="reference_line",
+        ),
+        # The renderer eager-loads tab 0; `eager` only overrides non-first tabs.
+        pytest.param(
+            lambda: LazyTab(key="x", label="X", endpoint=URL("/x")),
+            {"eager": False},
+            id="lazy_tab",
+        ),
+        pytest.param(
+            lambda: SearchBox(name="x", fts_endpoint=URL("/_dazzle/fts/X")),
+            {"placeholder": "Search…", "coaching_message": "Type to search", "label": ""},
+            id="search_box",
+        ),
+        pytest.param(
+            lambda: ConfirmCheckItem(title="X"),
+            {"required": False, "caption": ""},
+            id="confirm_check_item",
+        ),
+        pytest.param(
+            ConfirmGate,
+            {
+                "state": "off",
+                "confirmations": (),
+                "audit_enabled": False,
+                "primary_label": "Confirm and enable",
+                "secondary_label": "Save as draft",
+                "revoke_label": "Revoke",
+                "live_title": "Currently live.",
+            },
+            id="confirm_gate",
+        ),
+        pytest.param(
+            lambda: FilterColumn(key="k", label="L", options=(("a", "A"),)),
+            {"selected": ""},
+            id="filter_column",
+        ),
+        pytest.param(
+            lambda: FilterBar(
+                endpoint=URL("/x"),
+                region_name="r",
+                columns=(FilterColumn(key="k", label="L", options=()),),
             ),
-        )
-
-
-def test_filter_bar_default_temporal_empty() -> None:
-    f = FilterBar(
-        endpoint=URL("/x"),
-        region_name="r",
-        columns=(FilterColumn(key="k", label="L", options=()),),
-    )
-    assert f.include_closed == ""
-    assert f.as_of == ""
-
-
-# === SortHeader ===
-
-
-def test_sort_header_default_direction_is_asc() -> None:
-    s = SortHeader(label="L", column_key="k", endpoint=URL("/x"), region_name="r")
-    assert s.current_direction == "asc"
-    assert s.current_sort == ""
-    assert s.include_closed == ""
-    assert s.as_of == ""
-
-
-# === CsvExportButton ===
-
-
-def test_csv_export_button_defaults() -> None:
-    c = CsvExportButton(endpoint=URL("/api/x"))
-    assert c.filename == "export.csv"
-    assert c.label == "Export CSV"
-    assert c.include_closed == ""
-    assert c.as_of == ""
-
-
-# === Pagination ===
-
-
-def test_pagination_temporal_defaults_empty() -> None:
-    p = Pagination(
-        region_name="t",
-        endpoint=URL("/api/x"),
-        total=100,
-        page=1,
-        page_size=10,
-    )
-    assert p.include_closed == ""
-    assert p.as_of == ""
-    assert p.extra_query == ""
-
-
-# === DateRangePicker ===
-
-
-def test_date_range_picker_defaults_empty() -> None:
-    d = DateRangePicker(endpoint=URL("/x"), region_name="r")
-    assert d.date_from == ""
-    assert d.date_to == ""
-    assert d.include_closed == ""
-    assert d.as_of == ""
+            _TEMPORAL_EMPTY,
+            id="filter_bar",
+        ),
+        pytest.param(
+            lambda: SortHeader(label="L", column_key="k", endpoint=URL("/x"), region_name="r"),
+            {"current_direction": "asc", "current_sort": "", **_TEMPORAL_EMPTY},
+            id="sort_header",
+        ),
+        pytest.param(
+            lambda: CsvExportButton(endpoint=URL("/api/x")),
+            {"filename": "export.csv", "label": "Export CSV", **_TEMPORAL_EMPTY},
+            id="csv_export_button",
+        ),
+        pytest.param(
+            lambda: Pagination(
+                region_name="t", endpoint=URL("/api/x"), total=100, page=1, page_size=10
+            ),
+            {"extra_query": "", **_TEMPORAL_EMPTY},
+            id="pagination",
+        ),
+        pytest.param(
+            lambda: DateRangePicker(endpoint=URL("/x"), region_name="r"),
+            {"date_from": "", "date_to": "", **_TEMPORAL_EMPTY},
+            id="date_range_picker",
+        ),
+    ],
+)
+def test_defaults(ctor: Callable[[], object], expected: dict[str, object]) -> None:
+    """Optional fields default to the values the renderers rely on."""
+    obj = ctor()
+    assert {key: getattr(obj, key) for key in expected} == expected

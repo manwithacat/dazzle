@@ -77,38 +77,41 @@ class _RendererWithoutAssets:
         return "<x/>"
 
 
-def test_collect_assets_walks_handlers_with_assets_method() -> None:
+_JS_X = RendererAsset(path=pathlib.Path("/a/x.js"), kind="js")
+_CSS_X = RendererAsset(path=pathlib.Path("/a/x.css"), kind="css")
+_JS_A = RendererAsset(path=pathlib.Path("/a.js"), kind="js")
+_JS_B = RendererAsset(path=pathlib.Path("/b.js"), kind="js")
+
+
+@pytest.mark.parametrize(
+    ("registrations", "expected"),
+    [
+        pytest.param(
+            [("my_renderer", [_JS_X, _CSS_X])],
+            [("my_renderer", _JS_X), ("my_renderer", _CSS_X)],
+            id="walks-handlers-with-assets-method",
+        ),
+        # `assets()` is optional on the Protocol: renderers without it are
+        # skipped, so existing renderers stay compliant without a no-op.
+        pytest.param([("bare", None)], [], id="skips-handlers-without-assets-method"),
+        # Declared order per renderer + registration order across renderers are
+        # both deterministic, so the emitted chrome is reproducible.
+        pytest.param(
+            [("second", [_JS_B]), ("first", [_JS_A])],
+            [("second", _JS_B), ("first", _JS_A)],
+            id="preserves-registration-order",
+        ),
+    ],
+)
+def test_collect_assets(
+    registrations: list[tuple[str, list[RendererAsset] | None]],
+    expected: list[tuple[str, RendererAsset]],
+) -> None:
     reg = RendererRegistry()
-    a1 = RendererAsset(path=pathlib.Path("/a/x.js"), kind="js")
-    a2 = RendererAsset(path=pathlib.Path("/a/x.css"), kind="css")
-    reg.register(name="my_renderer", handler=_RendererWithAssets([a1, a2]))
-
-    collected = reg.collect_assets()
-
-    assert collected == [("my_renderer", a1), ("my_renderer", a2)]
-
-
-def test_collect_assets_skips_handlers_without_assets_method() -> None:
-    """A renderer that doesn't implement ``assets()`` is silently
-    skipped — the method is optional on the Protocol so existing
-    renderers stay compliant without an empty no-op."""
-    reg = RendererRegistry()
-    reg.register(name="bare", handler=_RendererWithoutAssets())
-    assert reg.collect_assets() == []
-
-
-def test_collect_assets_preserves_registration_order() -> None:
-    """Asset URLs render in the order they're collected — so the
-    declared order on each renderer + registration order across
-    renderers must both be deterministic for reproducible chrome."""
-    reg = RendererRegistry()
-    a_b = RendererAsset(path=pathlib.Path("/b.js"), kind="js")
-    a_a = RendererAsset(path=pathlib.Path("/a.js"), kind="js")
-    reg.register(name="second", handler=_RendererWithAssets([a_b]))
-    reg.register(name="first", handler=_RendererWithAssets([a_a]))
-
-    names = [n for n, _ in reg.collect_assets()]
-    assert names == ["second", "first"]
+    for name, assets in registrations:
+        handler = _RendererWithoutAssets() if assets is None else _RendererWithAssets(assets)
+        reg.register(name=name, handler=handler)
+    assert reg.collect_assets() == expected
 
 
 def test_collect_assets_raises_on_non_RendererAsset_entry() -> None:
@@ -135,13 +138,22 @@ def test_collect_assets_raises_on_non_RendererAsset_entry() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_asset_url_shape() -> None:
-    assert asset_url("word_cloud", "wordcloud.js") == (
-        "/static/dazzle-renderers/word_cloud/wordcloud.js"
-    )
-
-
-def test_asset_url_preserves_extension_and_subpath() -> None:
-    assert asset_url("graph", "vendor/cytoscape.min.js") == (
-        "/static/dazzle-renderers/graph/vendor/cytoscape.min.js"
-    )
+@pytest.mark.parametrize(
+    ("name", "filename", "expected"),
+    [
+        pytest.param(
+            "word_cloud",
+            "wordcloud.js",
+            "/static/dazzle-renderers/word_cloud/wordcloud.js",
+            id="bare-filename",
+        ),
+        pytest.param(
+            "graph",
+            "vendor/cytoscape.min.js",
+            "/static/dazzle-renderers/graph/vendor/cytoscape.min.js",
+            id="preserves-extension-and-subpath",
+        ),
+    ],
+)
+def test_asset_url(name: str, filename: str, expected: str) -> None:
+    assert asset_url(name, filename) == expected

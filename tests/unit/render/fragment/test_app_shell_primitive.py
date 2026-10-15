@@ -1,5 +1,7 @@
 """AppShell primitive — multi-slot application layout (P17 Phase 5)."""
 
+import pytest
+
 from dazzle.render.fragment import AppShell, Heading, Page, Surface, Text
 from dazzle.render.fragment.renderer import FragmentRenderer
 
@@ -8,67 +10,94 @@ def _render(node: object) -> str:
     return FragmentRenderer().render(node)
 
 
-# ───────────────── Construction ─────────────────────────
+@pytest.mark.parametrize(
+    ("shell", "present", "absent"),
+    [
+        pytest.param(
+            AppShell(body=Text("hi")),
+            (
+                '<div class="dz-app-shell"',
+                '<div class="dz-app-content">',
+                # a11y skip-links target a stable id on <main> (legacy
+                # `{{ skip_link("#main-content") }}` contract).
+                '<main class="dz-app-main" id="main-content">',
+            ),
+            ("dz-app-sidebar",),
+            id="body-only-emits-root-content-main-no-sidebar",
+        ),
+        pytest.param(
+            AppShell(body=Text("body"), sidebar=Text("nav-stuff")),
+            ('<aside class="dz-app-sidebar"', "nav-stuff"),
+            (),
+            id="sidebar-in-aside",
+        ),
+        pytest.param(
+            AppShell(body=Text("body"), header=Heading("My App", level=1)),
+            ('<header class="dz-app-header">', "My App"),
+            (),
+            id="header-in-header-element",
+        ),
+        pytest.param(
+            AppShell(body=Text("body"), footer=Text("© 2026")),
+            ('<footer class="dz-app-footer">', "© 2026"),
+            (),
+            id="footer-in-footer-element",
+        ),
+        # #1294 — sidebar reachability: the CSS keys the off-screen/visible
+        # state off data-dz-sidebar, which the renderer once never emitted
+        # (geometry is checked in the e2e harness; these are the DOM guards).
+        pytest.param(
+            AppShell(body=Text("hi"), sidebar=Text("nav")),
+            ('data-dz-sidebar="open"', 'id="dz-app-sidebar"'),
+            (),
+            id="1294-sidebar-open-by-default-with-toggle-target-id",
+        ),
+        pytest.param(
+            AppShell(body=Text("hi"), sidebar=Text("nav"), sidebar_state="closed"),
+            ('data-dz-sidebar="closed"',),
+            (),
+            id="1294-sidebar-closed-when-set",
+        ),
+        pytest.param(
+            AppShell(body=Text("hi"), sidebar_state='evil"><script>'),
+            ('data-dz-sidebar="open"',),
+            ("<script>",),
+            id="1294-invalid-sidebar-state-sanitised-to-open",
+        ),
+        # content measure (cycle 1546): empty / full-bleed means no max-width.
+        *(
+            pytest.param(
+                AppShell(body=Text("body"), content_measure=measure),
+                (),
+                ("data-dz-measure",),
+                id=f"measure-omitted-for-{label}",
+            )
+            for measure, label in [
+                ("", "empty"),
+                ("full", "full"),
+                ("  ", "blank"),
+                ("unknown", "unknown"),
+            ]
+        ),
+    ],
+)
+def test_app_shell_renders(shell: AppShell, present: tuple, absent: tuple) -> None:
+    html = _render(shell)
+    assert [s for s in present if s not in html] == []
+    assert [s for s in absent if s in html] == []
 
 
-def test_app_shell_minimal_body_only() -> None:
-    a = AppShell(body=Text("hello"))
-    assert a.sidebar is None
-    assert a.header is None
-    assert a.footer is None
-
-
-def test_app_shell_all_slots() -> None:
-    a = AppShell(
-        body=Text("body"),
-        sidebar=Text("sidebar"),
-        header=Text("header"),
-        footer=Text("footer"),
-    )
-    assert a.body is not None
-    assert a.sidebar is not None
-    assert a.header is not None
-    assert a.footer is not None
-
-
-# ───────────────── Renderer output ─────────────────────
-
-
-def test_app_shell_emits_root_div_and_content_wrapper() -> None:
-    html = _render(AppShell(body=Text("hi")))
-    assert '<div class="dz-app-shell"' in html  # #1294: now carries data-dz-sidebar
-    assert '<div class="dz-app-content">' in html
-
-
-def test_app_shell_emits_main_with_id_for_skip_link_target() -> None:
-    """The main element must carry id="main-content" so a11y skip-links
-    point to a stable target — matches the legacy app_shell.html
-    contract (`{{ skip_link("#main-content") }}` line 5)."""
-    html = _render(AppShell(body=Text("body")))
-    assert '<main class="dz-app-main" id="main-content">' in html
-
-
-def test_app_shell_omits_sidebar_aside_when_no_sidebar() -> None:
-    html = _render(AppShell(body=Text("body")))
-    assert "dz-app-sidebar" not in html
-
-
-def test_app_shell_renders_sidebar_in_aside_when_provided() -> None:
-    html = _render(AppShell(body=Text("body"), sidebar=Text("nav-stuff")))
-    assert '<aside class="dz-app-sidebar"' in html
-    assert "nav-stuff" in html
-
-
-def test_app_shell_renders_header_in_header_element_when_provided() -> None:
-    html = _render(AppShell(body=Text("body"), header=Heading("My App", level=1)))
-    assert '<header class="dz-app-header">' in html
-    assert "My App" in html
-
-
-def test_app_shell_renders_footer_in_footer_element_when_provided() -> None:
-    html = _render(AppShell(body=Text("body"), footer=Text("© 2026")))
-    assert '<footer class="dz-app-footer">' in html
-    assert "© 2026" in html
+@pytest.mark.parametrize(
+    ("measure", "expected"),
+    [("app", "app"), ("product", "product"), ("wide", "wide"), ("Product", "product")],
+    ids=["app", "product", "wide", "case-normalised"],
+)
+def test_app_shell_emits_content_measure_on_main(measure: str, expected: str) -> None:
+    """PageContext.content_measure reaches the DOM on <main> (the shell
+    content column), not the shell root (cycle 1546)."""
+    html = _render(AppShell(body=Text("body"), content_measure=measure))
+    main = html[html.index("<main") : html.index("</main>") + 7]
+    assert f'data-dz-measure="{expected}"' in main
 
 
 def test_app_shell_slot_order_sidebar_header_main_footer() -> None:
@@ -83,16 +112,9 @@ def test_app_shell_slot_order_sidebar_header_main_footer() -> None:
             footer=Text("FOOT"),
         )
     )
-    # Sidebar comes before content wrapper
-    side_idx = html.index("SIDE")
     content_open_idx = html.index('<div class="dz-app-content">')
-    assert side_idx < content_open_idx
-
-    # Within content: header < main < footer
-    head_idx = html.index("HEAD")
-    body_idx = html.index("BODY")
-    foot_idx = html.index("FOOT")
-    assert content_open_idx < head_idx < body_idx < foot_idx
+    assert html.index("SIDE") < content_open_idx
+    assert content_open_idx < html.index("HEAD") < html.index("BODY") < html.index("FOOT")
 
 
 def test_app_shell_inside_page_composes_full_chrome() -> None:
@@ -109,68 +131,8 @@ def test_app_shell_inside_page_composes_full_chrome() -> None:
     html = _render(page)
     assert "<!DOCTYPE html>" in html
     assert '<body class="dz-page">' in html
-    assert '<div class="dz-app-shell"' in html  # #1294: now carries data-dz-sidebar
+    assert '<div class="dz-app-shell"' in html
     assert '<aside class="dz-app-sidebar"' in html
     assert '<main class="dz-app-main" id="main-content">' in html
     assert '<section class="dz-surface">' in html
     assert "Tasks" in html
-
-
-# ──────────── #1294 — sidebar reachability (data-dz-sidebar) ────────────
-# Regression for the app-wide nav-unreachable bug: the Fragment app-shell
-# rendered the sidebar off-screen (translateX(-100%)) with no toggle
-# because the renderer never emitted the `data-dz-sidebar` state the CSS
-# keys off. These are the FAST DOM-presence guards; the orthogonal
-# geometry/viewport reachability check lives in the e2e harness (the
-# dimension that actually missed this — DOM presence alone did not).
-
-
-def test_app_shell_emits_data_dz_sidebar_open_by_default() -> None:
-    html = _render(AppShell(body=Text("hi"), sidebar=Text("nav")))
-    assert 'data-dz-sidebar="open"' in html
-
-
-def test_app_shell_emits_data_dz_sidebar_closed_when_set() -> None:
-    html = _render(AppShell(body=Text("hi"), sidebar=Text("nav"), sidebar_state="closed"))
-    assert 'data-dz-sidebar="closed"' in html
-
-
-def test_app_shell_sanitises_invalid_sidebar_state() -> None:
-    """A bad sidebar_state falls back to 'open' and can't inject markup."""
-    html = _render(AppShell(body=Text("hi"), sidebar_state='evil"><script>'))
-    assert 'data-dz-sidebar="open"' in html
-    assert "<script>" not in html
-
-
-def test_app_shell_sidebar_aside_has_id_for_toggle_target() -> None:
-    """The sidebar <aside> carries id='dz-app-sidebar' so the topbar
-    toggle's aria-controls resolves."""
-    html = _render(AppShell(body=Text("hi"), sidebar=Text("nav")))
-    assert 'id="dz-app-sidebar"' in html
-
-
-# ──────────── content measure (data-dz-measure on <main>) ────────────
-# PageContext.content_measure was set by template_compiler since cycle
-# 1286 but never reached the DOM — AppShell had no field and the
-# renderer never emitted the attribute. Cycle 1546 wires it through.
-
-
-def test_app_shell_emits_data_dz_measure_when_set() -> None:
-    for token in ("app", "product", "wide"):
-        html = _render(AppShell(body=Text("body"), content_measure=token))
-        assert f'data-dz-measure="{token}"' in html, token
-        # Attribute lives on main (shell content column), not shell root.
-        main = html[html.index("<main") : html.index("</main>") + 7]
-        assert f'data-dz-measure="{token}"' in main
-
-
-def test_app_shell_omits_data_dz_measure_when_empty_or_full() -> None:
-    """Empty / full-bleed: no max-width contract on main."""
-    for measure in ("", "full", "  ", "unknown"):
-        html = _render(AppShell(body=Text("body"), content_measure=measure))
-        assert "data-dz-measure" not in html, measure
-
-
-def test_app_shell_content_measure_is_case_normalised() -> None:
-    html = _render(AppShell(body=Text("body"), content_measure="Product"))
-    assert 'data-dz-measure="product"' in html
