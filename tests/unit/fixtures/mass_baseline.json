@@ -1,7 +1,7 @@
 {
   "src_lines": 322538,
   "test_lines": 310741,
-  "docs_lines": 47992,
+  "docs_lines": 48045,
   "construct_count": 31,
   "written": "2026-10-15",
   "exceptions": [
@@ -189,6 +189,13 @@
         "docs_lines"
       ],
       "reason": "Phase 7 plan \u00a710 written (+88 docs lines), consumer briefs repointed to v0.118.0"
+    },
+    {
+      "date": "2026-10-15",
+      "rose": [
+        "docs_lines"
+      ],
+      "reason": "Phase 7 \u00a710.7 result section (+50 docs lines)"
     }
   ]
 }
