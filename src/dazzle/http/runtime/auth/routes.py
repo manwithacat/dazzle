@@ -107,39 +107,14 @@ def _resolve_redirect(persona_routes: dict[str, str] | None, roles: list[str] | 
 async def _login(deps: _AuthDeps, credentials: LoginRequest, request: FastAPIRequest) -> Response:
     """Login with email and password.
 
-    Returns session cookie on success, or 2FA challenge if enabled.
+    Returns the session cookie on success.
     """
     user = deps.auth_store.authenticate(credentials.email, credentials.password)
 
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Check if 2FA is enabled for this user
-    if user.two_factor_enabled:
-        # Create a short-lived pending session for 2FA verification
-        pending_session = deps.auth_store.create_session(
-            user,
-            expires_in=timedelta(minutes=10),
-            ip_address=request.client.host if request.client else None,
-            user_agent=request.headers.get("user-agent"),
-        )
-        methods = []
-        if user.totp_enabled:
-            methods.append("totp")
-        if user.email_otp_enabled:
-            methods.append("email_otp")
-
-        return JSONResponse(
-            content={
-                "status": "2fa_required",
-                "methods": methods,
-                "session_token": pending_session.id,
-                "user_id": str(user.id),
-            },
-            status_code=200,
-        )
-
-    # No 2FA — create full session.
+    # Create the session.
     # Session-fixation defence (#1198): regenerate the session id on login
     # success — invalidate any pre-auth session cookie the client presented
     # so an attacker-planted id can't survive into the authenticated state.

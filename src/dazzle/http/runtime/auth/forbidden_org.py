@@ -3,8 +3,8 @@
 The host-pinned login flows (`resolve_activation` → `HostForbidden` →
 `FORBIDDEN_SENTINEL`) denied a non-member with a bare
 ``HTTPException(403, "no membership for this organization")`` — a raw JSON
-error page in the browser. This module is the single shared helper the five
-browser login routes (password ×2, magic-link, SSO, 2FA) now return instead:
+error page in the browser. This module is the single shared helper the
+browser login routes (password ×2, magic-link, SSO) now return instead:
 a branded "this isn't your organisation" page.
 
 The JSON API login path (`routes._json_active_membership_id`) deliberately

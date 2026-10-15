@@ -1,15 +1,14 @@
 """OAuth leftover code/state must not invent sso_failed (cycle 2243).
 
-leftover-honest consume token / 2FA code already exist (oral #109 /
-#108). SSO callback still forwarded leftover ``?code=zzz`` / ``ghost``
+leftover-honest consume token already exists (oral #109). SSO callback still forwarded leftover ``?code=zzz`` / ``ghost``
 into authorize_access_token and invented ``303 /login?error=sso_failed``.
 Leftover ``?state=zzz`` did too. Valid opaque IdP codes
 (urlsafe + ``/+=.``, length 16–512) ride; leftover stays put (400, no
 theater). Absent / blank still first-visit (stray / cancel still
 sso_failed). Well-formed codes that fail exchange still bounce
 sso_failed. Live simple_task ``/auth/sso/{provider}/callback``.
-Oral #113 — not leftover consume token (oral #109), not leftover 2FA
-code (oral #108), not leftover SSO provider (oral #112).
+Oral #113 — not leftover consume token (oral #109), not leftover SSO
+provider (oral #112).
 """
 
 from __future__ import annotations

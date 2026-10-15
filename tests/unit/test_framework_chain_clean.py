@@ -48,6 +48,9 @@ _ALLOWED_VERSIONS: dict[str, str] = {
     "0023_flense_park_enterprise_auth": (
         "drops the enterprise-auth tables parked in flense ship AD (DD-013)"
     ),
+    "0024_flense_park_two_factor": (
+        "drops the two-factor tables parked in flense ship AG (DD-014)"
+    ),
 }
 
 

@@ -1,4 +1,4 @@
-"""Authentication store (PostgreSQL) — user CRUD, sessions, and 2FA state."""
+"""Authentication store (PostgreSQL) — user CRUD and sessions."""
 
 import logging
 import secrets
@@ -170,10 +170,6 @@ class UserStoreMixin:
             is_active=bool(row["is_active"]),
             is_superuser=bool(row["is_superuser"]),
             roles=json.loads(row["roles"]),
-            totp_secret=row.get("totp_secret"),
-            totp_enabled=bool(row.get("totp_enabled", False)),
-            email_otp_enabled=bool(row.get("email_otp_enabled", False)),
-            recovery_codes_generated=bool(row.get("recovery_codes_generated", False)),
             email_verified=bool(row.get("email_verified", False)),
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
@@ -398,68 +394,6 @@ class UserStoreMixin:
             return None
 
         return self.get_user_by_id(user_id)
-
-
-class TwoFactorMixin:
-    """Two-factor authentication state management."""
-
-    _execute: Any
-    _execute_one: Any
-    _execute_modify: Any
-    get_user_by_id: Any
-
-    def enable_totp(self, user_id: UUID, secret: str) -> None:
-        """Enable TOTP for a user and store the encrypted secret.
-
-        Args:
-            user_id: User UUID
-            secret: Base32-encoded TOTP secret
-        """
-        self._execute_modify(
-            "UPDATE users SET totp_secret = %s, totp_enabled = TRUE, updated_at = %s WHERE id = %s",
-            (secret, datetime.now(UTC).isoformat(), str(user_id)),
-        )
-
-    def disable_totp(self, user_id: UUID) -> None:
-        """Disable TOTP for a user and clear the secret."""
-        self._execute_modify(
-            "UPDATE users SET totp_secret = NULL, totp_enabled = FALSE, updated_at = %s "
-            "WHERE id = %s",
-            (datetime.now(UTC).isoformat(), str(user_id)),
-        )
-
-    def enable_email_otp(self, user_id: UUID) -> None:
-        """Enable email OTP for a user."""
-        self._execute_modify(
-            "UPDATE users SET email_otp_enabled = TRUE, updated_at = %s WHERE id = %s",
-            (datetime.now(UTC).isoformat(), str(user_id)),
-        )
-
-    def disable_email_otp(self, user_id: UUID) -> None:
-        """Disable email OTP for a user."""
-        self._execute_modify(
-            "UPDATE users SET email_otp_enabled = FALSE, updated_at = %s WHERE id = %s",
-            (datetime.now(UTC).isoformat(), str(user_id)),
-        )
-
-    def set_recovery_codes_generated(self, user_id: UUID, generated: bool = True) -> None:
-        """Mark whether recovery codes have been generated for a user."""
-        self._execute_modify(
-            "UPDATE users SET recovery_codes_generated = %s, updated_at = %s WHERE id = %s",
-            (generated, datetime.now(UTC).isoformat(), str(user_id)),
-        )
-
-    def get_totp_secret(self, user_id: UUID) -> str | None:
-        """Get the TOTP secret for a user.
-
-        Args:
-            user_id: User UUID
-
-        Returns:
-            Base32-encoded TOTP secret or None
-        """
-        row = self._execute_one("SELECT totp_secret FROM users WHERE id = %s", (str(user_id),))
-        return row["totp_secret"] if row else None
 
 
 class SessionStoreMixin:
@@ -1337,7 +1271,9 @@ def ensure_auth_core_tables(cur: Any) -> None:
             updated_at TEXT NOT NULL
         )
     """)
-    # Add 2FA + email-verification columns if they don't exist (idempotent migration).
+    # Add the email-verification column (and the four 2FA columns, kept on
+    # `users` after 2FA was parked as DD-014 pending an operator decision on
+    # the column drop) if they don't exist (idempotent migration).
     for _col, _col_type, _default in [
         ("totp_secret", "TEXT", None),
         ("totp_enabled", "BOOLEAN", "FALSE"),
@@ -1461,7 +1397,7 @@ def ensure_auth_core_tables(cur: Any) -> None:
     cur.execute("CREATE INDEX IF NOT EXISTS idx_user_prefs_user ON user_preferences(user_id)")
 
 
-class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin, LazyPgStore):
+class AuthStore(UserStoreMixin, SessionStoreMixin, LazyPgStore):
     """
     Authentication store using PostgreSQL.
 
@@ -1755,20 +1691,3 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin, LazyPgStore):
         params.append(limit)
 
         return self._execute(sql, tuple(params))
-
-    def store_totp_secret_pending(self, user_id: UUID, secret: str) -> None:
-        """Store a TOTP secret without enabling TOTP (pending confirmation).
-
-        Use this during TOTP setup to persist the secret before the user
-        has verified their first code.  Call :meth:`enable_totp` once the
-        verification succeeds.
-
-        Args:
-            user_id: User UUID.
-            secret:  Base32-encoded TOTP secret to store.
-        """
-        self._execute_modify(
-            "UPDATE users SET totp_secret = %s, totp_enabled = FALSE, updated_at = %s "
-            "WHERE id = %s",
-            (secret, datetime.now(UTC).isoformat(), str(user_id)),
-        )

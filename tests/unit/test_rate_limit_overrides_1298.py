@@ -107,7 +107,6 @@ def test_env_override_unset_is_noop(monkeypatch: pytest.MonkeyPatch) -> None:
         "DAZZLE_RATE_LIMIT_API",
         "DAZZLE_RATE_LIMIT_AUTH",
         "DAZZLE_RATE_LIMIT_UPLOAD",
-        "DAZZLE_RATE_LIMIT_2FA",
     ):
         monkeypatch.delenv(var, raising=False)
     config = configure_rate_limits_for_profile("standard")
@@ -116,17 +115,15 @@ def test_env_override_unset_is_noop(monkeypatch: pytest.MonkeyPatch) -> None:
     assert config.auth_limit == "10/minute"
 
 
-def test_env_override_covers_all_four_limits(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_env_override_covers_all_three_limits(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DAZZLE_RATE_LIMIT_API", "400/minute")
     monkeypatch.setenv("DAZZLE_RATE_LIMIT_AUTH", "20/minute")
     monkeypatch.setenv("DAZZLE_RATE_LIMIT_UPLOAD", "15/minute")
-    monkeypatch.setenv("DAZZLE_RATE_LIMIT_2FA", "8/minute")
     config = configure_rate_limits_for_profile("standard")
     _apply_env_limit_overrides(config)
     assert config.api_limit == "400/minute"
     assert config.auth_limit == "20/minute"
     assert config.upload_limit == "15/minute"
-    assert config.twofa_limit == "8/minute"
 
 
 def test_env_override_stores_canonical_not_raw(monkeypatch: pytest.MonkeyPatch) -> None:

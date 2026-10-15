@@ -5,7 +5,7 @@ omitted leftover ``?next=zzz`` / ``https://evil.com`` as absent and
 invented the default landing (form omit, then ``/app`` after login).
 Valid same-origin paths ride; leftover stays put (400, no invented
 clean form / landing). Live simple_task ``/login``. Oral #96 — not
-leftover auth error (oral #95), not leftover 2FA sent (oral #94).
+leftover auth error (oral #95).
 POST leftover next stays fail-closed to ``/app`` (security).
 """
 
@@ -50,7 +50,7 @@ _LIVE = Path(__file__).resolve().parents[2] / "examples" / "simple_task" / "dazz
     [
         ("/app", "/app"),
         ("/workspaces/my_work", "/workspaces/my_work"),
-        ("/2fa/setup", "/2fa/setup"),
+        ("/app/settings", "/app/settings"),
         ("", ""),
         (None, ""),
         ("   ", ""),
@@ -65,7 +65,7 @@ _LIVE = Path(__file__).resolve().parents[2] / "examples" / "simple_task" / "dazz
     ids=[
         "valid-app",
         "valid-workspace",
-        "valid-2fa-setup",
+        "valid-nested-path",
         "empty-default",
         "none-default",
         "blank-default",

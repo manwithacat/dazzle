@@ -61,7 +61,6 @@ SIGNUP_ERROR_TOKENS: frozenset[str] = frozenset(
     }
 )
 RESET_ERROR_TOKENS: frozenset[str] = frozenset({"mismatch", "invalid"})
-CHALLENGE_ERROR_TOKENS: frozenset[str] = frozenset({"invalid_code"})
 SELECT_ORG_ERROR_TOKENS: frozenset[str] = frozenset({"invalid_org"})
 
 LOGIN_ERROR_MESSAGES: dict[str, str] = {
@@ -86,9 +85,6 @@ RESET_ERROR_MESSAGES: dict[str, str] = {
     "mismatch": "The two password fields didn't match. Try again.",
     "invalid": "That reset link is invalid or expired. Request a new one.",
 }
-CHALLENGE_ERROR_MESSAGES: dict[str, str] = {
-    "invalid_code": "That code didn't match. Try again.",
-}
 SELECT_ORG_ERROR_MESSAGES: dict[str, str] = {
     "invalid_org": "That organization isn't available. Choose another.",
 }
@@ -99,9 +95,8 @@ def leftover_honest_auth_error(raw: Any, declared: Any) -> str | None:
 
     Leftover ``?error=zzz`` used to invent a clean page (no banner)
     via omit-as-absent. Valid declared tokens ride. Absent / blank is the honest first-visit
-    default (``""``). Rest is stay-put (None). Distinct from leftover
-    2FA sent (oral #94) and leftover 2FA mode (oral #92). Live
-    simple_task ``/login``. Cycle 2221.
+    default (``""``). Rest is stay-put (None). Live simple_task
+    ``/login``. Cycle 2221.
     """
     text = "" if raw is None else str(raw).strip()
     if not text:
@@ -157,14 +152,13 @@ def leftover_auth_email_or_400(raw: Any) -> str | HTMLResponse:
 def leftover_honest_auth_token(raw: Any) -> str | None:
     """Valid urlsafe auth tokens ride. Leftover junk restores None.
 
-    Leftover ``?token=zzz`` / ``?session=zzz`` used to invent a reset /
-    2FA form (token echo theater, oral #98). Leftover consume
+    Leftover ``?token=zzz`` used to invent a reset form (token echo
+    theater, oral #98). Leftover consume
     ``/auth/magic/zzz`` used to invent ``invalid_magic_link`` (oral #109).
     ``secrets.token_urlsafe(32)`` tokens ride. Absent / blank is the
     honest first-visit default (``""``). Rest is stay-put (None).
-    Distinct from leftover auth error (oral #95) and leftover 2FA
-    mode (oral #92). Live simple_task ``/reset-password`` +
-    ``/2fa/challenge`` + ``/auth/magic``. Cycle 2224 / 2239.
+    Distinct from leftover auth error (oral #95). Live simple_task
+    ``/reset-password`` + ``/auth/magic``. Cycle 2224 / 2239.
     """
     text = "" if raw is None else str(raw).strip()
     if not text:

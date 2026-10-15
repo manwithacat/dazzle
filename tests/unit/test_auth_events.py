@@ -1,7 +1,6 @@
 """Tests for auth lifecycle event emission.
 
-Verifies that successful registration, login, password change, and 2FA
-verification emit the correct events via the EventFramework bus.
+Verifies that successful registration, login and password change emit the correct events via the EventFramework bus.
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -109,16 +108,6 @@ class TestEmitUserLoggedIn:
         assert envelope.payload["session_id"] == "sess_xyz"
         assert envelope.payload["method"] == "password"
         assert "timestamp" in envelope.payload
-
-    @pytest.mark.asyncio
-    async def test_2fa_method(
-        self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
-    ) -> None:
-        with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
-            await emit_user_logged_in(user, session_id="s", method="2fa")
-
-        envelope = mock_bus.await_args.args[1]
-        assert envelope.payload["method"] == "2fa"
 
     @pytest.mark.asyncio
     async def test_default_method_is_password(

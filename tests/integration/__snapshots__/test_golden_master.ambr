@@ -1131,14 +1131,6 @@
       'enable_hsts': False,
       'profile': <SecurityProfile.BASIC: 'basic'>,
       'require_auth_by_default': False,
-      'two_factor': dict({
-        'enabled': False,
-        'methods': list([
-          <TwoFactorMethod.EMAIL_OTP: 'email_otp'>,
-          <TwoFactorMethod.TOTP: 'totp'>,
-        ]),
-        'recovery_code_count': 8,
-      }),
     }),
     'slas': list([
     ]),

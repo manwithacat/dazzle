@@ -158,7 +158,7 @@ async def _login(
     )
     if resp.status_code >= 400:
         # #1141: include the response body excerpt so a 422 from a
-        # project that required extra fields (2FA, captcha) gives the
+        # project that required extra fields (captcha) gives the
         # operator something to act on. Pre-fix the error was bare
         # `Login failed (422): <email>` with no hint of the cause.
         body = (getattr(resp, "text", "") or "")[:200]

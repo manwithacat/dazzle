@@ -139,6 +139,8 @@ _ALLOWLIST = frozenset(
         "dazzle.http.alembic.versions.0022_flense_park_tables.downgrade",
         # 0023.downgrade recreates the enterprise-auth tables parked in ship AD (DD-013).
         "dazzle.http.alembic.versions.0023_flense_park_enterprise_auth.downgrade",
+        # 0024.downgrade recreates the two-factor tables parked in ship AG (DD-014).
+        "dazzle.http.alembic.versions.0024_flense_park_two_factor.downgrade",
     }
 )
 

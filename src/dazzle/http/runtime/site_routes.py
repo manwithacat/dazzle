@@ -17,8 +17,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.core.ir import AnalyticsSpec
 from dazzle.http.runtime.auth.auth_views import (
-    CHALLENGE_ERROR_MESSAGES,
-    CHALLENGE_ERROR_TOKENS,
     LOGIN_ERROR_MESSAGES,
     LOGIN_ERROR_TOKENS,
     RESET_ERROR_MESSAGES,
@@ -34,13 +32,6 @@ from dazzle.http.runtime.auth.auth_views import (
     leftover_honest_auth_token,
 )
 from dazzle.http.runtime.auth.redirect_safety import leftover_honest_auth_next
-from dazzle.http.runtime.auth.two_factor_views import (
-    build_2fa_challenge_view,
-    build_2fa_settings_view,
-    build_2fa_setup_view,
-    leftover_honest_2fa_mode,
-    leftover_honest_2fa_sent,
-)
 from dazzle.page.runtime.css_loader import get_bundled_css
 from dazzle.page.runtime.site_context import build_site_page_context
 from dazzle.page.runtime.site_renderer import get_site_js
@@ -934,20 +925,15 @@ def create_site_page_routes(
 def create_auth_page_routes(
     sitespec_data: dict[str, Any],
     project_root: Path | None = None,
-    get_auth_context: Callable[..., Any] | None = None,
 ) -> APIRouter:
     """
     Create FastAPI routes for authentication pages.
 
-    Routes: /login, /signup, /forgot-password, /reset-password,
-    /2fa/setup, /2fa/settings, /2fa/challenge.
+    Routes: /login, /signup, /forgot-password, /reset-password.
 
     Args:
         sitespec_data: SiteSpec as dict
         project_root: Project root for detecting custom CSS
-        get_auth_context: Optional callable that takes a Request and returns an
-            auth context with ``is_authenticated``. When provided, /2fa/setup
-            and /2fa/settings redirect unauthenticated users to /login.
 
     Returns:
         FastAPI router with auth page routes
@@ -955,30 +941,12 @@ def create_auth_page_routes(
 
     router = APIRouter()
 
-    # Phase 1.D.2 (v0.67.37): all auth/2FA routes use typed-Fragment
+    # Phase 1.D.2 (v0.67.37): all auth routes use typed-Fragment
     # views that pull per-deployment CSS overrides from
     # `app.state.fragment_chrome_css_links` rather than the legacy
     # project-root probe. `project_root` is kept on the signature for
     # backward call-site compatibility but is no longer consulted.
     _ = project_root
-
-    _auth_fn = get_auth_context
-
-    def _require_auth(request: Request, next_path: str) -> RedirectResponse | None:
-        """Return a redirect to /login when the request is unauthenticated.
-
-        When no auth callable is wired, fall through (treat all requests as
-        permitted) so the page is still reachable in dev/testing setups.
-        """
-        if _auth_fn is None:
-            return None
-        try:
-            auth_ctx = _auth_fn(request)
-            if auth_ctx and getattr(auth_ctx, "is_authenticated", False):
-                return None
-        except Exception:
-            logger.debug("Auth check failed, redirecting to login", exc_info=True)
-        return RedirectResponse(url=f"/login?next={next_path}", status_code=302)
 
     def _typed_chrome_assets(app_state: object) -> tuple[tuple[str, ...], tuple[str, ...]]:
         """Resolve the CSS+JS asset tuples for typed-Fragment auth pages.
@@ -1187,112 +1155,5 @@ def create_auth_page_routes(
             js_scripts=js_scripts,
         )
         return FragmentRenderer().render(page)
-
-    @router.get("/2fa/setup", include_in_schema=False)
-    async def two_factor_setup_page(
-        request: Request,
-        sitespec: dict[str, Any] = sitespec_data,
-    ) -> Response:
-        """Serve the 2FA enrolment page (authenticated users only).
-
-        Phase 1.D.2 (v0.67.37): typed-Fragment is the only path —
-        `site/auth/2fa_setup.html` was deleted. DOM scaffold is
-        emitted via RawHTML inside the typed Page; client behavior
-        lives in `/static/js/dz-2fa-setup.js` (referenced via
-        `Page.js_scripts`).
-        """
-        redirect = _require_auth(request, "/2fa/setup")
-        if redirect is not None:
-            return redirect
-
-        app_state = request.app.state
-        css_links, js_scripts = _typed_chrome_assets(app_state)
-        # The 2FA setup page also needs the dz-2fa-setup.js client.
-        js_scripts = tuple(list(js_scripts) + ["/static/js/dz-2fa-setup.js"])
-        page = build_2fa_setup_view(
-            product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
-            css_links=css_links,
-            js_scripts=js_scripts,
-        )
-        return HTMLResponse(content=FragmentRenderer().render(page))
-
-    @router.get("/2fa/settings", include_in_schema=False)
-    async def two_factor_settings_page(
-        request: Request,
-        sitespec: dict[str, Any] = sitespec_data,
-    ) -> Response:
-        """Serve the 2FA management page (Phase 1.D.2: typed-only)."""
-        redirect = _require_auth(request, "/2fa/settings")
-        if redirect is not None:
-            return redirect
-
-        app_state = request.app.state
-        css_links, js_scripts = _typed_chrome_assets(app_state)
-        js_scripts = tuple(list(js_scripts) + ["/static/js/dz-2fa-settings.js"])
-        page = build_2fa_settings_view(
-            product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
-            css_links=css_links,
-            js_scripts=js_scripts,
-        )
-        return HTMLResponse(content=FragmentRenderer().render(page))
-
-    @router.get("/2fa/challenge", include_in_schema=False)
-    async def two_factor_challenge_page(
-        request: Request,
-        session: str = "",
-        method: str = "",
-        mode: str = "",
-        sent: str = "",
-        error: str = "",
-        sitespec: dict[str, Any] = sitespec_data,
-    ) -> Response:
-        """Serve the mid-login 2FA challenge page.
-
-        Phase 1.D.1 (v0.67.35): typed-Fragment is the only path —
-        `site/auth/2fa_challenge.html` was deleted. The view posts to
-        the form-encoded `/auth/2fa/verify/submit` endpoint and does
-        mode switching via plain links rather than JS.
-
-        Public route — the pre-login session_token is the sole
-        credential the verify endpoint relies on. The token threads
-        through as ``?session=<token>`` from the login flow.
-        """
-
-        app_state = request.app.state
-        css_links, js_scripts = _typed_chrome_assets(app_state)
-        product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
-        # Leftover ``?session=zzz`` used to invent the challenge form
-        # (token echo theater). Same helper as reset ``?token=``.
-        honest_session = leftover_honest_auth_token(session)
-        if honest_session is None:
-            return HTMLResponse("Unknown 2FA session", status_code=400)
-        # `mode` is the canonical query name; accept legacy `method=`
-        # too so links from older bookmarks still work. Leftover
-        # ``?mode=zzz`` used to invent totp — stay put (400).
-        honest = leftover_honest_2fa_mode(mode or method)
-        if honest is None:
-            return HTMLResponse("Unknown 2FA method", status_code=400)
-        chosen_mode = honest
-        # Leftover ``?sent=zzz`` used to invent code-sent theater via
-        # ``bool(sent)``. Valid ``sent=1`` rides; absent/blank is first
-        # visit (False). HTMLResponse (not Response(content=…)) — oral #93.
-        honest_sent = leftover_honest_2fa_sent(sent)
-        if honest_sent is None:
-            return HTMLResponse("Unknown 2FA sent flag", status_code=400)
-        honest_error = leftover_honest_auth_error(error, CHALLENGE_ERROR_TOKENS)
-        if honest_error is None:
-            return HTMLResponse("Unknown 2FA error", status_code=400)
-        error_message = CHALLENGE_ERROR_MESSAGES.get(honest_error, "")
-        page = build_2fa_challenge_view(
-            product_name=product_name,
-            session_token=honest_session,
-            mode=chosen_mode,
-            email_otp_enabled=True,
-            code_sent=honest_sent,
-            error_message=error_message,
-            css_links=css_links,
-            js_scripts=js_scripts,
-        )
-        return HTMLResponse(content=FragmentRenderer().render(page))
 
     return router

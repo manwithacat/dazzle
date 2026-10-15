@@ -423,14 +423,6 @@
     ]
   },
   {
-    "signature": "09cdac775e2da6f35af97f467eee48d1",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/auth/routes_2fa.py::_get_otp_store",
-      "dazzle/http/runtime/auth/routes_2fa.py::_get_recovery_store"
-    ]
-  },
-  {
     "signature": "5d4130261ee3008b68e9fddfe088586a",
     "count": 2,
     "names": [
@@ -444,30 +436,6 @@
     "names": [
       "dazzle/http/runtime/handlers/graph_handlers.py::_auth_handler",
       "dazzle/http/runtime/handlers/graph_handlers.py::_noauth_handler"
-    ]
-  },
-  {
-    "signature": "exact:9c015c0dc1d0335634c39fa1598d3d63",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/otp_store.py::__init__",
-      "dazzle/http/runtime/recovery_codes.py::__init__"
-    ]
-  },
-  {
-    "signature": "exact:b39e87aceb4e7a9aea08e91b64f4d98f",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/otp_store.py::_get_connection",
-      "dazzle/http/runtime/recovery_codes.py::_get_connection"
-    ]
-  },
-  {
-    "signature": "d100312e7baa6130f0f2d2331127a925",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/otp_store.py::init_db",
-      "dazzle/http/runtime/recovery_codes.py::init_db"
     ]
   },
   {
@@ -517,14 +485,6 @@
       "dazzle/http/runtime/site_routes.py::serve_page",
       "dazzle/http/runtime/site_routes.py::serve_privacy_page",
       "dazzle/http/runtime/site_routes.py::serve_terms_page"
-    ]
-  },
-  {
-    "signature": "b8b3c52354b218d9c282abfeb3e245ed",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/site_routes.py::two_factor_settings_page",
-      "dazzle/http/runtime/site_routes.py::two_factor_setup_page"
     ]
   },
   {

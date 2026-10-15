@@ -1,7 +1,7 @@
 """Auth routes subsystem.
 
-Registers authentication routes (login/register/logout), social auth (OAuth2),
-2FA routes, and JWT routes. Auth deps (AuthStore, AuthMiddleware, auth_dep,
+Registers authentication routes (login/register/logout), social auth (OAuth2)
+and JWT routes. Auth deps (AuthStore, AuthMiddleware, auth_dep,
 optional_auth_dep) are set on SubsystemContext by DazzleBackendApp._setup_auth().
 """
 
@@ -34,8 +34,8 @@ class AuthSubsystem:
         self._register_jwt_routes(ctx)
 
     def _register_auth_routes(self, ctx: SubsystemContext) -> None:
-        """Register login/register/logout, 2FA, and JWT auth routes."""
-        from dazzle.http.runtime.auth import create_2fa_routes, create_auth_routes
+        """Register login/register/logout and JWT auth routes."""
+        from dazzle.http.runtime.auth import create_auth_routes
 
         # Build persona -> default_route mapping for post-login redirect
         _persona_routes: dict[str, str] = {}
@@ -228,17 +228,6 @@ class AuthSubsystem:
                 "(QA_AUTH_SECRET set) — ensure this deployment is a test instance"
             )
 
-        # Form-encoded 2FA challenge submit routes (Phase 1.D.1,
-        # v0.67.35) — the typed challenge view posts here instead of
-        # the JSON `/auth/2fa/verify` endpoint, so the form works
-        # without JS.
-        from dazzle.http.runtime.auth.two_factor_form_routes import (
-            create_two_factor_form_routes,
-        )
-
-        two_factor_form_router = create_two_factor_form_routes()
-        ctx.app.include_router(two_factor_form_router)
-
         # SSO initiation + callback routes (Phase 1.C, v0.67.39).
         # Mounted unconditionally so the endpoint dispatcher can return
         # a friendly "sso_provider_unknown" redirect when SSO isn't
@@ -274,20 +263,6 @@ class AuthSubsystem:
             )
 
             ctx.app.include_router(create_sso_routes())
-
-        # 2FA routes — thread the AppSpec-level TwoFactorConfig through so
-        # DSL authors can tune recovery-code count etc. at app-configuration
-        # time (#838). When no SecurityConfig is present on the AppSpec, the
-        # routes fall back to framework defaults via TwoFactorConfig().
-        twofa_config = None
-        if ctx.appspec.security is not None:
-            twofa_config = ctx.appspec.security.two_factor
-        twofa_router = create_2fa_routes(
-            ctx.auth_store,
-            database_url=ctx.database_url,
-            two_factor_config=twofa_config,
-        )
-        ctx.app.include_router(twofa_router)
 
         # SES webhook (if SES is configured)
         try:

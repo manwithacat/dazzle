@@ -1,12 +1,10 @@
-"""Auth leftover urlsafe tokens must not invent a reset / 2FA form (cycle 2224).
+"""Auth leftover urlsafe tokens must not invent a reset form (cycle 2224).
 
 leftover-honest auth error already exists (oral #95). Reset GET still
 echoed leftover ``?token=zzz`` / ``ghost`` into the reset form and
-invented token theater. 2FA GET echoed leftover ``?session=zzz`` the
-same way. Valid ``secrets.token_urlsafe(32)`` tokens ride; leftover
-stays put (400, no invented form). Live simple_task ``/reset-password``
-+ ``/2fa/challenge``. Oral #98 — not leftover auth error (oral #95),
-not leftover 2FA mode (oral #92), not leftover 2FA sent (oral #94).
+invented token theater. Valid ``secrets.token_urlsafe(32)`` tokens ride; leftover
+stays put (400, no invented form). Live simple_task ``/reset-password``.
+Oral #98 — not leftover auth error (oral #95).
 """
 
 from __future__ import annotations
@@ -107,36 +105,6 @@ def test_valid_reset_token_rides() -> None:
     assert "Unknown reset token" not in resp.text
 
 
-def test_leftover_2fa_session_does_not_invent_form() -> None:
-    resp = _site_client().get("/2fa/challenge?session=zzz")
-    assert resp.status_code == 400
-    assert "Unknown 2FA session" in resp.text
-    assert "Authenticator code" not in resp.text
-    assert "Verify your identity" not in resp.text
-
-
-def test_leftover_2fa_session_sid_does_not_invent_form() -> None:
-    resp = _site_client().get("/2fa/challenge?session=sid&mode=totp")
-    assert resp.status_code == 400
-    assert "Unknown 2FA session" in resp.text
-    assert "Authenticator code" not in resp.text
-
-
-def test_absent_2fa_session_still_renders_form() -> None:
-    resp = _site_client().get("/2fa/challenge")
-    assert resp.status_code == 200
-    assert "Authenticator code" in resp.text
-    assert "Unknown 2FA session" not in resp.text
-
-
-def test_valid_2fa_session_rides() -> None:
-    resp = _site_client().get(f"/2fa/challenge?session={_VALID}&mode=totp")
-    assert resp.status_code == 200
-    assert "Authenticator code" in resp.text
-    assert _VALID in resp.text
-    assert "Unknown 2FA session" not in resp.text
-
-
 def test_helper_source_pins_auth_token_leftover() -> None:
     views = _VIEWS.read_text()
     assert "def leftover_honest_auth_token" in views
@@ -144,7 +112,6 @@ def test_helper_source_pins_auth_token_leftover() -> None:
     site = _SITE.read_text()
     assert "leftover_honest_auth_token" in site
     assert "Unknown reset token" in site
-    assert "Unknown 2FA session" in site
     assert "HTMLResponse" in site
 
 

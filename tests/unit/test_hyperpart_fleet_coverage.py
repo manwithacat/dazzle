@@ -65,7 +65,7 @@ SIGNALS: dict[str, object] = {
     "combobox": r"widget\s*[:=]\s*combobox",
     "tags": r"widget\s*[:=]\s*tags",
     "pdf": r"display:\s*pdf_viewer",
-    "two-factor": "always",  # gated on sitespec presence — 7/12 examples mount /2fa/*
+    "two-factor": "exempt:2FA parked (DD-014, ADR-0057 ship AG); HM gallery only",
     # field-level DOTTED source refs only (source=pack.operation; the
     # workspace-region `source: Entity` keyword is a different feature).
     # Anchor: fieldtest_hub manufacturer ← companies_house_lookup.

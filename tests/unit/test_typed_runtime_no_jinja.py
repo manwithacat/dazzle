@@ -37,8 +37,6 @@ _TYPED_ONLY_MODULES = (
     "src/dazzle/http/runtime/auth/sso_config.py",
     "src/dazzle/http/runtime/auth/sso_routes.py",
     "src/dazzle/http/runtime/auth/sso_views.py",
-    "src/dazzle/http/runtime/auth/two_factor_form_routes.py",
-    "src/dazzle/http/runtime/auth/two_factor_views.py",
     "src/dazzle/http/runtime/error_views.py",
     # Phase 4 app-shell completion (v0.67.55–v0.67.57):
     "src/dazzle/http/runtime/exception_handlers.py",
@@ -186,7 +184,7 @@ def test_site_auth_template_dir_does_not_exist() -> None:
         f"site/auth/ Jinja template directory has reappeared at {auth_dir}. "
         "The auth Jinja retirement (Phases 1.A–1.D.2) deliberately emptied "
         "this directory. New auth surfaces must be typed-Fragment views in "
-        "`dazzle_http.runtime.auth.auth_views` or `two_factor_views`."
+        "`dazzle.http.runtime.auth.auth_views`."
     )
 
 

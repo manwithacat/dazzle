@@ -1,8 +1,8 @@
 """Single source of truth for same-origin redirect validation.
 
 Consolidates the `_is_safe_redirect_path` helper that was previously duplicated
-across five auth route modules (password_login, magic_link, sso, email_verification,
-two_factor_form). One implementation removes the risk of a single copy drifting
+across the auth route modules (password_login, magic_link, sso,
+email_verification). One implementation removes the risk of a single copy drifting
 into a real open redirect — exactly the bug class CodeQL's ``py/url-redirection``
 warns about. Each route module imports this and keeps its local
 ``_is_safe_redirect_path`` name as a thin alias, so call sites are unchanged.

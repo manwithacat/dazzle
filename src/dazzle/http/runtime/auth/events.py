@@ -2,7 +2,7 @@
 
 Emits events to the EventFramework bus after successful auth operations:
 - ``auth.user.registered`` — after user registration
-- ``auth.user.logged_in`` — after login (including 2FA completion)
+- ``auth.user.logged_in`` — after login
 - ``auth.user.password_changed`` — after password change
 
 Events are fire-and-forget: failures are logged but never block the auth
@@ -92,7 +92,7 @@ async def emit_user_logged_in(
     Args:
         user: The authenticated user.
         session_id: The session ID created for this login.
-        method: How the user authenticated (``password``, ``2fa``, ``jwt``).
+        method: How the user authenticated (``password``, ``jwt``).
     """
     envelope = EventEnvelope.create(
         event_type=AUTH_USER_LOGGED_IN,

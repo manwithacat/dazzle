@@ -209,7 +209,7 @@ def build_site_page_context(
 
 # build_site_auth_context retired in Phase 1.D.2 (v0.67.37). All
 # auth-page surfaces now render via typed-Fragment views in
-# `dazzle.http.runtime.auth.{auth_views,two_factor_views}`. The
+# `dazzle.http.runtime.auth.auth_views`. The
 # `SiteAuthContext` Pydantic model in `template_context.py` is kept
 # for now because the template_renderer's Union type still references
 # it, but no production code path constructs it.

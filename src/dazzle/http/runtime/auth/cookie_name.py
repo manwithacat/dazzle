@@ -70,7 +70,7 @@ def select_write_name(
     default: str = LEGACY_NAME,
 ) -> str:
     """Pick the cookie name to use when **writing** a new session cookie
-    in a login / signup / 2FA-verify / SSO-callback handler.
+    in a login / signup / SSO-callback handler.
 
     Apps without ``tenant_host:`` always get ``default`` (typically
     ``dazzle_session``). Apps with ``tenant_host:`` get the host-bound

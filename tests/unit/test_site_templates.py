@@ -220,8 +220,7 @@ class TestBuildSitePageContext:
 
 # TestBuildSiteAuthContext class retired in Phase 1.D.2 (v0.67.37).
 # `build_site_auth_context` is gone; auth-page coverage now lives in
-# the typed-view test suites under `tests/unit/test_auth_views_*.py`
-# and `tests/unit/test_two_factor_views.py`.
+# the typed-view test suites under `tests/unit/test_auth_views_*.py`.
 
 
 # TestBuildSite404Context removed in Phase 2.A (v0.67.34) —

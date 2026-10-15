@@ -67,7 +67,7 @@ Files dominated by tests that pin internal call shapes (high mocks, short body, 
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 8647
+- **Twin pairs**: 8463
 
 ### Top 30 twin pairs
 
@@ -80,13 +80,11 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_expression_lang.py` | `test_sla_manager.py` | 82 | 32 | 23 | 0.72 |
 | `test_workspace_layout_prefs.py` | `test_workspace_rendering.py` | 31 | 46 | 23 | 0.74 |
 | `test_curl_test_generator.py` | `test_pdf_viewer_component.py` | 28 | 52 | 22 | 0.79 |
-| `test_expression_lang.py` | `test_otp_store.py` | 82 | 28 | 22 | 0.79 |
 | `test_expression_lang.py` | `test_workspace_layout_prefs.py` | 82 | 31 | 22 | 0.71 |
 | `test_onboarding_renderer.py` | `test_pdf_viewer_component.py` | 25 | 52 | 22 | 0.88 |
 | `test_demo_data_loader.py` | `test_persona_journey.py` | 27 | 55 | 21 | 0.78 |
 | `test_demo_data_loader.py` | `test_schema_diff.py` | 27 | 40 | 21 | 0.78 |
 | `test_expression_lang.py` | `test_vendor_mock_generator.py` | 82 | 27 | 21 | 0.78 |
-| `test_auth_views_login_magic_link.py` | `test_two_factor_views.py` | 22 | 35 | 20 | 0.91 |
 | `test_css_clip_check.py` | `test_expression_lang.py` | 21 | 82 | 20 | 0.95 |
 | `test_css_clip_check.py` | `test_persona_journey.py` | 21 | 55 | 20 | 0.95 |
 | `test_css_clip_check.py` | `test_workspace_layout_prefs.py` | 21 | 31 | 20 | 0.95 |
@@ -103,3 +101,5 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_vendor_mock_generator.py` | `test_workspace_rendering.py` | 27 | 46 | 20 | 0.74 |
 | `test_computed_evaluator.py` | `test_expression_lang.py` | 21 | 82 | 19 | 0.9 |
 | `test_css_clip_check.py` | `test_sla_manager.py` | 21 | 32 | 19 | 0.9 |
+| `test_css_clip_check.py` | `test_vendor_mock_generator.py` | 21 | 27 | 19 | 0.9 |
+| `test_expression_lang.py` | `test_grant_store.py` | 82 | 23 | 19 | 0.83 |

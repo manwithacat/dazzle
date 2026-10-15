@@ -15,7 +15,6 @@ import pytest
 # returning `Response` — these MUST use `include_in_schema=False`.
 AUTH_ROUTE_FILES = [
     "src/dazzle/http/runtime/auth/routes.py",
-    "src/dazzle/http/runtime/auth/routes_2fa.py",
     "src/dazzle/http/runtime/email_templates.py",
 ]
 

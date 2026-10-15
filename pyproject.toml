@@ -65,11 +65,6 @@ dependencies = [
     # required dep so qualitative trials and demo boots produce
     # realistic strings instead of "UX first_name 2f828c".
     "faker>=20.0",
-    # segno renders TOTP enrollment QR codes server-side in the 2FA setup
-    # flow. Pure-Python, zero transitive deps. Previously the flow loaded
-    # QR codes from api.qrserver.com, leaking the TOTP secret to a third
-    # party (#829).
-    "segno>=1.5",
     # bleach sanitises rich-text widget input on the server side
     # (#977 cycle 4). The client-side schema enforcement in
     # dz-richtext.js is a UX layer; bleach is the security boundary.
@@ -519,7 +514,6 @@ module = [
     # route_generator into handlers/* — the override moves with the code.
     "dazzle.http.runtime.handlers.*",
     "dazzle.http.runtime.auth.routes",
-    "dazzle.http.runtime.auth.routes_2fa",
     "dazzle.http.runtime.auth.routes_jwt",
 ]
 # FastAPI app.get/post decorators on closure-scoped routes are untyped (app: Any),

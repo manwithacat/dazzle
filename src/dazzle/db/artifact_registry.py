@@ -139,13 +139,6 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
         "dazzle.http.runtime.grant_store.ensure_grant_tables",
         boot_entry="dazzle.http.runtime.grant_store.GrantStore._ensure_tables",
     ),
-    # otp / recovery — truly orchestrator-only (no independent boot path).
-    _fw("_dazzle_otp_codes", "dazzle.http.runtime.otp_store.ensure_otp_tables", boot_entry=None),
-    _fw(
-        "_dazzle_recovery_codes",
-        "dazzle.http.runtime.recovery_codes.ensure_recovery_code_tables",
-        boot_entry=None,
-    ),
     _fw(
         "_dazzle_event_inbox",
         "dazzle.http.events.inbox.EventInbox.create_table",

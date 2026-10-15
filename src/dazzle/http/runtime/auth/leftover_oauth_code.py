@@ -25,8 +25,8 @@ def leftover_honest_oauth_code(raw: Any) -> str | None:
     ride. Absent / blank is first-visit (``""`` — stray callback
     / cancel still bounces ``sso_failed``). Well-formed codes
     that fail exchange still bounce ``sso_failed``. Distinct from
-    leftover consume token (oral #109), leftover 2FA code (oral
-    #108) and leftover SSO provider (oral #112). Live simple_task
+    leftover consume token (oral #109) and leftover SSO
+    provider (oral #112). Live simple_task
     ``/auth/sso/{provider}/callback``. Cycle 2243.
     """
     if raw is None:

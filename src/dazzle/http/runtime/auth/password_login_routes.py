@@ -81,9 +81,7 @@ def create_password_login_routes() -> APIRouter:
 
         Failed authentication redirects to `/login?error=invalid_credentials`
         (preserving `?next=` so the user lands on the original page after
-        a successful retry). 2FA-enabled accounts redirect to
-        `/2fa/challenge?session=<pending_session_id>` — the typed 2FA
-        view (Phase 1.D, future ship) consumes the pending session.
+        a successful retry).
         """
         auth_store = request.app.state.auth_store
         # Leftover ``email=zzz`` used to invent invalid_credentials.
@@ -96,13 +94,6 @@ def create_password_login_routes() -> APIRouter:
             if next and _is_safe_redirect_path(next) and next != "/":
                 target = f"/login?error=invalid_credentials&next={_encode_next(next)}"
             return RedirectResponse(url=target, status_code=303)
-
-        if getattr(user, "two_factor_enabled", False):
-            pending = auth_store.create_session(user)
-            challenge_url = f"/2fa/challenge?session={pending.id}"
-            if next and _is_safe_redirect_path(next) and next != "/":
-                challenge_url = f"{challenge_url}&next={_encode_next(next)}"
-            return RedirectResponse(url=challenge_url, status_code=303)
 
         # Session-fixation defence (#1198): regenerate the session id on
         # login success — invalidate any pre-auth session cookie the client

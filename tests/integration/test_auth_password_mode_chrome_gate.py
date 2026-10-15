@@ -9,11 +9,9 @@ Coverage:
   3. POST /auth/login/password authenticates against the auth store,
      sets the dazzle_session cookie, and redirects to ?next= when
      safe (or /app). Failure → 303 to /login?error=invalid_credentials.
-  4. POST /auth/login/password handles 2FA-enabled accounts by
-     redirecting to /2fa/challenge with the pending session id.
-  5. POST /auth/signup/password creates a user + session, handles
+  4. POST /auth/signup/password creates a user + session, handles
      mismatch / already_registered / create_failed / invalid_email.
-  6. Account-enumeration NOT a concern for password-mode signup —
+  5. Account-enumeration NOT a concern for password-mode signup —
      the existing-email path returns a clear error (intended UX:
      password-mode deployments accept that signup leaks email
      existence in exchange for friendlier errors).
@@ -58,10 +56,8 @@ class _StubUser:
         self,
         *,
         user_id: str = "user-123",
-        two_factor_enabled: bool = False,
     ) -> None:
         self.id = user_id
-        self.two_factor_enabled = two_factor_enabled
 
 
 class _StubAuthStore:
@@ -74,24 +70,22 @@ class _StubAuthStore:
         *,
         known_email: str | None = None,
         valid_password: str | None = None,
-        two_factor: bool = False,
         create_should_raise: bool = False,
     ) -> None:
         self._known_email = (known_email or "").strip().lower()
         self._valid_password = valid_password
-        self._two_factor = two_factor
         self._create_should_raise = create_should_raise
         self.created_users: list[tuple[str, str, str | None]] = []
         self.created_sessions: list[str] = []
 
     def authenticate(self, email: str, password: str) -> _StubUser | None:
         if email.strip().lower() == self._known_email and password == self._valid_password:
-            return _StubUser(two_factor_enabled=self._two_factor)
+            return _StubUser()
         return None
 
     def get_user_by_email(self, email: str) -> _StubUser | None:
         if email.strip().lower() == self._known_email:
-            return _StubUser(two_factor_enabled=self._two_factor)
+            return _StubUser()
         return None
 
     def create_user(self, *, email: str, password: str, username: str | None = None) -> _StubUser:
@@ -117,7 +111,6 @@ def _build_app(
     password_mode: bool,
     known_email: str | None = None,
     valid_password: str | None = None,
-    two_factor: bool = False,
     create_should_raise: bool = False,
 ) -> tuple[TestClient, _StubAuthStore]:
     app = FastAPI()
@@ -126,7 +119,6 @@ def _build_app(
     store = _StubAuthStore(
         known_email=known_email,
         valid_password=valid_password,
-        two_factor=two_factor,
         create_should_raise=create_should_raise,
     )
     app.state.auth_store = store
@@ -312,26 +304,6 @@ def test_post_login_password_invalid_threads_safe_next_into_redirect() -> None:
     )
     assert resp.status_code == 303
     assert resp.headers["location"] == ("/login?error=invalid_credentials&next=/app/tasks")
-
-
-def test_post_login_password_2fa_redirects_to_challenge() -> None:
-    client, store = _build_app(
-        chrome=True,
-        password_mode=True,
-        known_email="alice@example.com",
-        valid_password="hunter2",
-        two_factor=True,
-    )
-    resp = client.post(
-        "/auth/login/password",
-        data={"email": "alice@example.com", "password": "hunter2"},
-    )
-    assert resp.status_code == 303
-    assert resp.headers["location"].startswith("/2fa/challenge?session=")
-    # Pending session was created.
-    assert store.created_sessions == ["sess-for-user-123"]
-    # Cookie NOT set on 2FA branch — typed view consumes pending session.
-    assert "dazzle_session=" not in resp.headers.get("set-cookie", "")
 
 
 def test_post_login_password_empty_password_redirects_with_error() -> None:

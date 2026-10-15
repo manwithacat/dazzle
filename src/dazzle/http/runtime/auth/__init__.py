@@ -1,8 +1,8 @@
 """
 Authentication runtime for Dazzle Backend (PostgreSQL-only).
 
-Provides session-based authentication with cookie management,
-two-factor authentication, and JWT token endpoints.
+Provides session-based authentication with cookie management
+and JWT token endpoints.
 """
 
 from .crypto import hash_password, verify_password
@@ -41,15 +41,12 @@ from .models import (
     SessionRecord,
     TokenRequest,
     TokenRevokeRequest,
-    TwoFactorSetupRequest,
-    TwoFactorVerifyRequest,
     UserRecord,
     effective_roles_of,
 )
 from .routes import create_auth_routes
-from .routes_2fa import create_2fa_routes
 from .routes_jwt import create_jwt_auth_routes
-from .store import AuthStore, TwoFactorMixin
+from .store import AuthStore
 
 __all__ = [
     "AUTH_USER_EMAIL_VERIFIED",
@@ -60,7 +57,6 @@ __all__ = [
     "effective_roles_of",
     "AuthMiddleware",
     "AuthStore",
-    "TwoFactorMixin",
     "ChangePasswordRequest",
     "ForgotPasswordRequest",
     "LoginRequest",
@@ -70,10 +66,7 @@ __all__ = [
     "SessionRecord",
     "TokenRequest",
     "TokenRevokeRequest",
-    "TwoFactorSetupRequest",
-    "TwoFactorVerifyRequest",
     "UserRecord",
-    "create_2fa_routes",
     "create_auth_dependency",
     "create_auth_routes",
     "create_deny_dependency",

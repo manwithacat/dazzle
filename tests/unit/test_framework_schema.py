@@ -45,8 +45,6 @@ IN_SCOPE_TABLES: list[str] = [
     "refresh_tokens",
     "_grants",
     "_grant_events",
-    "_dazzle_otp_codes",
-    "_dazzle_recovery_codes",
     "_dazzle_event_inbox",
     "_dazzle_event_outbox",
     "tenant_host_aliases",

@@ -1,11 +1,9 @@
 """Auth leftover ?error= tokens must not invent a clean page (cycle 2221).
 
-leftover-honest 2FA sent/mode already exist (oral #94 / #92). Login
-still omitted leftover ``?error=zzz`` as absent and invented a clean
+Login used to omit leftover ``?error=zzz`` as absent and invented a clean
 sign-in. Social SSO's ``sso_{reason}`` tokens vanished the same way.
 Valid declared tokens ride; leftover stays put (400, no invented
-clean page). Live simple_task ``/login``. Oral #95 — not leftover
-2FA sent (oral #94), not leftover 2FA mode (oral #92).
+clean page). Live simple_task ``/login``. Oral #95.
 """
 
 from __future__ import annotations
@@ -71,7 +69,6 @@ def _org_client() -> TestClient:
     return TestClient(app)
 
 
-_SESSION = "A" * 43
 _LOGIN_FORM = "Sign in"
 
 # (client, url, status, present, absent). A leftover token answers 400 with an
@@ -152,22 +149,6 @@ _CASES = [
         ("invalid or expired",),
         (),
         id="reset-invalid-rides",
-    ),
-    pytest.param(
-        _site_client,
-        f"/2fa/challenge?session={_SESSION}&mode=totp&error=zzz",
-        400,
-        ("Unknown 2FA error",),
-        (),
-        id="2fa-leftover-400",
-    ),
-    pytest.param(
-        _site_client,
-        f"/2fa/challenge?session={_SESSION}&mode=totp&error=invalid_code",
-        200,
-        ("That code didn't match. Try again.",),
-        (),
-        id="2fa-invalid-code-rides",
     ),
     pytest.param(
         _org_client,

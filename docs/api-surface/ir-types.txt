@@ -1909,7 +1909,6 @@ ir_class: SecurityConfig
     - enable_hsts: bool = False
     - profile: SecurityProfile = <SecurityProfile.BASIC: 'basic'>
     - require_auth_by_default: bool = False
-    - two_factor: TwoFactorConfig = TwoFactorConfig(enabled=False, methods=[<TwoFactorMethod.EMAIL_OTP: 'email_otp'>, <TwoFactorMethod.TOTP: 'totp'>], recovery_code_count=8)
 
 ir_class: SeedFieldTemplate
   required:

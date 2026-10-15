@@ -116,7 +116,6 @@ _LIMIT_OVERRIDE_ENV = {
     "DAZZLE_RATE_LIMIT_API": "api_limit",
     "DAZZLE_RATE_LIMIT_AUTH": "auth_limit",
     "DAZZLE_RATE_LIMIT_UPLOAD": "upload_limit",
-    "DAZZLE_RATE_LIMIT_2FA": "twofa_limit",
     "DAZZLE_RATE_LIMIT_DOWNLOAD": "download_limit",
 }
 
@@ -212,7 +211,6 @@ class _Limits:
     auth_limit: str = "10/minute"
     api_limit: str = "300/minute"  # #1298: matches the standard-profile default
     upload_limit: str = "10/minute"
-    twofa_limit: str = "5/minute"
     # #1551 item 4 (hx-pdf §18): document byte routes. Range-capable
     # viewers issue many byte requests per document — looser than the
     # write limits, but no longer unlimited.
@@ -240,7 +238,7 @@ def safe_limit(limit_str: str) -> Callable[[Any], Any]:
     partial-bound handler in the auth router. Just ``__name__`` is the
     surgical fix.
 
-    Route auth-flow + 2FA handlers wrapped with ``partial(deps_fn, deps)``
+    Route auth-flow handlers wrapped with ``partial(deps_fn, deps)``
     through this helper instead of calling ``_rl.limits.limiter.limit()``
     directly.
 
@@ -270,7 +268,6 @@ class RateLimitConfig:
     auth_limit: str | None = None  # login, register, forgot/reset password
     api_limit: str | None = None  # general API endpoints
     upload_limit: str | None = None  # file upload
-    twofa_limit: str | None = None  # 2FA verification
     download_limit: str | None = None  # document/file byte reads (#1551)
     # #1296: trusted proxy hops for X-Forwarded-For-aware client keying.
     # 0 = spoofing-safe request.client.host; 1 for Heroku/Cloudflare.
@@ -301,7 +298,6 @@ def configure_rate_limits_for_profile(profile: str) -> RateLimitConfig:
             # _apply_env_limit_overrides) instead of dropping to `basic`.
             api_limit="300/minute",
             upload_limit="10/minute",
-            twofa_limit="5/minute",
             download_limit="120/minute",
         )
     else:  # strict
@@ -309,7 +305,6 @@ def configure_rate_limits_for_profile(profile: str) -> RateLimitConfig:
             auth_limit="5/minute",
             api_limit="30/minute",
             upload_limit="5/minute",
-            twofa_limit="3/minute",
             download_limit="60/minute",
         )
 
@@ -320,7 +315,7 @@ def apply_rate_limiting(app: "FastAPI", profile: str) -> None:
     Creates a slowapi Limiter and stores it on app.state for use by
     endpoint decorators. On basic profile, no limiter is created.
 
-    Also sets limit strings on the ``limits`` container (auth_limit, twofa_limit, etc.)
+    Also sets limit strings on the ``limits`` container (auth_limit, api_limit, etc.)
     so route modules can reference them via ``_rl.limits.auth_limit``.
 
     Args:
@@ -341,8 +336,6 @@ def apply_rate_limiting(app: "FastAPI", profile: str) -> None:
         limits.api_limit = config.api_limit
     if config.upload_limit:
         limits.upload_limit = config.upload_limit
-    if config.twofa_limit:
-        limits.twofa_limit = config.twofa_limit
     if config.download_limit:
         limits.download_limit = config.download_limit
 

@@ -35,29 +35,6 @@ class SecurityProfile(StrEnum):
     STRICT = "strict"
 
 
-class TwoFactorMethod(StrEnum):
-    """Supported two-factor authentication methods."""
-
-    EMAIL_OTP = "email_otp"
-    TOTP = "totp"
-
-
-class TwoFactorConfig(BaseModel):
-    """Two-factor authentication configuration.
-
-    Attributes:
-        enabled: Whether 2FA is available for users
-        methods: Allowed 2FA methods
-        recovery_code_count: Number of recovery codes to generate
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    enabled: bool = False
-    methods: list[TwoFactorMethod] = [TwoFactorMethod.EMAIL_OTP, TwoFactorMethod.TOTP]
-    recovery_code_count: int = 8
-
-
 class SecurityConfig(BaseModel):
     """
     Security configuration for the application.
@@ -77,13 +54,6 @@ class SecurityConfig(BaseModel):
     enable_hsts: bool = False
     enable_csp: bool = False
     require_auth_by_default: bool = False
-    # 2FA policy knobs. Disabled by default; downstream apps opt in by
-    # constructing a TwoFactorConfig with enabled=True and threading it
-    # here through SecurityConfig.from_profile or a direct SecurityConfig().
-    # Consumed by dazzle.http.runtime.auth.routes_2fa.create_2fa_routes
-    # via the AuthSubsystem — the recovery-code count, TOTP drift window,
-    # and method-gating all read from this struct at request time (#838).
-    two_factor: TwoFactorConfig = TwoFactorConfig()
 
     model_config = ConfigDict(frozen=True)
 

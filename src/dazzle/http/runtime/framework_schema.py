@@ -47,8 +47,6 @@ from dazzle.http.runtime.audit_log import ensure_audit_log_table
 from dazzle.http.runtime.auth.store import ensure_auth_core_tables
 from dazzle.http.runtime.file_storage import ensure_file_storage_tables
 from dazzle.http.runtime.grant_store import ensure_grant_tables
-from dazzle.http.runtime.otp_store import ensure_otp_tables
-from dazzle.http.runtime.recovery_codes import ensure_recovery_code_tables
 from dazzle.http.runtime.tenant.aliases import ensure_tenant_host_aliases_table
 from dazzle.http.runtime.token_store import ensure_refresh_token_tables
 from dazzle.http.runtime.triggers import build_assert_subtype_kind_function
@@ -188,14 +186,6 @@ def _ensure_framework_schema_ddl(cur: Any) -> None:  # cur: psycopg.Cursor
     # ── GRANTS (_grants, _grant_events) ──────────────────────────────────
     # Delegated to ensure_grant_tables (grant_store.py).
     ensure_grant_tables(cur)
-
-    # ── OTP CODES (_dazzle_otp_codes) ────────────────────────────────────
-    # Delegated to ensure_otp_tables (otp_store.py).
-    ensure_otp_tables(cur)
-
-    # ── RECOVERY CODES (_dazzle_recovery_codes) ──────────────────────────
-    # Delegated to ensure_recovery_code_tables (recovery_codes.py).
-    ensure_recovery_code_tables(cur)
 
     # ── EVENT INBOX / OUTBOX (fixed names) ───────────────────────────────
     # The FIXED framework tables _dazzle_event_inbox and _dazzle_event_outbox

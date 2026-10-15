@@ -229,26 +229,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_two_factor_views.py",
-    "class": "(module)",
-    "assertion_shape": "('in',)",
-    "size": 9,
-    "members": [
-      "test_totp_mode_posts_to_verify_submit",
-      "test_totp_mode_default_subtitle",
-      "test_totp_mode_offers_email_otp_link_when_enabled",
-      "test_recovery_mode_subtitle",
-      "test_email_otp_mode_subtitle",
-      "test_setup_view_renders_required_element_ids",
-      "test_setup_view_totp_code_input_attributes",
-      "test_settings_view_renders_required_element_ids",
-      "test_settings_view_status_loading_placeholder"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/integration/test_examples_fragment_http.py",
     "class": "(module)",
     "assertion_shape": "('in',)",
@@ -821,24 +801,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_two_factor_views.py",
-    "class": "(module)",
-    "assertion_shape": "('in', 'in')",
-    "size": 7,
-    "members": [
-      "test_totp_mode_includes_session_token",
-      "test_totp_mode_includes_method_hidden_field",
-      "test_totp_mode_offers_recovery_link",
-      "test_recovery_mode_uses_recovery_label",
-      "test_recovery_mode_links_back_to_totp",
-      "test_setup_view_links_back_to_app",
-      "test_settings_view_links_back_to_app"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_workspace_live_refresh_1391.py",
     "class": "TestTerminalStateStop",
     "assertion_shape": "('is',)",
@@ -987,23 +949,6 @@
       "test_no_origin_signal_falls_back_to_token_reject",
       "test_exempt_path_still_exempt_regardless_of_origin",
       "test_bearer_still_exempt_regardless_of_origin"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_csrf_session_binding_phase1.py",
-    "class": "TestCsrfCookieAtSiblingSites",
-    "assertion_shape": "('eq', 'in', 'isnot', 'notin')",
-    "size": 6,
-    "members": [
-      "test_json_2fa_verify_sets_csrf_from_session",
-      "test_form_2fa_verify_sets_csrf_from_session",
-      "test_form_login_sets_csrf_from_session",
-      "test_form_signup_sets_csrf_from_session",
-      "test_magic_link_consume_sets_csrf_from_session",
-      "test_sso_callback_sets_csrf_from_session"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -1378,23 +1323,6 @@
       "test_host_outside_domain_returns_400",
       "test_negative_cache_short_circuits_second_request",
       "test_mount_tenant_resolution_middleware_dedups_via_stack_when_marker_absent"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_two_factor_views.py",
-    "class": "(module)",
-    "assertion_shape": "('in', 'notin')",
-    "size": 6,
-    "members": [
-      "test_error_message_escaped",
-      "test_setup_view_references_extracted_js",
-      "test_setup_view_escapes_product_name",
-      "test_settings_view_references_extracted_js",
-      "test_settings_view_escapes_product_name",
-      "test_settings_alerts_hidden_via_attribute_not_class"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -2331,22 +2259,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_two_factor_views.py",
-    "class": "(module)",
-    "assertion_shape": "('notin',)",
-    "size": 5,
-    "members": [
-      "test_totp_mode_hides_email_otp_link_when_disabled",
-      "test_totp_mode_hides_self_mode_link",
-      "test_session_token_escaped_in_form_value",
-      "test_session_token_escaped_in_mode_switch_links",
-      "test_site_sections_css_carries_no_auth_rules"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_ux_contract_checker.py",
     "class": "TestFindDuplicateTitlesInCards",
     "assertion_shape": "('eq',)",
@@ -2710,21 +2622,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_auth_token_leftover.py",
-    "class": "(module)",
-    "assertion_shape": "('eq', 'in', 'notin')",
-    "size": 4,
-    "members": [
-      "test_leftover_reset_token_ghost_does_not_invent_form",
-      "test_absent_reset_token_still_renders_form",
-      "test_leftover_2fa_session_sid_does_not_invent_form",
-      "test_absent_2fa_session_still_renders_form"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "property",
-    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
-  },
-  {
     "file": "tests/unit/test_auth_views_password_reset.py",
     "class": "(module)",
     "assertion_shape": "('expr',)",
@@ -3019,6 +2916,21 @@
       "test_sec_fetch_site_same_origin_wins_over_mismatched_origin",
       "test_sec_fetch_site_cross_site_wins_over_matching_origin",
       "test_explicit_default_port_origin_does_not_match_bare_host"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_csrf_session_binding_phase1.py",
+    "class": "TestCsrfCookieAtSiblingSites",
+    "assertion_shape": "('eq', 'in', 'isnot', 'notin')",
+    "size": 4,
+    "members": [
+      "test_form_login_sets_csrf_from_session",
+      "test_form_signup_sets_csrf_from_session",
+      "test_magic_link_consume_sets_csrf_from_session",
+      "test_sso_callback_sets_csrf_from_session"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -4099,21 +4011,6 @@
       "test_multiple_active_memberships_need_picker",
       "test_non_active_memberships_are_ignored",
       "test_host_pin_matches_membership"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_otp_store.py",
-    "class": "TestRecoveryCodeStoreVerifyCode",
-    "assertion_shape": "('is',)",
-    "size": 4,
-    "members": [
-      "test_valid_code_returns_true",
-      "test_invalid_code_returns_false",
-      "test_case_insensitive",
-      "test_wrong_user_returns_false"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -5267,76 +5164,6 @@
       "test_workspace_spec_creation",
       "test_theme_spec_creation",
       "test_element_node_creation"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_2fa_auth.py",
-    "class": "TestTwoFactorMixin",
-    "assertion_shape": "('assert_called_once', 'in')",
-    "size": 3,
-    "members": [
-      "test_enable_email_otp",
-      "test_disable_email_otp",
-      "test_set_recovery_codes_generated"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_2fa_auth.py",
-    "class": "TestTwoFactorVerifyRoute",
-    "assertion_shape": "('eq', 'in')",
-    "size": 3,
-    "members": [
-      "test_verify_invalid_totp_returns_401",
-      "test_verify_expired_session_token_returns_401",
-      "test_verify_totp_with_no_secret_returns_401"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_2fa_mode_leftover.py",
-    "class": "(module)",
-    "assertion_shape": "('eq', 'in')",
-    "size": 3,
-    "members": [
-      "test_absent_mode_still_defaults_totp",
-      "test_valid_mode_still_renders",
-      "test_leftover_verify_method_stays_put"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_2fa_page_routes.py",
-    "class": "TestTwoFactorRoutesWithoutAuth",
-    "assertion_shape": "('eq', 'in')",
-    "size": 3,
-    "members": [
-      "test_setup_route_returns_200",
-      "test_settings_route_returns_200",
-      "test_challenge_route_without_session_still_renders"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_2fa_page_routes.py",
-    "class": "TestTwoFactorAuthGuards",
-    "assertion_shape": "('eq', 'in')",
-    "size": 3,
-    "members": [
-      "test_setup_renders_when_authenticated",
-      "test_settings_renders_when_authenticated",
-      "test_challenge_is_public_even_with_auth_wired"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -8815,48 +8642,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_otp_store.py",
-    "class": "TestOTPStoreCleanup",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 3,
-    "members": [
-      "test_removes_expired_records",
-      "test_keeps_non_expired_records",
-      "test_mixed_expired_and_fresh"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_otp_store.py",
-    "class": "TestGenerateRecoveryCodes",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_generates_correct_count",
-      "test_custom_count",
-      "test_codes_are_unique"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_otp_store.py",
-    "class": "TestRecoveryCodeHashNormalization",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_dash_stripped",
-      "test_case_insensitive_hash",
-      "test_mixed_case_and_dashes"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_page_builder.py",
     "class": "(module)",
     "assertion_shape": "('eq',)",
@@ -11251,34 +11036,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_totp.py",
-    "class": "TestGenerateTotp",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_leading_zeros_preserved",
-      "test_same_secret_same_timestamp_same_code",
-      "test_same_time_step_same_code"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_totp.py",
-    "class": "TestVerifyTotp",
-    "assertion_shape": "('is', 'is')",
-    "size": 3,
-    "members": [
-      "test_window_zero_exact_match_only",
-      "test_larger_window",
-      "test_uses_constant_time_comparison"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_triples.py",
     "class": "TestResolveWidgetHasSource",
     "assertion_shape": "('eq',)",
@@ -11301,20 +11058,6 @@
       "test_deny_all_rule_permits_nobody",
       "test_forbid_rule_overrides_permit",
       "test_rules_match_effective_role_not_persona_id"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_two_factor_views.py",
-    "class": "(module)",
-    "assertion_shape": "('in', 'in', 'notin')",
-    "size": 3,
-    "members": [
-      "test_email_otp_mode_before_send_shows_send_button",
-      "test_setup_scaffold_hides_sections_via_native_hidden_attribute",
-      "test_setup_alerts_hidden_via_attribute_not_class"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",

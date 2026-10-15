@@ -24,18 +24,9 @@ class UserRecord(BaseModel):
     is_active: bool = True
     is_superuser: bool = False
     roles: list[str] = Field(default_factory=list)
-    totp_secret: str | None = None
-    totp_enabled: bool = False
-    email_otp_enabled: bool = False
-    recovery_codes_generated: bool = False
     email_verified: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-
-    @property
-    def two_factor_enabled(self) -> bool:
-        """Whether any 2FA method is active."""
-        return self.totp_enabled or self.email_otp_enabled
 
 
 class SessionRecord(BaseModel):
@@ -216,20 +207,6 @@ class ResetPasswordRequest(BaseModel):
 
     token: str
     new_password: str
-
-
-class TwoFactorVerifyRequest(BaseModel):
-    """2FA verification request body."""
-
-    code: str
-    method: str = "totp"  # "totp", "email_otp", or "recovery"
-    session_token: str = ""
-
-
-class TwoFactorSetupRequest(BaseModel):
-    """2FA TOTP setup verification request body."""
-
-    code: str
 
 
 class TokenRequest(BaseModel):

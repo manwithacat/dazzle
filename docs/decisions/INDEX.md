@@ -80,6 +80,7 @@ below, link from the issue body (not only a comment).
 | [DD-011](DD-011-island-rendering.md) | Rendering DSL-declared islands (`src:` / `title` / `fallback:`) | PARKED | — | Only `entity:` is live (data route); `dazzle validate` warns since flense ship R; reopen when cyfuture or AegisMark needs a rendered island |
 | [DD-012](DD-012-string-translation-catalogue.md) | String translation catalogue (`.po`/`.mo`, `translate`, `dazzle i18n`) | PARKED | #955 | Removed in flense ship AB (display-locale profile kept, middleware now mounted); restore from `3844ec995` when a consumer ships `.po` files |
 | [DD-013](DD-013-enterprise-sso-scim-connections.md) | Enterprise SSO / SCIM connections (OIDC, SAML, SCIM, domain verification, `dazzle auth connection`) | PARKED | #1342 | Removed in flense ship AD with its five tables (revision 0023); restore from `23cf59372` when a consumer declares `auth.enterprise.*` with a real IdP |
+| [DD-014](DD-014-two-factor-authentication.md) | Two-factor authentication (TOTP, email code, recovery codes, `/2fa/*` pages) | PARKED | #829, #838 | Removed in flense ship AG with its two tables (revision 0024); restore from `229226a88` when a consumer declares 2FA or its assurance pack names MFA |
 
 ## Related
 

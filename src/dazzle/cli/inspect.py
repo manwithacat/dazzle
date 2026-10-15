@@ -515,7 +515,6 @@ _AUTH_ROUTES: frozenset[str] = frozenset(
 )
 _AUTH_PREFIXES: tuple[str, ...] = (
     "/auth/",
-    "/2fa/",
     "/login/",
     "/signup/",
     "/forgot-password/",

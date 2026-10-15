@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 803
-- **Tests inside those clusters**: 3,034
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,231 tests** (≈ 15.6% of the suite)
+- **Clusters of ≥3**: 786
+- **Tests inside those clusters**: 2,964
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,178 tests** (≈ 15.2% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -16,8 +16,8 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 |---|---:|
 | 20+ | 0 |
 | 10-19 | 3 |
-| 5-9 | 136 |
-| 3-4 | 664 |
+| 5-9 | 131 |
+| 3-4 | 652 |
 
 ## Top 30 largest clusters
 
@@ -34,7 +34,6 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_schema_diff.py` | `(module)` | 9 | test_added_column, test_dropped_column, test_no_change_empty_delta… |
 | `tests/unit/test_scope_create_eval.py` | `(module)` | 9 | test_user_attr_check_passes_when_field_equals_user_id, test_user_attr_check_rejects_when_field_does_not_equal_user_id, test_user_attr_check_missing_attr_rejects… |
 | `tests/unit/test_session_manager.py` | `TestSessionTokenFromLoginResponse` | 9 | test_legacy_dazzle_session, test_host_cookie, test_apex_cookie… |
-| `tests/unit/test_two_factor_views.py` | `(module)` | 9 | test_totp_mode_posts_to_verify_submit, test_totp_mode_default_subtitle, test_totp_mode_offers_email_otp_link_when_enabled… |
 | `tests/integration/test_examples_fragment_http.py` | `(module)` | 8 | test_simple_task_create_form_str_field_renders_as_text_input, test_fragment_chrome_emits_dz_page_body_class, test_fragment_chrome_default_off_unchanged_behaviour… |
 | `tests/unit/test_cohort_strip_tone_bands_1144.py` | `(module)` | 8 | test_value_clears_highest_band_takes_that_tone, test_value_falls_to_middle_band, test_value_below_all_bands_stays_neutral… |
 | `tests/unit/test_csrf_disposition_phase3.py` | `TestCsrfDisposition` | 8 | test_bearer_is_na_bearer, test_webhook_is_na_signature, test_sign_route_is_na_signature… |
@@ -53,6 +52,7 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_apex_discovery.py` | `TestResolveApexRedirect` | 7 | test_apex_topology_does_not_bounce_even_with_apex_cookies, test_leftover_topology_does_not_invent_a_bounce, test_single_membership_stays_on_apex_when_host_cookies… |
 | `tests/unit/test_audit_integrity_config_loading.py` | `(module)` | 7 | test_manifest_default_audit_integrity_is_none, test_manifest_parses_hash_chain, test_build_server_config_threads_audit_integrity… |
 | `tests/unit/test_auth_views_login_magic_link.py` | `(module)` | 7 | test_login_form_posts_to_magic_link_issuance_endpoint, test_login_emits_submit_button, test_login_threads_next_url_through_form_action… |
+| `tests/unit/test_auth_views_password_mode.py` | `(module)` | 7 | test_login_password_view_posts_to_password_endpoint, test_login_password_view_threads_next_param, test_login_password_view_links_forgot_password… |
 
 ## Top 10 files by collapse-saving potential
 
@@ -60,7 +60,6 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 |---|---:|
 | `tests/unit/test_expression_lang.py` | 27 |
 | `tests/unit/test_schema_diff.py` | 25 |
-| `tests/unit/test_two_factor_views.py` | 25 |
 | `tests/unit/test_hm_contract_dom_conformance.py` | 24 |
 | `tests/unit/test_entity_card_data_resolution.py` | 20 |
 | `tests/unit/test_rbac_verifier.py` | 20 |
@@ -68,12 +67,13 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 | `tests/unit/test_org_activation.py` | 18 |
 | `tests/unit/test_csrf_origin_gate_phase2.py` | 17 |
 | `tests/unit/test_htmx_details.py` | 15 |
+| `tests/unit/test_scope_create_eval.py` | 14 |
 
 ## Fuzz-target worklist (property/fuzz-candidate clusters)
 
 Clusters whose subject is an input-boundary surface (parser/validator/crypto/…). Each is a candidate to collapse into ONE property test (input space → invariant) — which then becomes a fuzz target — rather than a fixed `@pytest.mark.parametrize` list. Path-based hint; confirm by reading the cluster. (#1342)
 
-- **Property/fuzz-candidate clusters**: 82
+- **Property/fuzz-candidate clusters**: 81
 
 | File | Class | Size | Form | Why |
 |---|---|---:|---|---|
@@ -88,7 +88,6 @@ Clusters whose subject is an input-boundary surface (parser/validator/crypto/…
 | `tests/unit/test_scope_default_deny_returns.py` | `(module)` | 5 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_agent_parser.py` | `TestParseActionTier2` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_auth_identity_validation.py` | `TestAuthIdentityValidation` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
-| `tests/unit/test_auth_token_leftover.py` | `(module)` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_copy_parser.py` | `TestParseCopyFile` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_copy_parser.py` | `TestMergeCopyIntoSitespec` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_day_timeline_config_parser.py` | `(module)` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
@@ -107,6 +106,7 @@ Clusters whose subject is an input-boundary surface (parser/validator/crypto/…
 | `tests/unit/test_rhythm_parser.py` | `(module)` | 4 | fuzz | DSL/parser surface — collapse to a property + add a fuzz target (corpus+mutators) |
 | `tests/unit/test_scope_rules.py` | `TestPermitFieldConditionRejection` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 | `tests/unit/test_validate_app_links.py` | `(module)` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
+| `tests/unit/test_validate_scope_predicates.py` | `TestInvalidPredicates` | 4 | property | input-boundary surface — collapse to a Hypothesis property (input space → invariant) |
 
 ## How to act on this
 

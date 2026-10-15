@@ -405,15 +405,11 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2210: leftover consent tokens must not invent granted
     "tests/unit/test_consent_bool_leftover.py",
     # cycle 2212: leftover join-policy tokens must not invent admin_approval
-    # cycle 2215: leftover 2FA ?mode=zzz must not invent totp
-    "tests/unit/test_2fa_mode_leftover.py",
-    # cycle 2218: leftover 2FA ?sent=zzz must not invent code-sent theater
-    "tests/unit/test_2fa_sent_leftover.py",
     # cycle 2221: leftover auth ?error=zzz must not invent a clean page
     "tests/unit/test_auth_error_leftover.py",
     # cycle 2222: leftover auth ?next=zzz must not invent the default landing
     "tests/unit/test_auth_next_leftover.py",
-    # cycle 2224: leftover auth ?token= / ?session= must not invent form theater
+    # cycle 2224: leftover auth ?token= must not invent form theater
     "tests/unit/test_auth_token_leftover.py",
     # cycle 2233: leftover auth email must not invent sent theater / persist / default IdP
     "tests/unit/test_auth_email_leftover.py",
@@ -421,8 +417,6 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_mailbox_shape.py",
     # cycle 2237: leftover org membership_id must not invent invalid_org theater
     "tests/unit/test_membership_id_leftover.py",
-    # cycle 2238: leftover 2FA code must not invent invalid_code theater
-    "tests/unit/test_2fa_code_leftover.py",
     # cycle 2239: leftover consume token must not invent invalid theater
     "tests/unit/test_auth_consume_token_leftover.py",
     # cycle 2242: leftover SSO provider slug must not invent sso_provider_unknown
@@ -447,8 +441,6 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2225: 2224 pack missed sibling GETs that still used leftover tokens
     "tests/integration/test_auth_password_reset_chrome_gate.py::test_get_reset_password_chrome_on_renders_typed_view_with_token",
     "tests/integration/test_auth_password_reset_chrome_gate.py::test_get_reset_password_renders_mismatch_error",
-    "tests/unit/test_2fa_page_routes.py::TestTwoFactorRoutesWithoutAuth::test_challenge_route_returns_200",
-    "tests/unit/test_2fa_page_routes.py::TestTwoFactorAuthGuards::test_challenge_is_public_even_with_auth_wired",
     # cycle 2216: leftover-honest form 400 used Response(content=) — #1551
     # byte-route proof red ×3 Pythons. GET already used HTMLResponse.
     "tests/unit/test_byte_route_proof.py",

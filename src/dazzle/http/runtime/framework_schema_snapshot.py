@@ -16,7 +16,7 @@ followed by ``render_snapshot_literal``.
     This is SEPARATE from ``project_schema``'s lossy ``list[str]`` format used
     by the #1431 app-entity migration-diffing path.  Do not conflate the two.
 
-**In-scope tables** (25): every entry in the FRAMEWORK_SCHEMA_SNAPSHOT dict
+**In-scope tables** (23): every entry in the FRAMEWORK_SCHEMA_SNAPSHOT dict
 key set (see the global-constraints list in the migration-baseline plan).
 
 **Excluded (not in this snapshot):** ops-database tables, event-bus
@@ -165,34 +165,6 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "uniques": [],
     },
-    "_dazzle_otp_codes": {
-        "columns": {
-            "attempts": {"default": "0", "nullable": True, "pk": False, "type": "integer"},
-            "code_hash": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "created_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "expires_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "id": {
-                "default": "nextval('_dazzle_otp_codes_id_seq'::regclass)",
-                "nullable": False,
-                "pk": True,
-                "type": "integer",
-            },
-            "max_attempts": {"default": "3", "nullable": True, "pk": False, "type": "integer"},
-            "method": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "used": {"default": "false", "nullable": True, "pk": False, "type": "boolean"},
-            "user_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
-        },
-        "fks": {},
-        "indexes": {
-            "idx_otp_expires": {"columns": ["expires_at"], "predicate": None, "unique": False},
-            "idx_otp_user_method": {
-                "columns": ["user_id", "method"],
-                "predicate": None,
-                "unique": False,
-            },
-        },
-        "uniques": [],
-    },
     "_dazzle_outbox": {
         "columns": {
             "attempts": {"default": "0", "nullable": True, "pk": False, "type": "integer"},
@@ -258,26 +230,6 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "fks": {},
         "indexes": {},
-        "uniques": [],
-    },
-    "_dazzle_recovery_codes": {
-        "columns": {
-            "code_hash": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "created_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "id": {
-                "default": "nextval('_dazzle_recovery_codes_id_seq'::regclass)",
-                "nullable": False,
-                "pk": True,
-                "type": "integer",
-            },
-            "used": {"default": "false", "nullable": True, "pk": False, "type": "boolean"},
-            "used_at": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "user_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
-        },
-        "fks": {},
-        "indexes": {
-            "idx_recovery_user": {"columns": ["user_id"], "predicate": None, "unique": False}
-        },
         "uniques": [],
     },
     "_dazzle_usage_events": {
