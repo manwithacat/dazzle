@@ -33,6 +33,11 @@ def _eslint_argv(project_root: Path) -> list[str] | None:
     return None
 
 
+def _is_npm_network_error(stderr: str) -> bool:
+    """True when npx failed to reach the registry (ECONNRESET, ETIMEDOUT, ...)."""
+    return "npm error network" in stderr or "npm error code ECONNRESET" in stderr
+
+
 class TestJsLinting:
     def test_eslint_no_errors(self):
         """Source JS files pass ESLint structural checks."""
@@ -53,9 +58,16 @@ class TestJsLinting:
             except subprocess.TimeoutExpired as exc:
                 last_err = exc
                 continue
+            if result.returncode != 0 and _is_npm_network_error(result.stderr):
+                # npx could not fetch eslint: registry/network failure, not a lint
+                # finding. Retry once, then skip rather than fail the badge.
+                last_err = RuntimeError(result.stderr.strip().splitlines()[-1][:200])
+                continue
             if result.returncode != 0:
                 pytest.fail(f"ESLint found errors:\n{result.stdout}\n{result.stderr}")
             return
+        if isinstance(last_err, RuntimeError):
+            pytest.skip(f"npm registry unreachable while fetching eslint: {last_err}")
         pytest.fail(
             f"ESLint timed out after {_ESLINT_TIMEOUT_S}s x2 "
             f"(cold npx install under load?): {last_err!r}"
