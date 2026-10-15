@@ -415,3 +415,91 @@ targets (≤ 250k / ≤ 200k) remain Phase 7 material: the runtime monoliths (`p
 Consumer actions from this phase are in each `FLENSE_*.md` §2 step 6: `dazzle db upgrade head`
 now reaches 0024 (seven empty framework tables dropped), confirm no user row has
 `totp_enabled`/`email_otp_enabled` set, and AegisMark's enterprise-auth runbook is obsolete.
+
+## 10. Phase 7 — the third flense (planned 2026-10-15, after v0.118.0)
+
+§9.7 closed with the §7 targets (≤ 250k src, ≤ 200k tests) out of reach of evidence-only
+cuts. This phase separates what is left into two piles: the evidence-only remainder, which
+dispatches at once, and four product decisions, which wait for the operator. It also records
+where evidence-only cutting stops, so the §7 numbers can be reaffirmed or revised.
+
+### 10.1 Principles carried forward, one sharpened
+
+- Everything in §3, §9.1 and ADR-0057 still applies; HaTchi-MaXchi stays exempt.
+- **A consumer's production path is a consumer.** cyfuture's `app_factory.py` selects
+  `EventBusProcessAdapter` over the Redis bus when Heroku sets `REDIS_URL`; no `.dsl`, test
+  or `dazzle.toml` grep shows it. Evidence for runtime subsystems therefore includes the
+  consumers' Python entry points and deploy configuration, not only their DSL.
+- The runtime monoliths are structure, not mass. Splitting `server.py` or `page_routes.py`
+  moves lines; it does not remove them. They leave this programme and go to a separate
+  "runtime shape" plan once Phase 4's assurance pack says what the runtime must prove.
+
+### 10.2 Evidence (measured 2026-10-15 against v0.118.0 and the three checkouts)
+
+| Finding | Size (src / tests) | Evidence |
+|---|---:|---|
+| Runtime event transport: `http/events` (redis_bus 889, postgres_bus 919, outbox 509, framework 508, publisher 473, consumer 401, inbox 396, bus 379, dev_memory 373, tier 264, envelope 246, base 223, null 163), `event_explorer.py` 552, `sse_stream.py` + `sse_wiring.py` 489, `channels/outbox.py` 467 | ≈ 7,800 / ≈ 6,700 | cyfuture subscribes to the in-process `EntityEventBus` (`http/runtime/event_bus.py`, kept) and runs `process` through `EventBusProcessAdapter` on the Redis bus in production; no consumer selects the Postgres bus, declares `live: on`, or reads `_dazzle_event_inbox`; `dev_memory` is test-only; the explorer is a dev-mode route; `OutboxRepository` is never constructed (ship AI) |
+| `page_routes.py` 3,902: a 476-line per-field-kind filter family at lines 430–905 (`entity_<kind>_filter_fields`, `leftover_honest_filter_<kind>`, `_parse_list_filter_<kind>_values` for nine kinds) and three persona-override walkers at 1203–1448 | ≈ 700 collapsible | one shape per kind; the clone detector misses it because the bodies differ only in string-valued AST fields (`fitness/clones.py:194`) |
+| Zero-importer modules after Phase 6 (static scan re-run) | 2,964 | `core/llm_context` 643, `qa/subscription_vision` 515, `core/design_context` 347, `qa/work_surface_utility` 330, `testing/ux/reconciler` 269, `http/runtime/response_helpers` 262, `core/process/context` 250, `qa/evaluate` 181, `qa/hyperpart_dsl_shapes` 127, `fitness/swallows` 40 |
+| `testing/` modules with no importer outside `tests/` once relative imports are counted | ≈ 3,000 | `auth_flows` 660, `walk/actions_api` 428, `ux/reconciler` 269, `viewport_screenshot` 249, `cleanup_manager` 236, `ux/seed_values` 218, `ux/interactions/card_add` 212, `ux_catalogue_manifest` 204; `vendor_mock/*` 1,516 reached only through `test populate` (to confirm). Kept: the eight consumer-imported modules, `fuzz_runtime` (fuzz skill), `ux/contract_checker` (card-safety gate), `tier2_playwright`, `e2e_runner`, `viewport*` (CLI-reached) |
+| CLI groups with no consumer reach outside prose and no harness reach | ≈ 1,700 / ≈ 1,500 | `analytics` 260, `representation` 136, `rhythm` 162 (the MCP `rhythm` tool stays: AegisMark names it), `vocab` 316 (examples only), `walk` 460 (cyfuture imports `testing.walk`, not the command), `activity` 133, `claims` 131 (unless it backs `docs claims`, cyfuture 12), `prove` 116 (`scripts/example_agent_prove.sh` and the stems skill; examples only). `doctor` (release-cli workflow), `fragment-audit` (CI), `coverage` (preflight), `spec` (ship skill) stay |
+| MCP: 19 tools pinned; `spec_analyze` (handler 1,181 plus `spec_questions` 406, `spec_lifecycles` 424, `domain` if only it reads them) and `project` have zero consumer mentions | ≈ 2,500 / ≈ 1,500 | `docs/api-surface/mcp-tools.txt`; `bootstrap` must be re-pointed if it calls `spec_analyze` (ship C flag) |
+| `core/grammar_gen.py` 1,703 reached only from `cli/__init__.py` and two tests | 1,703 / ≈ 300 | no `grammar` group is registered; check what in `cli/__init__.py` imports it |
+| Vulture ≥ 60 % after ship AI: 629 function/class/method flags | — | mostly typer-decorated commands and pydantic fields (false positives); the real residue is unread IR attributes (`core/ir/workspaces` 54, `sitespec` 43, `themespec` 21, `test_design` 21, `surfaces` 21, `domain` 21, `process` 17, `governance` 16, `llm` 15, `onboarding` 14, `rhythm` 13) and `testing/step_executor.py` 29 |
+| Tests 319,714 lines by the package a file mainly imports | — | `core.ir` 64k (223 files), `http.runtime` 55k, `render.fragment` 27k, no-`dazzle`-import harness/docs/fixture tests 25k, `http.specs` 12.8k, `core.errors` 11.8k. Redundancy: 745 clusters spread over ≈ 400 flat `tests/unit` files (deepest: `test_expression_lang.py` 12, `test_rbac_verifier.py` 7, `test_mapping_executor.py` 6, `test_htmx_details.py` 6, `test_vendor_mock_generator.py` 6, `test_schema_diff.py` 5, `test_org_activation.py` 5, `test_csrf_origin_gate_phase2.py` 5, `test_fidelity_scorer.py` 5, `test_scope_rules.py` 5). Largest undistilled: `test_persona_journey.py` 1,464, `test_workspace_rendering.py` 1,344, `test_mapping_executor.py` 1,338, `test_fidelity_scorer.py` 1,273, `test_events.py` 1,178, `test_qa_trial.py` 1,177, `test_testspec_generator.py` 1,122 (`test_hm_contract_dom_conformance.py` 1,782 is HM, exempt) |
+| Monoliths (structure, not mass) | — | `server.py` 2,624 (`DazzleBackendApp` with twenty `_mount_*`/`_wire_*` methods), `page_routes.py` 3,902, `auth/store.py` 1,685 (three mixins on `LazyPgStore` after AH), `cli/db.py` 2,380 (24 commands, consumers use most), `dsl_parser_impl/workspace.py` 3,399 and `entity.py` 3,047 (the grammar) |
+| Kept and load-bearing (not candidates) | — | `__test__` routes (pennydreadful 51, AegisMark 12, cyfuture 9), `consent_routes` (`analytics` construct: AegisMark, cyfuture), `audit_routes` no-auth twins (only when auth is off), `task_routes` + `core/process` (cyfuture `process`, hr_records), `sentinel` (`sentinel scan`: AegisMark, cyfuture; MCP 4/6), `signing` (AegisMark), `grant_routes` (both regulated consumers), FTS/search/files/documents/bulk/i18n (consumer-declared or consumer-imported) |
+
+### 10.3 Ships
+
+Letters continue from Phase 6. **D** = needs an operator decision before dispatch; the rest
+run on evidence alone with the §9.6 mechanics.
+
+| Ship | Scope | Disposition | Expected Δ (src / tests) |
+|---|---|---|---:|
+| **AP** | `page_routes.py`: the nine-kind filter family becomes one kind-keyed table; the three persona-override walkers share one walker; `http/runtime/response_helpers.py` (zero importers) and the `site_routes.py` vulture residue go | Consolidate | −1.2k / 0 |
+| **AQ** | The ten zero-importer modules and the `testing/` modules with no importer outside `tests/`; each verified by `rg` across src (absolute and relative imports), tests, the three checkouts, skills, hooks, Makefile, CI, and `python -m` entry points; tests that only exercised them go | Delete | −5k / −4k |
+| **AR** (D) | Event transport residue: `postgres_bus.py`, `dev_memory.py` (its fake moves into `tests/`), `inbox.py` with `_dazzle_event_inbox`, `event_explorer.py` and its dev route, `sse_stream.py` + `sse_wiring.py` + `/_ops/sse/events` + the workspace `live:` flag, `channels/outbox.py` `OutboxRepository` + `email_outbox`; the Redis bus, `null`, `framework`, `publisher`, `consumer`, `outbox` (`_dazzle_event_outbox`), `EventBusProcessAdapter` and the in-process `EntityEventBus` stay | **Park** into DD-006 (extended from the DSL to the transport); revision 0025 drops `_dazzle_event_inbox` and `email_outbox` | −3k / −3k |
+| **AS** (D) | CLI groups `analytics`, `representation`, `rhythm` (command only), `vocab`, `walk`, `activity`, `prove` with `scripts/example_agent_prove.sh` (stems skill re-pointed to MCP `knowledge counter_prior`), `claims` unless `docs claims` reads it | Delete | −1.7k / −1.5k |
+| **AT** | MCP `spec_analyze` and `project`, with `spec_questions`, `spec_lifecycles`, `domain` and the `domain_brief` residue if nothing else reads them; `bootstrap` re-pointed; `core/grammar_gen.py` if no registered command reaches it | Delete | −3k / −1.8k |
+| **AU** | Unread IR attributes (vulture residue in `core/ir/*`), each verified against the parser's writes and every reader including the consumers' `dazzle.core.ir` imports (AegisMark 9, cyfuture 5); `testing/step_executor.py` residue; `ir-types` baseline regenerated with a CHANGELOG entry | Delete | −1k / −0.5k |
+| **AV** | Distillation: the twenty deepest cluster files | Distil | 0 / −5k |
+| **AW** | Distillation: `test_persona_journey.py`, `test_workspace_rendering.py`, `test_mapping_executor.py`, `test_fidelity_scorer.py`, `test_qa_trial.py`, `test_testspec_generator.py` | Distil | 0 / −6k |
+| **AX** | The 25k lines of tests with no `dazzle` import: fold duplicate harness gates (docs, agents, stems, drift), delete tests pinning features removed in Phases 3–6, keep one gate per invariant | Distil | 0 / −7k |
+
+Rules for AV–AX as in §9.3; AQ and AS must not remove anything cyfuture's `testing.walk`
+path, the fuzz skill or the card-safety gate imports.
+
+### 10.4 Decisions needed (before AR and AS are dispatched)
+
+1. **AR — the event transport.** Recommendation: park. cyfuture's production path keeps the
+   Redis bus and `EventBusProcessAdapter`; the Postgres bus, the inbox, the explorer, the
+   SSE live push and the email outbox have no consumer in any environment. DD-006 already
+   holds the events DSL; it grows a transport section naming the restoring commit. Against:
+   `live: on` is a cheap demo feature. The AO fix stays in history either way.
+2. **AS — the CLI groups.** Recommendation: delete. `prove` is the only one a skill names;
+   re-point the stems skill to the MCP `knowledge counter_prior` call it already lists.
+3. **Monoliths.** Recommendation: out of scope for the flense. Write the "runtime shape" plan
+   after Phase 4's first assurance pack, so the split follows what the runtime must prove.
+4. **§7 end-state targets.** Evidence-only cutting stops near 305k src / 285k tests. The
+   remaining ≈ 55k src is consumer-used feature mass (signing, grants, FTS, files, documents,
+   i18n, processes, SLA, integrations, LLM) that ADR-0057 keeps. Recommendation: revise the
+   programme end state to ≤ 300k / ≤ 250k and move the rest to Phase 4's "what the pack
+   reveals" and Phase 5's cost-of-change metric.
+
+### 10.5 Targets for this phase
+
+| Measure | After v0.118.0 | Phase 7 target | Note |
+|---|---:|---:|---|
+| Framework src lines | 323,851 | ≤ 308,000 | AP, AQ, AT, AU now; AR, AS on decision |
+| Test lines | 319,714 | ≤ 290,000 | AV–AX plus the tests of removed code |
+| Docs lines in tree | 47,904 | ≤ 48,500 | DD-006 grows |
+| Top-level constructs | 31 | 31 | unchanged |
+| Zero-importer modules | 10 | 0 | AQ |
+| Redundancy clusters ≥3 | 745 | ≤ 650 | AV–AX |
+
+### 10.6 Mechanics
+
+Same loop as §9.6. AP, AQ, AT and AU run on evidence from dispatch; AV–AX follow once the
+code ships land (so they distil tests of surviving code); AR and AS wait for §10.4. The
+phase closes with a `minor` bump and §10.7 recording the measured numbers.

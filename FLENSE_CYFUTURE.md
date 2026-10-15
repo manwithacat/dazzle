@@ -1,4 +1,4 @@
-# FLENSE_CYFUTURE.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/cyfuture` (refreshed 2026-10-14 for Dazzle v0.117.0)
+# FLENSE_CYFUTURE.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/cyfuture` (refreshed 2026-10-15 for Dazzle v0.118.0)
 
 This file is the hand-off from the Dazzle framework to the cyfuture repo. Read it before
 touching anything; it is the only brief you get. Framework context lives in the Dazzle
@@ -42,15 +42,15 @@ The pattern is clear: cyfuture has the richest scope model of the three apps and
 weakest *evidence* model. Six of the sixteen ISO gaps exist because the DSL never says what
 the data is.
 
-## 2. Step 1 — move the pin to v0.117.0 and absorb the releases
+## 2. Step 1 — move the pin to v0.118.0 and absorb the releases
 
-v0.116.0 bundles the flense ships and v0.117.0 the surgical loop (CHANGELOG `## [0.116.0]`, `## [0.117.0]`, *Removed* and *Agent
+v0.116.0 bundles the flense ships, v0.117.0 the surgical loop and v0.118.0 the second flense (CHANGELOG `## [0.116.0]`, `## [0.117.0]`, `## [0.118.0]`, *Removed* and *Agent
 Guidance*). Two removals name cyfuture, both as non-events: the `composition` tool
 (cyfuture keeps its own `compositionspec.yaml` script) and the messaging DSL (the SLA
 `on_breach: notify` still writes a log line, DD-007 names cyfuture as the forcing
 consumer when a real channel is needed). Prove the rest:
 
-1. `pyproject.toml`: `…dazzle.git@v0.117.0` (keep `[signing,sso]`). `uv lock && uv sync`.
+1. `pyproject.toml`: `…dazzle.git@v0.118.0` (keep `[signing,sso]`). `uv lock && uv sync`.
 2. `uv run dazzle validate && uv run dazzle lint` — 0 errors, same warnings.
 3. Import every `dazzle.*` module the app uses:
    `grep -rhoE '^(from|import) dazzle[.a-zA-Z_]*' --include='*.py' . | sort -u`, then import
@@ -93,7 +93,7 @@ consumer when a real channel is needed). Prove the rest:
    - **Islands are not rendered (DD-011)**; only `entity:` has effect. The locale middleware is
      mounted (ship AB), so `param locale.*` defaults and tenant config reach rendered dates. The
      feedback widget mounts again when `feedback_widget: enabled` is declared (ship AB).
-   - **Phase 6 (2026-10-15, on `main` after v0.117.0; next release tag carries it).** Revisions
+   - **Phase 6 (2026-10-15, released as v0.118.0; read CHANGELOG `## [0.118.0]` *Agent Guidance*).** Revisions
      `0023_flense_park_enterprise_auth` and `0024_flense_park_two_factor` drop seven framework tables
      (`connections`, `connection_secret_events`, `scim_groups`, `scim_group_members`,
      `saml_consumed_assertions`, `_dazzle_otp_codes`, `_dazzle_recovery_codes`), all empty everywhere:
@@ -222,7 +222,7 @@ construct locally.
 
 ## 7. Done when
 
-- [ ] pin at `v0.117.0`, all workflows green, migrations at the framework head
+- [ ] pin at `v0.118.0`, all workflows green, migrations at the framework head
 - [ ] `dazzle validate` emits no `W_DECLARED_NOT_READ` / `W_UNKNOWN_BLOCK_KEY` / `W_CLAUSE_VALUE_IGNORED` line
 - [ ] `dazzle db resanitize-rich-text --apply` run per environment; grant clients send `expires_at` and `confirmed`
 - [ ] `rbac matrix` 0 warnings, `rbac routes` 0 escapes

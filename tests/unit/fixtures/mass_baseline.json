@@ -1,7 +1,7 @@
 {
   "src_lines": 323851,
-  "test_lines": 319714,
-  "docs_lines": 47904,
+  "test_lines": 319701,
+  "docs_lines": 47992,
   "construct_count": 31,
   "written": "2026-10-15",
   "exceptions": [
@@ -182,6 +182,13 @@
         "docs_lines"
       ],
       "reason": "Phase 6 close-out: plan \u00a79.7 result table and FLENSE \u00a72 step 6 migration note (+docs)"
+    },
+    {
+      "date": "2026-10-15",
+      "rose": [
+        "docs_lines"
+      ],
+      "reason": "Phase 7 plan \u00a710 written (+88 docs lines), consumer briefs repointed to v0.118.0"
     }
   ]
 }

@@ -1,4 +1,4 @@
-# FLENSE_AEGISMARK.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/AegisMark` (refreshed 2026-10-14 for Dazzle v0.117.0)
+# FLENSE_AEGISMARK.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/AegisMark` (refreshed 2026-10-15 for Dazzle v0.118.0)
 
 This file is the hand-off from the Dazzle framework to the AegisMark repo. Read it before
 touching anything; it is the only brief you get. Framework context lives in the Dazzle
@@ -38,13 +38,13 @@ v0.117.0 tree, so the pack can be assembled before any DSL changes.
 | `dazzle analytics audit -f json` | 31 PII name hints, 12 subprocessor rows |
 | DSL annotations | 11 `pii`, 10 `retention`, 18 `signed`, 4 `subprocessor`, 1 `tenancy`, 1 `policies` |
 
-## 2. Step 1 — move the pin to v0.117.0 and absorb the releases
+## 2. Step 1 — move the pin to v0.118.0 and absorb the releases
 
-v0.116.0 bundles the flense ships and v0.117.0 the surgical loop (CHANGELOG `## [0.116.0]`, `## [0.117.0]`, section *Removed*, plus
+v0.116.0 bundles the flense ships, v0.117.0 the surgical loop and v0.118.0 the second flense (CHANGELOG `## [0.116.0]`, `## [0.117.0]`, `## [0.118.0]`, section *Removed*, plus
 *Agent Guidance*). Nothing AegisMark's DSL or Python uses was removed — every removal was
 gated on the consumer inventory — but prove it here rather than trust it:
 
-1. In `pyproject.toml` change the git ref to the tag: `…dazzle.git@v0.117.0` (keep the
+1. In `pyproject.toml` change the git ref to the tag: `…dazzle.git@v0.118.0` (keep the
    extras; `serve`, `redis`, `mcp` and `signing` all still exist). `uv lock && uv sync`.
 2. `uv run dazzle validate && uv run dazzle lint` — expect 0 errors and the same
    warnings as before.
@@ -92,7 +92,7 @@ gated on the consumer inventory — but prove it here rather than trust it:
    - **Islands are not rendered (DD-011)**; only `entity:` has effect. The locale middleware is
      mounted (ship AB), so `param locale.*` defaults and tenant config reach rendered dates. The
      feedback widget mounts again when `feedback_widget: enabled` is declared (ship AB).
-   - **Phase 6 (2026-10-15, on `main` after v0.117.0; next release tag carries it).** Revisions
+   - **Phase 6 (2026-10-15, released as v0.118.0; read CHANGELOG `## [0.118.0]` *Agent Guidance*).** Revisions
      `0023_flense_park_enterprise_auth` and `0024_flense_park_two_factor` drop seven framework tables
      (`connections`, `connection_secret_events`, `scim_groups`, `scim_group_members`,
      `saml_consumed_assertions`, `_dazzle_otp_codes`, `_dazzle_recovery_codes`), all empty everywhere:
@@ -233,7 +233,7 @@ place the design already lives.
 
 ## 7. Done when
 
-- [ ] pin at `v0.117.0`, tests green, `db upgrade head` at the framework head
+- [ ] pin at `v0.118.0`, tests green, `db upgrade head` at the framework head
 - [ ] `dazzle validate` emits no `W_DECLARED_NOT_READ` / `W_UNKNOWN_BLOCK_KEY` / `W_CLAUSE_VALUE_IGNORED` line
 - [ ] `dazzle db resanitize-rich-text --apply` run per environment; grant clients send `expires_at` and `confirmed`
 - [ ] `make assure` exists, `assurance/` committed, CI fails on drift and on a rising gap count

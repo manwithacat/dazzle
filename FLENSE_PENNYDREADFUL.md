@@ -1,4 +1,4 @@
-# FLENSE_PENNYDREADFUL.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/pennydreadful` (refreshed 2026-10-14 for Dazzle v0.117.0)
+# FLENSE_PENNYDREADFUL.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/pennydreadful` (refreshed 2026-10-15 for Dazzle v0.118.0)
 
 This file is the hand-off from the Dazzle framework to the pennydreadful repo. Read it
 before touching anything; it is the only brief you get. Framework context lives in the
@@ -38,14 +38,14 @@ against this checkout with the v0.116.0 tree.
 | `dazzle analytics audit -f json` | 3 PII name hints, 8 subprocessor rows |
 | DSL | `guide` ×2, `llm_intent` ×6, `persona` ×5; no `pii`, `signed`, `retention`, `tenancy`, `subprocessor` |
 
-## 2. Step 1 — move the pin to v0.117.0 and absorb the releases
+## 2. Step 1 — move the pin to v0.118.0 and absorb the releases
 
-v0.116.0 bundles the flense ships and v0.117.0 the surgical loop (CHANGELOG `## [0.116.0]`, `## [0.117.0]`, *Removed* and *Agent
+v0.116.0 bundles the flense ships, v0.117.0 the surgical loop and v0.118.0 the second flense (CHANGELOG `## [0.116.0]`, `## [0.117.0]`, `## [0.118.0]`, *Removed* and *Agent
 Guidance*). One removal names pennydreadful as a non-event: the framework GraphQL BFF is
 gone, and pennydreadful's `/graphql` is its own Strawberry schema (`graphql_schema.py`),
 untouched. Prove the rest:
 
-1. `pyproject.toml` `[tool.uv.sources]`: replace `rev = "…"` with `tag = "v0.117.0"`.
+1. `pyproject.toml` `[tool.uv.sources]`: replace `rev = "…"` with `tag = "v0.118.0"`.
    `uv lock && uv sync`. If the app relied on the removed `graphql` extra for strawberry,
    add strawberry as a direct dependency.
 2. `uv run dazzle validate && uv run dazzle lint` — 0 errors, same warnings.
@@ -90,7 +90,7 @@ untouched. Prove the rest:
    - **Islands are not rendered (DD-011)**; only `entity:` has effect. The locale middleware is
      mounted (ship AB), so `param locale.*` defaults and tenant config reach rendered dates. The
      feedback widget mounts again when `feedback_widget: enabled` is declared (ship AB).
-   - **Phase 6 (2026-10-15, on `main` after v0.117.0; next release tag carries it).** Revisions
+   - **Phase 6 (2026-10-15, released as v0.118.0; read CHANGELOG `## [0.118.0]` *Agent Guidance*).** Revisions
      `0023_flense_park_enterprise_auth` and `0024_flense_park_two_factor` drop seven framework tables
      (`connections`, `connection_secret_events`, `scim_groups`, `scim_group_members`,
      `saml_consumed_assertions`, `_dazzle_otp_codes`, `_dazzle_recovery_codes`), all empty everywhere:
@@ -186,7 +186,7 @@ when real; a `dazzle assure` composite command; anything in §2 step 3 that fail
 
 ## 7. Done when
 
-- [ ] pin at `v0.117.0`, tests green, migrations at the framework head
+- [ ] pin at `v0.118.0`, tests green, migrations at the framework head
 - [ ] `dazzle validate` emits no `W_DECLARED_NOT_READ` / `W_UNKNOWN_BLOCK_KEY` / `W_CLAUSE_VALUE_IGNORED` line
 - [ ] `dazzle db resanitize-rich-text --apply` run per environment; grant clients send `expires_at` and `confirmed`
 - [ ] `assure.yml` exists and is green; `assurance/` committed
