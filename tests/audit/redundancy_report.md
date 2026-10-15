@@ -4,9 +4,9 @@ Clusters where ≥3 tests in the same file/class share the same assertion-shape 
 
 ## Headline numbers
 
-- **Clusters of ≥3**: 908
-- **Tests inside those clusters**: 3,468
-- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,560 tests** (≈ 17.9% of the suite)
+- **Clusters of ≥3**: 877
+- **Tests inside those clusters**: 3,361
+- **Theoretical saving** if every cluster collapsed to one parametrised test: **2,484 tests** (≈ 17.4% of the suite)
 
 Caveats: not every cluster *should* collapse — sometimes independent test names carry intentional documentation value. The report below is ranked by size; larger clusters are more likely to genuinely benefit from consolidation.
 
@@ -16,8 +16,8 @@ Caveats: not every cluster *should* collapse — sometimes independent test name
 |---|---:|
 | 20+ | 1 |
 | 10-19 | 5 |
-| 5-9 | 156 |
-| 3-4 | 746 |
+| 5-9 | 152 |
+| 3-4 | 719 |
 
 ## Top 30 largest clusters
 

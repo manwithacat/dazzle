@@ -5,6 +5,8 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import patch
 
+import pytest
+
 # ── Fixtures ─────────────────────────────────────────────────────────
 
 
@@ -71,177 +73,93 @@ def _make_appspec(**kwargs: Any) -> SimpleNamespace:
 # ── Score Computation ────────────────────────────────────────────────
 
 
-class TestScoreComputation:
-    def test_perfect_score(self) -> None:
-        from dazzle.mcp.server.handlers.discovery import _compute_coherence_score
+# Score = 100 - deductions, clamped to 0..100.
+@pytest.mark.parametrize(
+    ("deductions", "score"),
+    [
+        pytest.param(0, 100, id="no-deductions-perfect"),
+        pytest.param(20, 80, id="one-error-deducts-20"),
+        pytest.param(999, 0, id="floor-at-zero"),
+    ],
+)
+def test_coherence_score(deductions: int, score: int) -> None:
+    from dazzle.mcp.server.handlers.discovery import _compute_coherence_score
 
-        assert _compute_coherence_score(0) == 100
-
-    def test_one_error_deducts_20(self) -> None:
-        from dazzle.mcp.server.handlers.discovery import _compute_coherence_score
-
-        assert _compute_coherence_score(20) == 80
-
-    def test_floor_at_zero(self) -> None:
-        from dazzle.mcp.server.handlers.discovery import _compute_coherence_score
-
-        assert _compute_coherence_score(999) == 0
+    assert _compute_coherence_score(deductions) == score
 
 
 # ── Handler Integration ──────────────────────────────────────────────
 
 
-class TestAppCoherenceHandler:
-    def _run(self, appspec: SimpleNamespace, persona: str | None = None) -> dict[str, Any]:
-        from dazzle.mcp.server.handlers.discovery import app_coherence_handler
+def _clean_appspec(*personas: SimpleNamespace, stories: list[Any] | None = None) -> SimpleNamespace:
+    """One Task entity, a ``main`` workspace sourcing it, and a Task list surface."""
+    return _make_appspec(
+        entities=[_make_entity("Task"), _make_entity("AdminConfig")],
+        personas=list(personas),
+        workspaces=[_make_workspace("main", regions=[_make_region("r1", source="Task")])],
+        surfaces=[_make_surface("task_list", entity_ref="Task")],
+        stories=stories if stories is not None else [_make_story("S1", "admin", ["Task"])],
+    )
 
-        args: dict[str, Any] = {}
-        if persona:
-            args["persona"] = persona
 
-        with patch(
-            "dazzle.mcp.server.handlers.discovery.status.load_project_appspec",
-            return_value=appspec,
-        ):
-            result = app_coherence_handler(project_path=SimpleNamespace(), args=args)
+def _run(appspec: SimpleNamespace, persona: str | None = None) -> dict[str, Any]:
+    from dazzle.mcp.server.handlers.discovery import app_coherence_handler
 
-        return json.loads(result)
+    args: dict[str, Any] = {"persona": persona} if persona else {}
+    with patch(
+        "dazzle.mcp.server.handlers.discovery.status.load_project_appspec",
+        return_value=appspec,
+    ):
+        result = app_coherence_handler(project_path=SimpleNamespace(), args=args)
+    return json.loads(result)
 
-    def test_clean_app_scores_100(self) -> None:
-        """All entities in workspace → perfect coherence."""
-        appspec = _make_appspec(
-            entities=[_make_entity("Task")],
-            personas=[_make_persona("admin", default_workspace="main")],
-            workspaces=[_make_workspace("main", regions=[_make_region("r1", source="Task")])],
-            surfaces=[_make_surface("task_list", entity_ref="Task")],
-            stories=[_make_story("S1", actor="admin", scope=["Task"])],
-        )
-        result = self._run(appspec)
-        assert result["overall_score"] == 100
-        assert result["persona_count"] == 1
-        admin = result["personas"][0]
-        assert admin["persona"] == "admin"
-        assert admin["coherence_score"] == 100
 
-    def test_missing_workspace_reduces_score(self) -> None:
-        """Persona with no workspace gets workspace_binding failure."""
-        appspec = _make_appspec(
-            entities=[_make_entity("Task")],
-            personas=[_make_persona("admin")],
-            surfaces=[_make_surface("task_list", entity_ref="Task")],
-            stories=[_make_story("S1", actor="admin", scope=["Task"])],
-        )
-        result = self._run(appspec)
-        admin = result["personas"][0]
-        assert admin["coherence_score"] < 100
-        check_names = [c["check"] for c in admin["checks"]]
-        assert "workspace_binding" in check_names
-        ws_check = next(c for c in admin["checks"] if c["check"] == "workspace_binding")
-        assert ws_check["status"] == "fail"
+def test_clean_app_scores_100_with_all_standard_checks() -> None:
+    """All entities in the workspace → perfect coherence; the four standard checks are
+    reported even when they pass. ``AdminConfig`` sits outside the workspace and does
+    not reduce the score (over-exposure is route-level, not coherence)."""
+    result = _run(_clean_appspec(_make_persona("admin", default_workspace="main")))
+    assert result["overall_score"] == 100
+    assert result["persona_count"] == 1
+    admin = result["personas"][0]
+    assert admin["persona"] == "admin"
+    assert admin["coherence_score"] == 100
+    assert {c["check"] for c in admin["checks"]} >= {
+        "workspace_binding",
+        "nav_filtering",
+        "surface_access",
+        "story_coverage",
+    }
 
-    def test_out_of_workspace_entities_no_penalty(self) -> None:
-        """Entities outside the persona's workspace don't reduce the score.
 
-        Over-exposure is workspace-scoped: entities outside the persona's workspace
-        are handled by route-level access control and don't affect coherence score.
-        """
-        appspec = _make_appspec(
-            entities=[_make_entity("Task"), _make_entity("AdminConfig")],
-            personas=[_make_persona("customer", default_workspace="main")],
-            workspaces=[_make_workspace("main", regions=[_make_region("r1", source="Task")])],
-            surfaces=[_make_surface("task_list", entity_ref="Task")],
-            stories=[_make_story("S1", actor="customer", scope=["Task"])],
-        )
-        result = self._run(appspec)
-        customer = result["personas"][0]
-        assert customer["coherence_score"] == 100
+def test_missing_workspace_fails_binding_and_overall_is_average() -> None:
+    """A persona with no workspace fails ``workspace_binding``; the overall score is the
+    rounded average of persona scores."""
+    appspec = _clean_appspec(
+        _make_persona("admin", default_workspace="main"),
+        _make_persona("customer"),
+        stories=[_make_story("S1", "admin", ["Task"]), _make_story("S2", "customer", ["Task"])],
+    )
+    result = _run(appspec)
+    by_persona = {p["persona"]: p for p in result["personas"]}
+    customer = by_persona["customer"]
+    ws_check = next(c for c in customer["checks"] if c["check"] == "workspace_binding")
+    assert ws_check["status"] == "fail"
+    assert by_persona["admin"]["coherence_score"] == 100
+    assert customer["coherence_score"] == 80  # one error = -20
+    assert result["overall_score"] == 90
 
-    def test_persona_filter(self) -> None:
-        """Only the requested persona is analyzed."""
-        appspec = _make_appspec(
-            entities=[_make_entity("Task")],
-            personas=[
-                _make_persona("admin", default_workspace="main"),
-                _make_persona("viewer", default_workspace="main"),
-            ],
-            workspaces=[_make_workspace("main", regions=[_make_region("r1", source="Task")])],
-            surfaces=[_make_surface("task_list", entity_ref="Task")],
-            stories=[
-                _make_story("S1", actor="admin", scope=["Task"]),
-                _make_story("S2", actor="viewer", scope=["Task"]),
-            ],
-        )
-        result = self._run(appspec, persona="admin")
-        assert result["persona_count"] == 1
-        assert result["personas"][0]["persona"] == "admin"
 
-    def test_standard_checks_always_present(self) -> None:
-        """Standard checks are present even when passed."""
-        appspec = _make_appspec(
-            entities=[_make_entity("Task")],
-            personas=[_make_persona("admin", default_workspace="main")],
-            workspaces=[_make_workspace("main", regions=[_make_region("r1", source="Task")])],
-            surfaces=[_make_surface("task_list", entity_ref="Task")],
-            stories=[_make_story("S1", actor="admin", scope=["Task"])],
-        )
-        result = self._run(appspec)
-        admin = result["personas"][0]
-        check_names = {c["check"] for c in admin["checks"]}
-        assert "workspace_binding" in check_names
-        assert "nav_filtering" in check_names
-        assert "surface_access" in check_names
-        assert "story_coverage" in check_names
-
-    def test_skipped_personas_reported(self) -> None:
-        """Personas with no stories and no workspace are reported as skipped."""
-        appspec = _make_appspec(
-            entities=[_make_entity("Task")],
-            personas=[
-                _make_persona("admin", default_workspace="main"),
-                _make_persona("ghost"),  # No stories, no workspace
-            ],
-            workspaces=[_make_workspace("main", regions=[_make_region("r1", source="Task")])],
-            surfaces=[_make_surface("task_list", entity_ref="Task")],
-            stories=[_make_story("S1", actor="admin", scope=["Task"])],
-        )
-        result = self._run(appspec)
-        assert "ghost" in result["skipped_personas"]
-
-    def test_overall_score_is_average(self) -> None:
-        """Overall score averages across all personas."""
-        appspec = _make_appspec(
-            entities=[_make_entity("Task")],
-            personas=[
-                # admin: has workspace → good score
-                _make_persona("admin", default_workspace="admin_dash"),
-                # customer: no workspace binding → score < 100
-                _make_persona("customer"),
-            ],
-            workspaces=[
-                _make_workspace(
-                    "admin_dash",
-                    regions=[_make_region("r1", source="Task")],
-                ),
-            ],
-            surfaces=[
-                _make_surface("task_list", entity_ref="Task"),
-            ],
-            stories=[
-                _make_story("S1", actor="admin", scope=["Task"]),
-                _make_story("S2", actor="customer", scope=["Task"]),
-            ],
-        )
-        result = self._run(appspec)
-        # Admin: workspace bound, entities covered → 100
-        # Customer: no workspace → workspace_binding failure → < 100
-        # Overall should be the average
-        admin_score = next(p for p in result["personas"] if p["persona"] == "admin")[
-            "coherence_score"
-        ]
-        cust_score = next(p for p in result["personas"] if p["persona"] == "customer")[
-            "coherence_score"
-        ]
-        assert admin_score == 100
-        assert cust_score < 100
-        expected_avg = round((admin_score + cust_score) / 2)
-        assert result["overall_score"] == expected_avg
+def test_persona_filter_and_skipped_personas() -> None:
+    """``persona`` narrows the analysis; personas with no stories and no workspace are
+    reported as skipped rather than scored."""
+    appspec = _clean_appspec(
+        _make_persona("admin", default_workspace="main"),
+        _make_persona("viewer", default_workspace="main"),
+        _make_persona("ghost"),
+        stories=[_make_story("S1", "admin", ["Task"]), _make_story("S2", "viewer", ["Task"])],
+    )
+    assert "ghost" in _run(appspec)["skipped_personas"]
+    filtered = _run(appspec, persona="admin")
+    assert filtered["persona_count"] == 1
+    assert filtered["personas"][0]["persona"] == "admin"

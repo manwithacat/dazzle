@@ -1,5 +1,12 @@
-"""Tests for the Business Logic detection agent (BL-01, BL-02, BL-05 to BL-07)."""
+"""Tests for the Business Logic detection agent (BL-01, BL-02, BL-05 to BL-07).
 
+One table: each case builds an AppSpec, runs one heuristic and pins the exact
+findings (see ``assert_findings``). Agent identity, heuristic order and the
+clean-spec run live in ``test_registry.py``.
+"""
+
+from collections.abc import Callable
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -7,18 +14,12 @@ import pytest
 from dazzle.core.ir.process import ProcessTriggerKind
 from dazzle.core.ir.stories import StoryTrigger
 from dazzle.sentinel.agents.business_logic import BusinessLogicAgent
-from dazzle.sentinel.models import AgentId, Severity
+from dazzle.sentinel.models import Confidence, Severity
 
-from .conftest import make_appspec, make_entity, mock_entity, pk_field, str_field
-
-
-@pytest.fixture
-def agent() -> BusinessLogicAgent:
-    return BusinessLogicAgent()
-
+from .conftest import assert_findings, make_appspec, make_entity, mock_entity
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Builders
 # ---------------------------------------------------------------------------
 
 
@@ -28,11 +29,10 @@ def _process(
     implements: list[str] | None = None,
     trigger_kind: ProcessTriggerKind | None = None,
     trigger_entity: str | None = None,
-    title: str | None = None,
 ) -> MagicMock:
     p = MagicMock()
     p.name = name
-    p.title = title or name
+    p.title = name
     p.implements = implements or []
     if trigger_kind:
         p.trigger = MagicMock()
@@ -44,16 +44,15 @@ def _process(
 
 
 def _story(
-    story_id: str,
-    actor: str = "admin",
-    trigger: StoryTrigger = StoryTrigger.FORM_SUBMITTED,
-    title: str = "",
+    trigger: StoryTrigger = StoryTrigger.FORM_SUBMITTED, scope: list[str] | None = None
 ) -> MagicMock:
     s = MagicMock()
-    s.story_id = story_id
-    s.persona = actor
+    s.story_id = "ST-001"
+    s.persona = "admin"
     s.trigger = trigger
-    s.title = title or story_id
+    s.title = "ST-001"
+    if scope is not None:
+        s.entities = scope
     return s
 
 
@@ -64,14 +63,10 @@ def _sla(name: str, entity: str) -> MagicMock:
     return s
 
 
-def _experience(
-    name: str,
-    start_step: str,
-    steps: list[tuple[str, list[str]]],
-) -> MagicMock:
+def _experience(start_step: str, steps: list[tuple[str, list[str]]]) -> MagicMock:
     """Build an experience mock. steps is [(name, [next_step_names])]."""
     exp = MagicMock()
-    exp.name = name
+    exp.name = "onboarding"
     exp.start_step = start_step
     step_mocks = []
     step_dict: dict[str, MagicMock] = {}
@@ -90,27 +85,10 @@ def _experience(
     return exp
 
 
-def _enum(name: str, values: list[str]) -> MagicMock:
-    e = MagicMock()
-    e.name = name
-    e.values = []
-    for v in values:
-        val = MagicMock()
-        val.name = v
-        e.values.append(val)
-    return e
-
-
-def _test_spec(name: str) -> MagicMock:
-    t = MagicMock()
-    t.name = name
-    return t
-
-
-def _schedule(name: str, title: str = "") -> MagicMock:
+def _schedule(name: str) -> MagicMock:
     s = MagicMock()
     s.name = name
-    s.title = title or name
+    s.title = name
     return s
 
 
@@ -119,158 +97,6 @@ def _surface(name: str, entity_ref: str | None = None) -> MagicMock:
     s.name = name
     s.entity_ref = entity_ref
     return s
-
-
-def _invariant(expr: str) -> MagicMock:
-    inv = MagicMock()
-    inv.expression = expr
-    return inv
-
-
-# =============================================================================
-# BL-01  Process not linked to any story
-# =============================================================================
-
-
-class TestBL01ProcessEmptyImplements:
-    def test_flags_unlinked_process(self, agent: BusinessLogicAgent) -> None:
-        process = _process("approve_order", implements=[])
-        findings = agent.check_process_empty_implements(make_appspec(processes=[process]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "BL-01"
-        assert findings[0].severity == Severity.LOW
-
-    def test_passes_when_linked(self, agent: BusinessLogicAgent) -> None:
-        process = _process("approve_order", implements=["ST-001"])
-        assert agent.check_process_empty_implements(make_appspec(processes=[process])) == []
-
-
-# =============================================================================
-# BL-02  Story trigger mismatch
-# =============================================================================
-
-
-class TestBL02StoryTriggerMismatch:
-    def test_flags_status_changed_without_process(self, agent: BusinessLogicAgent) -> None:
-        story = _story("ST-001", trigger=StoryTrigger.STATUS_CHANGED)
-        findings = agent.check_story_trigger_mismatch(make_appspec(stories=[story]))
-        assert len(findings) == 1
-
-    def test_passes_with_matching_process(self, agent: BusinessLogicAgent) -> None:
-        story = _story("ST-001", trigger=StoryTrigger.STATUS_CHANGED)
-        process = _process(
-            "handle_status",
-            trigger_kind=ProcessTriggerKind.ENTITY_STATUS_TRANSITION,
-        )
-        assert (
-            agent.check_story_trigger_mismatch(make_appspec(stories=[story], processes=[process]))
-            == []
-        )
-
-    def test_ignores_non_status_triggers(self, agent: BusinessLogicAgent) -> None:
-        story = _story("ST-001", trigger=StoryTrigger.FORM_SUBMITTED)
-        assert agent.check_story_trigger_mismatch(make_appspec(stories=[story])) == []
-
-
-# =============================================================================
-# BL-05  SLA without monitoring
-# =============================================================================
-
-
-class TestBL05SLAMonitoring:
-    def test_flags_sla_without_monitor(self, agent: BusinessLogicAgent) -> None:
-        sla = _sla("response_sla", "Ticket")
-        findings = agent.check_sla_without_monitoring(make_appspec(slas=[sla]))
-        assert len(findings) == 1
-        assert findings[0].severity == Severity.MEDIUM
-
-    def test_passes_with_matching_schedule(self, agent: BusinessLogicAgent) -> None:
-        sla = _sla("response_sla", "Ticket")
-        schedule = _schedule("check_sla_breaches")
-        assert (
-            agent.check_sla_without_monitoring(make_appspec(slas=[sla], schedules=[schedule])) == []
-        )
-
-    def test_passes_with_matching_process(self, agent: BusinessLogicAgent) -> None:
-        sla = _sla("response_sla", "Ticket")
-        process = _process("monitor_ticket", trigger_entity="Ticket")
-        assert (
-            agent.check_sla_without_monitoring(make_appspec(slas=[sla], processes=[process])) == []
-        )
-
-
-# =============================================================================
-# BL-06  Experience with unreachable steps
-# =============================================================================
-
-
-class TestBL06UnreachableSteps:
-    def test_flags_unreachable_steps(self, agent: BusinessLogicAgent) -> None:
-        exp = _experience(
-            "onboarding",
-            start_step="step1",
-            steps=[
-                ("step1", ["step2"]),
-                ("step2", []),
-                ("orphan", []),  # not reachable from step1
-            ],
-        )
-        findings = agent.check_experience_unreachable_steps(make_appspec(experiences=[exp]))
-        assert len(findings) == 1
-        assert "orphan" in findings[0].description
-
-    def test_passes_all_reachable(self, agent: BusinessLogicAgent) -> None:
-        exp = _experience(
-            "onboarding",
-            start_step="step1",
-            steps=[
-                ("step1", ["step2"]),
-                ("step2", ["step3"]),
-                ("step3", []),
-            ],
-        )
-        assert agent.check_experience_unreachable_steps(make_appspec(experiences=[exp])) == []
-
-
-# =============================================================================
-# BL-07  Entity not referenced by any surface
-# =============================================================================
-
-
-class TestBL07EntityWithoutSurface:
-    def test_flags_entity_without_surface(self, agent: BusinessLogicAgent) -> None:
-        entity = make_entity("AuditLog")
-        findings = agent.check_entity_without_surface(make_appspec([entity]))
-        assert len(findings) == 1
-        assert findings[0].severity == Severity.LOW
-
-    def test_passes_with_surface(self, agent: BusinessLogicAgent) -> None:
-        entity = make_entity("Task")
-        surface = _surface("task_list", entity_ref="Task")
-        assert agent.check_entity_without_surface(make_appspec([entity], surfaces=[surface])) == []
-
-
-# =============================================================================
-# Full agent run
-# =============================================================================
-
-
-class TestBusinessLogicAgentRun:
-    def test_agent_id(self, agent: BusinessLogicAgent) -> None:
-        assert agent.agent_id == AgentId.BL
-
-    def test_has_5_heuristics(self, agent: BusinessLogicAgent) -> None:
-        assert len(agent.get_heuristics()) == 5
-
-    def test_heuristic_ids(self, agent: BusinessLogicAgent) -> None:
-        ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == ["BL-01", "BL-02", "BL-05", "BL-06", "BL-07"]
-
-    def test_clean_appspec_no_errors(self, agent: BusinessLogicAgent) -> None:
-        entity = make_entity("Task", [pk_field(), str_field("title")])
-        surface = _surface("task_list", entity_ref="Task")
-        result = agent.run(make_appspec([entity], surfaces=[surface]))
-        assert result.errors == []
 
 
 def _sm_entity(name: str, *, role_guarded: bool) -> MagicMock:
@@ -284,60 +110,153 @@ def _sm_entity(name: str, *, role_guarded: bool) -> MagicMock:
     return mock_entity(name, state_machine=sm)
 
 
-class TestBL02Issue1356:
-    """#1356: role-guarded state machines implement status_changed stories."""
-
-    def _scoped_story(self, scope: list[str]) -> MagicMock:
-        s = MagicMock()
-        s.story_id = "ST-001"
-        s.persona = "admin"
-        s.trigger = StoryTrigger.STATUS_CHANGED
-        s.title = "ST-001"
-        s.entities = scope
-        return s
-
-    def test_role_guarded_state_machine_suppresses(self, agent: BusinessLogicAgent) -> None:
-        entity = _sm_entity("Order", role_guarded=True)
-        story = self._scoped_story(["Order"])
-        assert agent.check_story_trigger_mismatch(make_appspec([entity], stories=[story])) == []
-
-    def test_unguarded_state_machine_downgrades(self, agent: BusinessLogicAgent) -> None:
-        from dazzle.sentinel.models import Confidence
-
-        entity = _sm_entity("Order", role_guarded=False)
-        story = self._scoped_story(["Order"])
-        findings = agent.check_story_trigger_mismatch(make_appspec([entity], stories=[story]))
-        assert len(findings) == 1
-        assert findings[0].confidence == Confidence.POSSIBLE
-
-    def test_no_state_machine_stays_likely(self, agent: BusinessLogicAgent) -> None:
-        from dazzle.sentinel.models import Confidence
-
-        entity = make_entity("Order")
-        story = self._scoped_story(["Order"])
-        findings = agent.check_story_trigger_mismatch(make_appspec([entity], stories=[story]))
-        assert len(findings) == 1
-        assert findings[0].confidence == Confidence.LIKELY
-
-    def test_out_of_scope_machine_does_not_suppress(self, agent: BusinessLogicAgent) -> None:
-        # The guarded machine is on an entity OUTSIDE the story's scope.
-        guarded = _sm_entity("Invoice", role_guarded=True)
-        plain = make_entity("Order")
-        story = self._scoped_story(["Order"])
-        findings = agent.check_story_trigger_mismatch(
-            make_appspec([guarded, plain], stories=[story])
-        )
-        assert len(findings) == 1
+def _status_story_on(*entities: Any) -> Any:
+    """A status_changed story scoped to Order, over the given entities."""
+    story = _story(StoryTrigger.STATUS_CHANGED, scope=["Order"])
+    return make_appspec(list(entities), stories=[story])
 
 
-class TestBL07ManagedBy1356:
-    def test_managed_by_entity_not_flagged(self, agent: BusinessLogicAgent) -> None:
-        # #1333 marker: lifecycle owned outside the surface graph.
-        entity = mock_entity("OnboardingProgress")
-        entity.managed_by = "route"
-        assert agent.check_entity_without_surface(make_appspec([entity])) == []
+def _managed_by_route() -> Any:
+    entity = mock_entity("OnboardingProgress")
+    entity.managed_by = "route"
+    return make_appspec([entity])
 
-    def test_unmarked_entity_still_flagged(self, agent: BusinessLogicAgent) -> None:
-        entity = make_entity("Orphan")
-        findings = agent.check_entity_without_surface(make_appspec([entity]))
-        assert len(findings) == 1
+
+# ---------------------------------------------------------------------------
+# Heuristic table
+# ---------------------------------------------------------------------------
+
+CASES = [
+    # BL-01  process not linked to any story
+    pytest.param(
+        "check_process_empty_implements",
+        lambda: make_appspec(processes=[_process("approve_order")]),
+        [{"heuristic_id": "BL-01", "severity": Severity.LOW}],
+        id="BL-01-flags-unlinked-process",
+    ),
+    pytest.param(
+        "check_process_empty_implements",
+        lambda: make_appspec(processes=[_process("approve_order", implements=["ST-001"])]),
+        [],
+        id="BL-01-linked-process",
+    ),
+    # BL-02  status_changed story with nothing implementing it
+    pytest.param(
+        "check_story_trigger_mismatch",
+        lambda: make_appspec(stories=[_story(StoryTrigger.STATUS_CHANGED)]),
+        [{"heuristic_id": "BL-02"}],
+        id="BL-02-flags-status-story-without-process",
+    ),
+    pytest.param(
+        "check_story_trigger_mismatch",
+        lambda: make_appspec(
+            stories=[_story(StoryTrigger.STATUS_CHANGED)],
+            processes=[_process("h", trigger_kind=ProcessTriggerKind.ENTITY_STATUS_TRANSITION)],
+        ),
+        [],
+        id="BL-02-status-transition-process-satisfies",
+    ),
+    pytest.param(
+        "check_story_trigger_mismatch",
+        lambda: make_appspec(stories=[_story(StoryTrigger.FORM_SUBMITTED)]),
+        [],
+        id="BL-02-ignores-non-status-trigger",
+    ),
+    # #1356: a role-guarded state machine on an in-scope entity implements the story.
+    pytest.param(
+        "check_story_trigger_mismatch",
+        lambda: _status_story_on(_sm_entity("Order", role_guarded=True)),
+        [],
+        id="BL-02-role-guarded-machine-suppresses-1356",
+    ),
+    pytest.param(
+        "check_story_trigger_mismatch",
+        lambda: _status_story_on(_sm_entity("Order", role_guarded=False)),
+        [{"heuristic_id": "BL-02", "confidence": Confidence.POSSIBLE}],
+        id="BL-02-unguarded-machine-downgrades-1356",
+    ),
+    pytest.param(
+        "check_story_trigger_mismatch",
+        lambda: _status_story_on(make_entity("Order")),
+        [{"heuristic_id": "BL-02", "confidence": Confidence.LIKELY}],
+        id="BL-02-no-machine-stays-likely-1356",
+    ),
+    pytest.param(
+        "check_story_trigger_mismatch",
+        lambda: _status_story_on(_sm_entity("Invoice", role_guarded=True), make_entity("Order")),
+        [{"heuristic_id": "BL-02"}],
+        id="BL-02-out-of-scope-machine-does-not-suppress-1356",
+    ),
+    # BL-05  SLA nothing monitors
+    pytest.param(
+        "check_sla_without_monitoring",
+        lambda: make_appspec(slas=[_sla("response_sla", "Ticket")]),
+        [{"heuristic_id": "BL-05", "severity": Severity.MEDIUM}],
+        id="BL-05-flags-unmonitored-sla",
+    ),
+    pytest.param(
+        "check_sla_without_monitoring",
+        lambda: make_appspec(
+            slas=[_sla("response_sla", "Ticket")], schedules=[_schedule("check_sla_breaches")]
+        ),
+        [],
+        id="BL-05-sla-schedule-satisfies",
+    ),
+    pytest.param(
+        "check_sla_without_monitoring",
+        lambda: make_appspec(
+            slas=[_sla("response_sla", "Ticket")],
+            processes=[_process("monitor_ticket", trigger_entity="Ticket")],
+        ),
+        [],
+        id="BL-05-entity-process-satisfies",
+    ),
+    # BL-06  experience step unreachable from the start step
+    pytest.param(
+        "check_experience_unreachable_steps",
+        lambda: make_appspec(
+            experiences=[
+                _experience("step1", [("step1", ["step2"]), ("step2", []), ("orphan", [])])
+            ]
+        ),
+        [{"heuristic_id": "BL-06", "description_has": "orphan"}],
+        id="BL-06-flags-orphan-step",
+    ),
+    pytest.param(
+        "check_experience_unreachable_steps",
+        lambda: make_appspec(
+            experiences=[
+                _experience("step1", [("step1", ["step2"]), ("step2", ["step3"]), ("step3", [])])
+            ]
+        ),
+        [],
+        id="BL-06-all-steps-reachable",
+    ),
+    # BL-07  entity no surface references
+    pytest.param(
+        "check_entity_without_surface",
+        lambda: make_appspec([make_entity("AuditLog")]),
+        [{"heuristic_id": "BL-07", "severity": Severity.LOW}],
+        id="BL-07-flags-entity-without-surface",
+    ),
+    pytest.param(
+        "check_entity_without_surface",
+        lambda: make_appspec([make_entity("Task")], surfaces=[_surface("task_list", "Task")]),
+        [],
+        id="BL-07-surface-satisfies",
+    ),
+    # #1333 marker: lifecycle owned outside the surface graph (fixed under #1356).
+    pytest.param(
+        "check_entity_without_surface",
+        _managed_by_route,
+        [],
+        id="BL-07-managed-by-entity-not-flagged-1333",
+    ),
+]
+
+
+@pytest.mark.parametrize(("heuristic", "build", "expected"), CASES)
+def test_heuristic(
+    heuristic: str, build: Callable[[], Any], expected: list[dict[str, Any]]
+) -> None:
+    assert_findings(getattr(BusinessLogicAgent(), heuristic)(build()), expected)

@@ -1,15 +1,23 @@
-"""Tests for the Multi-Tenancy detection agent (MT-01 through MT-07)."""
+"""Tests for the Multi-Tenancy detection agent (MT-01 to MT-04, MT-06, MT-07).
 
+One table: each case builds an AppSpec, runs one heuristic and pins the exact
+findings (see ``assert_findings``). Agent identity, heuristic order and the
+clean-spec run live in ``test_registry.py``.
+"""
+
+from collections.abc import Callable
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
 from dazzle.core.ir import FieldTypeKind
-from dazzle.core.ir.governance import TenancyMode
+from dazzle.core.ir.governance import TenancyMode, TopicNamespaceMode
 from dazzle.sentinel.agents.multi_tenancy import MultiTenancyAgent
-from dazzle.sentinel.models import AgentId, Severity
+from dazzle.sentinel.models import Severity
 
 from .conftest import (
+    assert_findings,
     make_appspec,
     make_entity,
     make_field,
@@ -19,26 +27,19 @@ from .conftest import (
     str_field,
 )
 
-
-@pytest.fixture
-def agent() -> MultiTenancyAgent:
-    return MultiTenancyAgent()
-
-
 # ---------------------------------------------------------------------------
-# Helpers
+# Builders
 # ---------------------------------------------------------------------------
 
 
 def _tenancy(
     mode: TenancyMode = TenancyMode.SHARED_SCHEMA,
-    partition_key: str = "tenant_id",
     excluded: list[str] | None = None,
     topic_namespace: object | None = None,
 ) -> MagicMock:
     isolation = MagicMock()
     isolation.mode = mode
-    isolation.partition_key = partition_key
+    isolation.partition_key = "tenant_id"
     isolation.topic_namespace = topic_namespace
     t = MagicMock()
     t.isolation = isolation
@@ -46,233 +47,157 @@ def _tenancy(
     return t
 
 
-# =============================================================================
-# MT-01  Missing partition key field
-# =============================================================================
+def _tenanted(*entities: Any, **tenancy_kw: Any) -> Any:
+    return make_appspec(list(entities), tenancy=_tenancy(**tenancy_kw))
 
 
-class TestMT01MissingPartitionKey:
-    def test_flags_entity_without_partition_key(self, agent: MultiTenancyAgent) -> None:
-        entity = make_entity("Task", [pk_field(), str_field("title")])
-        tenancy = _tenancy()
-        findings = agent.mt_01_missing_partition_key(make_appspec([entity], tenancy=tenancy))
-        assert len(findings) == 1
-        assert findings[0].severity == Severity.CRITICAL
-        assert "tenant_id" in findings[0].title
-
-    @pytest.mark.parametrize(
-        "scenario",
-        [
-            "passes_when_field_present",
-            "skips_excluded_entities",
-            "no_tenancy",
-            "non_shared_schema_skipped",
-        ],
-        ids=[
-            "test_passes_when_field_present",
-            "test_skips_excluded_entities",
-            "test_no_tenancy",
-            "test_non_shared_schema_skipped",
-        ],
-    )
-    def test_mt_01_returns_empty(self, agent: MultiTenancyAgent, scenario: str) -> None:
-        if scenario == "passes_when_field_present":
-            entity = make_entity(
-                "Task",
-                [pk_field(), str_field("title"), make_field("tenant_id", FieldTypeKind.UUID)],
-            )
-            spec = make_appspec([entity], tenancy=_tenancy())
-        elif scenario == "skips_excluded_entities":
-            entity = make_entity("Config", [pk_field()])
-            spec = make_appspec([entity], tenancy=_tenancy(excluded=["Config"]))
-        elif scenario == "no_tenancy":
-            spec = make_appspec()
-        else:  # non_shared_schema_skipped
-            entity = make_entity("Task", [pk_field()])
-            spec = make_appspec([entity], tenancy=_tenancy(mode=TenancyMode.DATABASE_PER_TENANT))
-        assert agent.mt_01_missing_partition_key(spec) == []
+def _tenant_id() -> Any:
+    return make_field("tenant_id", FieldTypeKind.UUID)
 
 
-# =============================================================================
-# MT-02  Ref chain missing tenant field
-# =============================================================================
+def _order_and_line_item(*, line_item_keyed: bool) -> Any:
+    order = make_entity("Order", [pk_field(), _tenant_id()])
+    line_fields = [pk_field(), ref_field("order", "Order")]
+    if line_item_keyed:
+        line_fields.append(_tenant_id())
+    return _tenanted(order, make_entity("LineItem", line_fields))
 
 
-class TestMT02RefChainMissingTenant:
-    def test_flags_ref_to_tenant_scoped_entity(self, agent: MultiTenancyAgent) -> None:
-        order = make_entity(
-            "Order",
-            [pk_field(), make_field("tenant_id", FieldTypeKind.UUID)],
-        )
-        line_item = make_entity(
-            "LineItem",
-            [pk_field(), ref_field("order", "Order")],
-        )
-        tenancy = _tenancy()
-        findings = agent.mt_02_ref_chain_missing_tenant(
-            make_appspec([order, line_item], tenancy=tenancy)
-        )
-        assert len(findings) == 1
-        assert "LineItem" in findings[0].title
-
-    def test_passes_when_both_have_key(self, agent: MultiTenancyAgent) -> None:
-        order = make_entity(
-            "Order",
-            [pk_field(), make_field("tenant_id", FieldTypeKind.UUID)],
-        )
-        line_item = make_entity(
-            "LineItem",
-            [
-                pk_field(),
-                ref_field("order", "Order"),
-                make_field("tenant_id", FieldTypeKind.UUID),
-            ],
-        )
-        tenancy = _tenancy()
-        assert (
-            agent.mt_02_ref_chain_missing_tenant(make_appspec([order, line_item], tenancy=tenancy))
-            == []
-        )
-
-    def test_no_tenancy(self, agent: MultiTenancyAgent) -> None:
-        assert agent.mt_02_ref_chain_missing_tenant(make_appspec()) == []
-
-
-# =============================================================================
-# MT-03  Singleton in multi-tenant app
-# =============================================================================
-
-
-class TestMT03SingletonInMultiTenant:
-    def test_flags_singleton(self, agent: MultiTenancyAgent) -> None:
-        entity = make_entity("AppConfig", is_singleton=True)
-        tenancy = _tenancy()
-        findings = agent.mt_03_singleton_in_multi_tenant(make_appspec([entity], tenancy=tenancy))
-        assert len(findings) == 1
-        assert findings[0].severity == Severity.MEDIUM
-
-    def test_passes_non_singleton(self, agent: MultiTenancyAgent) -> None:
-        entity = make_entity("Task")
-        tenancy = _tenancy()
-        assert agent.mt_03_singleton_in_multi_tenant(make_appspec([entity], tenancy=tenancy)) == []
-
-    def test_no_tenancy(self, agent: MultiTenancyAgent) -> None:
-        entity = make_entity("AppConfig", is_singleton=True)
-        assert agent.mt_03_singleton_in_multi_tenant(make_appspec([entity])) == []
-
-
-# =============================================================================
-# MT-04  No tenant root entity
-# =============================================================================
-
-
-class TestMT04NoTenantRoot:
-    def test_flags_missing_root(self, agent: MultiTenancyAgent) -> None:
-        entity = make_entity("Task")
-        tenancy = _tenancy()
-        findings = agent.mt_04_no_tenant_root(make_appspec([entity], tenancy=tenancy))
-        assert len(findings) == 1
-        assert findings[0].severity == Severity.HIGH
-
-    def test_passes_with_root(self, agent: MultiTenancyAgent) -> None:
-        entity = make_entity("Tenant", is_tenant_root=True)
-        tenancy = _tenancy()
-        assert agent.mt_04_no_tenant_root(make_appspec([entity], tenancy=tenancy)) == []
-
-    def test_no_tenancy(self, agent: MultiTenancyAgent) -> None:
-        assert agent.mt_04_no_tenant_root(make_appspec()) == []
-
-
-# =============================================================================
-# MT-06  Visibility rules without partition key
-# =============================================================================
-
-
-class TestMT06VisibilityWithoutPartition:
-    def _visibility_rule(self, condition: str) -> MagicMock:
+def _visibility(*conditions: str) -> Any:
+    access = MagicMock()
+    access.visibility = []
+    for condition in conditions:
         rule = MagicMock()
         rule.condition = condition
         rule.context = MagicMock()
         rule.context.value = "authenticated"
-        return rule
-
-    def test_flags_visibility_ignoring_partition(self, agent: MultiTenancyAgent) -> None:
-        access = MagicMock()
-        access.visibility = [self._visibility_rule("created_by = current_user")]
-        access.permissions = []
-        entity = mock_entity("Task", access=access)
-        tenancy = _tenancy()
-        findings = agent.mt_06_visibility_without_partition(make_appspec([entity], tenancy=tenancy))
-        assert len(findings) == 1
-
-    def test_passes_when_partition_referenced(self, agent: MultiTenancyAgent) -> None:
-        access = MagicMock()
-        access.visibility = [self._visibility_rule("tenant_id = current_tenant")]
-        access.permissions = []
-        entity = mock_entity("Task", access=access)
-        tenancy = _tenancy()
-        assert (
-            agent.mt_06_visibility_without_partition(make_appspec([entity], tenancy=tenancy)) == []
-        )
-
-    def test_no_visibility_rules(self, agent: MultiTenancyAgent) -> None:
-        access = MagicMock()
-        access.visibility = []
-        access.permissions = []
-        entity = mock_entity("Task", access=access)
-        tenancy = _tenancy()
-        assert (
-            agent.mt_06_visibility_without_partition(make_appspec([entity], tenancy=tenancy)) == []
-        )
+        access.visibility.append(rule)
+    access.permissions = []
+    return _tenanted(mock_entity("Task", access=access))
 
 
-# =============================================================================
-# MT-07  Shared topic namespace with strict tenancy
-# =============================================================================
+def _topics(mode: TenancyMode, namespace: TopicNamespaceMode) -> Any:
+    return make_appspec(tenancy=_tenancy(mode=mode, topic_namespace=namespace))
 
 
-class TestMT07SharedTopicStrictTenancy:
-    def test_flags_shared_topic_with_strict(self, agent: MultiTenancyAgent) -> None:
-        from dazzle.core.ir.governance import TopicNamespaceMode
+# ---------------------------------------------------------------------------
+# Heuristic table
+# ---------------------------------------------------------------------------
 
-        tenancy = _tenancy(
-            mode=TenancyMode.SCHEMA_PER_TENANT,
-            topic_namespace=TopicNamespaceMode.SHARED,
-        )
-        findings = agent.mt_07_shared_topic_strict_tenancy(make_appspec(tenancy=tenancy))
-        assert len(findings) == 1
+CASES = [
+    # MT-01  shared-schema entity without the partition key field
+    pytest.param(
+        "mt_01_missing_partition_key",
+        lambda: _tenanted(make_entity("Task", [pk_field(), str_field("title")])),
+        [{"heuristic_id": "MT-01", "severity": Severity.CRITICAL, "title_has": "tenant_id"}],
+        id="MT-01-flags-entity-without-partition-key",
+    ),
+    pytest.param(
+        "mt_01_missing_partition_key",
+        lambda: _tenanted(make_entity("Task", [pk_field(), str_field("title"), _tenant_id()])),
+        [],
+        id="MT-01-partition-key-present",
+    ),
+    pytest.param(
+        "mt_01_missing_partition_key",
+        lambda: _tenanted(make_entity("Config", [pk_field()]), excluded=["Config"]),
+        [],
+        id="MT-01-skips-excluded-entity",
+    ),
+    pytest.param("mt_01_missing_partition_key", make_appspec, [], id="MT-01-no-tenancy"),
+    pytest.param(
+        "mt_01_missing_partition_key",
+        lambda: _tenanted(make_entity("Task", [pk_field()]), mode=TenancyMode.DATABASE_PER_TENANT),
+        [],
+        id="MT-01-skips-non-shared-schema",
+    ),
+    # MT-02  ref to a tenant-scoped entity from an entity without the key
+    pytest.param(
+        "mt_02_ref_chain_missing_tenant",
+        lambda: _order_and_line_item(line_item_keyed=False),
+        [{"heuristic_id": "MT-02", "title_has": "LineItem"}],
+        id="MT-02-flags-unkeyed-ref-to-tenant-entity",
+    ),
+    pytest.param(
+        "mt_02_ref_chain_missing_tenant",
+        lambda: _order_and_line_item(line_item_keyed=True),
+        [],
+        id="MT-02-both-keyed",
+    ),
+    pytest.param("mt_02_ref_chain_missing_tenant", make_appspec, [], id="MT-02-no-tenancy"),
+    # MT-03  singleton in a multi-tenant app
+    pytest.param(
+        "mt_03_singleton_in_multi_tenant",
+        lambda: _tenanted(make_entity("AppConfig", is_singleton=True)),
+        [{"heuristic_id": "MT-03", "severity": Severity.MEDIUM}],
+        id="MT-03-flags-singleton",
+    ),
+    pytest.param(
+        "mt_03_singleton_in_multi_tenant",
+        lambda: _tenanted(make_entity("Task")),
+        [],
+        id="MT-03-non-singleton",
+    ),
+    pytest.param(
+        "mt_03_singleton_in_multi_tenant",
+        lambda: make_appspec([make_entity("AppConfig", is_singleton=True)]),
+        [],
+        id="MT-03-no-tenancy",
+    ),
+    # MT-04  no tenant-root entity
+    pytest.param(
+        "mt_04_no_tenant_root",
+        lambda: _tenanted(make_entity("Task")),
+        [{"heuristic_id": "MT-04", "severity": Severity.HIGH}],
+        id="MT-04-flags-missing-root",
+    ),
+    pytest.param(
+        "mt_04_no_tenant_root",
+        lambda: _tenanted(make_entity("Tenant", is_tenant_root=True)),
+        [],
+        id="MT-04-root-present",
+    ),
+    pytest.param("mt_04_no_tenant_root", make_appspec, [], id="MT-04-no-tenancy"),
+    # MT-06  visibility rule that ignores the partition key
+    pytest.param(
+        "mt_06_visibility_without_partition",
+        lambda: _visibility("created_by = current_user"),
+        [{"heuristic_id": "MT-06"}],
+        id="MT-06-flags-visibility-ignoring-partition",
+    ),
+    pytest.param(
+        "mt_06_visibility_without_partition",
+        lambda: _visibility("tenant_id = current_tenant"),
+        [],
+        id="MT-06-partition-referenced",
+    ),
+    pytest.param(
+        "mt_06_visibility_without_partition", _visibility, [], id="MT-06-no-visibility-rules"
+    ),
+    # MT-07  shared topic namespace under strict (schema-per-tenant) isolation
+    pytest.param(
+        "mt_07_shared_topic_strict_tenancy",
+        lambda: _topics(TenancyMode.SCHEMA_PER_TENANT, TopicNamespaceMode.SHARED),
+        [{"heuristic_id": "MT-07"}],
+        id="MT-07-flags-shared-topic-with-strict-tenancy",
+    ),
+    pytest.param(
+        "mt_07_shared_topic_strict_tenancy",
+        lambda: _topics(TenancyMode.SCHEMA_PER_TENANT, TopicNamespaceMode.NAMESPACE_PER_TENANT),
+        [],
+        id="MT-07-namespace-per-tenant",
+    ),
+    pytest.param(
+        "mt_07_shared_topic_strict_tenancy",
+        lambda: _topics(TenancyMode.SHARED_SCHEMA, TopicNamespaceMode.SHARED),
+        [],
+        id="MT-07-shared-schema",
+    ),
+]
 
-    def test_passes_namespace_per_tenant(self, agent: MultiTenancyAgent) -> None:
-        from dazzle.core.ir.governance import TopicNamespaceMode
 
-        tenancy = _tenancy(
-            mode=TenancyMode.SCHEMA_PER_TENANT,
-            topic_namespace=TopicNamespaceMode.NAMESPACE_PER_TENANT,
-        )
-        assert agent.mt_07_shared_topic_strict_tenancy(make_appspec(tenancy=tenancy)) == []
-
-    def test_passes_shared_schema(self, agent: MultiTenancyAgent) -> None:
-        from dazzle.core.ir.governance import TopicNamespaceMode
-
-        tenancy = _tenancy(
-            mode=TenancyMode.SHARED_SCHEMA,
-            topic_namespace=TopicNamespaceMode.SHARED,
-        )
-        assert agent.mt_07_shared_topic_strict_tenancy(make_appspec(tenancy=tenancy)) == []
-
-
-# =============================================================================
-# Full agent run
-# =============================================================================
-
-
-class TestMultiTenancyAgentRun:
-    def test_agent_id(self, agent: MultiTenancyAgent) -> None:
-        assert agent.agent_id == AgentId.MT
-
-    def test_has_6_heuristics(self, agent: MultiTenancyAgent) -> None:
-        assert len(agent.get_heuristics()) == 6
-
-    def test_heuristic_ids(self, agent: MultiTenancyAgent) -> None:
-        ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == ["MT-01", "MT-02", "MT-03", "MT-04", "MT-06", "MT-07"]
+@pytest.mark.parametrize(("heuristic", "build", "expected"), CASES)
+def test_heuristic(
+    heuristic: str, build: Callable[[], Any], expected: list[dict[str, Any]]
+) -> None:
+    assert_findings(getattr(MultiTenancyAgent(), heuristic)(build()), expected)

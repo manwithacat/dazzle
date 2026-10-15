@@ -33,12 +33,6 @@ def _import_knowledge():
     install_handlers_common_mock()
 
     # Mock the dependent modules
-    mock_semantics = MagicMock()
-    mock_semantics.lookup_concept = MagicMock(
-        return_value={"term": "entity", "definition": "A domain object"}
-    )
-    sys.modules["dazzle.mcp.semantics"] = mock_semantics
-
     mock_examples = MagicMock()
     mock_examples.search_examples = MagicMock(
         return_value=[{"name": "simple_task", "features": ["entity", "surface"]}]
@@ -81,6 +75,11 @@ def _import_knowledge():
         module_path,
     )
     module = importlib.util.module_from_spec(spec)
+    module._test_mocks = {  # type: ignore[attr-defined]
+        "examples": mock_examples,
+        "cli_help": mock_cli_help,
+        "inference": mock_inference,
+    }
 
     # Set up the package structure for relative imports
     sys.modules["dazzle.mcp.server.handlers.knowledge"] = module
@@ -100,139 +99,82 @@ get_workflow_guide_handler = _kn.get_workflow_guide_handler
 lookup_inference_handler = _kn.lookup_inference_handler
 
 
+_MOCKS = _kn._test_mocks
+
+
 # =============================================================================
 # Handler Tests
 # =============================================================================
 
 
-class TestLookupConceptHandler:
-    """Tests for lookup_concept_handler."""
-
-    def test_requires_term(self) -> None:
-        """Test that term parameter is required."""
-        result = lookup_concept_handler({})
-        data = json.loads(result)
-
-        assert "error" in data
-        assert "term" in data["error"].lower()
-
-    def test_looks_up_concept(self) -> None:
-        """Test looking up a concept."""
-        result = lookup_concept_handler({"term": "entity"})
-        data = json.loads(result)
-
-        # Should return concept info
-        assert "term" in data or "definition" in data or "error" not in data
+# Required-argument guards answer with an error naming the missing argument.
+@pytest.mark.parametrize(
+    ("handler", "missing"),
+    [
+        pytest.param(lookup_concept_handler, "term", id="concept-requires-term"),
+        pytest.param(get_workflow_guide_handler, "workflow", id="workflow-requires-workflow"),
+        pytest.param(lookup_inference_handler, "query", id="inference-requires-query-or-list-all"),
+    ],
+)
+def test_required_argument_error(handler, missing: str) -> None:
+    data = json.loads(handler({}))
+    assert missing in data["error"].lower()
 
 
-class TestFindExamplesHandler:
-    """Tests for find_examples_handler."""
-
-    def test_returns_examples(self) -> None:
-        """Test finding examples."""
-        result = find_examples_handler({})
-        data = json.loads(result)
-
-        assert "examples" in data
-        assert "count" in data
-
-    def test_with_features_filter(self) -> None:
-        """Test filtering by features."""
-        result = find_examples_handler({"features": ["entity"]})
-        data = json.loads(result)
-
-        assert "query" in data
-        assert data["query"]["features"] == ["entity"]
-        assert "examples" in data
-
-    def test_with_complexity_filter(self) -> None:
-        """Test filtering by complexity."""
-        result = find_examples_handler({"complexity": "beginner"})
-        data = json.loads(result)
-
-        assert "query" in data
-        assert data["query"]["complexity"] == "beginner"
+def test_lookup_concept_forwards_term() -> None:
+    assert json.loads(lookup_concept_handler({"term": "entity"}))["term"] == "entity"
 
 
-class TestGetCliHelpHandler:
-    """Tests for get_cli_help_handler."""
-
-    def test_returns_help(self) -> None:
-        """Test getting CLI help."""
-        result = get_cli_help_handler({})
-        data = json.loads(result)
-
-        # Should return help info or command list
-        assert "command" in data or "commands" in data or "help" in data
-
-    def test_with_command(self) -> None:
-        """Test getting help for specific command."""
-        result = get_cli_help_handler({"command": "serve"})
-        data = json.loads(result)
-
-        # Should return help for serve command
-        assert "command" in data or "help" in data
-
-
-class TestGetWorkflowGuideHandler:
-    """Tests for get_workflow_guide_handler."""
-
-    def test_requires_workflow(self) -> None:
-        """Test that workflow parameter is required."""
-        result = get_workflow_guide_handler({})
-        data = json.loads(result)
-
-        assert "error" in data
-        assert "workflow" in data["error"].lower()
-
-    def test_returns_workflow_guide(self) -> None:
-        """Test getting a workflow guide."""
-        result = get_workflow_guide_handler({"workflow": "new_project"})
-        data = json.loads(result)
-
-        # Should return workflow info
-        assert "workflow" in data or "steps" in data or "error" not in data
-
-
-class TestLookupInferenceHandler:
-    """Tests for lookup_inference_handler."""
-
-    def test_requires_query_or_list_all(self) -> None:
-        """Test that query or list_all is required."""
-        result = lookup_inference_handler({})
-        data = json.loads(result)
-
-        assert "error" in data
-        assert "query" in data["error"].lower() or "hint" in data
-
-    @pytest.mark.parametrize(
-        "args,check",
-        [
-            (
-                {"query": "task management"},
-                lambda d: "patterns" in d or "matches" in d or "error" not in d,
-            ),
-            (
-                {"list_all": True},
-                lambda d: "categories" in d or "pattern_count" in d or "triggers" in d,
-            ),
-            (
-                {"query": "task", "detail": "full"},
-                lambda d: "error" not in d or "detail" not in d.get("error", ""),
-            ),
-            (
-                {"query": "task", "detail": "invalid"},
-                lambda d: "error" not in d or "detail" not in d.get("error", ""),
-            ),
-        ],
-        ids=[
-            "test_with_query",
-            "test_list_all_patterns",
-            "test_detail_option",
-            "test_invalid_detail_defaults_to_minimal",
-        ],
+@pytest.mark.parametrize(
+    "args",
+    [
+        pytest.param({}, id="no-filter"),
+        pytest.param({"features": ["entity"]}, id="features-filter"),
+        pytest.param({"complexity": "beginner"}, id="complexity-filter"),
+    ],
+)
+def test_find_examples_echoes_query_and_counts(args: dict) -> None:
+    data = json.loads(find_examples_handler(args))
+    assert data["query"] == {
+        "features": args.get("features"),
+        "complexity": args.get("complexity"),
+    }
+    assert data["examples"] == [{"name": "simple_task", "features": ["entity", "surface"]}]
+    assert data["count"] == 1
+    _MOCKS["examples"].search_examples.assert_called_with(
+        features=args.get("features"), complexity=args.get("complexity")
     )
-    def test_handler_invocation(self, args: dict, check) -> None:
-        result = lookup_inference_handler(args)
-        data = json.loads(result)
-        assert check(data)
+
+
+@pytest.mark.parametrize("command", [None, "serve"], ids=["overview", "command"])
+def test_cli_help_forwards_command(command: str | None) -> None:
+    args = {"command": command} if command else {}
+    data = json.loads(get_cli_help_handler(args))
+    assert data == {"command": "serve", "help": "Run the server"}
+    _MOCKS["cli_help"].get_cli_help.assert_called_with(command)
+
+
+def test_workflow_guide_forwards_workflow() -> None:
+    data = json.loads(get_workflow_guide_handler({"workflow": "new_project"}))
+    assert data == {"workflow": "new_project", "steps": ["Step 1", "Step 2"]}
+    _MOCKS["cli_help"].get_workflow_guide.assert_called_with("new_project")
+
+
+def test_inference_list_all_returns_catalogue() -> None:
+    data = json.loads(lookup_inference_handler({"list_all": True}))
+    assert data["pattern_count"] == 10
+
+
+# ``detail`` is forwarded when valid and normalised to "minimal" otherwise.
+@pytest.mark.parametrize(
+    ("args", "detail"),
+    [
+        pytest.param({"query": "task management"}, "minimal", id="default-minimal"),
+        pytest.param({"query": "task", "detail": "full"}, "full", id="full-forwarded"),
+        pytest.param({"query": "task", "detail": "invalid"}, "minimal", id="invalid-to-minimal"),
+    ],
+)
+def test_inference_query_detail(args: dict, detail: str) -> None:
+    data = json.loads(lookup_inference_handler(args))
+    assert data == {"patterns": [{"trigger": "task", "template": "entity Task"}]}
+    _MOCKS["inference"].lookup_inference.assert_called_with(args["query"], detail=detail)

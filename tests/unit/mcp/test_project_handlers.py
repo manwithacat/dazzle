@@ -127,206 +127,117 @@ entity Task "Task":
 # =============================================================================
 
 
-class TestListProjects:
-    """Tests for list_projects handler."""
+def _state(dev: bool = True, projects: dict | None = None, active: str | None = None, root=None):
+    """Patch the server-state accessors the project handlers read."""
+    from contextlib import ExitStack
 
-    def test_returns_error_not_in_dev_mode(self) -> None:
-        """Test error when not in dev mode."""
-        with patch.object(_pr, "is_dev_mode", return_value=False):
-            result = list_projects()
-            data = json.loads(result)
-
-            assert "error" in data
-            assert "dev mode" in data["error"].lower()
-
-    def test_returns_project_list_in_dev_mode(self) -> None:
-        """Test listing projects in dev mode."""
-        with patch.object(_pr, "is_dev_mode", return_value=True):
-            with patch.object(_pr, "get_available_projects", return_value={}):
-                with patch.object(_pr, "get_active_project", return_value=None):
-                    result = list_projects()
-                    data = json.loads(result)
-
-                    assert data["mode"] == "dev"
-                    assert "project_count" in data
-                    assert "projects" in data
-
-    def test_includes_active_project(self, temp_project) -> None:
-        """Test that active project is indicated."""
-        projects = {"test_project": temp_project}
-        with patch.object(_pr, "is_dev_mode", return_value=True):
-            with patch.object(_pr, "get_available_projects", return_value=projects):
-                with patch.object(_pr, "get_active_project", return_value="test_project"):
-                    result = list_projects()
-                    data = json.loads(result)
-
-                    assert data["active_project"] == "test_project"
-                    # Find the active project in the list
-                    active = [p for p in data["projects"] if p["active"]]
-                    assert len(active) == 1
-                    assert active[0]["name"] == "test_project"
+    stack = ExitStack()
+    stack.enter_context(patch.object(_pr, "is_dev_mode", return_value=dev))
+    stack.enter_context(patch.object(_pr, "get_available_projects", return_value=projects or {}))
+    stack.enter_context(patch.object(_pr, "get_active_project", return_value=active))
+    if root is not None:
+        stack.enter_context(patch.object(_pr, "get_project_root", return_value=root))
+    return stack
 
 
-class TestSelectProject:
-    """Tests for select_project handler."""
-
-    def test_returns_error_not_in_dev_mode(self) -> None:
-        """Test error when not in dev mode."""
-        with patch.object(_pr, "is_dev_mode", return_value=False):
-            result = select_project({"project_name": "test"})
-            data = json.loads(result)
-
-            assert "error" in data
-            assert "dev mode" in data["error"].lower()
-
-    def test_requires_project_name(self) -> None:
-        """Test that project_name is required."""
-        with patch.object(_pr, "is_dev_mode", return_value=True):
-            result = select_project({})
-            data = json.loads(result)
-
-            assert "error" in data
-            assert "project_name" in data["error"].lower()
-
-    def test_selects_valid_project(self, temp_project) -> None:
-        """Test selecting a valid project."""
-        projects = {"test_project": temp_project}
-        with patch.object(_pr, "is_dev_mode", return_value=True):
-            with patch.object(_pr, "get_available_projects", return_value=projects):
-                result = select_project({"project_name": "test_project"})
-                data = json.loads(result)
-
-                assert data["status"] == "selected"
-                assert data["project"] == "test_project"
-                assert "path" in data
-
-    def test_returns_error_for_unknown_project(self) -> None:
-        """Test error for unknown project name."""
-        with patch.object(_pr, "is_dev_mode", return_value=True):
-            with patch.object(_pr, "get_available_projects", return_value={}):
-                result = select_project({"project_name": "nonexistent"})
-                data = json.loads(result)
-
-                assert "error" in data
-                assert "not found" in data["error"].lower()
-
-    def test_accepts_absolute_path(self, temp_project) -> None:
-        """Test accepting an absolute path to external project."""
-        with patch.object(_pr, "is_dev_mode", return_value=True):
-            with patch.object(_pr, "get_available_projects", return_value={}):
-                result = select_project({"project_name": str(temp_project)})
-                data = json.loads(result)
-
-                assert data["status"] == "selected"
+# The project-switching tools exist only in the Dazzle dev environment.
+@pytest.mark.parametrize(
+    "call",
+    [
+        pytest.param(list_projects, id="list_projects"),
+        pytest.param(lambda: select_project({"project_name": "test"}), id="select_project"),
+        pytest.param(validate_all_projects, id="validate_all_projects"),
+    ],
+)
+def test_dev_mode_only_tools_refuse_outside_dev_mode(call) -> None:
+    with _state(dev=False):
+        data = json.loads(call())
+    assert "dev mode" in data["error"].lower()
 
 
-class TestGetActiveProjectInfo:
-    """Tests for get_active_project_info handler."""
-
-    def test_with_resolved_path(self, temp_project) -> None:
-        """Test with resolved path containing manifest."""
-        result = get_active_project_info(resolved_path=temp_project)
-        data = json.loads(result)
-
-        assert "manifest_name" in data or "error" in data
-        if "manifest_name" in data:
-            assert data["manifest_name"] == "test_project"
-
-    def test_no_active_project_in_dev_mode(self) -> None:
-        """Test when no project is active in dev mode."""
-        with patch.object(_pr, "is_dev_mode", return_value=True):
-            with patch.object(_pr, "get_active_project", return_value=None):
-                with patch.object(_pr, "get_available_projects", return_value={}):
-                    with patch.object(
-                        _pr, "get_project_root", return_value=Path("/tmp/no-manifest")
-                    ):
-                        result = get_active_project_info()
-                        data = json.loads(result)
-
-                        assert data["mode"] == "dev"
-                        assert (
-                            data.get("active_project") is None
-                            or "message" in data
-                            or "error" in data
-                        )
-
-    def test_with_cwd_manifest_in_dev_mode(self, temp_project) -> None:
-        """Test when CWD has a manifest in dev mode."""
-        with patch.object(_pr, "is_dev_mode", return_value=True):
-            with patch.object(_pr, "get_project_root", return_value=temp_project):
-                result = get_active_project_info()
-                data = json.loads(result)
-
-                assert data["mode"] == "dev"
-                assert data.get("source") == "cwd" or "manifest_name" in data
+def test_list_projects_marks_the_active_project(temp_project) -> None:
+    with _state(projects={"test_project": temp_project}, active="test_project"):
+        data = json.loads(list_projects())
+    assert data["mode"] == "dev"
+    assert data["project_count"] == 1
+    assert data["active_project"] == "test_project"
+    assert [p["name"] for p in data["projects"] if p["active"]] == ["test_project"]
 
 
-class TestValidateAllProjects:
-    """Tests for validate_all_projects handler."""
-
-    def test_returns_error_not_in_dev_mode(self) -> None:
-        """Test error when not in dev mode."""
-        with patch.object(_pr, "is_dev_mode", return_value=False):
-            result = validate_all_projects()
-            data = json.loads(result)
-
-            assert "error" in data
-            assert "dev mode" in data["error"].lower()
-
-    def test_validates_empty_project_list(self) -> None:
-        """Test validating when no projects available."""
-        with patch.object(_pr, "is_dev_mode", return_value=True):
-            with patch.object(_pr, "get_available_projects", return_value={}):
-                result = validate_all_projects()
-                data = json.loads(result)
-
-                assert "summary" in data
-                assert data["summary"]["total"] == 0
-
-    def test_validates_valid_project(self, temp_project) -> None:
-        """Test validating a valid project."""
-        projects = {"test_project": temp_project}
-        with patch.object(_pr, "is_dev_mode", return_value=True):
-            with patch.object(_pr, "get_available_projects", return_value=projects):
-                result = validate_all_projects()
-                data = json.loads(result)
-
-                assert "summary" in data
-                assert "projects" in data
-                # Check validation result
-                if "test_project" in data["projects"]:
-                    proj_result = data["projects"]["test_project"]
-                    assert proj_result["status"] in ("valid", "error")
+@pytest.mark.parametrize(
+    ("args", "phrase"),
+    [
+        pytest.param({}, "project_name", id="requires-project-name"),
+        pytest.param({"project_name": "nonexistent"}, "not found", id="unknown-project"),
+    ],
+)
+def test_select_project_errors(args: dict, phrase: str) -> None:
+    with _state():
+        data = json.loads(select_project(args))
+    assert phrase in data["error"].lower()
 
 
-class TestLoadBackendSpecForProject:
-    """Tests for load_appspec_for_project helper."""
+# A project is selected by its registered name or by an absolute path to an
+# external project.
+@pytest.mark.parametrize("by_path", [False, True], ids=["by-name", "by-absolute-path"])
+def test_select_project_selects(temp_project, by_path: bool) -> None:
+    projects = {} if by_path else {"test_project": temp_project}
+    name = str(temp_project) if by_path else "test_project"
+    with _state(projects=projects):
+        data = json.loads(select_project({"project_name": name}))
+    assert data["status"] == "selected"
+    assert data["path"] == str(temp_project)
+    if not by_path:
+        assert data["project"] == "test_project"
 
-    def test_returns_false_for_missing_manifest(self, tmp_path) -> None:
-        """Test returns False when no dazzle.toml."""
-        project_dir = tmp_path / "no_manifest"
-        project_dir.mkdir()
 
-        result = load_appspec_for_project(project_dir)
-        assert result is False
+def test_active_project_info_prefers_roots_resolved_path(temp_project) -> None:
+    data = json.loads(get_active_project_info(resolved_path=temp_project))
+    assert data["manifest_name"] == "test_project"
+    assert data["project_root"] == str(temp_project)
+    assert data["appspec"] == "loaded"
 
-    def test_returns_false_for_no_dsl_files(self, tmp_path) -> None:
-        """Test returns False when no DSL files."""
-        project_dir = tmp_path / "empty_project"
-        project_dir.mkdir()
 
-        manifest = project_dir / "dazzle.toml"
-        manifest.write_text(
-            """
-[project]
-name = "empty"
-version = "0.1.0"
-root = "empty"
+def test_active_project_info_dev_mode_cwd_manifest(temp_project) -> None:
+    with _state(root=temp_project):
+        data = json.loads(get_active_project_info())
+    assert data["mode"] == "dev"
+    assert data["source"] == "cwd"
+    assert data["manifest_name"] == "test_project"
 
-[modules]
-paths = ["./dsl"]
-"""
-        )
 
-        result = load_appspec_for_project(project_dir)
-        assert result is False
+def test_active_project_info_dev_mode_nothing_selected(tmp_path) -> None:
+    with _state(root=tmp_path / "no-manifest"):
+        data = json.loads(get_active_project_info())
+    assert data["mode"] == "dev"
+    assert data["active_project"] is None
+    assert data["available_projects"] == []
+
+
+@pytest.mark.parametrize("with_project", [False, True], ids=["empty", "one-valid-project"])
+def test_validate_all_projects_summary(temp_project, with_project: bool) -> None:
+    projects = {"test_project": temp_project} if with_project else {}
+    with _state(projects=projects):
+        data = json.loads(validate_all_projects())
+    n = int(with_project)
+    assert data["summary"] == {"total": n, "valid": n, "errors": 0}
+    if with_project:
+        assert data["projects"]["test_project"]["status"] == "valid"
+
+
+# load_appspec_for_project reports False (not raise) when there is nothing to build.
+@pytest.mark.parametrize(
+    "manifest",
+    [
+        pytest.param(None, id="missing-manifest"),
+        pytest.param(
+            '[project]\nname = "empty"\nversion = "0.1.0"\nroot = "empty"\n\n'
+            '[modules]\npaths = ["./dsl"]\n',
+            id="no-dsl-files",
+        ),
+    ],
+)
+def test_load_appspec_for_project_false_when_nothing_to_build(tmp_path, manifest) -> None:
+    if manifest is not None:
+        (tmp_path / "dazzle.toml").write_text(manifest)
+    assert load_appspec_for_project(tmp_path) is False

@@ -105,7 +105,12 @@ class TestDbStatusHandler:
         args: dict[str, object] = {"_progress": MagicMock()}
         result_str = await _db_mod.db_status_handler(project_path, args)
         result = json.loads(result_str)
-        assert "entities" in result or "total_rows" in result
+        assert result["entities"] == [
+            {"name": "Task", "table": "Task", "rows": 10, "error": None, "status": "ok"}
+        ]
+        assert result["total_rows"] == 10
+        assert result["database_size"] == "1 MB"
+        assert result["project_root"] == "/fake/project"
 
 
 class TestDbVerifyHandler:
@@ -130,4 +135,4 @@ class TestDbVerifyHandler:
         args: dict[str, object] = {"_progress": MagicMock()}
         result_str = await _db_mod.db_verify_handler(project_path, args)
         result = json.loads(result_str)
-        assert "checks" in result
+        assert result == {"checks": [], "total_issues": 0, "warning_count": 0, "error_count": 0}

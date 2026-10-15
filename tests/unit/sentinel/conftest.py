@@ -222,3 +222,27 @@ def simple_entity() -> EntitySpec:
 @pytest.fixture
 def simple_appspec(simple_entity: EntitySpec) -> Any:
     return make_appspec([simple_entity])
+
+
+# ---------------------------------------------------------------------------
+# Finding assertions
+# ---------------------------------------------------------------------------
+
+
+def assert_findings(findings: list[Any], expected: list[dict[str, Any]]) -> None:
+    """Pin a heuristic's findings exactly: one dict per expected finding, in order.
+
+    Each key names a ``Finding`` attribute compared for equality; a key ending in
+    ``_has`` instead asserts its value (or each value of a tuple) is a substring
+    of that attribute (for titles and descriptions whose full prose is not the
+    contract). An empty ``expected`` list means the heuristic must stay silent.
+    """
+    assert len(findings) == len(expected), [f.title for f in findings]
+    for finding, want in zip(findings, expected, strict=True):
+        for key, value in want.items():
+            if key.endswith("_has"):
+                text = getattr(finding, key.removesuffix("_has"))
+                for part in value if isinstance(value, tuple) else (value,):
+                    assert part in text
+            else:
+                assert getattr(finding, key) == value

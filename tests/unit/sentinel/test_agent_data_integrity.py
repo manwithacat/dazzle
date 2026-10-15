@@ -1,15 +1,25 @@
-"""Tests for the Data Integrity detection agent (DI-01 through DI-07)."""
+"""Tests for the Data Integrity detection agent (DI-01 through DI-07).
 
+One table: each case builds an AppSpec, runs one heuristic and pins the exact
+findings (see ``assert_findings``). Agent identity, heuristic order and the
+clean-spec run live in ``test_registry.py``.
+"""
+
+from collections.abc import Callable
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
 from dazzle.core.ir import FieldTypeKind
+from dazzle.core.ir.domain import Constraint, ConstraintKind, EntitySpec
+from dazzle.core.ir.fields import RelationshipBehavior
 from dazzle.core.ir.governance import DataClassification
 from dazzle.sentinel.agents.data_integrity import DataIntegrityAgent
-from dazzle.sentinel.models import AgentId, Severity
+from dazzle.sentinel.models import Severity
 
 from .conftest import (
+    assert_findings,
     make_appspec,
     make_entity,
     make_field,
@@ -19,319 +29,270 @@ from .conftest import (
     str_field,
 )
 
-
-@pytest.fixture
-def agent() -> DataIntegrityAgent:
-    return DataIntegrityAgent()
-
-
-# =============================================================================
-# DI-01  Cascade delete missing
-# =============================================================================
+# ---------------------------------------------------------------------------
+# Builders
+# ---------------------------------------------------------------------------
 
 
-class TestDI01CascadeDeleteMissing:
-    @pytest.mark.parametrize(
-        "kind",
-        [FieldTypeKind.HAS_MANY, FieldTypeKind.HAS_ONE],
-        ids=["has_many", "has_one"],
-    )
-    def test_flags_relationship_without_behavior(
-        self, agent: DataIntegrityAgent, kind: FieldTypeKind
-    ) -> None:
-        entity = make_entity(
-            "Order",
-            [pk_field(), make_field("rel", kind, ref_entity="Other")],
+def _one(*fields: Any, name: str = "Order") -> Any:
+    return make_appspec([make_entity(name, [pk_field(), *fields])])
+
+
+def _relationship(kind: FieldTypeKind, behavior: RelationshipBehavior | None = None) -> Any:
+    return _one(make_field("rel", kind, ref_entity="Other", relationship_behavior=behavior))
+
+
+def _machine(name: str, states: list[str], transitions: list[tuple[str, str]]) -> Any:
+    sm = MagicMock()
+    sm.states = states
+    sm.transitions = []
+    for from_s, to_s in transitions:
+        t = MagicMock()
+        t.from_state = from_s
+        t.to_state = to_s
+        sm.transitions.append(t)
+    return make_appspec([mock_entity(name, state_machine=sm)])
+
+
+def _computed(*deps: str) -> Any:
+    cf = MagicMock()
+    cf.name = "total"
+    cf.dependencies = list(deps)
+    cf.expression = f"compute({', '.join(deps)})"
+    return make_appspec([mock_entity("Order", computed_fields=[cf])])
+
+
+def _pii_email(audit: object | None = None) -> Any:
+    cls_spec = MagicMock()
+    cls_spec.entity = "Customer"
+    cls_spec.field = "email"
+    cls_spec.classification = DataClassification.PII_DIRECT
+    policies = MagicMock()
+    policies.classifications = [cls_spec]
+    entity = mock_entity("Customer", [pk_field(), str_field("email")], audit=audit)
+    return make_appspec([entity], policies=policies)
+
+
+def _audit_enabled() -> MagicMock:
+    audit = MagicMock()
+    audit.enabled = True
+    return audit
+
+
+def _di(n: int, **extra: Any) -> list[dict[str, Any]]:
+    return [{"heuristic_id": f"DI-0{n}", **extra}]
+
+
+# ---------------------------------------------------------------------------
+# Heuristic table
+# ---------------------------------------------------------------------------
+
+CASES = [
+    # DI-01  relationship with no delete behaviour
+    *[
+        pytest.param(
+            "check_cascade_delete_missing",
+            lambda kind=kind: _relationship(kind),
+            _di(1, severity=Severity.HIGH),
+            id=f"DI-01-flags-{kind.value}-without-behavior",
         )
-        findings = agent.check_cascade_delete_missing(make_appspec([entity]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DI-01"
-        assert findings[0].severity == Severity.HIGH
-
-    def test_passes_when_behavior_set(self, agent: DataIntegrityAgent) -> None:
-        from dazzle.core.ir.fields import RelationshipBehavior
-
-        entity = make_entity(
-            "Order",
+        for kind in (FieldTypeKind.HAS_MANY, FieldTypeKind.HAS_ONE)
+    ],
+    pytest.param(
+        "check_cascade_delete_missing",
+        lambda: _relationship(FieldTypeKind.HAS_MANY, RelationshipBehavior.CASCADE),
+        [],
+        id="DI-01-behavior-set",
+    ),
+    pytest.param(
+        "check_cascade_delete_missing",
+        lambda: _one(str_field("title")),
+        [],
+        id="DI-01-ignores-non-relationship",
+    ),
+    # DI-02  ref to an entity that does not exist
+    pytest.param(
+        "check_orphaned_ref",
+        lambda: _one(ref_field("customer", "Customer")),
+        _di(2, title_has="Customer"),
+        id="DI-02-flags-ref-to-unknown-entity",
+    ),
+    pytest.param(
+        "check_orphaned_ref",
+        lambda: make_appspec(
             [
-                pk_field(),
-                make_field(
-                    "items",
-                    FieldTypeKind.HAS_MANY,
-                    ref_entity="OrderItem",
-                    relationship_behavior=RelationshipBehavior.CASCADE,
-                ),
-            ],
+                make_entity("Customer", [pk_field()]),
+                make_entity("Order", [pk_field(), ref_field("customer", "Customer")]),
+            ]
+        ),
+        [],
+        id="DI-02-target-exists",
+    ),
+    pytest.param(
+        "check_orphaned_ref", lambda: _one(str_field("title")), [], id="DI-02-ignores-non-ref"
+    ),
+    # DI-03  entity without a primary key
+    pytest.param(
+        "check_missing_primary_key",
+        lambda: make_appspec([make_entity("Task", [str_field("title", required=True)])]),
+        _di(3, severity=Severity.CRITICAL),
+        id="DI-03-flags-entity-without-pk",
+    ),
+    pytest.param(
+        "check_missing_primary_key",
+        lambda: _one(str_field("title")),
+        [],
+        id="DI-03-pk-present",
+    ),
+    # DI-04  unique-worthy field without UNIQUE
+    *[
+        pytest.param(
+            "check_missing_unique_constraint",
+            lambda name=name: _one(str_field(name), name="User"),
+            _di(4, severity=Severity.MEDIUM),
+            id=f"DI-04-flags-{name}",
         )
-        assert agent.check_cascade_delete_missing(make_appspec([entity])) == []
-
-    def test_ignores_non_relationship_fields(self, agent: DataIntegrityAgent) -> None:
-        entity = make_entity("Task", [pk_field(), str_field("title")])
-        assert agent.check_cascade_delete_missing(make_appspec([entity])) == []
-
-
-# =============================================================================
-# DI-02  Orphaned ref
-# =============================================================================
-
-
-class TestDI02OrphanedRef:
-    def test_flags_ref_to_unknown_entity(self, agent: DataIntegrityAgent) -> None:
-        entity = make_entity("Order", [pk_field(), ref_field("customer", "Customer")])
-        findings = agent.check_orphaned_ref(make_appspec([entity]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DI-02"
-        assert "Customer" in findings[0].title
-
-    def test_passes_when_target_exists(self, agent: DataIntegrityAgent) -> None:
-        customer = make_entity("Customer", [pk_field()])
-        order = make_entity("Order", [pk_field(), ref_field("customer", "Customer")])
-        assert agent.check_orphaned_ref(make_appspec([customer, order])) == []
-
-    def test_ignores_non_ref_fields(self, agent: DataIntegrityAgent) -> None:
-        entity = make_entity("Task", [pk_field(), str_field("title")])
-        assert agent.check_orphaned_ref(make_appspec([entity])) == []
-
-
-# =============================================================================
-# DI-03  Entity without primary key
-# =============================================================================
-
-
-class TestDI03MissingPrimaryKey:
-    def test_flags_entity_without_pk(self, agent: DataIntegrityAgent) -> None:
-        entity = make_entity("Task", [str_field("title", required=True)])
-        findings = agent.check_missing_primary_key(make_appspec([entity]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DI-03"
-        assert findings[0].severity == Severity.CRITICAL
-
-    def test_passes_with_pk(self, agent: DataIntegrityAgent) -> None:
-        entity = make_entity("Task", [pk_field(), str_field("title")])
-        assert agent.check_missing_primary_key(make_appspec([entity])) == []
-
-
-# =============================================================================
-# DI-04  Unique-worthy field without UNIQUE
-# =============================================================================
-
-
-class TestDI04MissingUnique:
-    @pytest.mark.parametrize("field_name", ["email", "slug", "username", "phone"])
-    def test_flags_unique_worthy_fields(self, agent: DataIntegrityAgent, field_name: str) -> None:
-        entity = make_entity("User", [pk_field(), str_field(field_name)])
-        findings = agent.check_missing_unique_constraint(make_appspec([entity]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DI-04"
-        assert findings[0].severity == Severity.MEDIUM
-
-    def test_passes_when_already_unique(self, agent: DataIntegrityAgent) -> None:
-        entity = make_entity("User", [pk_field(), str_field("email", unique=True)])
-        assert agent.check_missing_unique_constraint(make_appspec([entity])) == []
-
-    def test_ignores_non_unique_worthy_names(self, agent: DataIntegrityAgent) -> None:
-        entity = make_entity("Task", [pk_field(), str_field("description")])
-        assert agent.check_missing_unique_constraint(make_appspec([entity])) == []
-
-
-# =============================================================================
-# DI-05  Dead-end state-machine states
-# =============================================================================
-
-
-class TestDI05DeadEndStates:
-    def _sm(self, states: list[str], transitions: list[tuple[str, str]]) -> MagicMock:
-        sm = MagicMock()
-        sm.states = states
-        sm.transitions = []
-        for from_s, to_s in transitions:
-            t = MagicMock()
-            t.from_state = from_s
-            t.to_state = to_s
-            sm.transitions.append(t)
-        return sm
-
-    def test_flags_dead_end_state_when_name_is_transient(self, agent: DataIntegrityAgent) -> None:
-        """A reachable state with no outbound transitions and a name that
-        does NOT suggest a terminal outcome IS a real dead-end."""
-        sm = self._sm(
+        for name in ("email", "slug", "username", "phone")
+    ],
+    pytest.param(
+        "check_missing_unique_constraint",
+        lambda: _one(str_field("email", unique=True), name="User"),
+        [],
+        id="DI-04-already-unique",
+    ),
+    pytest.param(
+        "check_missing_unique_constraint",
+        lambda: _one(str_field("description")),
+        [],
+        id="DI-04-ignores-ordinary-name",
+    ),
+    # #1356: `code` is the SECOND column of a composite unique and still covered.
+    pytest.param(
+        "check_missing_unique_constraint",
+        lambda: make_appspec(
+            [
+                EntitySpec(
+                    name="Product",
+                    title="Product",
+                    fields=[pk_field(), str_field("code")],
+                    constraints=[Constraint(kind=ConstraintKind.UNIQUE, fields=["tenant", "code"])],
+                )
+            ]
+        ),
+        [],
+        id="DI-04-composite-unique-any-position-1356",
+    ),
+    # #1356: a SessionInfo-style platform entity cannot be amended by project DSL.
+    pytest.param(
+        "check_missing_unique_constraint",
+        lambda: make_appspec(
+            [
+                EntitySpec(
+                    name="SessionInfo",
+                    title="Session Info",
+                    fields=[pk_field(), str_field("email")],
+                    domain="platform",
+                )
+            ]
+        ),
+        [],
+        id="DI-04-platform-injected-entity-skipped-1356",
+    ),
+    # DI-05  reachable state with no way out and a non-terminal name
+    pytest.param(
+        "check_dead_end_states",
+        lambda: _machine(
+            "Article",
             ["draft", "review", "awaiting_review", "published"],
+            [("draft", "review"), ("review", "published"), ("review", "awaiting_review")],
+        ),
+        _di(5, title_has="awaiting_review"),
+        id="DI-05-flags-transient-named-dead-end",
+    ),
+    # #1004: clearly terminal names (rejected, resolved, wont_fix, the last state
+    # of a linear flow) are outcomes, not dead ends.
+    pytest.param(
+        "check_dead_end_states",
+        lambda: _machine(
+            "Article",
+            ["draft", "review", "rejected", "published"],
+            [("draft", "review"), ("review", "published"), ("review", "rejected")],
+        ),
+        [],
+        id="DI-05-terminal-named-state-silent-1004",
+    ),
+    pytest.param(
+        "check_dead_end_states",
+        lambda: _machine(
+            "FeedbackReport",
+            ["new", "triaged", "in_progress", "resolved", "verified", "wont_fix", "duplicate"],
             [
-                ("draft", "review"),
-                ("review", "published"),
-                ("review", "awaiting_review"),
+                ("new", "triaged"),
+                ("triaged", "in_progress"),
+                ("in_progress", "resolved"),
+                ("resolved", "verified"),
+                ("triaged", "wont_fix"),
+                ("triaged", "duplicate"),
             ],
-        )
-        entity = mock_entity("Article", state_machine=sm)
-        findings = agent.check_dead_end_states(make_appspec([entity]))
-        assert len(findings) == 1
-        assert "awaiting_review" in findings[0].title
-
-    @pytest.mark.parametrize(
-        "case",
-        ["single_terminal_named", "multiple_terminal_outcomes", "last_state_is_terminal"],
-    )
-    def test_silences_terminal_named_states(self, agent: DataIntegrityAgent, case: str) -> None:
-        """#1004 — clearly-named terminal states (rejected, resolved, wont_fix,
-        and the last-listed state in a linear flow) are not flagged."""
-        if case == "single_terminal_named":
-            sm = self._sm(
-                ["draft", "review", "rejected", "published"],
-                [("draft", "review"), ("review", "published"), ("review", "rejected")],
-            )
-            entity = mock_entity("Article", state_machine=sm)
-        elif case == "multiple_terminal_outcomes":
-            sm = self._sm(
-                [
-                    "new",
-                    "triaged",
-                    "in_progress",
-                    "resolved",
-                    "verified",
-                    "wont_fix",
-                    "duplicate",
-                ],
-                [
-                    ("new", "triaged"),
-                    ("triaged", "in_progress"),
-                    ("in_progress", "resolved"),
-                    ("resolved", "verified"),
-                    ("triaged", "wont_fix"),
-                    ("triaged", "duplicate"),
-                ],
-            )
-            entity = mock_entity("FeedbackReport", state_machine=sm)
-        else:  # last_state_is_terminal
-            sm = self._sm(["draft", "published"], [("draft", "published")])
-            entity = mock_entity("Article", state_machine=sm)
-
-        assert agent.check_dead_end_states(make_appspec([entity])) == []
-
-    def test_no_state_machine(self, agent: DataIntegrityAgent) -> None:
-        entity = mock_entity("Task", state_machine=None)
-        assert agent.check_dead_end_states(make_appspec([entity])) == []
-
-
-# =============================================================================
-# DI-06  Cross-entity computed field dependency
-# =============================================================================
-
-
-class TestDI06CrossEntityComputed:
-    def _computed(self, name: str, deps: list[str]) -> MagicMock:
-        cf = MagicMock()
-        cf.name = name
-        cf.dependencies = deps
-        cf.expression = f"compute({', '.join(deps)})"
-        return cf
-
-    def test_flags_cross_entity_dep(self, agent: DataIntegrityAgent) -> None:
-        entity = mock_entity(
-            "Order",
-            computed_fields=[self._computed("total", ["items.price"])],
-        )
-        findings = agent.check_cross_entity_computed(make_appspec([entity]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DI-06"
-        assert findings[0].severity == Severity.INFO
-
-    def test_passes_for_local_deps(self, agent: DataIntegrityAgent) -> None:
-        entity = mock_entity(
-            "Order",
-            computed_fields=[self._computed("total", ["price", "quantity"])],
-        )
-        assert agent.check_cross_entity_computed(make_appspec([entity])) == []
-
-    def test_no_computed_fields(self, agent: DataIntegrityAgent) -> None:
-        entity = mock_entity("Task", computed_fields=[])
-        assert agent.check_cross_entity_computed(make_appspec([entity])) == []
+        ),
+        [],
+        id="DI-05-multiple-terminal-outcomes-silent-1004",
+    ),
+    pytest.param(
+        "check_dead_end_states",
+        lambda: _machine("Article", ["draft", "published"], [("draft", "published")]),
+        [],
+        id="DI-05-last-state-terminal-silent-1004",
+    ),
+    pytest.param(
+        "check_dead_end_states",
+        lambda: make_appspec([mock_entity("Task", state_machine=None)]),
+        [],
+        id="DI-05-no-state-machine",
+    ),
+    # DI-06  computed field reaching across entities
+    pytest.param(
+        "check_cross_entity_computed",
+        lambda: _computed("items.price"),
+        _di(6, severity=Severity.INFO),
+        id="DI-06-flags-cross-entity-dependency",
+    ),
+    pytest.param(
+        "check_cross_entity_computed",
+        lambda: _computed("price", "quantity"),
+        [],
+        id="DI-06-local-dependencies",
+    ),
+    pytest.param(
+        "check_cross_entity_computed",
+        lambda: make_appspec([mock_entity("Task", computed_fields=[])]),
+        [],
+        id="DI-06-no-computed-fields",
+    ),
+    # DI-07  PII/financial field on an entity without audit
+    pytest.param(
+        "check_sensitive_fields_without_audit",
+        _pii_email,
+        _di(7, severity=Severity.HIGH),
+        id="DI-07-flags-pii-without-audit",
+    ),
+    pytest.param(
+        "check_sensitive_fields_without_audit",
+        lambda: _pii_email(audit=_audit_enabled()),
+        [],
+        id="DI-07-audit-enabled",
+    ),
+    pytest.param(
+        "check_sensitive_fields_without_audit",
+        lambda: make_appspec([mock_entity("Task")]),
+        [],
+        id="DI-07-no-policies",
+    ),
+]
 
 
-# =============================================================================
-# DI-07  PII/financial fields without audit
-# =============================================================================
-
-
-class TestDI07SensitiveNoAudit:
-    def _policies(self, entity: str, field: str, classification: DataClassification) -> MagicMock:
-        cls_spec = MagicMock()
-        cls_spec.entity = entity
-        cls_spec.field = field
-        cls_spec.classification = classification
-        policies = MagicMock()
-        policies.classifications = [cls_spec]
-        return policies
-
-    def test_flags_pii_without_audit(self, agent: DataIntegrityAgent) -> None:
-        entity = mock_entity("Customer", [pk_field(), str_field("email")])
-        policies = self._policies("Customer", "email", DataClassification.PII_DIRECT)
-        findings = agent.check_sensitive_fields_without_audit(
-            make_appspec([entity], policies=policies)
-        )
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DI-07"
-        assert findings[0].severity == Severity.HIGH
-
-    def test_passes_with_audit_enabled(self, agent: DataIntegrityAgent) -> None:
-        audit = MagicMock()
-        audit.enabled = True
-        entity = mock_entity("Customer", [pk_field(), str_field("email")], audit=audit)
-        policies = self._policies("Customer", "email", DataClassification.PII_DIRECT)
-        assert (
-            agent.check_sensitive_fields_without_audit(make_appspec([entity], policies=policies))
-            == []
-        )
-
-    def test_no_policies(self, agent: DataIntegrityAgent) -> None:
-        entity = mock_entity("Task")
-        assert agent.check_sensitive_fields_without_audit(make_appspec([entity])) == []
-
-
-# =============================================================================
-# Full agent run
-# =============================================================================
-
-
-class TestDataIntegrityAgentRun:
-    def test_agent_id(self, agent: DataIntegrityAgent) -> None:
-        assert agent.agent_id == AgentId.DI
-
-    def test_has_7_heuristics(self, agent: DataIntegrityAgent) -> None:
-        assert len(agent.get_heuristics()) == 7
-
-    def test_heuristic_ids(self, agent: DataIntegrityAgent) -> None:
-        ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == [f"DI-0{i}" for i in range(1, 8)]
-
-    def test_clean_appspec_no_findings(self, agent: DataIntegrityAgent) -> None:
-        entity = make_entity("Task", [pk_field(), str_field("title", required=True)])
-        result = agent.run(make_appspec([entity]))
-        assert result.errors == []
-
-
-class TestDI04Issue1356:
-    """#1356: composite uniques satisfy DI-04; injected entities are skipped."""
-
-    def test_composite_unique_satisfies_any_position(self, agent: DataIntegrityAgent) -> None:
-        from dazzle.core.ir.domain import Constraint, ConstraintKind, EntitySpec
-
-        # `code` is the SECOND column of the composite unique — still covered.
-        entity = EntitySpec(
-            name="Product",
-            title="Product",
-            fields=[pk_field(), str_field("code")],
-            constraints=[Constraint(kind=ConstraintKind.UNIQUE, fields=["tenant", "code"])],
-        )
-        assert agent.check_missing_unique_constraint(make_appspec([entity])) == []
-
-    def test_platform_injected_entity_skipped(self, agent: DataIntegrityAgent) -> None:
-        from dazzle.core.ir.domain import EntitySpec
-
-        # SessionInfo-style framework entity: project DSL cannot amend it.
-        entity = EntitySpec(
-            name="SessionInfo",
-            title="Session Info",
-            fields=[pk_field(), str_field("email")],
-            domain="platform",
-        )
-        assert agent.check_missing_unique_constraint(make_appspec([entity])) == []
+@pytest.mark.parametrize(("heuristic", "build", "expected"), CASES)
+def test_heuristic(
+    heuristic: str, build: Callable[[], Any], expected: list[dict[str, Any]]
+) -> None:
+    assert_findings(getattr(DataIntegrityAgent(), heuristic)(build()), expected)

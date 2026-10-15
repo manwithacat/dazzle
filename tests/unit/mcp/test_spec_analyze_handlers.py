@@ -72,426 +72,272 @@ def _import_spec_analyze():
 # Import the module once at module load time
 _sa = _import_spec_analyze()
 
-# Get references to the functions we need
 handle_spec_analyze = _sa.handle_spec_analyze
-_discover_entities = _sa._discover_entities
-_identify_lifecycles = _sa._identify_lifecycles
-_extract_personas = _sa._extract_personas
-_surface_rules = _sa._surface_rules
-_generate_questions = _sa._generate_questions
-_refine_spec = _sa._refine_spec
 
 
-class TestHandleSpecAnalyze:
-    """Tests for the main dispatch function."""
+def _op(operation: str, **args) -> dict:
+    """Call the spec_analyze tool through its dispatcher."""
+    return json.loads(handle_spec_analyze({"operation": operation, **args}))
 
-    def test_discover_entities_dispatch(self) -> None:
-        """Test dispatch to discover_entities."""
-        result = handle_spec_analyze(
-            {
-                "operation": "discover_entities",
-                "spec_text": "The Customer places an Order.",
-            }
-        )
-        data = json.loads(result)
-        assert "entities" in data or "error" not in data
 
-    @pytest.mark.parametrize(
-        ("params", "expected_key"),
-        [
-            (
-                {
-                    "operation": "identify_lifecycles",
-                    "spec_text": "Orders go from pending to shipped.",
-                    "entities": ["Order"],
-                },
-                "lifecycles",
-            ),
-            (
-                {
-                    "operation": "extract_personas",
-                    "spec_text": "Admins can manage users. Customers can place orders.",
-                },
-                "personas",
-            ),
-            (
-                {
-                    "operation": "surface_rules",
-                    "spec_text": "Users must verify email before ordering.",
-                },
-                "business_rules",
-            ),
-            (
-                {
-                    "operation": "generate_questions",
-                    "spec_text": "The app should handle payments.",
-                },
-                "questions",
-            ),
-        ],
-        ids=[
-            "test_identify_lifecycles_dispatch",
-            "test_extract_personas_dispatch",
-            "test_surface_rules_dispatch",
-            "test_generate_questions_dispatch",
-        ],
+def _names(items: list[dict]) -> list[str]:
+    return [i["name"] for i in items]
+
+
+OPERATIONS = [
+    "discover_entities",
+    "identify_lifecycles",
+    "extract_personas",
+    "surface_rules",
+    "generate_questions",
+    "refine_spec",
+]
+
+
+@pytest.mark.parametrize("operation", OPERATIONS)
+def test_every_operation_requires_spec_text(operation: str) -> None:
+    assert _op(operation) == {"error": "spec_text is required"}
+
+
+def test_unknown_operation() -> None:
+    assert _op("unknown_operation") == {
+        "error": "Unknown spec_analyze operation: unknown_operation"
+    }
+
+
+# =============================================================================
+# discover_entities
+# =============================================================================
+
+
+def test_discover_entities_capitalised_nouns_and_roles_offline_1631() -> None:
+    """Capitalised nouns become domain entities (plurals singularised), role words
+    become ``user_role`` entities; the extract is marked offline (#1631)."""
+    data = _op(
+        "discover_entities", spec_text="A Customer places an Order. The Order contains Items."
     )
-    def test_operation_dispatch(self, params: dict, expected_key: str) -> None:
-        result = handle_spec_analyze(params)
-        data = json.loads(result)
-        assert expected_key in data
-
-    def test_refine_spec_dispatch(self) -> None:
-        """Test dispatch to refine_spec."""
-        result = handle_spec_analyze(
-            {
-                "operation": "refine_spec",
-                "spec_text": "A simple todo app for managing tasks.",
-            }
-        )
-        data = json.loads(result)
-        assert "refined_spec" in data or "entities" in data
-
-    def test_unknown_operation(self) -> None:
-        """Test error for unknown operation."""
-        result = handle_spec_analyze(
-            {
-                "operation": "unknown_operation",
-            }
-        )
-        data = json.loads(result)
-        assert "error" in data
-        assert "Unknown" in data["error"] and "operation" in data["error"]
+    # Order among capitalised nouns follows set iteration, so compare as a mapping.
+    assert {e["name"]: e["type"] for e in data["entities"]} == {
+        "Customer": "user_role",
+        "Order": "domain_entity",
+        "Item": "domain_entity",
+    }
+    assert data["extract_mode"] == "offline_deterministic"
 
 
-class TestDiscoverEntities:
-    """Tests for entity discovery."""
-
-    def test_requires_spec_text(self) -> None:
-        """Test that spec_text is required."""
-        result = _discover_entities({})
-        data = json.loads(result)
-        assert "error" in data
-        assert "spec_text is required" in data["error"]
-
-    def test_finds_capitalized_nouns(self) -> None:
-        """Test finding capitalized nouns as potential entities."""
-        result = _discover_entities(
-            {"spec_text": "A Customer places an Order. The Order contains Items."}
-        )
-        data = json.loads(result)
-        entities = data.get("entities", [])
-        entity_names = [e["name"] if isinstance(e, dict) else e for e in entities]
-        assert "Customer" in entity_names or "Order" in entity_names
-
-    def test_finds_relationships(self) -> None:
-        """Test finding relationships between entities."""
-        result = _discover_entities(
-            {"spec_text": "Each Order belongs to a Customer. Orders contain multiple Items."}
-        )
-        data = json.loads(result)
-        # Should identify relationships
-        relationships = data.get("relationships", [])
-        assert isinstance(relationships, list)
-
-    def test_skips_common_words(self) -> None:
-        """Test that common words are not detected as entities."""
-        result = _discover_entities(
-            {"spec_text": "The System manages Users. This Application is for Teams."}
-        )
-        data = json.loads(result)
-        entities = data.get("entities", [])
-        entity_names = [e["name"] if isinstance(e, dict) else e for e in entities]
-        # "System", "Application" should be skipped
-        assert "System" not in entity_names
-        assert "Application" not in entity_names
-
-
-class TestIdentifyLifecycles:
-    """Tests for lifecycle identification."""
-
-    def test_requires_spec_text(self) -> None:
-        """Test that spec_text is required."""
-        result = _identify_lifecycles({"entities": ["Order"]})
-        data = json.loads(result)
-        assert "error" in data
-
-    def test_identifies_order_lifecycle(self) -> None:
-        """Test identification of order lifecycle pattern."""
-        result = _identify_lifecycles(
-            {
-                "spec_text": "Orders are created and then shipped to customers.",
-                "entities": ["Order"],
-            }
-        )
-        data = json.loads(result)
-        lifecycles = data.get("lifecycles", [])
-        assert len(lifecycles) >= 1
-        order_lifecycle = next((lc for lc in lifecycles if lc["entity"] == "Order"), None)
-        assert order_lifecycle is not None
-        assert "states" in order_lifecycle
-
-    def test_identifies_request_lifecycle(self) -> None:
-        """Test identification of request lifecycle pattern."""
-        result = _identify_lifecycles(
-            {
-                "spec_text": "Requests can be submitted and approved or rejected.",
-                "entities": ["Request"],
-            }
-        )
-        data = json.loads(result)
-        lifecycles = data.get("lifecycles", [])
-        assert len(lifecycles) >= 1
-
-    def test_identifies_task_lifecycle(self) -> None:
-        """Test identification of task lifecycle pattern."""
-        result = _identify_lifecycles(
-            {
-                "spec_text": "Tasks are assigned to team members and completed.",
-                "entities": ["Task"],
-            }
-        )
-        data = json.loads(result)
-        lifecycles = data.get("lifecycles", [])
-        assert len(lifecycles) >= 1
-
-    def test_detects_transition_words(self) -> None:
-        """Test detection of transition keywords."""
-        result = _identify_lifecycles(
-            {
-                "spec_text": "Users can submit, approve, reject, or cancel items.",
-                "entities": [],
-            }
-        )
-        data = json.loads(result)
-        transitions = data.get("detected_transitions", [])
-        assert "submit" in transitions or "approve" in transitions
-
-
-class TestExtractPersonas:
-    """Tests for persona extraction."""
-
-    def test_requires_spec_text(self) -> None:
-        """Test that spec_text is required."""
-        result = _extract_personas({})
-        data = json.loads(result)
-        assert "error" in data
-
-    def test_finds_admin_persona(self) -> None:
-        """Test finding admin persona."""
-        result = _extract_personas(
-            {"spec_text": "Administrators can manage all users and settings."}
-        )
-        data = json.loads(result)
-        personas = data.get("personas", [])
-        persona_names = [p["name"] if isinstance(p, dict) else p for p in personas]
-        assert any("admin" in name.lower() for name in persona_names)
-
-    def test_finds_user_persona(self) -> None:
-        """Test finding user persona."""
-        result = _extract_personas({"spec_text": "Users can create and view their own content."})
-        data = json.loads(result)
-        personas = data.get("personas", [])
-        assert len(personas) >= 1
-
-    def test_finds_customer_persona(self) -> None:
-        """Test finding customer persona."""
-        result = _extract_personas({"spec_text": "Customers can browse products and place orders."})
-        data = json.loads(result)
-        personas = data.get("personas", [])
-        persona_names = [p["name"] if isinstance(p, dict) else p for p in personas]
-        assert any("customer" in name.lower() for name in persona_names)
-
-
-class TestSurfaceRules:
-    """Tests for business rule extraction."""
-
-    def test_requires_spec_text(self) -> None:
-        """Test that spec_text is required."""
-        result = _surface_rules({})
-        data = json.loads(result)
-        assert "error" in data
-
-    def test_finds_must_rules(self) -> None:
-        """Test finding 'must' constraints."""
-        result = _surface_rules(
-            {"spec_text": "Users must verify their email before placing orders."}
-        )
-        data = json.loads(result)
-        rules = data.get("business_rules", [])
-        assert len(rules) >= 1
-
-    def test_finds_cannot_rules(self) -> None:
-        """Test finding 'cannot' constraints."""
-        result = _surface_rules({"spec_text": "Users cannot delete orders after they are shipped."})
-        data = json.loads(result)
-        rules = data.get("business_rules", [])
-        assert len(rules) >= 1
-
-    def test_finds_only_rules(self) -> None:
-        """Test finding 'only' constraints."""
-        result = _surface_rules({"spec_text": "Only admins can access the settings page."})
-        data = json.loads(result)
-        rules = data.get("business_rules", [])
-        assert len(rules) >= 1
-
-
-class TestGenerateQuestions:
-    """Tests for question generation."""
-
-    def test_requires_spec_text(self) -> None:
-        """Test that spec_text is required."""
-        result = _generate_questions({})
-        data = json.loads(result)
-        assert "error" in data
-
-    def test_generates_questions(self) -> None:
-        """Test that questions are generated."""
-        result = _generate_questions(
-            {"spec_text": "The app should handle payments and user authentication."}
-        )
-        data = json.loads(result)
-        questions = data.get("questions", [])
-        assert isinstance(questions, list)
-
-    def test_questions_about_ambiguity(self) -> None:
-        """Test questions about vague requirements."""
-        result = _generate_questions(
-            {"spec_text": "The system should be fast and handle many users."}
-        )
-        data = json.loads(result)
-        questions = data.get("questions", [])
-        # Should generate clarifying questions about vague terms
-        assert len(questions) >= 0  # May or may not find issues
-
-
-class TestRefineSpec:
-    """Tests for spec refinement."""
-
-    def test_requires_spec_text(self) -> None:
-        """Test that spec_text is required."""
-        result = _refine_spec({})
-        data = json.loads(result)
-        assert "error" in data
-
-    def test_produces_refined_output(self) -> None:
-        """Test that refinement produces structured output."""
-        result = _refine_spec(
-            {
-                "spec_text": """
-            A task management app where users can create tasks,
-            assign them to team members, and track completion.
-            Tasks have a title, description, and due date.
-            """
-            }
-        )
-        data = json.loads(result)
-        # Should have structured output
-        assert "refined_spec" in data or "entities" in data or "error" not in data
-
-    def test_incorporates_answers(self) -> None:
-        """Test that answers are incorporated into refinement."""
-        result = _refine_spec(
-            {
-                "spec_text": "A simple todo app.",
-                "answers": {
-                    "auth_method": "email_password",
-                    "multi_tenant": False,
-                },
-            }
-        )
-        data = json.loads(result)
-        # Should process without error
-        assert "error" not in data
-
-
-class TestDiscoverEntitiesHeuristics1353:
-    """#1353: adjective/sentence-initial false positives, comma-list and
-    arrow-chain misses — pinned on the issue's exact repro spec."""
-
-    SPEC = (
-        "A small invoicing tool: clients, invoices with line items, "
-        "draft->sent->paid lifecycle, members see only their own client's "
-        "invoices, admins see all. Monthly statement email to each client."
+def test_discover_entities_finds_belongs_to_relationship() -> None:
+    data = _op(
+        "discover_entities",
+        spec_text="Each Order belongs to a Customer. Orders contain multiple Items.",
     )
-
-    def _names(self, spec: str) -> list[str]:
-        data = json.loads(_discover_entities({"spec_text": spec}))
-        return [e["name"] for e in data["entities"]]
-
-    def test_no_adjective_false_positives(self) -> None:
-        names = self._names(self.SPEC)
-        assert "Small" not in names  # "a small invoicing tool"
-        assert "Monthly" not in names  # sentence-initial adjective
-
-    def test_comma_list_plurals_extracted(self) -> None:
-        names = self._names(self.SPEC)
-        assert "Client" in names
-        assert "Invoice" in names
-
-    def test_with_compound_child_entity(self) -> None:
-        assert "LineItem" in self._names(self.SPEC)
-
-    def test_roles_still_detected(self) -> None:
-        names = self._names(self.SPEC)
-        assert "Member" in names
-        assert "Admin" in names
-
-    def test_camel_case_counts_even_sentence_initial(self) -> None:
-        names = self._names("LineItem rows roll up. The total is computed.")
-        assert "LineItem" in names
-
-    def test_non_plural_s_words_not_singularised(self) -> None:
-        names = self._names("status, address records for each site.")
-        assert "Statu" not in names
-        assert "Addres" not in names
+    assert {"Order"} == {r["from"] for r in data["relationships"] if r["type"] == "belongs_to"}
 
 
-class TestArrowChainLifecycles1353:
-    """#1353: explicit arrow chains mirror DSL transitions syntax and must win."""
+# Each case: spec → names that must appear / must not appear (#1353 cases pinned
+# on the issue's exact repro spec).
+_SPEC_1353 = (
+    "A small invoicing tool: clients, invoices with line items, "
+    "draft->sent->paid lifecycle, members see only their own client's "
+    "invoices, admins see all. Monthly statement email to each client."
+)
 
-    def test_arrow_chain_detected_and_attributed(self) -> None:
-        result = _identify_lifecycles(
-            {
-                "spec_text": "Invoices follow a draft->sent->paid lifecycle.",
-                "entities": ["Invoice"],
-            }
-        )
-        data = json.loads(result)
-        chains = [lc for lc in data["lifecycles"] if lc.get("source") == "arrow_chain"]
-        assert len(chains) == 1
-        assert chains[0]["states"] == ["draft", "sent", "paid"]
-        assert chains[0]["entity"] == "Invoice"
 
-    def test_unicode_arrow_detected(self) -> None:
-        result = _identify_lifecycles(
-            {"spec_text": "Tickets: open → triaged → closed.", "entities": ["Ticket"]}
-        )
-        data = json.loads(result)
-        chains = [lc for lc in data["lifecycles"] if lc.get("source") == "arrow_chain"]
-        assert chains and chains[0]["states"] == ["open", "triaged", "closed"]
+@pytest.mark.parametrize(
+    ("spec", "present", "absent"),
+    [
+        pytest.param(
+            "The System manages Users. This Application is for Teams.",
+            {"User", "Team"},
+            {"System", "Application"},
+            id="skips-common-words",
+        ),
+        pytest.param(
+            _SPEC_1353, set(), {"Small", "Monthly"}, id="no-adjective-false-positives-1353"
+        ),
+        pytest.param(_SPEC_1353, {"Client", "Invoice"}, set(), id="comma-list-plurals-1353"),
+        pytest.param(_SPEC_1353, {"LineItem"}, set(), id="compound-child-entity-1353"),
+        pytest.param(_SPEC_1353, {"Member", "Admin"}, set(), id="roles-still-detected-1353"),
+        pytest.param(
+            "LineItem rows roll up. The total is computed.",
+            {"LineItem"},
+            set(),
+            id="camel-case-counts-sentence-initial-1353",
+        ),
+        pytest.param(
+            "status, address records for each site.",
+            set(),
+            {"Statu", "Addres"},
+            id="non-plural-s-words-not-singularised-1353",
+        ),
+    ],
+)
+def test_discover_entities_names(spec: str, present: set, absent: set) -> None:
+    names = set(_names(_op("discover_entities", spec_text=spec)["entities"]))
+    assert present <= names
+    assert not (absent & names)
 
-    def test_arrow_chain_beats_pattern_guess(self) -> None:
-        # "Order" matches the canned pattern, but the explicit chain must win.
-        result = _identify_lifecycles(
-            {
-                "spec_text": "Orders move quoted->packed->shipped.",
-                "entities": ["Order"],
-            }
-        )
-        data = json.loads(result)
-        order_lcs = [lc for lc in data["lifecycles"] if lc["entity"] == "Order"]
-        assert len(order_lcs) == 1
-        assert order_lcs[0]["source"] == "arrow_chain"
-        assert order_lcs[0]["states"] == ["quoted", "packed", "shipped"]
 
-    def test_chain_without_entity_is_unattributed(self) -> None:
-        result = _identify_lifecycles(
-            {"spec_text": "Everything is draft->live eventually.", "entities": []}
-        )
-        data = json.loads(result)
-        chains = [lc for lc in data["lifecycles"] if lc.get("source") == "arrow_chain"]
-        assert chains and chains[0]["entity"] == "UNKNOWN"
+# =============================================================================
+# identify_lifecycles
+# =============================================================================
+
+
+@pytest.mark.parametrize(
+    ("spec", "entity", "states"),
+    [
+        pytest.param(
+            "Orders are created and then shipped to customers.",
+            "Order",
+            ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"],
+            id="order-pattern",
+        ),
+        pytest.param(
+            "Requests can be submitted and approved or rejected.",
+            "Request",
+            ["draft", "submitted", "pending", "approved", "rejected", "completed"],
+            id="request-pattern",
+        ),
+        pytest.param(
+            "Tasks are assigned to team members and completed.",
+            "Task",
+            ["pending", "assigned", "in_progress", "completed", "blocked"],
+            id="task-pattern",
+        ),
+    ],
+)
+def test_identify_lifecycles_pattern_match(spec: str, entity: str, states: list[str]) -> None:
+    lifecycles = _op("identify_lifecycles", spec_text=spec, entities=[entity])["lifecycles"]
+    assert lifecycles == [
+        {"entity": entity, "status_field": "status", "states": states, "source": "pattern_match"}
+    ]
+
+
+def test_identify_lifecycles_detects_transition_words() -> None:
+    data = _op(
+        "identify_lifecycles",
+        spec_text="Users can submit, approve, reject, or cancel items.",
+        entities=[],
+    )
+    assert data["detected_transitions"] == ["approve", "cancel", "reject", "submit"]
+
+
+# #1353: explicit arrow chains mirror DSL transitions syntax and win over the
+# canned pattern guess; a chain with no named entity is attributed to UNKNOWN.
+@pytest.mark.parametrize(
+    ("spec", "entities", "entity", "states"),
+    [
+        pytest.param(
+            "Invoices follow a draft->sent->paid lifecycle.",
+            ["Invoice"],
+            "Invoice",
+            ["draft", "sent", "paid"],
+            id="ascii-arrow-attributed-1353",
+        ),
+        pytest.param(
+            "Tickets: open → triaged → closed.",
+            ["Ticket"],
+            "Ticket",
+            ["open", "triaged", "closed"],
+            id="unicode-arrow-1353",
+        ),
+        pytest.param(
+            "Orders move quoted->packed->shipped.",
+            ["Order"],
+            "Order",
+            ["quoted", "packed", "shipped"],
+            id="arrow-chain-beats-pattern-guess-1353",
+        ),
+        pytest.param(
+            "Everything is draft->live eventually.",
+            [],
+            "UNKNOWN",
+            ["draft", "live"],
+            id="chain-without-entity-unattributed-1353",
+        ),
+    ],
+)
+def test_arrow_chain_lifecycles(spec: str, entities: list, entity: str, states: list) -> None:
+    lifecycles = _op("identify_lifecycles", spec_text=spec, entities=entities)["lifecycles"]
+    chains = [lc for lc in lifecycles if lc.get("source") == "arrow_chain"]
+    assert [(c["entity"], c["states"]) for c in chains] == [(entity, states)]
+    # The chain is the only lifecycle for its entity — no pattern-match duplicate.
+    assert len([lc for lc in lifecycles if lc["entity"] == entity]) == 1
+
+
+# =============================================================================
+# extract_personas / surface_rules / generate_questions / refine_spec
+# =============================================================================
+
+
+# Admin is always present: explicitly, or added as an implicit platform administrator.
+@pytest.mark.parametrize(
+    ("spec", "personas"),
+    [
+        pytest.param(
+            "Administrators can manage all users and settings.", ["Admin", "User"], id="admin"
+        ),
+        pytest.param("Users can create and view their own content.", ["User", "Admin"], id="user"),
+        pytest.param(
+            "Customers can browse products and place orders.", ["Customer", "Admin"], id="customer"
+        ),
+    ],
+)
+def test_extract_personas(spec: str, personas: list[str]) -> None:
+    assert _names(_op("extract_personas", spec_text=spec)["personas"]) == personas
+
+
+@pytest.mark.parametrize(
+    ("spec", "rule", "dsl_hint"),
+    [
+        pytest.param(
+            "Users must verify their email before placing orders.",
+            "must verify their email before placing orders",
+            "Consider invariant or guard",
+            id="must",
+        ),
+        pytest.param(
+            "Users cannot delete orders after they are shipped.",
+            "cannot delete orders after they are shipped",
+            "Consider invariant with negation",
+            id="cannot",
+        ),
+        pytest.param(
+            "Only admins can access the settings page.",
+            "only admins can access the settings page",
+            "Consider permission or guard",
+            id="only",
+        ),
+    ],
+)
+def test_surface_rules(spec: str, rule: str, dsl_hint: str) -> None:
+    assert _op("surface_rules", spec_text=spec)["business_rules"] == [
+        {"type": "constraint", "rule": rule, "dsl_hint": dsl_hint}
+    ]
+
+
+@pytest.mark.parametrize(
+    ("spec", "topics"),
+    [
+        pytest.param(
+            "The app should handle payments and user authentication.",
+            ["cardinality"],
+            id="payment-user-cardinality",
+        ),
+        pytest.param("The system should be fast and handle many users.", [], id="nothing-to-ask"),
+    ],
+)
+def test_generate_questions(spec: str, topics: list[str]) -> None:
+    questions = _op("generate_questions", spec_text=spec)["questions"]
+    assert [q["topic"] for q in questions] == topics
+
+
+def test_refine_spec_structures_spec_and_records_answers() -> None:
+    answers = {"auth_method": "email_password", "multi_tenant": False}
+    data = _op("refine_spec", spec_text="A simple todo app.", answers=answers)
+    assert data["original_spec"] == "A simple todo app."
+    assert _names(data["entities"]) == ["Todo"]
+    assert data["state_machines"][0]["entity"] == "Todo"
+    assert data["answered_questions"] == answers
 
 
 class TestChromeEntities1631:
@@ -517,17 +363,11 @@ Employee sees draft and in-flight lists for their SpendRequest rows.
 """
 
     def test_refuses_markdown_table_chrome(self) -> None:
-        result = _discover_entities({"spec_text": self.SPEND_SPEC})
-        data = json.loads(result)
+        data = _op("discover_entities", spec_text=self.SPEND_SPEC)
         names = {e["name"] for e in data.get("entities", [])}
         chrome = {"Optional", "Field", "Display", "Raise", "Type", "Amount", "Status", "Statu"}
         assert not (names & chrome), f"chrome leaked into entities: {names & chrome}"
-        assert "SpendRequest" in names or "Employee" in names
-
-    def test_offline_mode_marker(self) -> None:
-        result = _discover_entities({"spec_text": "A Customer places an Order."})
-        data = json.loads(result)
-        assert data.get("extract_mode") == "offline_deterministic"
+        assert {"SpendRequest", "Employee"} <= names
 
     def test_strip_markdown_tables_helper(self) -> None:
         strip_fn = _sa._strip_markdown_tables

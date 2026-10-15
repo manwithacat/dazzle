@@ -160,6 +160,8 @@ def _import_sitespec():
 
 # Import the module once at module load time
 _ss = _import_sitespec()
+_LOADER = sys.modules["dazzle.core.sitespec_loader"]
+_COHERENCE = sys.modules["dazzle.core.site_coherence"]
 
 # Get references to the functions we need
 get_sitespec_handler = _ss.get_sitespec_handler
@@ -209,214 +211,105 @@ paths = ["./dsl"]
 # =============================================================================
 
 
-class TestGetSitespecHandler:
-    """Tests for get_sitespec_handler."""
-
-    def test_returns_sitespec_data(self, temp_project) -> None:
-        """Test getting sitespec data."""
-        result = get_sitespec_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert "version" in data
-        assert "brand" in data
-        assert "layout" in data
-        assert "pages" in data
-
-    def test_includes_brand_info(self, temp_project) -> None:
-        """Test that brand info is included."""
-        result = get_sitespec_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert "brand" in data
-        brand = data["brand"]
-        assert "product_name" in brand
-        assert "tagline" in brand
-
-    def test_includes_all_routes(self, temp_project) -> None:
-        """Test that all routes are listed."""
-        result = get_sitespec_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert "all_routes" in data
-        assert "/" in data["all_routes"]
-
-    def test_with_use_defaults_option(self, temp_project) -> None:
-        """Test use_defaults option."""
-        result = get_sitespec_handler(temp_project, {"use_defaults": False})
-        data = json.loads(result)
-
-        # Should still return data (mocked)
-        assert "version" in data or "error" in data
+@pytest.mark.parametrize("use_defaults", [True, False], ids=["defaults", "no-defaults"])
+def test_get_sitespec_serialises_spec(temp_project, use_defaults: bool) -> None:
+    data = json.loads(get_sitespec_handler(temp_project, {"use_defaults": use_defaults}))
+    _LOADER.load_sitespec.assert_called_with(temp_project, use_defaults=use_defaults)
+    assert data["version"] == "1.0"
+    assert data["brand"]["product_name"] == "My App"
+    assert data["brand"]["tagline"] == "Your best solution"
+    assert data["layout"]["nav"]["public"] == [{"label": "Home", "href": "/"}]
+    assert data["pages"] == [
+        {"route": "/", "type": "landing", "title": "Home", "sections_count": 0, "source": None}
+    ]
+    assert data["all_routes"] == ["/", "/login", "/signup", "/terms", "/privacy"]
 
 
-class TestValidateSitespecHandler:
-    """Tests for validate_sitespec_handler."""
-
-    def test_returns_validation_result(self, temp_project) -> None:
-        """Test sitespec validation."""
-        result = validate_sitespec_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert "is_valid" in data
-        assert "error_count" in data
-        assert "warning_count" in data
-
-    def test_includes_errors_and_warnings(self, temp_project) -> None:
-        """Test that errors and warnings are included."""
-        result = validate_sitespec_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert "errors" in data
-        assert "warnings" in data
-
-    def test_with_check_content_files(self, temp_project) -> None:
-        """Test check_content_files option."""
-        result = validate_sitespec_handler(temp_project, {"check_content_files": False})
-        data = json.loads(result)
-
-        assert "is_valid" in data or "error" in data
+@pytest.mark.parametrize("check", [True, False], ids=["check-content", "skip-content"])
+def test_validate_sitespec_reports_counts(temp_project, check: bool) -> None:
+    data = json.loads(validate_sitespec_handler(temp_project, {"check_content_files": check}))
+    assert data == {
+        "is_valid": True,
+        "error_count": 0,
+        "warning_count": 1,
+        "errors": [],
+        "warnings": ["Consider adding more content"],
+    }
+    assert _LOADER.validate_sitespec.call_args.kwargs["check_content_files"] is check
 
 
-class TestScaffoldSiteHandler:
-    """Tests for scaffold_site_handler."""
-
-    def test_scaffolds_site(self, temp_project) -> None:
-        """Test scaffolding a site."""
-        result = scaffold_site_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert data["success"] is True
-        assert "created_files" in data
-
-    def test_with_product_name(self, temp_project) -> None:
-        """Test with custom product name."""
-        result = scaffold_site_handler(temp_project, {"product_name": "My Product"})
-        data = json.loads(result)
-
-        assert data["product_name"] == "My Product"
-
-    def test_overwrite_option(self, temp_project) -> None:
-        """Test overwrite option."""
-        result = scaffold_site_handler(temp_project, {"overwrite": True})
-        data = json.loads(result)
-
-        assert data["success"] is True
+@pytest.mark.parametrize(
+    ("args", "product_name", "overwrite"),
+    [
+        pytest.param({}, "My App", False, id="defaults"),
+        pytest.param({"product_name": "My Product"}, "My Product", False, id="product-name"),
+        pytest.param({"overwrite": True}, "My App", True, id="overwrite"),
+    ],
+)
+def test_scaffold_site(temp_project, args: dict, product_name: str, overwrite: bool) -> None:
+    data = json.loads(scaffold_site_handler(temp_project, args))
+    _LOADER.scaffold_site.assert_called_with(temp_project, product_name, overwrite=overwrite)
+    assert data["success"] is True
+    assert data["product_name"] == product_name
+    assert "sitespec.yaml" in data["created_files"]
+    # The static/images/ convention directory is created with a .gitkeep.
+    assert (temp_project / "static" / "images" / ".gitkeep").exists()
 
 
-class TestGetCopyHandler:
-    """Tests for get_copy_handler."""
-
-    def test_returns_not_found_when_missing(self, temp_project) -> None:
-        """Test when copy.md doesn't exist."""
-        result = get_copy_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert data["exists"] is False
-        assert "hint" in data
-
-    def test_returns_copy_data_when_exists(self, temp_project) -> None:
-        """Test when copy.md exists."""
-        # Update mock to return copy exists
-        sitespec_loader = sys.modules["dazzle.core.sitespec_loader"]
-        sitespec_loader.copy_file_exists = MagicMock(return_value=True)
-        sitespec_loader.load_copy = MagicMock(
-            return_value={"sections": [{"type": "hero", "title": "Welcome"}]}
-        )
-
-        result = get_copy_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert data["exists"] is True
-        assert "sections" in data
+def test_copy_handlers_when_copy_md_missing(temp_project, monkeypatch) -> None:
+    monkeypatch.setattr(_LOADER, "copy_file_exists", MagicMock(return_value=False))
+    got = json.loads(get_copy_handler(temp_project, {}))
+    assert got["exists"] is False
+    assert "scaffold_copy" in got["hint"]
+    assert json.loads(review_copy_handler(temp_project, {}))["exists"] is False
+    created = json.loads(scaffold_copy_handler(temp_project, {}))
+    assert created["success"] is True
+    assert created["overwritten"] is False
+    assert created["sections"][0] == "Hero"
 
 
-class TestScaffoldCopyHandler:
-    """Tests for scaffold_copy_handler."""
+def test_get_copy_formats_sections(temp_project, monkeypatch) -> None:
+    monkeypatch.setattr(_LOADER, "copy_file_exists", MagicMock(return_value=True))
+    monkeypatch.setattr(
+        _LOADER,
+        "load_copy",
+        MagicMock(return_value={"sections": [{"type": "hero", "title": "Welcome"}]}),
+    )
+    data = json.loads(get_copy_handler(temp_project, {}))
+    assert data["exists"] is True
+    assert data["section_count"] == 1
+    assert data["sections"] == [{"type": "hero", "title": "Welcome"}]
 
-    def test_scaffolds_copy_file(self, temp_project) -> None:
-        """Test scaffolding copy.md."""
-        # Reset mock to return file doesn't exist
-        sitespec_loader = sys.modules["dazzle.core.sitespec_loader"]
-        sitespec_loader.copy_file_exists = MagicMock(return_value=False)
 
-        result = scaffold_copy_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert data["success"] is True
-        assert "sections" in data
-
-    def test_refuses_overwrite_by_default(self, temp_project) -> None:
-        """Test that overwrite is refused by default when file exists."""
-        sitespec_loader = sys.modules["dazzle.core.sitespec_loader"]
-        sitespec_loader.copy_file_exists = MagicMock(return_value=True)
-
-        result = scaffold_copy_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert data["success"] is False
-        assert "warning" in data
-
-    def test_allows_overwrite_when_requested(self, temp_project) -> None:
-        """Test overwrite when explicitly requested."""
-        sitespec_loader = sys.modules["dazzle.core.sitespec_loader"]
-        sitespec_loader.copy_file_exists = MagicMock(return_value=True)
-
-        result = scaffold_copy_handler(temp_project, {"overwrite": True})
-        data = json.loads(result)
-
-        assert data["success"] is True
+# An existing copy.md is never overwritten unless overwrite=true is passed.
+@pytest.mark.parametrize(
+    ("overwrite", "success"),
+    [pytest.param(False, False, id="refused-by-default"), pytest.param(True, True, id="overwrite")],
+)
+def test_scaffold_copy_existing_file(temp_project, monkeypatch, overwrite, success) -> None:
+    monkeypatch.setattr(_LOADER, "copy_file_exists", MagicMock(return_value=True))
+    data = json.loads(scaffold_copy_handler(temp_project, {"overwrite": overwrite}))
+    assert data["success"] is success
+    if overwrite:
         assert data["overwritten"] is True
+    else:
+        assert "Overwriting will lose existing content" in data["warning"]
 
 
-class TestReviewCopyHandler:
-    """Tests for review_copy_handler."""
-
-    def test_returns_not_found_when_missing(self, temp_project) -> None:
-        """Test when copy.md doesn't exist."""
-        sitespec_loader = sys.modules["dazzle.core.sitespec_loader"]
-        sitespec_loader.copy_file_exists = MagicMock(return_value=False)
-
-        result = review_copy_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert data["exists"] is False
+@pytest.mark.parametrize("args", [{}, {"business_context": "saas"}], ids=["plain", "saas-context"])
+def test_coherence_reports_score_and_priority(temp_project, args: dict) -> None:
+    data = json.loads(coherence_handler(temp_project, args))
+    assert data["score"] == 85
+    assert data["formatted"] == "Site coherence: 85%"
+    assert "priority" in data
+    assert _COHERENCE.validate_site_coherence.call_args.kwargs.get("business_context") == args.get(
+        "business_context"
+    )
 
 
-class TestCoherenceHandler:
-    """Tests for coherence_handler."""
-
-    def test_returns_coherence_score(self, temp_project) -> None:
-        """Test coherence validation."""
-        result = coherence_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert "score" in data
-        assert "formatted" in data
-
-    def test_includes_priority(self, temp_project) -> None:
-        """Test that priority guidance is included."""
-        result = coherence_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert "priority" in data
-
-    def test_with_business_context(self, temp_project) -> None:
-        """Test with business context hint."""
-        result = coherence_handler(temp_project, {"business_context": "saas"})
-        data = json.loads(result)
-
-        # Should return results (mock doesn't use context)
-        assert "score" in data or "error" in data
-
-
-class TestAdviseSitespecHandler:
-    """Tests for advise_sitespec_handler."""
-
-    def test_returns_summary(self, temp_project) -> None:
-        """Test that advise returns structured suggestions."""
-        result = advise_sitespec_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert "page_count" in data
-        assert "total_suggestions" in data
-        assert "summary" in data
+def test_advise_sitespec_summary(temp_project) -> None:
+    data = json.loads(advise_sitespec_handler(temp_project, {}))
+    # The mock model_dump() carries no pages, so only site-level advice remains.
+    assert data["page_count"] == 0
+    assert data["total_suggestions"] == 1
+    assert "summary" in data

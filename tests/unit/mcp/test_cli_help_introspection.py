@@ -75,17 +75,10 @@ class TestIntrospectionCompleteness:
         "test walk run",
     ]
 
-    @pytest.mark.parametrize("cmd", TOP_LEVEL)
-    def test_top_level_discovered(self, commands: dict, cmd: str) -> None:
-        assert cmd in commands, f"top-level command '{cmd}' not found"
-
-    @pytest.mark.parametrize("cmd", SUB_COMMANDS)
-    def test_sub_command_discovered(self, commands: dict, cmd: str) -> None:
-        assert cmd in commands, f"sub-command '{cmd}' not found"
-
-    @pytest.mark.parametrize("cmd", NESTED)
-    def test_nested_group_discovered(self, commands: dict, cmd: str) -> None:
-        assert cmd in commands, f"nested command '{cmd}' not found"
+    @pytest.mark.parametrize("cmd", TOP_LEVEL + SUB_COMMANDS + NESTED)
+    def test_command_discovered(self, commands: dict, cmd: str) -> None:
+        """Top-level leaves, group sub-commands and nested-group leaves are all walked."""
+        assert cmd in commands, f"command '{cmd}' not found"
 
     def test_total_command_count(self, commands: dict) -> None:
         # We know there are ~100+ commands.  Use a conservative lower bound
@@ -103,18 +96,10 @@ class TestIntrospectionCompleteness:
 class TestDataQuality:
     """Each entry must have minimum viable metadata."""
 
-    def test_every_command_has_description(self, commands: dict) -> None:
+    def test_every_command_has_metadata(self, commands: dict) -> None:
         for name, info in commands.items():
-            assert "description" in info, f"'{name}' missing description"
-
-    def test_every_command_has_category(self, commands: dict) -> None:
-        for name, info in commands.items():
-            assert "category" in info, f"'{name}' missing category"
-
-    def test_every_command_has_syntax(self, commands: dict) -> None:
-        for name, info in commands.items():
-            assert "syntax" in info, f"'{name}' missing syntax"
-            assert info["syntax"].startswith("dazzle ")
+            assert {"description", "category", "syntax"} <= info.keys(), name
+            assert info["syntax"].startswith("dazzle "), name
 
     def test_serve_has_options(self, commands: dict) -> None:
         serve = commands["serve"]
@@ -157,53 +142,34 @@ class TestGetCliHelp:
         assert "primary_command" in result
         assert result["primary_command"] == "dazzle serve"
 
-    def test_found_command(self) -> None:
-        result = get_cli_help("serve")
+    # Exact names resolve, with or without the ``dazzle`` prefix, including
+    # sub-commands of groups.
+    @pytest.mark.parametrize(
+        ("query", "command"),
+        [
+            pytest.param("serve", "serve", id="top-level"),
+            pytest.param("validate", "validate", id="top-level-validate"),
+            pytest.param("dazzle serve", "serve", id="dazzle-prefix-stripped"),
+            pytest.param("pipeline run", "pipeline run", id="sub-command-pipeline-run"),
+            pytest.param("story propose", "story propose", id="sub-command-story-propose"),
+        ],
+    )
+    def test_found(self, query: str, command: str) -> None:
+        result = get_cli_help(query)
         assert result["found"] is True
-        assert result["command"] == "serve"
-        assert "description" in result
-        assert "options" in result
-        assert "syntax" in result
+        assert result["command"] == command
+        assert {"description", "options", "syntax"} <= result.keys()
 
-    def test_not_found(self) -> None:
-        result = get_cli_help("nonexistent")
+    @pytest.mark.parametrize("query", ["nonexistent", "xyznonexistentcommand12345"])
+    def test_not_found_lists_available_commands(self, query: str) -> None:
+        result = get_cli_help(query)
         assert result["found"] is False
-        assert "available_commands" in result
-
-    def test_dazzle_prefix_stripped(self) -> None:
-        result = get_cli_help("dazzle serve")
-        assert result["found"] is True
-        assert result["command"] == "serve"
+        assert result["available_commands"]
 
     def test_partial_match_suggestions(self) -> None:
         result = get_cli_help("val")
         assert result["found"] is False
-        assert "matches" in result
         assert any(m["command"] == "validate" for m in result["matches"])
-
-    def test_new_commands_found(self) -> None:
-        for cmd in ("pipeline run", "story propose"):
-            result = get_cli_help(cmd)
-            assert result["found"] is True, f"'{cmd}' should be found"
-
-    def test_description_search_matches(self) -> None:
-        # "validate" should be found by exact name match
-        result = get_cli_help("validate")
-        assert result["found"] is True
-        assert result["command"] == "validate"
-
-    def test_description_search_via_description_keyword(self) -> None:
-        # A keyword that appears in descriptions but not command names should
-        # return matches (not found=True, but matches list populated).
-        result = get_cli_help("syntax")
-        # Could be found if a command is literally named "syntax", or matched
-        # via description — either way there must be some response.
-        assert "found" in result
-
-    def test_description_search_no_match(self) -> None:
-        result = get_cli_help("xyznonexistentcommand12345")
-        assert result["found"] is False
-        assert "available_commands" in result
 
 
 # ===========================================================================
@@ -214,23 +180,21 @@ class TestGetCliHelp:
 class TestSearchCommands:
     """Verify the search_commands() helper used by MCP and the CLI search cmd."""
 
-    def test_search_by_name(self) -> None:
+    def test_search_by_name_ranks_name_hit_with_name_bonus(self) -> None:
         from dazzle.mcp.cli_help import search_commands
 
         results = search_commands("serve")
-        assert any(r["command"] == "serve" for r in results)
-
-    def test_search_by_description(self) -> None:
-        from dazzle.mcp.cli_help import search_commands
-
-        results = search_commands("validate")
-        assert len(results) > 0
+        for r in results:
+            assert {"command", "description", "category", "score"} <= r.keys()
+        serve_hits = [r for r in results if r["command"] == "serve"]
+        assert serve_hits, "Expected 'serve' in results"
+        # "serve" appears literally in the command name: name bonus is >= 3.
+        assert serve_hits[0]["score"] >= 3
 
     def test_search_no_results(self) -> None:
         from dazzle.mcp.cli_help import search_commands
 
-        results = search_commands("xyznonexistent999")
-        assert results == []
+        assert search_commands("xyznonexistent999") == []
 
     def test_results_sorted_by_score_descending(self) -> None:
         from dazzle.mcp.cli_help import search_commands
@@ -240,33 +204,8 @@ class TestSearchCommands:
         scores = [r["score"] for r in results]
         assert scores == sorted(scores, reverse=True)
 
-    def test_result_has_required_keys(self) -> None:
-        from dazzle.mcp.cli_help import search_commands
-
-        results = search_commands("serve")
-        assert len(results) > 0
-        for r in results:
-            assert "command" in r
-            assert "description" in r
-            assert "category" in r
-            assert "score" in r
-
-    def test_name_match_scores_higher_than_description_only(self) -> None:
-        from dazzle.mcp.cli_help import search_commands
-
-        # "serve" appears literally in the command name — its score should be
-        # >= 3 (name bonus).
-        results = search_commands("serve")
-        serve_hits = [r for r in results if r["command"] == "serve"]
-        assert serve_hits, "Expected 'serve' in results"
-        assert serve_hits[0]["score"] >= 3
-
     def test_search_category_match(self) -> None:
         from dazzle.mcp.cli_help import search_commands
 
-        # "Runtime" is a category — searching for it should return commands in
-        # that category.
-        results = search_commands("Runtime")
-        assert len(results) > 0
-        categories = {r["category"] for r in results}
-        assert "Runtime" in categories
+        # "Runtime" is a category — searching for it returns that category's commands.
+        assert "Runtime" in {r["category"] for r in search_commands("Runtime")}

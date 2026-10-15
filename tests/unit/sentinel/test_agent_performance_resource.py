@@ -1,5 +1,12 @@
-"""Tests for the Performance & Resource detection agent (PR-01 through PR-08)."""
+"""Tests for the Performance & Resource detection agent (PR-01 to PR-03, PR-05, PR-07, PR-08).
 
+One table: each case builds an AppSpec, runs one heuristic and pins the exact
+findings (see ``assert_findings``). Agent identity, heuristic order and the
+clean-spec run live in ``test_registry.py``.
+"""
+
+from collections.abc import Callable
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -8,9 +15,10 @@ from dazzle.core.ir import FieldTypeKind
 from dazzle.core.ir.process import OverlapPolicy
 from dazzle.core.ir.views import ViewFieldSpec, ViewSpec
 from dazzle.sentinel.agents.performance_resource import PerformanceResourceAgent
-from dazzle.sentinel.models import AgentId, Severity
+from dazzle.sentinel.models import Severity
 
 from .conftest import (
+    assert_findings,
     make_appspec,
     make_entity,
     make_field,
@@ -19,455 +27,343 @@ from .conftest import (
     str_field,
 )
 
+# ---------------------------------------------------------------------------
+# Builders
+# ---------------------------------------------------------------------------
 
-@pytest.fixture
-def agent() -> PerformanceResourceAgent:
-    return PerformanceResourceAgent()
 
-
-def _list_surface(name: str, entity_ref: str) -> MagicMock:
+def _surface(
+    name: str, entity_ref: str | None, mode: str = "list", view_ref: str | None = None
+) -> MagicMock:
     surface = MagicMock()
     surface.name = name
-    surface.mode = "list"
+    surface.mode = mode
     surface.entity_ref = entity_ref
+    surface.view_ref = view_ref
+    if entity_ref is None:
+        surface.entity = None
     return surface
 
 
-# =============================================================================
-# PR-01  N+1 risk on list surface
-# =============================================================================
+def _has_many(name: str, target: str) -> Any:
+    return make_field(name, FieldTypeKind.HAS_MANY, ref_entity=target)
 
 
-class TestPR01NPlusOneListSurface:
-    def test_ref_only_entity_not_flagged(self, agent: PerformanceResourceAgent) -> None:
-        """ref fields get auto-eager-load — no N+1 risk."""
-        entity = make_entity(
-            "Order",
-            [
-                pk_field(),
-                ref_field("customer", "Customer"),
-                ref_field("product", "Product"),
-                ref_field("warehouse", "Warehouse"),
-            ],
+def _three_has_many() -> list[Any]:
+    return [
+        _has_many("items", "OrderItem"),
+        _has_many("payments", "Payment"),
+        _has_many("notes", "Note"),
+    ]
+
+
+def _three_refs() -> list[Any]:
+    return [
+        ref_field("customer", "Customer"),
+        ref_field("product", "Product"),
+        ref_field("warehouse", "Warehouse"),
+    ]
+
+
+def _order_on(surface: MagicMock, *fields: Any) -> Any:
+    return make_appspec([make_entity("Order", [pk_field(), *fields])], surfaces=[surface])
+
+
+def _order_list(*fields: Any) -> Any:
+    return _order_on(_surface("order_list", "Order"), *fields)
+
+
+def _wide(name: str, n_str_fields: int, surface: MagicMock, views: list | None = None) -> Any:
+    fields = [pk_field()] + [str_field(f"field_{i}") for i in range(n_str_fields)]
+    return make_appspec([make_entity(name, fields)], surfaces=[surface], views=views)
+
+
+def _indexed_ref() -> Any:
+    entity = MagicMock()
+    entity.name = "Order"
+    entity.fields = [pk_field(), ref_field("customer", "Customer")]
+    constraint = MagicMock()
+    constraint.kind = "index"
+    constraint.fields = ["customer"]
+    entity.constraints = [constraint]
+    return make_appspec([entity])
+
+
+def _process(name: str = "approve_order", **attrs: Any) -> MagicMock:
+    process = MagicMock()
+    process.name = name
+    for key, value in attrs.items():
+        setattr(process, key, value)
+    return process
+
+
+def _one_process(**attrs: Any) -> Any:
+    return make_appspec(processes=[_process(**attrs)])
+
+
+def _surfaces(*specs: tuple[str, str, str]) -> Any:
+    return make_appspec(surfaces=[_surface(n, e, m) for n, e, m in specs])
+
+
+_CRUD = (
+    ("task_list", "Task", "list"),
+    ("task_detail", "Task", "view"),
+    ("task_create", "Task", "create"),
+    ("task_edit", "Task", "edit"),
+)
+
+
+def _pr(n: int, severity: Severity | None = None, **extra: Any) -> list[dict[str, Any]]:
+    want: dict[str, Any] = {"heuristic_id": f"PR-0{n}", **extra}
+    if severity is not None:
+        want["severity"] = severity
+    return [want]
+
+
+# ---------------------------------------------------------------------------
+# Heuristic table
+# ---------------------------------------------------------------------------
+
+CASES = [
+    # PR-01  N+1 risk: list surface over an entity with >=3 has_many
+    # (ref fields are auto-eager-loaded; has_many are not).
+    pytest.param(
+        "n_plus_1_list_surface",
+        lambda: _order_list(*_three_refs()),
+        [],
+        id="PR-01-ref-only-entity-eager-loaded",
+    ),
+    pytest.param(
+        "n_plus_1_list_surface",
+        lambda: _order_list(*_three_has_many()),
+        _pr(1, Severity.HIGH, title_has="order_list"),
+        id="PR-01-flags-three-has-many",
+    ),
+    pytest.param(
+        "n_plus_1_list_surface",
+        lambda: _order_list(ref_field("customer", "Customer"), *_three_has_many()),
+        _pr(1, Severity.HIGH),
+        id="PR-01-only-has-many-counts-alongside-refs",
+    ),
+    pytest.param(
+        "n_plus_1_list_surface",
+        lambda: _order_list(
+            ref_field("customer", "Customer"),
+            _has_many("items", "OrderItem"),
+            make_field("invoice", FieldTypeKind.HAS_ONE, ref_entity="Invoice"),
+        ),
+        [],
+        id="PR-01-mixed-relations-below-threshold",
+    ),
+    pytest.param(
+        "n_plus_1_list_surface",
+        lambda: _order_list(*_three_refs()[:2]),
+        [],
+        id="PR-01-two-refs",
+    ),
+    pytest.param(
+        "n_plus_1_list_surface",
+        lambda: _order_on(_surface("order_detail", "Order", "detail"), *_three_has_many()),
+        [],
+        id="PR-01-non-list-surface",
+    ),
+    pytest.param(
+        "n_plus_1_list_surface",
+        lambda: make_appspec(surfaces=[_surface("dashboard", None)]),
+        [],
+        id="PR-01-surface-without-entity",
+    ),
+    pytest.param("n_plus_1_list_surface", make_appspec, [], id="PR-01-no-surfaces"),
+    pytest.param(
+        "n_plus_1_list_surface",
+        lambda: make_appspec(surfaces=[_surface("order_list", "NonExistent")]),
+        [],
+        id="PR-01-entity-not-found",
+    ),
+    # PR-02  ref field without an index
+    pytest.param(
+        "ref_without_index",
+        lambda: make_appspec(
+            [make_entity("Order", [pk_field(), ref_field("customer", "Customer")])]
+        ),
+        _pr(2, Severity.MEDIUM, title_has="Order.customer"),
+        id="PR-02-flags-ref-without-index",
+    ),
+    pytest.param("ref_without_index", _indexed_ref, [], id="PR-02-index-covers-field"),
+    pytest.param(
+        "ref_without_index",
+        lambda: make_appspec([make_entity("Task", [pk_field(), str_field("title")])]),
+        [],
+        id="PR-02-ignores-non-ref",
+    ),
+    # PR-03  process with ALLOW overlap policy
+    pytest.param(
+        "process_allow_overlap",
+        lambda: _one_process(overlap_policy=OverlapPolicy.ALLOW),
+        _pr(3, Severity.MEDIUM, title_has="approve_order"),
+        id="PR-03-flags-allow-overlap",
+    ),
+    *[
+        pytest.param(
+            "process_allow_overlap",
+            lambda p=policy: _one_process(overlap_policy=p),
+            [],
+            id=f"PR-03-{policy.value}-is-safe",
         )
-        surface = _list_surface("order_list", "Order")
-        appspec = make_appspec([entity], surfaces=[surface])
-        assert agent.n_plus_1_list_surface(appspec) == []
-
-    def test_flags_entity_with_3_has_many(self, agent: PerformanceResourceAgent) -> None:
-        """has_many fields are NOT auto-eager-loaded — N+1 risk remains."""
-        entity = make_entity(
-            "Order",
-            [
-                pk_field(),
-                make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
-                make_field("payments", FieldTypeKind.HAS_MANY, ref_entity="Payment"),
-                make_field("notes", FieldTypeKind.HAS_MANY, ref_entity="Note"),
+        for policy in (OverlapPolicy.SKIP, OverlapPolicy.QUEUE, OverlapPolicy.CANCEL_PREVIOUS)
+    ],
+    pytest.param("process_allow_overlap", make_appspec, [], id="PR-03-no-processes"),
+    # PR-05  list surface over an entity with >=10 fields (title names both)
+    pytest.param(
+        "large_entity_list_surface",
+        lambda: _wide("BigEntity", 10, _surface("big_list", "BigEntity")),
+        _pr(5, Severity.MEDIUM, title_has=("big_list", "BigEntity")),
+        id="PR-05-flags-eleven-fields",
+    ),
+    pytest.param(
+        "large_entity_list_surface",
+        lambda: _wide("TenFields", 9, _surface("ten_list", "TenFields")),
+        _pr(5, Severity.MEDIUM),
+        id="PR-05-exactly-ten-fields-triggers",
+    ),
+    pytest.param(
+        "large_entity_list_surface",
+        lambda: _wide("SmallEntity", 8, _surface("small_list", "SmallEntity")),
+        [],
+        id="PR-05-nine-fields",
+    ),
+    pytest.param(
+        "large_entity_list_surface",
+        lambda: _wide("BigEntity", 12, _surface("big_detail", "BigEntity", "detail")),
+        [],
+        id="PR-05-non-list-surface",
+    ),
+    pytest.param("large_entity_list_surface", make_appspec, [], id="PR-05-no-surfaces"),
+    pytest.param(
+        "large_entity_list_surface",
+        lambda: make_appspec(surfaces=[_surface("ghost_list", "Ghost")]),
+        [],
+        id="PR-05-entity-not-found",
+    ),
+    # A resolvable view_ref projects the surface down to the view's field count.
+    pytest.param(
+        "large_entity_list_surface",
+        lambda: _wide(
+            "Contact",
+            20,
+            _surface("contact_list", "Contact", view_ref="ContactSummary"),
+            views=[
+                ViewSpec(
+                    name="ContactSummary",
+                    source_entity="Contact",
+                    fields=[ViewFieldSpec(name=n) for n in ("id", "name", "email")],
+                )
             ],
-        )
-        surface = _list_surface("order_list", "Order")
-        findings = agent.n_plus_1_list_surface(make_appspec([entity], surfaces=[surface]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "PR-01"
-        assert findings[0].severity == Severity.HIGH
-        assert "order_list" in findings[0].title
+        ),
+        [],
+        id="PR-05-view-projection-reduces-field-count",
+    ),
+    pytest.param(
+        "large_entity_list_surface",
+        lambda: _wide("BigEntity", 10, _surface("big_list", "BigEntity", view_ref="Missing")),
+        _pr(5, Severity.MEDIUM),
+        id="PR-05-unresolved-view-falls-back-to-entity",
+    ),
+    # PR-07  entity surfaced beyond the one-per-mode baseline
+    # #1356: one surface per mode is the framework baseline, not a hot path.
+    pytest.param(
+        "heavily_surfaced_entity",
+        lambda: _surfaces(*_CRUD),
+        [],
+        id="PR-07-crud-quartet-not-flagged-1356",
+    ),
+    # CRUD quartet + two extra list views: excess 2, hot; title carries the count.
+    pytest.param(
+        "heavily_surfaced_entity",
+        lambda: _surfaces(*_CRUD, ("task_board", "Task", "list"), ("task_archive", "Task", "list")),
+        _pr(7, Severity.MEDIUM, title_has=("Task", "6")),
+        id="PR-07-flags-surfaces-beyond-mode-baseline-1356",
+    ),
+    pytest.param(
+        "heavily_surfaced_entity",
+        lambda: _surfaces(*((f"task_view_{i}", "Task", "list") for i in range(5))),
+        _pr(7, Severity.MEDIUM, title_has="Task"),
+        id="PR-07-flags-five-same-mode-surfaces",
+    ),
+    pytest.param(
+        "heavily_surfaced_entity",
+        lambda: _surfaces(_CRUD[0], _CRUD[1], _CRUD[3]),
+        [],
+        id="PR-07-three-surfaces",
+    ),
+    pytest.param(
+        "heavily_surfaced_entity",
+        lambda: _surfaces(
+            ("task_list", "Task", "list"),
+            ("task_board", "Task", "list"),
+            ("task_kanban", "Task", "list"),
+            ("task_timeline", "Task", "list"),
+            ("user_list", "User", "list"),
+            ("user_detail", "User", "view"),
+        ),
+        _pr(7, title_has="Task"),
+        id="PR-07-flags-only-hot-entity",
+    ),
+    pytest.param("heavily_surfaced_entity", make_appspec, [], id="PR-07-no-surfaces"),
+    pytest.param(
+        "heavily_surfaced_entity",
+        lambda: make_appspec(surfaces=[_surface("dashboard", None)]),
+        [],
+        id="PR-07-surface-without-entity",
+    ),
+    # PR-08  multi-step process left on the 24h default timeout
+    pytest.param(
+        "process_default_timeout",
+        lambda: _one_process(timeout_seconds=86400, steps=[MagicMock(), MagicMock()]),
+        _pr(8, Severity.LOW, title_has="approve_order", description_has="2 steps"),
+        id="PR-08-flags-default-timeout-with-steps",
+    ),
+    pytest.param(
+        "process_default_timeout",
+        lambda: _one_process(timeout_seconds=3600, steps=[MagicMock()]),
+        [],
+        id="PR-08-custom-timeout",
+    ),
+    pytest.param(
+        "process_default_timeout",
+        lambda: _one_process(timeout_seconds=86400, steps=[]),
+        [],
+        id="PR-08-default-timeout-without-steps",
+    ),
+    pytest.param("process_default_timeout", make_appspec, [], id="PR-08-no-processes"),
+]
 
-    def test_flags_3_has_many_even_with_refs(self, agent: PerformanceResourceAgent) -> None:
-        """Entity with both ref and has_many — only has_many count."""
-        entity = make_entity(
-            "Order",
-            [
-                pk_field(),
-                ref_field("customer", "Customer"),
-                make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
-                make_field("payments", FieldTypeKind.HAS_MANY, ref_entity="Payment"),
-                make_field("notes", FieldTypeKind.HAS_MANY, ref_entity="Note"),
-            ],
-        )
-        surface = _list_surface("order_list", "Order")
-        findings = agent.n_plus_1_list_surface(make_appspec([entity], surfaces=[surface]))
-        assert len(findings) == 1
 
-    @pytest.mark.parametrize(
-        "scenario",
+@pytest.mark.parametrize(("heuristic", "build", "expected"), CASES)
+def test_heuristic(
+    heuristic: str, build: Callable[[], Any], expected: list[dict[str, Any]]
+) -> None:
+    assert_findings(getattr(PerformanceResourceAgent(), heuristic)(build()), expected)
+
+
+def test_run_collects_findings_from_every_heuristic() -> None:
+    # One N+1 list surface, two unindexed refs and two default-timeout
+    # processes: run() iterates every offender of every heuristic.
+    entity = make_entity(
+        "Order",
         [
-            "mixed_refs_and_has_many",
-            "fewer_than_3_refs",
-            "non_list_surface",
-            "no_entity_ref",
-            "no_surfaces",
-            "entity_not_found",
+            pk_field(),
+            ref_field("customer", "Customer"),
+            ref_field("product", "Product"),
+            *_three_has_many(),
         ],
     )
-    def test_pr01_returns_empty(self, agent: PerformanceResourceAgent, scenario: str) -> None:
-        """Scenarios that should produce zero PR-01 findings."""
-        if scenario == "mixed_refs_and_has_many":
-            entity = make_entity(
-                "Order",
-                [
-                    pk_field(),
-                    ref_field("customer", "Customer"),
-                    make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
-                    make_field("invoice", FieldTypeKind.HAS_ONE, ref_entity="Invoice"),
-                ],
-            )
-            appspec = make_appspec([entity], surfaces=[_list_surface("order_list", "Order")])
-        elif scenario == "fewer_than_3_refs":
-            entity = make_entity(
-                "Order",
-                [
-                    pk_field(),
-                    ref_field("customer", "Customer"),
-                    ref_field("product", "Product"),
-                ],
-            )
-            appspec = make_appspec([entity], surfaces=[_list_surface("order_list", "Order")])
-        elif scenario == "non_list_surface":
-            entity = make_entity(
-                "Order",
-                [
-                    pk_field(),
-                    ref_field("customer", "Customer"),
-                    ref_field("product", "Product"),
-                    ref_field("warehouse", "Warehouse"),
-                ],
-            )
-            surface = MagicMock()
-            surface.name = "order_detail"
-            surface.mode = "detail"
-            surface.entity_ref = "Order"
-            appspec = make_appspec([entity], surfaces=[surface])
-        elif scenario == "no_entity_ref":
-            surface = MagicMock()
-            surface.name = "dashboard"
-            surface.mode = "list"
-            surface.entity_ref = None
-            surface.entity = None
-            appspec = make_appspec(surfaces=[surface])
-        elif scenario == "no_surfaces":
-            appspec = make_appspec(surfaces=[])
-        else:  # entity_not_found
-            appspec = make_appspec(surfaces=[_list_surface("order_list", "NonExistent")])
-
-        assert agent.n_plus_1_list_surface(appspec) == []
-
-
-# =============================================================================
-# PR-02  Ref field without index constraint
-# =============================================================================
-
-
-class TestPR02RefWithoutIndex:
-    def test_flags_ref_without_index(self, agent: PerformanceResourceAgent) -> None:
-        entity = make_entity("Order", [pk_field(), ref_field("customer", "Customer")])
-        findings = agent.ref_without_index(make_appspec([entity]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "PR-02"
-        assert findings[0].severity == Severity.MEDIUM
-        assert "Order.customer" in findings[0].title
-
-    def test_passes_when_index_covers_field(self, agent: PerformanceResourceAgent) -> None:
-        entity = MagicMock()
-        entity.name = "Order"
-        entity.fields = [pk_field(), ref_field("customer", "Customer")]
-        constraint = MagicMock()
-        constraint.kind = "index"
-        constraint.fields = ["customer"]
-        entity.constraints = [constraint]
-        assert agent.ref_without_index(make_appspec([entity])) == []
-
-    def test_ignores_non_ref_fields(self, agent: PerformanceResourceAgent) -> None:
-        entity = make_entity("Task", [pk_field(), str_field("title")])
-        assert agent.ref_without_index(make_appspec([entity])) == []
-
-
-# =============================================================================
-# PR-03  Process with ALLOW overlap policy
-# =============================================================================
-
-
-class TestPR03ProcessAllowOverlap:
-    def test_flags_allow_overlap(self, agent: PerformanceResourceAgent) -> None:
-        process = MagicMock()
-        process.name = "approve_order"
-        process.overlap_policy = OverlapPolicy.ALLOW
-        findings = agent.process_allow_overlap(make_appspec(processes=[process]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "PR-03"
-        assert findings[0].severity == Severity.MEDIUM
-        assert "approve_order" in findings[0].title
-
-    @pytest.mark.parametrize(
-        "policy",
-        [OverlapPolicy.SKIP, OverlapPolicy.QUEUE, OverlapPolicy.CANCEL_PREVIOUS],
-        ids=["skip", "queue", "cancel_previous"],
+    procs = [_process(n, timeout_seconds=86400, steps=[MagicMock()]) for n in ("pa", "pb")]
+    result = PerformanceResourceAgent().run(
+        make_appspec([entity], surfaces=[_surface("order_list", "Order")], processes=procs)
     )
-    def test_passes_safe_policies(
-        self, agent: PerformanceResourceAgent, policy: OverlapPolicy
-    ) -> None:
-        process = MagicMock()
-        process.name = "approve_order"
-        process.overlap_policy = policy
-        assert agent.process_allow_overlap(make_appspec(processes=[process])) == []
-
-    def test_no_processes(self, agent: PerformanceResourceAgent) -> None:
-        assert agent.process_allow_overlap(make_appspec(processes=[])) == []
-
-
-# =============================================================================
-# PR-05  Large entity in list surface
-# =============================================================================
-
-
-class TestPR05LargeEntityListSurface:
-    def test_flags_entity_with_10_plus_fields(self, agent: PerformanceResourceAgent) -> None:
-        fields = [pk_field()] + [str_field(f"field_{i}") for i in range(10)]
-        entity = make_entity("BigEntity", fields)
-        surface = _list_surface("big_list", "BigEntity")
-        findings = agent.large_entity_list_surface(make_appspec([entity], surfaces=[surface]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "PR-05"
-        assert findings[0].severity == Severity.MEDIUM
-        assert "big_list" in findings[0].title
-        assert "BigEntity" in findings[0].title
-
-    def test_exactly_10_fields_triggers(self, agent: PerformanceResourceAgent) -> None:
-        fields = [pk_field()] + [str_field(f"f_{i}") for i in range(9)]
-        assert len(fields) == 10
-        entity = make_entity("TenFields", fields)
-        surface = _list_surface("ten_list", "TenFields")
-        findings = agent.large_entity_list_surface(make_appspec([entity], surfaces=[surface]))
-        assert len(findings) == 1
-
-    @pytest.mark.parametrize(
-        "scenario",
-        ["fewer_fields", "non_list_surface", "no_surfaces", "entity_not_found"],
-    )
-    def test_pr05_returns_empty(self, agent: PerformanceResourceAgent, scenario: str) -> None:
-        if scenario == "fewer_fields":
-            fields = [pk_field()] + [str_field(f"field_{i}") for i in range(8)]
-            entity = make_entity("SmallEntity", fields)
-            appspec = make_appspec([entity], surfaces=[_list_surface("small_list", "SmallEntity")])
-        elif scenario == "non_list_surface":
-            fields = [pk_field()] + [str_field(f"field_{i}") for i in range(12)]
-            entity = make_entity("BigEntity", fields)
-            surface = MagicMock()
-            surface.name = "big_detail"
-            surface.mode = "detail"
-            surface.entity_ref = "BigEntity"
-            appspec = make_appspec([entity], surfaces=[surface])
-        elif scenario == "no_surfaces":
-            appspec = make_appspec(surfaces=[])
-        else:  # entity_not_found
-            appspec = make_appspec(surfaces=[_list_surface("ghost_list", "Ghost")])
-
-        assert agent.large_entity_list_surface(appspec) == []
-
-    def test_view_projection_reduces_field_count(self, agent: PerformanceResourceAgent) -> None:
-        """Surface with view_ref uses view's field count, not entity's."""
-        fields = [pk_field()] + [str_field(f"field_{i}") for i in range(20)]
-        entity = make_entity("Contact", fields)
-        surface = _list_surface("contact_list", "Contact")
-        surface.view_ref = "ContactSummary"
-        view = ViewSpec(
-            name="ContactSummary",
-            source_entity="Contact",
-            fields=[
-                ViewFieldSpec(name="id"),
-                ViewFieldSpec(name="name"),
-                ViewFieldSpec(name="email"),
-            ],
-        )
-        appspec = make_appspec([entity], surfaces=[surface], views=[view])
-        assert agent.large_entity_list_surface(appspec) == []
-
-    @pytest.mark.parametrize(
-        "view_ref",
-        ["NonExistentView", None],
-        ids=["missing_view_falls_back", "no_view_ref_uses_entity"],
-    )
-    def test_view_ref_fallback_to_entity_fields(
-        self, agent: PerformanceResourceAgent, view_ref: str | None
-    ) -> None:
-        """Both no-view-ref and unresolved-view-ref fall back to entity field count."""
-        fields = [pk_field()] + [str_field(f"field_{i}") for i in range(10)]
-        entity = make_entity("BigEntity", fields)
-        surface = _list_surface("big_list", "BigEntity")
-        surface.view_ref = view_ref
-        findings = agent.large_entity_list_surface(make_appspec([entity], surfaces=[surface]))
-        assert len(findings) == 1
-
-
-# =============================================================================
-# PR-07  Heavily surfaced entity
-# =============================================================================
-
-
-class TestPR07HeavilySurfacedEntity:
-    def _surface(self, name: str, entity_ref: str, mode: str = "list") -> MagicMock:
-        surface = MagicMock()
-        surface.name = name
-        surface.entity_ref = entity_ref
-        surface.mode = mode
-        return surface
-
-    def test_crud_quartet_not_flagged(self, agent: PerformanceResourceAgent) -> None:
-        # #1356: one surface per mode is the framework baseline, not a hot path.
-        surfaces = [
-            self._surface("task_list", "Task", "list"),
-            self._surface("task_detail", "Task", "view"),
-            self._surface("task_create", "Task", "create"),
-            self._surface("task_edit", "Task", "edit"),
-        ]
-        assert agent.heavily_surfaced_entity(make_appspec(surfaces=surfaces)) == []
-
-    def test_flags_surfaces_beyond_mode_baseline(self, agent: PerformanceResourceAgent) -> None:
-        # CRUD quartet + two extra list views → excess 2 → hot.
-        surfaces = [
-            self._surface("task_list", "Task", "list"),
-            self._surface("task_detail", "Task", "view"),
-            self._surface("task_create", "Task", "create"),
-            self._surface("task_edit", "Task", "edit"),
-            self._surface("task_board", "Task", "list"),
-            self._surface("task_archive", "Task", "list"),
-        ]
-        findings = agent.heavily_surfaced_entity(make_appspec(surfaces=surfaces))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "PR-07"
-        assert findings[0].severity == Severity.MEDIUM
-        assert "Task" in findings[0].title
-        assert "6" in findings[0].title
-
-    def test_flags_many_same_mode_surfaces(self, agent: PerformanceResourceAgent) -> None:
-        # Five list views of the same entity: excess 4 → hot.
-        surfaces = [self._surface(f"task_view_{i}", "Task", "list") for i in range(5)]
-        findings = agent.heavily_surfaced_entity(make_appspec(surfaces=surfaces))
-        assert len(findings) == 1
-
-    def test_passes_entity_with_3_surfaces(self, agent: PerformanceResourceAgent) -> None:
-        surfaces = [
-            self._surface("task_list", "Task", "list"),
-            self._surface("task_detail", "Task", "view"),
-            self._surface("task_edit", "Task", "edit"),
-        ]
-        assert agent.heavily_surfaced_entity(make_appspec(surfaces=surfaces)) == []
-
-    def test_multiple_entities_only_hot_flagged(self, agent: PerformanceResourceAgent) -> None:
-        surfaces = [
-            self._surface("task_list", "Task", "list"),
-            self._surface("task_board", "Task", "list"),
-            self._surface("task_kanban", "Task", "list"),
-            self._surface("task_timeline", "Task", "list"),
-            self._surface("user_list", "User", "list"),
-            self._surface("user_detail", "User", "view"),
-        ]
-        findings = agent.heavily_surfaced_entity(make_appspec(surfaces=surfaces))
-        assert len(findings) == 1
-        assert "Task" in findings[0].title
-
-    def test_no_surfaces(self, agent: PerformanceResourceAgent) -> None:
-        assert agent.heavily_surfaced_entity(make_appspec(surfaces=[])) == []
-
-    def test_surfaces_without_entity_ref(self, agent: PerformanceResourceAgent) -> None:
-        surface = MagicMock()
-        surface.name = "dashboard"
-        surface.entity_ref = None
-        surface.entity = None
-        assert agent.heavily_surfaced_entity(make_appspec(surfaces=[surface])) == []
-
-
-# =============================================================================
-# PR-08  Process without explicit timeout
-# =============================================================================
-
-
-class TestPR08ProcessDefaultTimeout:
-    def test_flags_default_timeout_with_steps(self, agent: PerformanceResourceAgent) -> None:
-        process = MagicMock()
-        process.name = "approve_order"
-        process.timeout_seconds = 86400
-        process.steps = [MagicMock(), MagicMock()]
-        findings = agent.process_default_timeout(make_appspec(processes=[process]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "PR-08"
-        assert findings[0].severity == Severity.LOW
-        assert "approve_order" in findings[0].title
-        assert "2 steps" in findings[0].description
-
-    def test_passes_with_custom_timeout(self, agent: PerformanceResourceAgent) -> None:
-        process = MagicMock()
-        process.name = "approve_order"
-        process.timeout_seconds = 3600
-        process.steps = [MagicMock()]
-        assert agent.process_default_timeout(make_appspec(processes=[process])) == []
-
-    def test_passes_default_timeout_without_steps(self, agent: PerformanceResourceAgent) -> None:
-        process = MagicMock()
-        process.name = "simple_process"
-        process.timeout_seconds = 86400
-        process.steps = []
-        assert agent.process_default_timeout(make_appspec(processes=[process])) == []
-
-    def test_no_processes(self, agent: PerformanceResourceAgent) -> None:
-        assert agent.process_default_timeout(make_appspec(processes=[])) == []
-
-
-# =============================================================================
-# Full agent run
-# =============================================================================
-
-
-class TestPerformanceResourceAgentRun:
-    def test_agent_id(self, agent: PerformanceResourceAgent) -> None:
-        assert agent.agent_id == AgentId.PR
-
-    def test_has_6_heuristics(self, agent: PerformanceResourceAgent) -> None:
-        assert len(agent.get_heuristics()) == 6
-
-    def test_heuristic_ids(self, agent: PerformanceResourceAgent) -> None:
-        ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == ["PR-01", "PR-02", "PR-03", "PR-05", "PR-07", "PR-08"]
-
-    def test_clean_appspec_no_findings(self, agent: PerformanceResourceAgent) -> None:
-        entity = make_entity("Task", [pk_field(), str_field("title", required=True)])
-        result = agent.run(make_appspec([entity]))
-        assert result.errors == []
-        assert result.findings == []
-
-    def test_run_collects_findings_and_iteration(self, agent: PerformanceResourceAgent) -> None:
-        """Aggregates per-heuristic findings AND exercises iteration —
-        replaces individual 'multiple_X' tests."""
-        entity = make_entity(
-            "Order",
-            [
-                pk_field(),
-                ref_field("customer", "Customer"),
-                ref_field("product", "Product"),  # extra ref → multiple PR-02
-                make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
-                make_field("payments", FieldTypeKind.HAS_MANY, ref_entity="Payment"),
-                make_field("notes", FieldTypeKind.HAS_MANY, ref_entity="Note"),
-            ],
-        )
-        surface = _list_surface("order_list", "Order")
-        # Multiple processes with default timeout → exercises PR-08 iteration.
-        procs = []
-        for n in ("process_a", "process_b"):
-            p = MagicMock()
-            p.name = n
-            p.timeout_seconds = 86400
-            p.steps = [MagicMock()]
-            procs.append(p)
-        result = agent.run(make_appspec([entity], surfaces=[surface], processes=procs))
-        assert result.errors == []
-        ids = [f.heuristic_id for f in result.findings]
-        assert "PR-01" in ids
-        assert ids.count("PR-02") == 2  # iteration over ref fields
-        assert ids.count("PR-08") == 2  # iteration over processes
-
-    def test_run_reports_heuristics_run_count(self, agent: PerformanceResourceAgent) -> None:
-        result = agent.run(make_appspec())
-        assert result.heuristics_run == 6
-
-    def test_run_has_duration(self, agent: PerformanceResourceAgent) -> None:
-        result = agent.run(make_appspec())
-        assert result.duration_ms >= 0
+    assert result.errors == []
+    ids = [f.heuristic_id for f in result.findings]
+    assert ids.count("PR-01") == 1
+    assert ids.count("PR-02") == 2
+    assert ids.count("PR-08") == 2

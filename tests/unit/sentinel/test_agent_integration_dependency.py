@@ -1,23 +1,24 @@
-"""Tests for the Integration & Dependency detection agent (ID-01 through ID-08)."""
+"""Tests for the Integration & Dependency detection agent (ID-01 through ID-08).
 
+One table: each case builds an AppSpec, runs one heuristic and pins the exact
+findings (see ``assert_findings``). Agent identity, heuristic order and the
+clean-spec run live in ``test_registry.py``.
+"""
+
+from collections.abc import Callable
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
 from dazzle.core.ir.services import AuthKind, DomainServiceKind
 from dazzle.sentinel.agents.integration_dependency import IntegrationDependencyAgent
-from dazzle.sentinel.models import AgentId, Severity
+from dazzle.sentinel.models import Severity
 
-from .conftest import make_appspec, make_entity, pk_field, str_field
-
-
-@pytest.fixture
-def agent() -> IntegrationDependencyAgent:
-    return IntegrationDependencyAgent()
-
+from .conftest import assert_findings, make_appspec
 
 # ---------------------------------------------------------------------------
-# Helpers for building mock IR objects
+# Builders
 # ---------------------------------------------------------------------------
 
 
@@ -73,235 +74,187 @@ def _domain_service(
     return svc
 
 
-# =============================================================================
-# ID-01  External API without authentication
-# =============================================================================
+def _id(n: int, severity: Severity, title_has: str | tuple[str, ...]) -> list[dict[str, Any]]:
+    return [{"heuristic_id": f"ID-0{n}", "severity": severity, "title_has": title_has}]
 
 
-class TestID01ApiWithoutAuth:
-    def test_flags_api_with_no_auth(self, agent: IntegrationDependencyAgent) -> None:
-        api = _api("stripe", auth_kind=AuthKind.NONE)
-        findings = agent.api_without_auth(make_appspec(apis=[api]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "ID-01"
-        assert findings[0].severity == Severity.HIGH
-        assert "stripe" in findings[0].title
+# ---------------------------------------------------------------------------
+# Heuristic table
+# ---------------------------------------------------------------------------
 
-    @pytest.mark.parametrize(
-        "auth_kind",
-        [AuthKind.API_KEY_HEADER, AuthKind.OAUTH2_PKCE],
-        ids=["api_key", "oauth2"],
-    )
-    def test_passes_with_auth(self, agent: IntegrationDependencyAgent, auth_kind: AuthKind) -> None:
-        api = _api("stripe", auth_kind=auth_kind)
-        assert agent.api_without_auth(make_appspec(apis=[api])) == []
-
-    def test_no_apis(self, agent: IntegrationDependencyAgent) -> None:
-        assert agent.api_without_auth(make_appspec()) == []
-
-
-# =============================================================================
-# ID-02  Integration referencing unknown API
-# =============================================================================
-
-
-class TestID02IntegrationUnknownApi:
-    def test_flags_unknown_api_ref(self, agent: IntegrationDependencyAgent) -> None:
-        integration = _integration("stripe_sync", api_refs=["stripe"])
-        findings = agent.integration_unknown_api(make_appspec(integrations=[integration]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "ID-02"
-        assert findings[0].severity == Severity.HIGH
-        assert "stripe" in findings[0].title
-
-    def test_flags_only_missing_refs(self, agent: IntegrationDependencyAgent) -> None:
-        api = _api("stripe")
-        integration = _integration("multi_sync", api_refs=["stripe", "paypal"])
-        findings = agent.integration_unknown_api(
-            make_appspec(apis=[api], integrations=[integration])
+CASES = [
+    # ID-01  external API without authentication
+    pytest.param(
+        "api_without_auth",
+        lambda: make_appspec(apis=[_api("stripe", auth_kind=AuthKind.NONE)]),
+        _id(1, Severity.HIGH, "stripe"),
+        id="ID-01-flags-api-without-auth",
+    ),
+    *[
+        pytest.param(
+            "api_without_auth",
+            lambda k=kind: make_appspec(apis=[_api("stripe", auth_kind=k)]),
+            [],
+            id=f"ID-01-{kind.value}-satisfies",
         )
-        assert len(findings) == 1
-        assert "paypal" in findings[0].title
-
-    def test_passes_when_api_exists(self, agent: IntegrationDependencyAgent) -> None:
-        api = _api("stripe")
-        integration = _integration("stripe_sync", api_refs=["stripe"])
-        assert (
-            agent.integration_unknown_api(make_appspec(apis=[api], integrations=[integration]))
-            == []
+        for kind in (AuthKind.API_KEY_HEADER, AuthKind.OAUTH2_PKCE)
+    ],
+    pytest.param("api_without_auth", make_appspec, [], id="ID-01-no-apis"),
+    # ID-02  integration naming an API that is not declared
+    pytest.param(
+        "integration_unknown_api",
+        lambda: make_appspec(integrations=[_integration("stripe_sync", api_refs=["stripe"])]),
+        _id(2, Severity.HIGH, "stripe"),
+        id="ID-02-flags-unknown-api",
+    ),
+    pytest.param(
+        "integration_unknown_api",
+        lambda: make_appspec(
+            apis=[_api("stripe")],
+            integrations=[_integration("multi_sync", api_refs=["stripe", "paypal"])],
+        ),
+        _id(2, Severity.HIGH, "paypal"),
+        id="ID-02-flags-only-missing-ref",
+    ),
+    pytest.param(
+        "integration_unknown_api",
+        lambda: make_appspec(
+            apis=[_api("stripe")], integrations=[_integration("stripe_sync", api_refs=["stripe"])]
+        ),
+        [],
+        id="ID-02-api-exists",
+    ),
+    pytest.param("integration_unknown_api", make_appspec, [], id="ID-02-no-integrations"),
+    pytest.param(
+        "integration_unknown_api",
+        lambda: make_appspec(integrations=[_integration("empty_sync")]),
+        [],
+        id="ID-02-empty-refs",
+    ),
+    # ID-03  integration naming a foreign model that is not declared
+    pytest.param(
+        "integration_unknown_foreign_model",
+        lambda: make_appspec(
+            integrations=[_integration("stripe_sync", foreign_model_refs=["StripeCustomer"])]
+        ),
+        _id(3, Severity.HIGH, "StripeCustomer"),
+        id="ID-03-flags-unknown-foreign-model",
+    ),
+    pytest.param(
+        "integration_unknown_foreign_model",
+        lambda: make_appspec(
+            foreign_models=[_foreign_model("StripeCustomer", key_fields=["stripe_id"])],
+            integrations=[
+                _integration("multi_sync", foreign_model_refs=["StripeCustomer", "PaypalAccount"])
+            ],
+        ),
+        _id(3, Severity.HIGH, "PaypalAccount"),
+        id="ID-03-flags-only-missing-ref",
+    ),
+    pytest.param(
+        "integration_unknown_foreign_model",
+        lambda: make_appspec(
+            foreign_models=[_foreign_model("StripeCustomer", key_fields=["stripe_id"])],
+            integrations=[_integration("stripe_sync", foreign_model_refs=["StripeCustomer"])],
+        ),
+        [],
+        id="ID-03-foreign-model-exists",
+    ),
+    pytest.param("integration_unknown_foreign_model", make_appspec, [], id="ID-03-no-integrations"),
+    pytest.param(
+        "integration_unknown_foreign_model",
+        lambda: make_appspec(integrations=[_integration("empty_sync")]),
+        [],
+        id="ID-03-empty-refs",
+    ),
+    # ID-06  foreign model without key fields
+    pytest.param(
+        "foreign_model_no_keys",
+        lambda: make_appspec(foreign_models=[_foreign_model("StripeCustomer")]),
+        _id(6, Severity.MEDIUM, "StripeCustomer"),
+        id="ID-06-flags-foreign-model-without-keys",
+    ),
+    pytest.param(
+        "foreign_model_no_keys",
+        lambda: make_appspec(
+            foreign_models=[_foreign_model("StripeCustomer", key_fields=["stripe_id"])]
+        ),
+        [],
+        id="ID-06-key-fields-present",
+    ),
+    pytest.param("foreign_model_no_keys", make_appspec, [], id="ID-06-no-foreign-models"),
+    # ID-07  sync without match rules (title names sync and integration)
+    pytest.param(
+        "sync_without_match_rules",
+        lambda: make_appspec(
+            integrations=[_integration("stripe_sync", syncs=[_sync("sync_customers")])]
+        ),
+        _id(7, Severity.MEDIUM, ("sync_customers", "stripe_sync")),
+        id="ID-07-flags-sync-without-match-rules",
+    ),
+    pytest.param(
+        "sync_without_match_rules",
+        lambda: make_appspec(
+            integrations=[
+                _integration(
+                    "stripe_sync", syncs=[_sync("sync_customers", match_rules=[MagicMock()])]
+                )
+            ]
+        ),
+        [],
+        id="ID-07-match-rules-present",
+    ),
+    pytest.param(
+        "sync_without_match_rules",
+        lambda: make_appspec(integrations=[_integration("stripe_sync")]),
+        [],
+        id="ID-07-no-syncs",
+    ),
+    pytest.param("sync_without_match_rules", make_appspec, [], id="ID-07-no-integrations"),
+    # ID-08  integration-kind domain service without guarantees
+    pytest.param(
+        "integration_service_no_guarantees",
+        lambda: make_appspec(domain_services=[_domain_service("sync_data")]),
+        _id(8, Severity.LOW, "sync_data"),
+        id="ID-08-flags-integration-service-without-guarantees",
+    ),
+    pytest.param(
+        "integration_service_no_guarantees",
+        lambda: make_appspec(
+            domain_services=[
+                _domain_service("sync_data", guarantees=["Idempotent", "Timeout: 30s"])
+            ]
+        ),
+        [],
+        id="ID-08-guarantees-present",
+    ),
+    *[
+        pytest.param(
+            "integration_service_no_guarantees",
+            lambda k=kind: make_appspec(domain_services=[_domain_service("svc", kind=k)]),
+            [],
+            id=f"ID-08-ignores-{kind.value}-kind",
         )
-
-    def test_no_integrations_or_empty_refs(self, agent: IntegrationDependencyAgent) -> None:
-        # Covers both: spec with no integrations + integration with empty api_refs.
-        assert agent.integration_unknown_api(make_appspec()) == []
-        empty = _integration("empty_sync", api_refs=[])
-        assert agent.integration_unknown_api(make_appspec(integrations=[empty])) == []
-
-
-# =============================================================================
-# ID-03  Integration referencing unknown foreign model
-# =============================================================================
+        for kind in (DomainServiceKind.VALIDATION, DomainServiceKind.DOMAIN_LOGIC)
+    ],
+    pytest.param(
+        "integration_service_no_guarantees", make_appspec, [], id="ID-08-no-domain-services"
+    ),
+]
 
 
-class TestID03IntegrationUnknownForeignModel:
-    def test_flags_unknown_foreign_model_ref(self, agent: IntegrationDependencyAgent) -> None:
-        integration = _integration("stripe_sync", foreign_model_refs=["StripeCustomer"])
-        findings = agent.integration_unknown_foreign_model(make_appspec(integrations=[integration]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "ID-03"
-        assert findings[0].severity == Severity.HIGH
-        assert "StripeCustomer" in findings[0].title
-
-    def test_flags_only_missing_refs(self, agent: IntegrationDependencyAgent) -> None:
-        fm = _foreign_model("StripeCustomer", key_fields=["stripe_id"])
-        integration = _integration(
-            "multi_sync",
-            foreign_model_refs=["StripeCustomer", "PaypalAccount"],
-        )
-        findings = agent.integration_unknown_foreign_model(
-            make_appspec(foreign_models=[fm], integrations=[integration])
-        )
-        assert len(findings) == 1
-        assert "PaypalAccount" in findings[0].title
-
-    def test_passes_when_foreign_model_exists(self, agent: IntegrationDependencyAgent) -> None:
-        fm = _foreign_model("StripeCustomer", key_fields=["stripe_id"])
-        integration = _integration("stripe_sync", foreign_model_refs=["StripeCustomer"])
-        assert (
-            agent.integration_unknown_foreign_model(
-                make_appspec(foreign_models=[fm], integrations=[integration])
-            )
-            == []
-        )
-
-    def test_no_integrations_or_empty_refs(self, agent: IntegrationDependencyAgent) -> None:
-        assert agent.integration_unknown_foreign_model(make_appspec()) == []
-        empty = _integration("empty_sync", foreign_model_refs=[])
-        assert agent.integration_unknown_foreign_model(make_appspec(integrations=[empty])) == []
+@pytest.mark.parametrize(("heuristic", "build", "expected"), CASES)
+def test_heuristic(
+    heuristic: str, build: Callable[[], Any], expected: list[dict[str, Any]]
+) -> None:
+    assert_findings(getattr(IntegrationDependencyAgent(), heuristic)(build()), expected)
 
 
-# =============================================================================
-# ID-06  Foreign model without key fields
-# =============================================================================
-
-
-class TestID06ForeignModelNoKeys:
-    def test_flags_foreign_model_with_empty_keys(self, agent: IntegrationDependencyAgent) -> None:
-        fm = _foreign_model("StripeCustomer", key_fields=[])
-        findings = agent.foreign_model_no_keys(make_appspec(foreign_models=[fm]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "ID-06"
-        assert findings[0].severity == Severity.MEDIUM
-        assert "StripeCustomer" in findings[0].title
-
-    def test_passes_with_key_fields(self, agent: IntegrationDependencyAgent) -> None:
-        fm = _foreign_model("StripeCustomer", key_fields=["stripe_id"])
-        assert agent.foreign_model_no_keys(make_appspec(foreign_models=[fm])) == []
-
-    def test_no_foreign_models(self, agent: IntegrationDependencyAgent) -> None:
-        assert agent.foreign_model_no_keys(make_appspec()) == []
-
-
-# =============================================================================
-# ID-07  Integration sync without match rules
-# =============================================================================
-
-
-class TestID07SyncWithoutMatchRules:
-    def test_flags_sync_without_match_rules(self, agent: IntegrationDependencyAgent) -> None:
-        sync = _sync("sync_customers", match_rules=[])
-        integration = _integration("stripe_sync", syncs=[sync])
-        findings = agent.sync_without_match_rules(make_appspec(integrations=[integration]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "ID-07"
-        assert findings[0].severity == Severity.MEDIUM
-        assert "sync_customers" in findings[0].title
-        assert "stripe_sync" in findings[0].title
-
-    def test_passes_with_match_rules(self, agent: IntegrationDependencyAgent) -> None:
-        rule = MagicMock()
-        sync = _sync("sync_customers", match_rules=[rule])
-        integration = _integration("stripe_sync", syncs=[sync])
-        assert agent.sync_without_match_rules(make_appspec(integrations=[integration])) == []
-
-    def test_no_syncs_or_integrations(self, agent: IntegrationDependencyAgent) -> None:
-        # Empty syncs in an integration + no integrations at all both produce no findings.
-        empty = _integration("stripe_sync", syncs=[])
-        assert agent.sync_without_match_rules(make_appspec(integrations=[empty])) == []
-        assert agent.sync_without_match_rules(make_appspec()) == []
-
-
-# =============================================================================
-# ID-08  Integration service without guarantees
-# =============================================================================
-
-
-class TestID08IntegrationServiceNoGuarantees:
-    def test_flags_integration_service_without_guarantees(
-        self, agent: IntegrationDependencyAgent
-    ) -> None:
-        svc = _domain_service("sync_data", guarantees=[])
-        findings = agent.integration_service_no_guarantees(make_appspec(domain_services=[svc]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "ID-08"
-        assert findings[0].severity == Severity.LOW
-        assert "sync_data" in findings[0].title
-
-    def test_passes_with_guarantees(self, agent: IntegrationDependencyAgent) -> None:
-        svc = _domain_service("sync_data", guarantees=["Idempotent", "Timeout: 30s"])
-        assert agent.integration_service_no_guarantees(make_appspec(domain_services=[svc])) == []
-
-    @pytest.mark.parametrize(
-        "kind",
-        [DomainServiceKind.VALIDATION, DomainServiceKind.DOMAIN_LOGIC],
-        ids=["validation", "domain_logic"],
-    )
-    def test_ignores_non_integration_kinds(
-        self, agent: IntegrationDependencyAgent, kind: DomainServiceKind
-    ) -> None:
-        svc = _domain_service("svc", kind=kind, guarantees=[])
-        assert agent.integration_service_no_guarantees(make_appspec(domain_services=[svc])) == []
-
-    def test_no_domain_services(self, agent: IntegrationDependencyAgent) -> None:
-        assert agent.integration_service_no_guarantees(make_appspec()) == []
-
-
-# =============================================================================
-# Full agent run
-# =============================================================================
-
-
-class TestIntegrationDependencyAgentRun:
-    def test_metadata_and_clean_run(self, agent: IntegrationDependencyAgent) -> None:
-        # Combined: agent_id + heuristic count + ids + clean-spec produces no findings.
-        assert agent.agent_id == AgentId.ID
-        heuristics = agent.get_heuristics()
-        assert len(heuristics) == 6
-        assert [m.heuristic_id for m, _ in heuristics] == [
-            "ID-01",
-            "ID-02",
-            "ID-03",
-            "ID-06",
-            "ID-07",
-            "ID-08",
-        ]
-        entity = make_entity("Task", [pk_field(), str_field("title", required=True)])
-        result = agent.run(make_appspec([entity]))
-        assert result.errors == []
-        assert result.findings == []
-
-    def test_run_collects_findings_from_multiple_heuristics(
-        self, agent: IntegrationDependencyAgent
-    ) -> None:
-        # Also exercises iteration: 2 unauth APIs + 1 keyless FM
-        # produces findings from ID-01 (×2), ID-06.
-        apis = [
-            _api("stripe", auth_kind=AuthKind.NONE),
-            _api("github", auth_kind=AuthKind.NONE),
-        ]
-        fm = _foreign_model("StripeCustomer", key_fields=[])
-        result = agent.run(make_appspec(apis=apis, foreign_models=[fm]))
-        assert result.errors == []
-        heuristic_ids = [f.heuristic_id for f in result.findings]
-        assert heuristic_ids.count("ID-01") == 2  # iteration coverage
-        assert "ID-06" in heuristic_ids
+def test_run_collects_findings_from_every_heuristic() -> None:
+    # Two unauthenticated APIs and one keyless foreign model: run() iterates
+    # every offender of every heuristic, in heuristic order.
+    apis = [_api("stripe", auth_kind=AuthKind.NONE), _api("github", auth_kind=AuthKind.NONE)]
+    fm = _foreign_model("StripeCustomer", key_fields=[])
+    result = IntegrationDependencyAgent().run(make_appspec(apis=apis, foreign_models=[fm]))
+    assert result.errors == []
+    assert [f.heuristic_id for f in result.findings] == ["ID-01", "ID-01", "ID-06"]

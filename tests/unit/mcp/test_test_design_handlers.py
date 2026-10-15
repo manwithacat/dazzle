@@ -190,51 +190,44 @@ entity Task "Task":
     return project_dir
 
 
-class TestStateTransitionFlowCovered:
-    """Regression for #1335: gap check must accept the `_as_{persona}` suffix
-    that generate_state_machine_flows emits for role-guarded transitions."""
+_BARE = "CohortAssessment_transition_marking_to_marked"
 
-    BARE = "CohortAssessment_transition_marking_to_marked"
 
-    def test_role_guarded_transition_covered_by_suffixed_flow(self) -> None:
+# Regression for #1335: the gap check must accept the `_as_{persona}` suffix that
+# generate_state_machine_flows emits for role-guarded transitions.
+@pytest.mark.parametrize(
+    ("flow_ids", "covered"),
+    [
         # A role-guarded transition emits only `_as_{persona}` flows — no bare id.
-        flow_ids = {f"{self.BARE}_as_teacher", f"{self.BARE}_as_head_of_dept"}
-        assert _state_transition_flow_covered(self.BARE, flow_ids) is True
-
-    def test_unguarded_transition_covered_by_bare_flow(self) -> None:
-        assert _state_transition_flow_covered(self.BARE, {self.BARE}) is True
-
-    def test_uncovered_transition_is_a_gap(self) -> None:
+        pytest.param(
+            {f"{_BARE}_as_teacher", f"{_BARE}_as_head_of_dept"},
+            True,
+            id="role-guarded-covered-by-suffixed-flow-1335",
+        ),
+        pytest.param({_BARE}, True, id="unguarded-covered-by-bare-flow-1335"),
         # Only a no-persona skip stub exists — genuinely untested by any persona.
-        flow_ids = {f"{self.BARE}_skipped_no_persona"}
-        assert _state_transition_flow_covered(self.BARE, flow_ids) is False
-
-    def test_no_flows_is_a_gap(self) -> None:
-        assert _state_transition_flow_covered(self.BARE, set()) is False
-
-    def test_no_false_match_on_unrelated_prefix(self) -> None:
+        pytest.param({f"{_BARE}_skipped_no_persona"}, False, id="skip-stub-is-a-gap-1335"),
+        pytest.param(set(), False, id="no-flows-is-a-gap-1335"),
         # A different transition that merely shares a string prefix must not count.
-        other = {"CohortAssessment_transition_marking_to_marked_late_as_teacher"}
-        assert _state_transition_flow_covered(self.BARE, other) is False
+        pytest.param(
+            {f"{_BARE}_late_as_teacher"}, False, id="no-false-match-on-shared-prefix-1335"
+        ),
+    ],
+)
+def test_state_transition_flow_covered(flow_ids: set[str], covered: bool) -> None:
+    assert _state_transition_flow_covered(_BARE, flow_ids) is covered
 
 
-class TestGetTestGapsHandler:
-    """Tests for get_test_gaps_handler."""
+def test_get_test_gaps_analyzes_project(temp_project) -> None:
+    data = json.loads(get_test_gaps_handler(temp_project, {}))
+    assert data["project"] == "test_project"
+    gaps = {(g["category"], g["target"]): g["severity"] for g in data["gaps"]}
+    # Untested app entity and the persona with goals but no test designs are gaps
+    # (framework-linked entities appear too; their exact set is not pinned here).
+    assert gaps[("untested_entity", "Task")] == "medium"
+    assert gaps[("untested_persona_goal", "admin")] == "high"
+    assert data["gap_count"] == len(data["gaps"])
 
-    def test_analyzes_gaps(self, temp_project) -> None:
-        """Test analyzing test coverage gaps."""
-        result = get_test_gaps_handler(temp_project, {})
-        data = json.loads(result)
 
-        # Should return gap analysis
-        assert "gaps" in data or "entities" in data or "error" not in data
-
-    def test_handles_missing_project(self, tmp_path) -> None:
-        """Test handling of missing project."""
-        missing_project = tmp_path / "missing"
-        missing_project.mkdir()
-
-        result = get_test_gaps_handler(missing_project, {})
-        data = json.loads(result)
-
-        assert "error" in data
+def test_get_test_gaps_missing_project(tmp_path) -> None:
+    assert "error" in json.loads(get_test_gaps_handler(tmp_path, {}))

@@ -1440,23 +1440,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_rhythm_mcp.py",
-    "class": "(module)",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 6,
-    "members": [
-      "test_gaps_layers_evaluated_failures",
-      "test_lifecycle_write_rhythms_partial_persona_coverage",
-      "test_lifecycle_map_scenes_partial",
-      "test_lifecycle_build_from_stories",
-      "test_lifecycle_iterate_not_started_when_nothing_complete",
-      "test_evaluate_advisory_not_counted_in_summary"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_schema_diff.py",
     "class": "(module)",
     "assertion_shape": "('eq', 'eq')",
@@ -1738,54 +1721,6 @@
       "test_read_other_tenant_lineitem_is_404",
       "test_admin_positive_control",
       "test_read_other_tenant_bank_account_is_404"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/mcp/test_test_design_handlers.py",
-    "class": "TestStateTransitionFlowCovered",
-    "assertion_shape": "('is',)",
-    "size": 5,
-    "members": [
-      "test_role_guarded_transition_covered_by_suffixed_flow",
-      "test_unguarded_transition_covered_by_bare_flow",
-      "test_uncovered_transition_is_a_gap",
-      "test_no_flows_is_a_gap",
-      "test_no_false_match_on_unrelated_prefix"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_auth.py",
-    "class": "TestAA04EmptyPersonasClassifiedData",
-    "assertion_shape": "('eq',)",
-    "size": 5,
-    "members": [
-      "test_flags_empty_personas_on_classified_entity",
-      "test_passes_no_policies",
-      "test_role_or_tree_condition_not_flagged",
-      "test_grant_check_condition_not_flagged",
-      "test_deny_all_rule_not_flagged"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_performance_resource.py",
-    "class": "TestPR07HeavilySurfacedEntity",
-    "assertion_shape": "('eq',)",
-    "size": 5,
-    "members": [
-      "test_crud_quartet_not_flagged",
-      "test_flags_many_same_mode_surfaces",
-      "test_passes_entity_with_3_surfaces",
-      "test_no_surfaces",
-      "test_surfaces_without_entity_ref"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -2996,60 +2931,15 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/sentinel/test_agent_business_logic.py",
-    "class": "TestBusinessLogicAgentRun",
+    "file": "tests/unit/mcp/test_spec_analyze_handlers.py",
+    "class": "(module)",
     "assertion_shape": "('eq',)",
     "size": 4,
     "members": [
-      "test_agent_id",
-      "test_has_5_heuristics",
-      "test_heuristic_ids",
-      "test_clean_appspec_no_errors"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_data_integrity.py",
-    "class": "TestDataIntegrityAgentRun",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_agent_id",
-      "test_has_7_heuristics",
-      "test_heuristic_ids",
-      "test_clean_appspec_no_findings"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_performance_resource.py",
-    "class": "TestPerformanceResourceAgentRun",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_agent_id",
-      "test_has_6_heuristics",
-      "test_heuristic_ids",
-      "test_run_reports_heuristics_run_count"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_handler.py",
-    "class": "TestFindingsHandler",
-    "assertion_shape": "('eq',)",
-    "size": 4,
-    "members": [
-      "test_returns_latest_findings",
-      "test_filter_by_severity",
-      "test_echoes_the_filters_actually_applied",
-      "test_load_specific_scan"
+      "test_every_operation_requires_spec_text",
+      "test_unknown_operation",
+      "test_discover_entities_finds_belongs_to_relationship",
+      "test_identify_lifecycles_detects_transition_words"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -5021,36 +4911,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_rhythm_mcp.py",
-    "class": "(module)",
-    "assertion_shape": "('eq', 'eq', 'eq')",
-    "size": 4,
-    "members": [
-      "test_list_rhythms",
-      "test_coverage_persona_deny_list",
-      "test_gaps_summary_counts",
-      "test_lifecycle_mature"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_rhythm_mcp.py",
-    "class": "(module)",
-    "assertion_shape": "('eq', 'eq', 'eq', 'eq')",
-    "size": 4,
-    "members": [
-      "test_get_rhythm",
-      "test_coverage_persona_scoped_with_acl",
-      "test_lifecycle_with_entities",
-      "test_lifecycle_maturity_building"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_rhythm_parser.py",
     "class": "(module)",
     "assertion_shape": "('eq',)",
@@ -6022,104 +5882,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/mcp/test_app_coherence.py",
-    "class": "TestScoreComputation",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_perfect_score",
-      "test_one_error_deducts_20",
-      "test_floor_at_zero"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/mcp/test_cli_help_introspection.py",
-    "class": "TestIntrospectionCompleteness",
-    "assertion_shape": "('in',)",
-    "size": 3,
-    "members": [
-      "test_top_level_discovered",
-      "test_sub_command_discovered",
-      "test_nested_group_discovered"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/mcp/test_fidelity_handlers.py",
-    "class": "TestBuildNextSteps",
-    "assertion_shape": "('call_any', 'gt')",
-    "size": 3,
-    "members": [
-      "test_low_overall_score",
-      "test_medium_overall_score",
-      "test_good_overall_score"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/mcp/test_project_handlers.py",
-    "class": "TestSelectProject",
-    "assertion_shape": "('in', 'in')",
-    "size": 3,
-    "members": [
-      "test_returns_error_not_in_dev_mode",
-      "test_requires_project_name",
-      "test_returns_error_for_unknown_project"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/mcp/test_project_handlers.py",
-    "class": "TestGetActiveProjectInfo",
-    "assertion_shape": "('eq', 'expr')",
-    "size": 3,
-    "members": [
-      "test_with_resolved_path",
-      "test_no_active_project_in_dev_mode",
-      "test_with_cwd_manifest_in_dev_mode"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/mcp/test_spec_analyze_handlers.py",
-    "class": "TestSurfaceRules",
-    "assertion_shape": "('gte',)",
-    "size": 3,
-    "members": [
-      "test_finds_must_rules",
-      "test_finds_cannot_rules",
-      "test_finds_only_rules"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/mcp/test_status_handlers.py",
-    "class": "TestGetDnrLogsHandler",
-    "assertion_shape": "('eq', 'in')",
-    "size": 3,
-    "members": [
-      "test_no_log_file",
-      "test_groups_errors_by_component",
-      "test_includes_recent_errors"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/page/test_ui_spec.py",
     "class": "(module)",
     "assertion_shape": "('eq', 'eq', 'eq')",
@@ -6128,188 +5890,6 @@
       "test_workspace_spec_creation",
       "test_theme_spec_creation",
       "test_element_node_creation"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_auth.py",
-    "class": "TestAA01SurfaceWithoutAccessControl",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_passes_when_surface_has_access",
-      "test_passes_when_entity_has_access",
-      "test_skips_surfaces_without_entity_ref"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_auth.py",
-    "class": "TestAuthAgentRun",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_agent_id",
-      "test_has_7_heuristics",
-      "test_heuristic_ids"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_business_logic.py",
-    "class": "TestBL02StoryTriggerMismatch",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_flags_status_changed_without_process",
-      "test_passes_with_matching_process",
-      "test_ignores_non_status_triggers"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_deployment_state.py",
-    "class": "TestDeploymentStateAgentRun",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_agent_id",
-      "test_has_2_heuristics",
-      "test_heuristic_ids"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_multi_tenancy.py",
-    "class": "TestMT06VisibilityWithoutPartition",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_flags_visibility_ignoring_partition",
-      "test_passes_when_partition_referenced",
-      "test_no_visibility_rules"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_multi_tenancy.py",
-    "class": "TestMT07SharedTopicStrictTenancy",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_flags_shared_topic_with_strict",
-      "test_passes_namespace_per_tenant",
-      "test_passes_shared_schema"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_multi_tenancy.py",
-    "class": "TestMultiTenancyAgentRun",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_agent_id",
-      "test_has_6_heuristics",
-      "test_heuristic_ids"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_operational_hygiene.py",
-    "class": "TestOP07ServiceStepWithoutRetry",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_passes_when_retry_configured",
-      "test_skips_non_service_steps",
-      "test_passes_when_no_processes"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_operational_hygiene.py",
-    "class": "TestOperationalHygieneAgentRun",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_agent_id",
-      "test_has_7_heuristics",
-      "test_heuristic_ids"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_agent_performance_resource.py",
-    "class": "TestPR08ProcessDefaultTimeout",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_passes_with_custom_timeout",
-      "test_passes_default_timeout_without_steps",
-      "test_no_processes"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_models.py",
-    "class": "TestFinding",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_auto_generated_id",
-      "test_dedup_key",
-      "test_dedup_key_minimal"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_orchestrator.py",
-    "class": "TestRunScan",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_excludes_false_positives_by_default",
-      "test_include_suppressed",
-      "test_persists_scan_result"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/sentinel/test_registry.py",
-    "class": "TestGetAllAgents",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_returns_nine_agents",
-      "test_agent_types",
-      "test_unique_agent_ids"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -11266,34 +10846,6 @@
       "test_rhythm_story_reference_hyphenated",
       "test_rhythm_scene_targets_workspace",
       "test_rhythm_phase_depends_on_valid"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_rhythm_mcp.py",
-    "class": "(module)",
-    "assertion_shape": "('in',)",
-    "size": 3,
-    "members": [
-      "test_get_rhythm_not_found",
-      "test_evaluate_submit_scores_validates_rhythm",
-      "test_fidelity_not_found"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_rhythm_mcp.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_list_rhythms_includes_ambient_phases",
-      "test_lifecycle_current_focus_is_first_incomplete",
-      "test_lifecycle_evaluating_maturity"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",

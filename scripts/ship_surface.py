@@ -49,7 +49,7 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/integration/test_golden_master.py::test_simple_dsl_to_ir_snapshot",
     "tests/unit/test_viewport.py::test_drawer_pattern_selectors_match_current_markup",
     # #1629 G6 compact status.mcp changelog (CI red 2026-07-18 after world-model ship)
-    "tests/unit/mcp/test_status_handlers.py::TestNewSinceLastCheck",
+    "tests/unit/mcp/test_status_handlers.py::test_new_since_last_check",
     "tests/unit/test_mcp_agent_cognition_1629.py::test_mcp_status_changelog_compact_by_default",
     # HM CONTRACT_SURFACE.md drift (CI red 2026-07-28 after KanbanCard.drill_url)
     "tests/unit/test_contract_surface_tool.py::test_committed_contract_surface_matches_generator",

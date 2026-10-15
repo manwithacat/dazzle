@@ -148,208 +148,101 @@ def project_with_logs(temp_project):
 # =============================================================================
 
 
-class TestGetMcpStatusHandler:
-    """Tests for get_mcp_status_handler."""
-
-    def test_returns_status(self) -> None:
-        """Test basic status retrieval."""
-        result = get_mcp_status_handler({})
-        data = json.loads(result)
-
-        # Should return mode and version info
-        assert "mode" in data
-        assert "version" in data or "semantics_version" in data
-
-    def test_returns_project_root(self) -> None:
-        """Test project root is included."""
-        result = get_mcp_status_handler({})
-        data = json.loads(result)
-
-        assert "project_root" in data
-
-    def test_with_resolved_project_path(self, temp_project) -> None:
-        """Test with resolved project path."""
-        result = get_mcp_status_handler({"_resolved_project_path": temp_project})
-        data = json.loads(result)
-
-        # Should include active project info from resolved path
-        assert "active_project" in data or "project_root" in data
-
-    def test_reload_option_in_non_dev_mode(self) -> None:
-        """Test reload option when not in dev mode."""
-        with patch.object(_st, "is_dev_mode", return_value=False):
-            result = get_mcp_status_handler({"reload": True})
-            data = json.loads(result)
-
-            # Reload should be skipped in non-dev mode
-            if "reload" in data:
-                assert "skipped" in data["reload"]
+def test_mcp_status_base_fields() -> None:
+    data = json.loads(get_mcp_status_handler({}))
+    assert data["mode"] == "dev"
+    assert data["project_root"] == "/tmp/test"
+    assert data["version"]
+    assert "semantics_version" in data
 
 
-class TestNewSinceLastCheck:
-    """Tests for new_since_last_check in status(mcp) response."""
-
-    def _call_with_changelog(
-        self, temp_project, changelog_text, last_seen=None, *, include_changelog=False
-    ):
-        """Helper: call status handler with a fake changelog and optional last_seen."""
-        import dazzle.core.changelog as _cl
-
-        tmp_changelog = temp_project / "CHANGELOG.md"
-        tmp_changelog.write_text(changelog_text)
-
-        if last_seen is not None:
-            dazzle_dir = temp_project / ".dazzle"
-            dazzle_dir.mkdir(exist_ok=True)
-            (dazzle_dir / "last_seen_version").write_text(last_seen)
-
-        args = {
-            "_resolved_project_path": temp_project,
-            "include_changelog": include_changelog,
-        }
-        with patch.object(_cl, "get_changelog_path", return_value=tmp_changelog):
-            result = get_mcp_status_handler(args)
-        return json.loads(result)
-
-    def test_first_run_compact_by_default(self, temp_project) -> None:
-        """First run: compact new_since_last_check by default (#1629 G6)."""
-        from dazzle._version import get_version
-
-        ver = get_version()
-        sample = f"## [{ver}] - 2026-01-01\n\n### Added\n- **Cool feature** — does things\n"
-        data = self._call_with_changelog(temp_project, sample)
-
-        assert "new_since_last_check" in data
-        nslc = data["new_since_last_check"]
-        assert isinstance(nslc, dict)
-        assert "count" in nslc and "hint" in nslc
-        assert nslc["count"] > 0
-        assert data["last_seen_version"] is None
-
-    def test_first_run_full_changelog_opt_in(self, temp_project) -> None:
-        """include_changelog=true returns full list of new items."""
-        from dazzle._version import get_version
-
-        ver = get_version()
-        sample = f"## [{ver}] - 2026-01-01\n\n### Added\n- **Cool feature** — does things\n"
-        data = self._call_with_changelog(temp_project, sample, include_changelog=True)
-
-        assert isinstance(data["new_since_last_check"], list)
-        assert len(data["new_since_last_check"]) > 0
-
-    def test_same_version_returns_compact_zero(self, temp_project) -> None:
-        """When last_seen == current, compact count is 0 (#1629 G6)."""
-        from dazzle._version import get_version
-
-        ver = get_version()
-        sample = f"## [{ver}]\n### Added\n- Feature\n"
-        data = self._call_with_changelog(temp_project, sample, last_seen=ver)
-
-        assert "new_since_last_check" in data
-        nslc = data["new_since_last_check"]
-        assert isinstance(nslc, dict)
-        assert nslc["count"] == 0
-        assert data["last_seen_version"] == ver
-
-    def test_same_version_full_list_empty(self, temp_project) -> None:
-        """include_changelog=true + same version → empty list."""
-        from dazzle._version import get_version
-
-        ver = get_version()
-        sample = f"## [{ver}]\n### Added\n- Feature\n"
-        data = self._call_with_changelog(
-            temp_project, sample, last_seen=ver, include_changelog=True
-        )
-        assert data["new_since_last_check"] == []
-
-    def test_version_file_written_after_check(self, temp_project) -> None:
-        """After status(mcp), last_seen_version file should contain current version."""
-        from dazzle._version import get_version
-
-        ver = get_version()
-        sample = f"## [{ver}]\n### Added\n- Feature\n"
-        self._call_with_changelog(temp_project, sample)
-
-        version_file = temp_project / ".dazzle" / "last_seen_version"
-        assert version_file.exists()
-        assert version_file.read_text().strip() == ver
+def test_mcp_status_roots_resolved_path_wins(temp_project) -> None:
+    data = json.loads(get_mcp_status_handler({"_resolved_project_path": temp_project}))
+    assert data["active_project"] == {
+        "path": str(temp_project),
+        "manifest_name": "test_project",
+        "version": "0.1.0",
+    }
 
 
-class TestGetDnrLogsHandler:
-    """Tests for get_dnr_logs_handler."""
+def test_mcp_status_reload_skipped_outside_dev_mode() -> None:
+    with patch.object(_st, "is_dev_mode", return_value=False):
+        data = json.loads(get_mcp_status_handler({"reload": True}))
+    assert data["reload"] == "skipped - only available in dev mode"
 
-    def test_no_log_file(self, temp_project) -> None:
-        """Test handling when no log file exists."""
-        # Remove logs directory content
-        log_file = temp_project / ".dazzle" / "logs" / "dazzle.log"
-        if log_file.exists():
-            log_file.unlink()
 
-        result = get_dnr_logs_handler({"_resolved_project_path": temp_project})
-        data = json.loads(result)
+# new_since_last_check: compact {count, hint} by default (#1629 G6), the full
+# list with include_changelog=true; nothing is new once last_seen == current.
+@pytest.mark.parametrize(
+    ("seen_before", "include_changelog", "expect_new"),
+    [
+        pytest.param(False, False, True, id="first-run-compact-by-default-1629"),
+        pytest.param(False, True, True, id="first-run-full-list-opt-in"),
+        pytest.param(True, False, False, id="same-version-compact-zero-1629"),
+        pytest.param(True, True, False, id="same-version-full-list-empty"),
+    ],
+)
+def test_new_since_last_check(
+    temp_project, seen_before: bool, include_changelog: bool, expect_new: bool
+) -> None:
+    import dazzle.core.changelog as _cl
+    from dazzle._version import get_version
 
-        assert data["status"] == "no_logs"
-        assert "hint" in data
+    ver = get_version()
+    changelog = temp_project / "CHANGELOG.md"
+    changelog.write_text(
+        f"## [{ver}] - 2026-01-01\n\n### Added\n- **Cool feature** — does things\n"
+    )
+    version_file = temp_project / ".dazzle" / "last_seen_version"
+    if seen_before:
+        version_file.write_text(ver)
+    args = {"_resolved_project_path": temp_project, "include_changelog": include_changelog}
+    with patch.object(_cl, "get_changelog_path", return_value=changelog):
+        data = json.loads(get_mcp_status_handler(args))
 
-    def test_returns_log_entries(self, project_with_logs) -> None:
-        """Test returning log entries."""
-        result = get_dnr_logs_handler({"_resolved_project_path": project_with_logs})
-        data = json.loads(result)
+    assert data["last_seen_version"] == (ver if seen_before else None)
+    nslc = data["new_since_last_check"]
+    if include_changelog:
+        assert isinstance(nslc, list)
+        assert bool(nslc) is expect_new
+    else:
+        assert "hint" in nslc
+        assert (nslc["count"] > 0) is expect_new
+    # The check records the current version for next time.
+    assert version_file.read_text().strip() == ver
 
-        assert data["status"] == "ok"
-        assert "entries" in data
-        assert data["total_entries"] == 6
 
-    def test_respects_count_limit(self, project_with_logs) -> None:
-        """Test count limit option."""
-        result = get_dnr_logs_handler({"_resolved_project_path": project_with_logs, "count": 2})
-        data = json.loads(result)
+def test_dnr_logs_no_log_file(temp_project) -> None:
+    data = json.loads(get_dnr_logs_handler({"_resolved_project_path": temp_project}))
+    assert data["status"] == "no_logs"
+    assert "hint" in data
 
-        assert data["status"] == "ok"
-        assert data["returned"] == 2
 
-    def test_filters_by_level(self, project_with_logs) -> None:
-        """Test filtering by log level."""
-        result = get_dnr_logs_handler(
-            {"_resolved_project_path": project_with_logs, "level": "ERROR"}
-        )
-        data = json.loads(result)
+@pytest.mark.parametrize(
+    ("args", "returned", "levels"),
+    [
+        pytest.param({}, 6, None, id="all-entries"),
+        pytest.param({"count": 2}, 2, None, id="count-limit"),
+        pytest.param({"level": "ERROR"}, 2, {"ERROR"}, id="level-filter"),
+    ],
+)
+def test_dnr_logs_entries(project_with_logs, args: dict, returned: int, levels) -> None:
+    data = json.loads(get_dnr_logs_handler({"_resolved_project_path": project_with_logs, **args}))
+    assert data["status"] == "ok"
+    # total_entries counts entries after the level filter, before the count limit.
+    assert data["total_entries"] == (2 if levels else 6)
+    assert data["returned"] == returned
+    assert len(data["entries"]) == returned
+    if levels is not None:
+        assert {e["level"] for e in data["entries"]} == levels
 
-        assert data["status"] == "ok"
-        # Should only return ERROR entries
-        for entry in data["entries"]:
-            assert entry["level"] == "ERROR"
 
-    def test_errors_only_mode(self, project_with_logs) -> None:
-        """Test errors_only mode."""
-        result = get_dnr_logs_handler(
-            {"_resolved_project_path": project_with_logs, "errors_only": True}
-        )
-        data = json.loads(result)
-
-        assert data["status"] == "error_summary"
-        assert "error_count" in data
-        assert "warning_count" in data
-        assert "errors_by_component" in data
-        assert data["error_count"] == 2
-        assert data["warning_count"] == 1
-
-    def test_groups_errors_by_component(self, project_with_logs) -> None:
-        """Test that errors are grouped by component."""
-        result = get_dnr_logs_handler(
-            {"_resolved_project_path": project_with_logs, "errors_only": True}
-        )
-        data = json.loads(result)
-
-        assert "errors_by_component" in data
-        assert data["errors_by_component"]["db"] == 2
-
-    def test_includes_recent_errors(self, project_with_logs) -> None:
-        """Test that recent errors are included."""
-        result = get_dnr_logs_handler(
-            {"_resolved_project_path": project_with_logs, "errors_only": True}
-        )
-        data = json.loads(result)
-
-        assert "recent_errors" in data
-        assert len(data["recent_errors"]) == 2
+def test_dnr_logs_errors_only_summary(project_with_logs) -> None:
+    data = json.loads(
+        get_dnr_logs_handler({"_resolved_project_path": project_with_logs, "errors_only": True})
+    )
+    assert data["status"] == "error_summary"
+    assert data["error_count"] == 2
+    assert data["warning_count"] == 1
+    assert data["errors_by_component"] == {"db": 2}
+    assert len(data["recent_errors"]) == 2

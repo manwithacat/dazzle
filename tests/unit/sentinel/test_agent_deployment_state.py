@@ -1,216 +1,152 @@
-"""Tests for the Deployment & State detection agent (DS-05 and DS-08)."""
+"""Tests for the Deployment & State detection agent (DS-05 and DS-08).
 
+One table: each case builds the governance policies, runs one heuristic and
+pins the exact findings (see ``assert_findings``). Agent identity, heuristic
+order and the clean-spec run live in ``test_registry.py``.
+"""
+
+from collections.abc import Callable
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.core.ir.governance import DataClassification
+from dazzle.core.ir.governance import DataClassification as DC
 from dazzle.sentinel.agents.deployment_state import DeploymentStateAgent
-from dazzle.sentinel.models import AgentId, Severity
+from dazzle.sentinel.models import Severity
 
-from .conftest import make_appspec, make_entity, pk_field, str_field
-
-
-@pytest.fixture
-def agent() -> DeploymentStateAgent:
-    return DeploymentStateAgent()
-
+from .conftest import assert_findings, make_appspec
 
 # ---------------------------------------------------------------------------
-# Policies helper
+# Builders
 # ---------------------------------------------------------------------------
 
 
-def _make_classification(
-    entity: str,
-    field: str,
-    classification: DataClassification,
-) -> MagicMock:
-    cls_spec = MagicMock()
-    cls_spec.entity = entity
-    cls_spec.field = field
-    cls_spec.classification = classification
-    return cls_spec
-
-
-def _make_erasure(entity: str) -> MagicMock:
-    erasure = MagicMock()
-    erasure.entity = entity
-    return erasure
-
-
-def _make_policies(
-    *,
-    classifications: list[MagicMock] | None = None,
-    erasures: list[MagicMock] | None = None,
+def _policies(
+    *classified: tuple[str, str, DC],
+    erasures: tuple[str, ...] = (),
     audit_access: bool = True,
-) -> MagicMock:
+) -> Any:
+    """An AppSpec whose policies classify ``(entity, field, classification)`` triples."""
     policies = MagicMock()
-    policies.classifications = classifications or []
-    policies.erasures = erasures or []
+    policies.classifications = []
+    for entity, field, classification in classified:
+        cls_spec = MagicMock()
+        cls_spec.entity = entity
+        cls_spec.field = field
+        cls_spec.classification = classification
+        policies.classifications.append(cls_spec)
+    policies.erasures = []
+    for entity in erasures:
+        erasure = MagicMock()
+        erasure.entity = entity
+        policies.erasures.append(erasure)
     policies.audit_access = audit_access
-    return policies
+    return make_appspec(policies=policies)
 
 
-# =============================================================================
-# DS-05  PII data without erasure policy
-# =============================================================================
+def _ds05(entity: str) -> list[dict[str, Any]]:
+    return [{"heuristic_id": "DS-05", "severity": Severity.HIGH, "title_has": entity}]
 
 
-class TestDS05PiiWithoutErasure:
-    @pytest.mark.parametrize(
-        ("entity", "field", "classification"),
-        [
-            ("Customer", "email", DataClassification.PII_DIRECT),
-            ("User", "ip_addr", DataClassification.PII_INDIRECT),
-            ("Patient", "diagnosis", DataClassification.PII_SENSITIVE),
-        ],
-        ids=["pii_direct", "pii_indirect", "pii_sensitive"],
+_DS08 = {"heuristic_id": "DS-08", "severity": Severity.HIGH, "title_has": "Audit access disabled"}
+
+
+# ---------------------------------------------------------------------------
+# Heuristic table
+# ---------------------------------------------------------------------------
+
+CASES = [
+    # DS-05  PII classification with no erasure policy
+    *[
+        pytest.param(
+            "pii_without_erasure",
+            lambda e=entity, f=field, c=cls: _policies((e, f, c)),
+            _ds05(entity),
+            id=f"DS-05-flags-{cls.value}",
+        )
+        for entity, field, cls in (
+            ("Customer", "email", DC.PII_DIRECT),
+            ("User", "ip_addr", DC.PII_INDIRECT),
+            ("Patient", "diagnosis", DC.PII_SENSITIVE),
+        )
+    ],
+    pytest.param(
+        "pii_without_erasure",
+        lambda: _policies(("Customer", "email", DC.PII_DIRECT), erasures=("Customer",)),
+        [],
+        id="DS-05-erasure-exists",
+    ),
+    pytest.param("pii_without_erasure", make_appspec, [], id="DS-05-no-policies"),
+    pytest.param(
+        "pii_without_erasure",
+        lambda: _policies(("Order", "amount", DC.FINANCIAL_TXN)),
+        [],
+        id="DS-05-non-pii-classification",
+    ),
+    pytest.param("pii_without_erasure", _policies, [], id="DS-05-empty-classifications"),
+    # One finding per entity, naming every PII field on it.
+    pytest.param(
+        "pii_without_erasure",
+        lambda: _policies(
+            ("Customer", "email", DC.PII_DIRECT), ("Customer", "phone", DC.PII_DIRECT)
+        ),
+        [{**_ds05("Customer")[0], "description_has": ("email", "phone")}],
+        id="DS-05-one-finding-per-entity-names-every-field",
+    ),
+    pytest.param(
+        "pii_without_erasure",
+        lambda: _policies(
+            ("Customer", "email", DC.PII_DIRECT),
+            ("Employee", "ssn", DC.PII_SENSITIVE),
+            erasures=("Customer",),
+        ),
+        _ds05("Employee"),
+        id="DS-05-flags-only-entity-without-erasure",
+    ),
+    # DS-08  audit_access disabled while sensitive data is classified
+    *[
+        pytest.param(
+            "audit_access_disabled_sensitive",
+            lambda e=entity, f=field, c=cls: _policies((e, f, c), audit_access=False),
+            [_DS08],
+            id=f"DS-08-flags-{cls.value}",
+        )
+        for entity, field, cls in (
+            ("Customer", "email", DC.PII_DIRECT),
+            ("Payment", "amount", DC.FINANCIAL_TXN),
+            ("Account", "card_number", DC.FINANCIAL_ACCOUNT),
+        )
+    ],
+    pytest.param(
+        "audit_access_disabled_sensitive",
+        lambda: _policies(("Customer", "email", DC.PII_DIRECT), audit_access=True),
+        [],
+        id="DS-08-audit-enabled",
+    ),
+    pytest.param("audit_access_disabled_sensitive", make_appspec, [], id="DS-08-no-policies"),
+    pytest.param(
+        "audit_access_disabled_sensitive",
+        lambda: _policies(audit_access=False),
+        [],
+        id="DS-08-no-sensitive-data",
+    ),
+]
+
+
+@pytest.mark.parametrize(("heuristic", "build", "expected"), CASES)
+def test_heuristic(
+    heuristic: str, build: Callable[[], Any], expected: list[dict[str, Any]]
+) -> None:
+    assert_findings(getattr(DeploymentStateAgent(), heuristic)(build()), expected)
+
+
+def test_ds08_aggregates_sensitive_entities_sorted() -> None:
+    (finding,) = DeploymentStateAgent().audit_access_disabled_sensitive(
+        _policies(
+            ("Zebra", "ssn", DC.PII_SENSITIVE),
+            ("Alpha", "card", DC.FINANCIAL_ACCOUNT),
+            audit_access=False,
+        )
     )
-    def test_flags_all_pii_classifications_without_erasure(
-        self,
-        agent: DeploymentStateAgent,
-        entity: str,
-        field: str,
-        classification: DataClassification,
-    ) -> None:
-        cls_spec = _make_classification(entity, field, classification)
-        policies = _make_policies(classifications=[cls_spec], erasures=[])
-        findings = agent.pii_without_erasure(make_appspec(policies=policies))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DS-05"
-        assert findings[0].severity == Severity.HIGH
-        assert entity in findings[0].title
-
-    def test_passes_when_erasure_exists(self, agent: DeploymentStateAgent) -> None:
-        cls_spec = _make_classification("Customer", "email", DataClassification.PII_DIRECT)
-        erasure = _make_erasure("Customer")
-        policies = _make_policies(classifications=[cls_spec], erasures=[erasure])
-        assert agent.pii_without_erasure(make_appspec(policies=policies)) == []
-
-    @pytest.mark.parametrize(
-        "policies_factory",
-        [
-            lambda: None,
-            lambda: _make_policies(
-                classifications=[
-                    _make_classification("Order", "amount", DataClassification.FINANCIAL_TXN)
-                ],
-                erasures=[],
-            ),
-            lambda: _make_policies(classifications=[], erasures=[]),
-        ],
-        ids=["no_policies", "no_pii_classifications", "empty_classifications"],
-    )
-    def test_returns_empty_for_non_pii_or_empty(
-        self, agent: DeploymentStateAgent, policies_factory: object
-    ) -> None:
-        policies = policies_factory()  # type: ignore[operator]
-        assert agent.pii_without_erasure(make_appspec(policies=policies)) == []
-
-    def test_multiple_entities_flags_only_without_erasure(
-        self, agent: DeploymentStateAgent
-    ) -> None:
-        cls1 = _make_classification("Customer", "email", DataClassification.PII_DIRECT)
-        cls2 = _make_classification("Employee", "ssn", DataClassification.PII_SENSITIVE)
-        erasure = _make_erasure("Customer")
-        policies = _make_policies(classifications=[cls1, cls2], erasures=[erasure])
-        findings = agent.pii_without_erasure(make_appspec(policies=policies))
-        assert len(findings) == 1
-        assert "Employee" in findings[0].title
-
-    def test_multiple_pii_fields_same_entity(self, agent: DeploymentStateAgent) -> None:
-        cls1 = _make_classification("Customer", "email", DataClassification.PII_DIRECT)
-        cls2 = _make_classification("Customer", "phone", DataClassification.PII_DIRECT)
-        policies = _make_policies(classifications=[cls1, cls2], erasures=[])
-        findings = agent.pii_without_erasure(make_appspec(policies=policies))
-        assert len(findings) == 1
-        assert "email" in findings[0].description
-        assert "phone" in findings[0].description
-
-
-# =============================================================================
-# DS-08  Audit access disabled with sensitive data
-# =============================================================================
-
-
-class TestDS08AuditAccessDisabledSensitive:
-    @pytest.mark.parametrize(
-        ("entity", "field", "classification"),
-        [
-            ("Customer", "email", DataClassification.PII_DIRECT),
-            ("Payment", "amount", DataClassification.FINANCIAL_TXN),
-            ("Account", "card_number", DataClassification.FINANCIAL_ACCOUNT),
-        ],
-        ids=["pii_direct", "financial_txn", "financial_account"],
-    )
-    def test_flags_audit_disabled_with_sensitive_classification(
-        self,
-        agent: DeploymentStateAgent,
-        entity: str,
-        field: str,
-        classification: DataClassification,
-    ) -> None:
-        cls_spec = _make_classification(entity, field, classification)
-        policies = _make_policies(classifications=[cls_spec], audit_access=False)
-        findings = agent.audit_access_disabled_sensitive(make_appspec(policies=policies))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DS-08"
-        assert findings[0].severity == Severity.HIGH
-        assert "Audit access disabled" in findings[0].title
-
-    @pytest.mark.parametrize(
-        "policies_factory",
-        [
-            lambda: _make_policies(
-                classifications=[
-                    _make_classification("Customer", "email", DataClassification.PII_DIRECT)
-                ],
-                audit_access=True,
-            ),
-            lambda: None,
-            lambda: _make_policies(classifications=[], audit_access=False),
-        ],
-        ids=["audit_enabled", "no_policies", "no_sensitive_data"],
-    )
-    def test_no_finding(self, agent: DeploymentStateAgent, policies_factory: object) -> None:
-        policies = policies_factory()  # type: ignore[operator]
-        assert agent.audit_access_disabled_sensitive(make_appspec(policies=policies)) == []
-
-    def test_affected_entities_sorted_in_description(self, agent: DeploymentStateAgent) -> None:
-        cls1 = _make_classification("Zebra", "ssn", DataClassification.PII_SENSITIVE)
-        cls2 = _make_classification("Alpha", "card", DataClassification.FINANCIAL_ACCOUNT)
-        policies = _make_policies(classifications=[cls1, cls2], audit_access=False)
-        findings = agent.audit_access_disabled_sensitive(make_appspec(policies=policies))
-        assert len(findings) == 1
-        # Single finding aggregates all sensitive entities.
-        assert "Alpha" in findings[0].description
-        assert "Zebra" in findings[0].description
-
-
-# =============================================================================
-# Full agent run
-# =============================================================================
-
-
-class TestDeploymentStateAgentRun:
-    def test_agent_id(self, agent: DeploymentStateAgent) -> None:
-        assert agent.agent_id == AgentId.DS
-
-    def test_has_2_heuristics(self, agent: DeploymentStateAgent) -> None:
-        assert len(agent.get_heuristics()) == 2
-
-    def test_heuristic_ids(self, agent: DeploymentStateAgent) -> None:
-        ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == ["DS-05", "DS-08"]
-
-    def test_clean_appspec_no_findings(self, agent: DeploymentStateAgent) -> None:
-        entity = make_entity("Task", [pk_field(), str_field("title", required=True)])
-        result = agent.run(make_appspec([entity]))
-        assert result.findings == []
-        assert result.errors == []
-
-    def test_run_returns_agent_result_with_timing(self, agent: DeploymentStateAgent) -> None:
-        result = agent.run(make_appspec())
-        assert result.agent == AgentId.DS
-        assert result.duration_ms >= 0
+    assert 0 <= finding.description.index("Alpha") < finding.description.index("Zebra")

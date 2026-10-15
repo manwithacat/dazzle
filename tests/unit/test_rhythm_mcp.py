@@ -1,7 +1,15 @@
-"""Tests for rhythm MCP handler."""
+"""Tests for the rhythm MCP handlers.
+
+`list` / `get` / `coverage` are the operations the `rhythm` tool registers, so
+they are exercised through its dispatcher (`handle_rhythm`). `evaluate`,
+`gaps`, `lifecycle`, `fidelity` and `propose` are not on the tool; they are
+exercised through their public `*_rhythm_handler` entry points. Every test
+patches only the AppSpec loader.
+"""
 
 import json
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,9 +17,100 @@ import pytest
 from dazzle.core.ir.rhythm import PhaseKind, PhaseSpec, RhythmSpec, SceneSpec
 from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
 
+_LOADER = "dazzle.mcp.server.handlers.rhythm.load_project_appspec"
+_TOOL_OPS = {"list", "get", "coverage"}
 
-@pytest.fixture
-def mock_appspec():
+# ---------------------------------------------------------------------------
+# Spec builders
+# ---------------------------------------------------------------------------
+
+
+def _named(name: str, **attrs: Any) -> MagicMock:
+    obj = MagicMock()
+    obj.name = name
+    for key, value in attrs.items():
+        setattr(obj, key, value)
+    return obj
+
+
+def _persona(pid: str) -> MagicMock:
+    p = MagicMock()
+    p.id = pid
+    return p
+
+
+def _surface(
+    name: str,
+    *,
+    entity_ref: str | None = None,
+    access: MagicMock | None = None,
+    mode: str = "list",
+) -> MagicMock:
+    return _named(name, entity_ref=entity_ref, access=access, mode=mode)
+
+
+def _acl(allow: list[str] | None = None, deny: list[str] | None = None) -> MagicMock:
+    access = MagicMock()
+    access.require_auth = True
+    access.allow_personas = allow or []
+    access.deny_personas = deny or []
+    return access
+
+
+def _entity(name: str, field_count: int = 2) -> MagicMock:
+    return _named(name, fields=[MagicMock() for _ in range(field_count)])
+
+
+def _rhythm(
+    *scenes: SceneSpec,
+    name: str = "r1",
+    persona: str = "user",
+    kind: PhaseKind | None = None,
+) -> RhythmSpec:
+    """Single-phase rhythm `p1` — the shape most tests need."""
+    return RhythmSpec(
+        name=name,
+        title=name.upper(),
+        persona=persona,
+        phases=[PhaseSpec(name="p1", kind=kind, scenes=list(scenes))],
+    )
+
+
+def _app(
+    rhythms: list[RhythmSpec] | None = None,
+    *,
+    personas: list[str] | None = None,
+    surfaces: list[MagicMock] | None = None,
+    workspaces: list[str] | None = None,
+    entities: list[MagicMock] | None = None,
+    stories: list[StorySpec] | None = None,
+) -> MagicMock:
+    spec = MagicMock()
+    spec.rhythms = rhythms or []
+    spec.personas = [_persona(p) for p in (["user"] if personas is None else personas)]
+    spec.surfaces = surfaces or []
+    spec.workspaces = [_named(w) for w in workspaces or []]
+    spec.domain.entities = entities or []
+    spec.stories = stories or []
+    return spec
+
+
+def _story(
+    story_id: str, actor: str = "user", status: StoryStatus = StoryStatus.ACCEPTED
+) -> StorySpec:
+    return StorySpec(
+        story_id=story_id,
+        title=f"Story {story_id}",
+        persona=actor,
+        trigger=StoryTrigger.USER_CLICK,
+        entities=["Task"],
+        status=status,
+        created_at="2026-01-01T00:00:00",
+    )
+
+
+def _onboarding_app() -> MagicMock:
+    """`onboarding` for `new_user`: a list scene and an entity-bound submit scene."""
     rhythm = RhythmSpec(
         name="onboarding",
         title="New User Onboarding",
@@ -33,37 +132,19 @@ def mock_appspec():
             ),
         ],
     )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-
-    persona = MagicMock()
-    persona.id = "new_user"
-    persona.name = "New User"
-    spec.personas = [persona]
-
-    surf_list = MagicMock()
-    surf_list.name = "course_list"
-    surf_list.mode = "list"
-    surf_list.entity_ref = None
-    surf_list.access = None
-
-    surf_detail = MagicMock()
-    surf_detail.name = "course_detail"
-    surf_detail.mode = "detail"
-    surf_detail.entity_ref = "Enrollment"
-    surf_detail.access = None
-
-    spec.surfaces = [surf_list, surf_detail]
-    spec.workspaces = []
-
-    entity = MagicMock()
-    entity.name = "Enrollment"
-    spec.domain.entities = [entity]
-    return spec
+    return _app(
+        [rhythm],
+        personas=["new_user"],
+        surfaces=[
+            _surface("course_list"),
+            _surface("course_detail", entity_ref="Enrollment", mode="detail"),
+        ],
+        entities=[_entity("Enrollment")],
+    )
 
 
-@pytest.fixture
-def mock_appspec_with_kinds():
+def _kinds_app() -> MagicMock:
+    """`onboarding` with one active and one ambient phase."""
     rhythm = RhythmSpec(
         name="onboarding",
         title="New User Onboarding",
@@ -73,200 +154,20 @@ def mock_appspec_with_kinds():
             PhaseSpec(
                 name="discovery",
                 kind=PhaseKind.ACTIVE,
-                scenes=[
-                    SceneSpec(name="browse", title="Browse Courses", surface="course_list"),
-                ],
+                scenes=[SceneSpec(name="browse", title="Browse Courses", surface="course_list")],
             ),
             PhaseSpec(
                 name="background",
                 kind=PhaseKind.AMBIENT,
-                scenes=[
-                    SceneSpec(name="notify", title="Notify", surface="notifications"),
-                ],
+                scenes=[SceneSpec(name="notify", title="Notify", surface="notifications")],
             ),
         ],
     )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-
-    persona = MagicMock()
-    persona.id = "new_user"
-    persona.name = "New User"
-    spec.personas = [persona]
-
-    spec.surfaces = []
-    spec.workspaces = []
-    spec.domain.entities = []
-    return spec
+    return _app([rhythm], personas=["new_user"])
 
 
-def test_list_rhythms(mock_appspec):
-    from dazzle.mcp.server.handlers.rhythm import list_rhythms_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec,
-    ):
-        result = list_rhythms_handler(Path("/fake"), {})
-        data = json.loads(result)
-        assert len(data["rhythms"]) == 1
-        assert data["rhythms"][0]["name"] == "onboarding"
-        assert data["rhythms"][0]["persona"] == "new_user"
-
-
-def test_get_rhythm(mock_appspec):
-    from dazzle.mcp.server.handlers.rhythm import get_rhythm_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec,
-    ):
-        result = get_rhythm_handler(Path("/fake"), {"name": "onboarding"})
-        data = json.loads(result)
-        assert data["name"] == "onboarding"
-        assert data["persona"] == "new_user"
-        assert len(data["phases"]) == 1
-        assert len(data["phases"][0]["scenes"]) == 2
-
-
-def test_get_rhythm_not_found(mock_appspec):
-    from dazzle.mcp.server.handlers.rhythm import get_rhythm_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec,
-    ):
-        result = get_rhythm_handler(Path("/fake"), {"name": "nonexistent"})
-        data = json.loads(result)
-        assert "error" in data
-
-
-def test_evaluate_rhythm(mock_appspec):
-    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec,
-    ):
-        result = evaluate_rhythm_handler(Path("/fake"), {"name": "onboarding"})
-        data = json.loads(result)
-        assert "rhythm" in data
-        assert "checks" in data
-
-
-def test_evaluate_workspace_reference_passes():
-    """Workspace references use workspace_exists check, not surface_exists."""
-    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="annual",
-        title="Annual Arc",
-        persona="customer",
-        phases=[
-            PhaseSpec(
-                name="start",
-                scenes=[
-                    SceneSpec(
-                        name="dashboard",
-                        title="Visit Dashboard",
-                        surface="customer_dashboard",
-                        actions=["browse"],
-                    ),
-                ],
-            ),
-        ],
-    )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-
-    persona = MagicMock()
-    persona.id = "customer"
-    spec.personas = [persona]
-
-    # customer_dashboard is a workspace, not a surface
-    spec.surfaces = []
-    workspace = MagicMock()
-    workspace.name = "customer_dashboard"
-    spec.workspaces = [workspace]
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = evaluate_rhythm_handler(Path("/fake"), {"name": "annual"})
-        data = json.loads(result)
-
-        ws_checks = [c for c in data["checks"] if c["check"] == "workspace_exists"]
-        assert len(ws_checks) == 1
-        assert ws_checks[0]["pass"] is True
-        assert ws_checks[0]["target"] == "customer_dashboard"
-
-        # No surface_exists failures
-        surf_checks = [c for c in data["checks"] if c["check"] == "surface_exists"]
-        assert len(surf_checks) == 0
-
-        # All hard checks pass
-        hard_checks = [c for c in data["checks"] if not c.get("advisory")]
-        assert all(c["pass"] for c in hard_checks)
-
-
-def test_evaluate_unknown_target_fails():
-    """A reference that is neither a surface nor a workspace should fail."""
-    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="test",
-        title="Test",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="start",
-                scenes=[
-                    SceneSpec(name="s1", title="S1", surface="nonexistent"),
-                ],
-            ),
-        ],
-    )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-
-    spec.surfaces = []
-    spec.workspaces = []
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = evaluate_rhythm_handler(Path("/fake"), {"name": "test"})
-        data = json.loads(result)
-
-        surf_checks = [c for c in data["checks"] if c["check"] == "surface_exists"]
-        assert len(surf_checks) == 1
-        assert surf_checks[0]["pass"] is False
-
-
-def test_list_rhythms_includes_ambient_phases(mock_appspec_with_kinds):
-    """list operation includes ambient phase count."""
-    from dazzle.mcp.server.handlers.rhythm import list_rhythms_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec_with_kinds,
-    ):
-        result = list_rhythms_handler(Path("/fake"), {})
-        data = json.loads(result)
-        assert data["rhythms"][0]["ambient_phases"] == 1
-
-
-@pytest.fixture
-def mock_appspec_fiscal_cadence():
-    """Rhythm with per-phase cadence hints (periodic + ambient)."""
+def _fiscal_app() -> MagicMock:
+    """`fiscal` with per-phase cadence hints (periodic + ambient)."""
     rhythm = RhythmSpec(
         name="fiscal",
         title="Fiscal Year",
@@ -276,53 +177,111 @@ def mock_appspec_fiscal_cadence():
                 name="q1",
                 kind=PhaseKind.PERIODIC,
                 cadence="January-March",
-                scenes=[
-                    SceneSpec(name="review", surface="budget_list"),
-                ],
+                scenes=[SceneSpec(name="review", surface="budget_list")],
             ),
             PhaseSpec(
                 name="ongoing",
                 kind=PhaseKind.AMBIENT,
                 cadence="ad-hoc, between deadlines",
-                scenes=[
-                    SceneSpec(name="check", surface="dashboard"),
-                ],
+                scenes=[SceneSpec(name="check", surface="dashboard")],
             ),
         ],
     )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "director"
-    spec.personas = [persona]
-    spec.surfaces = []
-    spec.workspaces = []
-    spec.domain.entities = []
-    return spec
+    return _app([rhythm], personas=["director"])
 
 
-# One serialization contract: the `get` operation includes per-phase
-# metadata field X. Collapsed from three "get_rhythm includes ..." tests
-# (kind / kind-null-when-unset / cadence) — #1530.
+def _run(op: str, app: MagicMock, args: dict[str, Any] | None = None, project: Path | None = None):
+    """Run one rhythm operation against `app`; return the decoded JSON."""
+    from dazzle.mcp.server.handlers import rhythm as handlers
+
+    project = project or Path("/fake")
+    with patch(_LOADER, return_value=app):
+        if op in _TOOL_OPS:
+            from dazzle.mcp.server.handlers_consolidated import handle_rhythm
+
+            raw = handle_rhythm(
+                {"operation": op, "_resolved_project_path": project, **(args or {})}
+            )
+        else:
+            raw = getattr(handlers, f"{op}_rhythm_handler")(project, args or {})
+    return json.loads(raw)
+
+
+# ---------------------------------------------------------------------------
+# list / get
+# ---------------------------------------------------------------------------
+
+
 @pytest.mark.parametrize(
-    ("spec_fixture", "rhythm_name", "field", "expected_by_phase"),
+    ("app_builder", "expected"),
     [
         pytest.param(
-            "mock_appspec_with_kinds",
-            "onboarding",
-            "kind",
-            ["active", "ambient"],
-            id="kind",
+            _onboarding_app,
+            {"phase_count": 1, "ambient_phases": 0, "scene_count": 2},
+            id="single-phase-no-ambient",
         ),
         pytest.param(
-            "mock_appspec",
-            "onboarding",
-            "kind",
-            [None],
-            id="kind-null-when-unset",
+            _kinds_app,
+            {"phase_count": 2, "ambient_phases": 1, "scene_count": 2},
+            id="counts-ambient-phases",
         ),
+    ],
+)
+def test_list_rhythms(app_builder, expected: dict):
+    data = _run("list", app_builder())
+    assert data == {
+        "rhythms": [
+            {
+                "name": "onboarding",
+                "title": "New User Onboarding",
+                "persona": "new_user",
+                "cadence": "quarterly",
+                **expected,
+            }
+        ]
+    }
+
+
+def test_get_rhythm_returns_phases_and_scenes():
+    data = _run("get", _onboarding_app(), {"name": "onboarding"})
+    assert (data["name"], data["persona"], data["cadence"]) == (
+        "onboarding",
+        "new_user",
+        "quarterly",
+    )
+    [phase] = data["phases"]
+    assert phase["name"] == "discovery"
+    assert phase["scenes"] == [
+        {
+            "name": "browse",
+            "title": "Browse Courses",
+            "surface": "course_list",
+            "actions": [],
+            "entity": None,
+            "expects": None,
+            "story": None,
+        },
+        {
+            "name": "enroll",
+            "title": "Enroll",
+            "surface": "course_detail",
+            "actions": ["submit"],
+            "entity": "Enrollment",
+            "expects": None,
+            "story": None,
+        },
+    ]
+
+
+# One serialization contract: `get` includes per-phase metadata field X
+# (kind / kind-null-when-unset / cadence) — #1530.
+@pytest.mark.parametrize(
+    ("app_builder", "rhythm_name", "field", "expected_by_phase"),
+    [
+        pytest.param(_kinds_app, "onboarding", "kind", ["active", "ambient"], id="kind"),
+        pytest.param(_onboarding_app, "onboarding", "kind", [None], id="kind-null-when-unset"),
         pytest.param(
-            "mock_appspec_fiscal_cadence",
+            _fiscal_app,
             "fiscal",
             "cadence",
             ["January-March", "ad-hoc, between deadlines"],
@@ -330,1684 +289,803 @@ def mock_appspec_fiscal_cadence():
         ),
     ],
 )
-def test_get_rhythm_includes_phase_field(
-    request: pytest.FixtureRequest,
-    spec_fixture: str,
-    rhythm_name: str,
-    field: str,
-    expected_by_phase: list,
-):
-    from dazzle.mcp.server.handlers.rhythm import get_rhythm_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=request.getfixturevalue(spec_fixture),
-    ):
-        result = get_rhythm_handler(Path("/fake"), {"name": rhythm_name})
-    data = json.loads(result)
-    for i, expected in enumerate(expected_by_phase):
-        assert data["phases"][i][field] == expected
+def test_get_rhythm_includes_phase_field(app_builder, rhythm_name, field, expected_by_phase):
+    data = _run("get", app_builder(), {"name": rhythm_name})
+    assert [phase[field] for phase in data["phases"]] == expected_by_phase
 
 
-def test_coverage_rhythms(mock_appspec):
-    from dazzle.mcp.server.handlers.rhythm import coverage_rhythms_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec,
-    ):
-        result = coverage_rhythms_handler(Path("/fake"), {})
-        data = json.loads(result)
-        assert "personas_with_rhythms" in data
-        assert "personas_without_rhythms" in data
-        assert "surfaces_exercised" in data
-        assert "surfaces_unexercised" in data
-
-
-def test_evaluate_submit_scores_persists(tmp_path, mock_appspec):
-    """submit_scores action writes evaluation to .dazzle/evaluations/."""
-    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
-
-    scores = [
-        {
-            "scene_name": "browse",
-            "phase_name": "discovery",
-            "dimensions": [
-                {"dimension": "arrival", "score": "pass", "evidence": "ok"},
-                {"dimension": "orientation", "score": "pass", "evidence": "ok"},
-                {"dimension": "action", "score": "pass", "evidence": "ok"},
-                {"dimension": "completion", "score": "pass", "evidence": "ok"},
-                {"dimension": "confidence", "score": "pass", "evidence": "ok"},
-            ],
-            "gap_type": "none",
-            "story_ref": None,
-        }
-    ]
-    project = tmp_path / "project"
-    project.mkdir()
-    (project / ".dazzle").mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec,
-    ):
-        result = evaluate_rhythm_handler(
-            project,
-            {"name": "onboarding", "action": "submit_scores", "scores": scores},
-        )
-    data = json.loads(result)
-    assert "stored" in data
-    assert data["count"] == 1
-
-    eval_dir = project / ".dazzle" / "evaluations"
-    assert eval_dir.exists()
-    eval_files = list(eval_dir.glob("eval-*.json"))
-    assert len(eval_files) == 1
-
-    stored = json.loads(eval_files[0].read_text())
-    assert stored["rhythm"] == "onboarding"
-    assert len(stored["evaluations"]) == 1
-    assert stored["evaluations"][0]["scene_name"] == "browse"
-
-
-def test_evaluate_submit_scores_validates_rhythm(tmp_path, mock_appspec):
-    """submit_scores returns error when rhythm not found."""
-    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
-
-    project = tmp_path / "project"
-    project.mkdir()
-    (project / ".dazzle").mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec,
-    ):
-        result = evaluate_rhythm_handler(
-            project,
+# Every rhythm-by-name operation answers an unknown name with the same error
+# document rather than an empty result.
+@pytest.mark.parametrize(
+    ("op", "args"),
+    [
+        pytest.param("get", {"name": "nonexistent"}, id="get"),
+        pytest.param("evaluate", {"name": "nonexistent"}, id="evaluate"),
+        pytest.param(
+            "evaluate",
             {"name": "nonexistent", "action": "submit_scores", "scores": []},
-        )
-    data = json.loads(result)
-    assert "error" in data
+            id="evaluate-submit-scores",
+        ),
+        pytest.param("fidelity", {"name": "nonexistent"}, id="fidelity"),
+    ],
+)
+def test_unknown_rhythm_is_error(op: str, args: dict):
+    assert _run(op, _onboarding_app(), args) == {"error": "Rhythm 'nonexistent' not found"}
 
 
-def test_evaluate_returns_stored_scores(tmp_path, mock_appspec):
-    """evaluate action returns stored scores alongside structural checks."""
-    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
+# ---------------------------------------------------------------------------
+# evaluate — structural checks
+# ---------------------------------------------------------------------------
 
+
+def _check_row(c: dict) -> tuple:
+    """(check, scene(s), subject, pass, advisory) — one row per emitted check."""
+    scene = tuple(c["scenes"]) if "scenes" in c else c.get("scene")
+    subject = c.get("target") or c.get("action") or c.get("surface")
+    return (c["check"], scene, subject, c["pass"], c.get("advisory", False))
+
+
+def _reuse_app(first_expects: str | None, second_expects: str | None) -> MagicMock:
+    """`dashboard` reused by two scenes with the given expects."""
+    return _app(
+        [
+            _rhythm(
+                SceneSpec(name="s1", surface="dashboard", expects=first_expects),
+                SceneSpec(name="s2", surface="dashboard", expects=second_expects),
+            )
+        ],
+        surfaces=[_surface("dashboard")],
+    )
+
+
+# One evaluation contract: every scene emits its structural checks, advisory
+# checks (action vocabulary, surface specialisation) never count toward the
+# `summary`, and `advisory_warnings` appears only when an advisory fails. No
+# scores are stored under /fake, so `scene_scores` is always null here.
+@pytest.mark.parametrize(
+    ("app", "name", "rows", "summary", "advisory_warnings"),
+    [
+        # Standard verbs (`submit`) pass silently; entity checks run for the
+        # entity-bound scene.
+        pytest.param(
+            _onboarding_app(),
+            "onboarding",
+            [
+                ("persona_exists", None, "new_user", True, False),
+                ("surface_exists", "browse", "course_list", True, False),
+                ("surface_exists", "enroll", "course_detail", True, False),
+                ("action_standard", "enroll", "submit", True, True),
+                ("entity_exists", "enroll", "Enrollment", True, False),
+                ("surface_entity_match", "enroll", "course_detail", True, False),
+            ],
+            "5/5 checks passed",
+            None,
+            id="standard-actions-no-advisory",
+        ),
+        # A workspace target uses workspace_exists, never surface_exists.
+        pytest.param(
+            _app(
+                [
+                    _rhythm(
+                        SceneSpec(
+                            name="dashboard", surface="customer_dashboard", actions=["browse"]
+                        )
+                    )
+                ],
+                workspaces=["customer_dashboard"],
+            ),
+            "r1",
+            [
+                ("persona_exists", None, "user", True, False),
+                ("workspace_exists", "dashboard", "customer_dashboard", True, False),
+                ("action_standard", "dashboard", "browse", True, True),
+            ],
+            "2/2 checks passed",
+            None,
+            id="workspace-target-uses-workspace-check",
+        ),
+        # Neither a surface nor a workspace → surface_exists fails.
+        pytest.param(
+            _app([_rhythm(SceneSpec(name="s1", surface="nonexistent"))]),
+            "r1",
+            [
+                ("persona_exists", None, "user", True, False),
+                ("surface_exists", "s1", "nonexistent", False, False),
+            ],
+            "1/2 checks passed",
+            None,
+            id="unknown-target-fails",
+        ),
+        # Non-standard verbs fail as advisories only.
+        pytest.param(
+            _app(
+                [
+                    _rhythm(
+                        SceneSpec(name="s1", surface="sf1", actions=["submit", "wiggle", "yeet"])
+                    )
+                ],
+                surfaces=[_surface("sf1")],
+            ),
+            "r1",
+            [
+                ("persona_exists", None, "user", True, False),
+                ("surface_exists", "s1", "sf1", True, False),
+                ("action_standard", "s1", "submit", True, True),
+                ("action_standard", "s1", "wiggle", False, True),
+                ("action_standard", "s1", "yeet", False, True),
+            ],
+            "2/2 checks passed",
+            2,
+            id="nonstandard-actions-advisory-not-in-summary",
+        ),
+        # One surface, two scenes, two different expects → specialisation advisory.
+        pytest.param(
+            _reuse_app("confirmation_statement_visible", "ct600_deadline_with_filing_status"),
+            "r1",
+            [
+                ("persona_exists", None, "user", True, False),
+                ("surface_exists", "s1", "dashboard", True, False),
+                ("surface_exists", "s2", "dashboard", True, False),
+                ("surface_specialization", ("s1", "s2"), "dashboard", False, True),
+            ],
+            "3/3 checks passed",
+            1,
+            id="surface-reuse-different-expects-advisory",
+        ),
+        # Same (or absent) expects on a reused surface → no specialisation check.
+        pytest.param(
+            _reuse_app("data_visible", "data_visible"),
+            "r1",
+            [
+                ("persona_exists", None, "user", True, False),
+                ("surface_exists", "s1", "dashboard", True, False),
+                ("surface_exists", "s2", "dashboard", True, False),
+            ],
+            "3/3 checks passed",
+            None,
+            id="surface-reuse-same-expects-no-advisory",
+        ),
+        pytest.param(
+            _reuse_app(None, None),
+            "r1",
+            [
+                ("persona_exists", None, "user", True, False),
+                ("surface_exists", "s1", "dashboard", True, False),
+                ("surface_exists", "s2", "dashboard", True, False),
+            ],
+            "3/3 checks passed",
+            None,
+            id="surface-reuse-no-expects-no-advisory",
+        ),
+    ],
+)
+def test_evaluate_checks(app, name, rows, summary, advisory_warnings):
+    data = _run("evaluate", app, {"name": name})
+    assert [_check_row(c) for c in data["checks"]] == rows
+    assert data["summary"] == summary
+    assert data["scene_scores"] is None
+    assert data.get("advisory_warnings") == advisory_warnings
+    if advisory_warnings:
+        # The failing advisory carries the standard vocabulary as a hint.
+        assert {"browse", "submit"} <= set(data["action_vocabulary"])
+    else:
+        assert "action_vocabulary" not in data
+    for check in data["checks"]:
+        if check["check"] == "surface_specialization":
+            assert check["surface"] in check["message"]
+
+
+def test_submitted_scores_persist_and_return_on_evaluate(tmp_path):
+    """`submit_scores` writes `.dazzle/evaluations/eval-*.json`; a later
+    structural `evaluate` returns those scores as `scene_scores`."""
     scores = [
         {
             "scene_name": "browse",
             "phase_name": "discovery",
             "dimensions": [
-                {"dimension": "arrival", "score": "pass", "evidence": "ok"},
-                {"dimension": "orientation", "score": "pass", "evidence": "ok"},
-                {"dimension": "action", "score": "pass", "evidence": "ok"},
-                {"dimension": "completion", "score": "pass", "evidence": "ok"},
-                {"dimension": "confidence", "score": "pass", "evidence": "ok"},
+                {"dimension": d, "score": "pass", "evidence": "ok"}
+                for d in ("arrival", "orientation", "action", "completion", "confidence")
             ],
             "gap_type": "none",
             "story_ref": None,
         }
     ]
-    project = tmp_path / "project"
-    project.mkdir()
-    (project / ".dazzle").mkdir()
+    app = _onboarding_app()
 
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec,
-    ):
-        # Submit scores first
-        evaluate_rhythm_handler(
-            project,
-            {"name": "onboarding", "action": "submit_scores", "scores": scores},
-        )
+    stored = _run(
+        "evaluate",
+        app,
+        {"name": "onboarding", "action": "submit_scores", "scores": scores},
+        project=tmp_path,
+    )
+    [eval_file] = (tmp_path / ".dazzle" / "evaluations").glob("eval-*.json")
+    assert stored == {"stored": str(eval_file), "count": 1}
+    on_disk = json.loads(eval_file.read_text())
+    assert on_disk["rhythm"] == "onboarding"
+    assert [e["scene_name"] for e in on_disk["evaluations"]] == ["browse"]
 
-        # Now run structural evaluate — should include scene_scores
-        result = evaluate_rhythm_handler(
-            project,
-            {"name": "onboarding"},
-        )
-    data = json.loads(result)
-    assert "checks" in data
-    assert "scene_scores" in data
-    assert data["scene_scores"] is not None
-    assert len(data["scene_scores"]) == 1
-    assert data["scene_scores"][0]["scene_name"] == "browse"
+    evaluated = _run("evaluate", app, {"name": "onboarding"}, project=tmp_path)
+    assert evaluated["summary"] == "5/5 checks passed"
+    assert [s["scene_name"] for s in evaluated["scene_scores"]] == ["browse"]
 
 
-@pytest.fixture
-def mock_appspec_coverage_ambient():
-    """Two personas: one with an ambient phase, one without."""
+# ---------------------------------------------------------------------------
+# coverage
+# ---------------------------------------------------------------------------
 
-    rhythm_with_ambient = RhythmSpec(
+
+def _ambient_split_app() -> MagicMock:
+    """`power_user` has an ambient phase; `new_user` does not."""
+    with_ambient = RhythmSpec(
         name="daily_check",
         title="Daily Check",
         persona="power_user",
-        cadence="daily",
         phases=[
             PhaseSpec(
                 name="work",
                 kind=PhaseKind.ACTIVE,
-                scenes=[
-                    SceneSpec(name="do_work", title="Do Work", surface="dashboard"),
-                ],
+                scenes=[SceneSpec(name="do_work", surface="dashboard")],
             ),
             PhaseSpec(
                 name="monitoring",
                 kind=PhaseKind.AMBIENT,
-                scenes=[
-                    SceneSpec(name="alerts", title="Alerts", surface="alerts_panel"),
-                ],
+                scenes=[SceneSpec(name="alerts", surface="alerts_panel")],
             ),
         ],
     )
-    rhythm_without_ambient = RhythmSpec(
+    without_ambient = _rhythm(
+        SceneSpec(name="register", surface="signup"),
         name="onboarding",
-        title="Onboarding",
         persona="new_user",
-        cadence="once",
-        phases=[
-            PhaseSpec(
-                name="setup",
-                kind=PhaseKind.ACTIVE,
-                scenes=[
-                    SceneSpec(name="register", title="Register", surface="signup"),
-                ],
-            ),
-        ],
+        kind=PhaseKind.ACTIVE,
     )
-
-    spec = MagicMock()
-    spec.rhythms = [rhythm_with_ambient, rhythm_without_ambient]
-
-    p1 = MagicMock()
-    p1.id = "power_user"
-    p2 = MagicMock()
-    p2.id = "new_user"
-    spec.personas = [p1, p2]
-
-    s1 = MagicMock()
-    s1.name = "dashboard"
-    s1.access = None
-    s2 = MagicMock()
-    s2.name = "alerts_panel"
-    s2.access = None
-    s3 = MagicMock()
-    s3.name = "signup"
-    s3.access = None
-    spec.surfaces = [s1, s2, s3]
-    spec.domain.entities = []
-    return spec
-
-
-def test_coverage_includes_ambient_analysis(mock_appspec_coverage_ambient):
-    """Coverage output includes ambient persona analysis."""
-    from dazzle.mcp.server.handlers.rhythm import coverage_rhythms_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec_coverage_ambient,
-    ):
-        result = coverage_rhythms_handler(Path("/fake"), {})
-        data = json.loads(result)
-        assert "personas_with_ambient" in data
-        assert "personas_without_ambient" in data
-        assert data["personas_with_ambient"] == ["power_user"]
-        assert data["personas_without_ambient"] == ["new_user"]
-
-
-def test_coverage_persona_scoped(mock_appspec):
-    """Coverage includes per-persona scoped metrics."""
-    from dazzle.mcp.server.handlers.rhythm import coverage_rhythms_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec,
-    ):
-        result = coverage_rhythms_handler(Path("/fake"), {})
-        data = json.loads(result)
-        assert "persona_coverage" in data
-        pc = data["persona_coverage"]
-        assert "new_user" in pc
-        # Both surfaces have access=None (no auth required) → both accessible
-        assert pc["new_user"]["accessible_surfaces"] == 2
-        assert pc["new_user"]["exercised"] == 2
-        assert pc["new_user"]["coverage_pct"] == 100
-
-
-def test_coverage_persona_scoped_with_acl():
-    """Persona-scoped coverage respects allow_personas ACL."""
-    from dazzle.mcp.server.handlers.rhythm import coverage_rhythms_handler
-
-    rhythm = RhythmSpec(
-        name="director_arc",
-        title="Director Arc",
-        persona="director",
-        phases=[
-            PhaseSpec(
-                name="fiscal",
-                scenes=[
-                    SceneSpec(name="review", surface="budget_review"),
-                    SceneSpec(name="approve", surface="approval_queue"),
-                ],
-            ),
-        ],
-    )
-
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-
-    persona = MagicMock()
-    persona.id = "director"
-    spec.personas = [persona]
-
-    # 4 surfaces: 2 accessible to director, 2 restricted to other roles
-    s1 = MagicMock()
-    s1.name = "budget_review"
-    s1.access = MagicMock()
-    s1.access.require_auth = True
-    s1.access.allow_personas = ["director", "finance"]
-    s1.access.deny_personas = []
-
-    s2 = MagicMock()
-    s2.name = "approval_queue"
-    s2.access = MagicMock()
-    s2.access.require_auth = True
-    s2.access.allow_personas = ["director"]
-    s2.access.deny_personas = []
-
-    s3 = MagicMock()
-    s3.name = "agent_capacity"
-    s3.access = MagicMock()
-    s3.access.require_auth = True
-    s3.access.allow_personas = ["agent_manager"]
-    s3.access.deny_personas = []
-
-    s4 = MagicMock()
-    s4.name = "public_page"
-    s4.access = None  # No auth required
-
-    spec.surfaces = [s1, s2, s3, s4]
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = coverage_rhythms_handler(Path("/fake"), {})
-        data = json.loads(result)
-
-    pc = data["persona_coverage"]["director"]
-    # director can access: budget_review, approval_queue, public_page (3 of 4)
-    assert pc["accessible_surfaces"] == 3
-    # rhythm exercises: budget_review, approval_queue (2 of 3 accessible)
-    assert pc["exercised"] == 2
-    assert pc["coverage_pct"] == 67  # 2/3 rounded
-    assert pc["unexercised"] == ["public_page"]
-
-
-def test_coverage_workspace_targets():
-    """Scenes targeting workspaces are tracked separately in coverage."""
-    from dazzle.mcp.server.handlers.rhythm import coverage_rhythms_handler
-
-    rhythm = RhythmSpec(
-        name="director_arc",
-        title="Director Arc",
-        persona="director",
-        phases=[
-            PhaseSpec(
-                name="daily",
-                scenes=[
-                    SceneSpec(name="arrive", surface="director_dash"),
-                    SceneSpec(name="review", surface="budget_list"),
-                ],
-            ),
-        ],
-    )
-
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-
-    persona = MagicMock()
-    persona.id = "director"
-    spec.personas = [persona]
-
-    s1 = MagicMock()
-    s1.name = "budget_list"
-    s1.access = None
-    spec.surfaces = [s1]
-
-    w1 = MagicMock()
-    w1.name = "director_dash"
-    spec.workspaces = [w1]
-
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = coverage_rhythms_handler(Path("/fake"), {})
-        data = json.loads(result)
-
-    assert data["total_workspaces"] == 1
-    assert data["workspaces_exercised"] == ["director_dash"]
-    assert data["workspaces_unexercised"] == []
-    assert "budget_list" in data["surfaces_exercised"]
-    # director_dash should NOT appear in surfaces_exercised
-    assert "director_dash" not in data["surfaces_exercised"]
-
-    pc = data["persona_coverage"]["director"]
-    assert pc["accessible_workspaces"] == 1
-    assert pc["exercised"] == 2  # budget_list + director_dash
-
-
-def test_coverage_persona_deny_list():
-    """Persona denied by deny_personas is excluded from surface access."""
-    from dazzle.mcp.server.handlers.rhythm import coverage_rhythms_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="intern",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="s1", surface="public_docs")],
-            ),
-        ],
-    )
-
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-
-    persona = MagicMock()
-    persona.id = "intern"
-    spec.personas = [persona]
-
-    s1 = MagicMock()
-    s1.name = "public_docs"
-    s1.access = None
-
-    s2 = MagicMock()
-    s2.name = "admin_panel"
-    s2.access = MagicMock()
-    s2.access.require_auth = True
-    s2.access.allow_personas = []  # all authenticated
-    s2.access.deny_personas = ["intern"]
-
-    spec.surfaces = [s1, s2]
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = coverage_rhythms_handler(Path("/fake"), {})
-        data = json.loads(result)
-
-    pc = data["persona_coverage"]["intern"]
-    assert pc["accessible_surfaces"] == 1  # only public_docs
-    assert pc["exercised"] == 1
-    assert pc["coverage_pct"] == 100
-
-
-def test_evaluate_no_stored_scores(mock_appspec):
-    """evaluate action returns null scene_scores when none stored."""
-    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec,
-    ):
-        result = evaluate_rhythm_handler(Path("/fake"), {"name": "onboarding"})
-    data = json.loads(result)
-    assert "scene_scores" in data
-    assert data["scene_scores"] is None
-
-
-# ---------------------------------------------------------------------------
-# Gaps analysis tests
-# ---------------------------------------------------------------------------
-
-
-def _make_story(
-    story_id: str,
-    actor: str = "user",
-    status: StoryStatus = StoryStatus.ACCEPTED,
-) -> StorySpec:
-    return StorySpec(
-        story_id=story_id,
-        title=f"Story {story_id}",
-        persona=actor,
-        trigger=StoryTrigger.USER_CLICK,
-        entities=["Task"],
-        status=status,
-        created_at="2026-01-01T00:00:00",
+    return _app(
+        [with_ambient, without_ambient],
+        personas=["power_user", "new_user"],
+        surfaces=[_surface("dashboard"), _surface("alerts_panel"), _surface("signup")],
     )
 
 
-def _make_gaps_appspec(
-    *,
-    rhythms: list[RhythmSpec] | None = None,
-    stories: list[StorySpec] | None = None,
-    persona_ids: list[str] | None = None,
-) -> MagicMock:
-    spec = MagicMock()
-    spec.rhythms = rhythms or []
-    spec.stories = stories or []
-    personas = []
-    for pid in persona_ids or []:
-        p = MagicMock()
-        p.id = pid
-        personas.append(p)
-    spec.personas = personas
-    spec.surfaces = []
-    spec.workspaces = []
-    spec.domain.entities = []
-    return spec
+def _cov(accessible_surfaces, accessible_workspaces, exercised, pct, unexercised):
+    return {
+        "accessible_surfaces": accessible_surfaces,
+        "accessible_workspaces": accessible_workspaces,
+        "exercised": exercised,
+        "coverage_pct": pct,
+        "unexercised": unexercised,
+    }
 
 
-def _gaps_rhythm(*scenes: SceneSpec, kind: PhaseKind | None = None) -> RhythmSpec:
-    """Single-phase rhythm 'r1' for persona 'user' — the gaps-test shape."""
-    return RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[PhaseSpec(name="p1", kind=kind, scenes=list(scenes))],
-    )
-
-
-# One classification contract: each spec shape produces a gap of the
-# expected kind + severity (+ description mention). Collapsed from six
-# per-kind tests (#1530). `exact_one=False` rows keep the original
-# `>= 1` count assertion.
+# One coverage contract: persona-level and surface/workspace-level coverage
+# over all rhythms. Per-persona coverage is scoped to what the persona can
+# reach: open surfaces (no ACL) count, `allow_personas` / `deny_personas`
+# exclude, workspaces always count and are tracked apart from surfaces.
 @pytest.mark.parametrize(
-    ("rhythms", "stories", "persona_ids", "kind", "severity", "desc_contains", "exact_one"),
+    ("app", "expected"),
     [
-        # Scene referencing non-existent story → blocking capability gap.
         pytest.param(
-            [_gaps_rhythm(SceneSpec(name="s1", surface="sf1", story="ST-999"))],
+            _onboarding_app(),
+            {
+                "personas_with_rhythms": ["new_user"],
+                "personas_without_rhythms": [],
+                "surfaces_exercised": ["course_detail", "course_list"],
+                "surfaces_unexercised": [],
+                "persona_coverage": {"new_user": _cov(2, 0, 2, 100, [])},
+            },
+            id="open-surfaces-all-accessible",
+        ),
+        pytest.param(
+            _ambient_split_app(),
+            {
+                "personas_with_ambient": ["power_user"],
+                "personas_without_ambient": ["new_user"],
+            },
+            id="ambient-persona-split",
+        ),
+        # director reaches budget_review, approval_queue (allow-listed) and
+        # public_page (no ACL), not agent_capacity: 2 of 3 exercised.
+        pytest.param(
+            _app(
+                [
+                    _rhythm(
+                        SceneSpec(name="review", surface="budget_review"),
+                        SceneSpec(name="approve", surface="approval_queue"),
+                        persona="director",
+                    )
+                ],
+                personas=["director"],
+                surfaces=[
+                    _surface("budget_review", access=_acl(allow=["director", "finance"])),
+                    _surface("approval_queue", access=_acl(allow=["director"])),
+                    _surface("agent_capacity", access=_acl(allow=["agent_manager"])),
+                    _surface("public_page"),
+                ],
+            ),
+            {"persona_coverage": {"director": _cov(3, 0, 2, 67, ["public_page"])}},
+            id="allow-list-scopes-persona",
+        ),
+        pytest.param(
+            _app(
+                [_rhythm(SceneSpec(name="s1", surface="public_docs"), persona="intern")],
+                personas=["intern"],
+                surfaces=[
+                    _surface("public_docs"),
+                    _surface("admin_panel", access=_acl(deny=["intern"])),
+                ],
+            ),
+            {"persona_coverage": {"intern": _cov(1, 0, 1, 100, [])}},
+            id="deny-list-excludes-persona",
+        ),
+        pytest.param(
+            _app(
+                [
+                    _rhythm(
+                        SceneSpec(name="arrive", surface="director_dash"),
+                        SceneSpec(name="review", surface="budget_list"),
+                        persona="director",
+                    )
+                ],
+                personas=["director"],
+                surfaces=[_surface("budget_list")],
+                workspaces=["director_dash"],
+            ),
+            {
+                "total_workspaces": 1,
+                "workspaces_exercised": ["director_dash"],
+                "workspaces_unexercised": [],
+                "surfaces_exercised": ["budget_list"],
+                "persona_coverage": {"director": _cov(1, 1, 2, 100, [])},
+            },
+            id="workspace-targets-tracked-apart",
+        ),
+    ],
+)
+def test_coverage(app, expected: dict):
+    data = _run("coverage", app)
+    assert {key: data[key] for key in expected} == expected
+
+
+# ---------------------------------------------------------------------------
+# gaps
+# ---------------------------------------------------------------------------
+
+
+# One classification contract: each spec shape produces exactly one gap of
+# the expected kind + severity + description mention (#1530).
+@pytest.mark.parametrize(
+    ("rhythms", "stories", "persona_ids", "kind", "severity", "desc_contains"),
+    [
+        pytest.param(
+            [_rhythm(SceneSpec(name="s1", surface="sf1", story="ST-999"))],
             [],
             ["user"],
             "capability",
             "blocking",
             "ST-999",
-            False,
             id="missing-story-blocking",
         ),
-        # Scene referencing DRAFT story → blocking capability gap.
         pytest.param(
-            [_gaps_rhythm(SceneSpec(name="s1", surface="sf1", story="ST-001"))],
-            [_make_story("ST-001", actor="user", status=StoryStatus.DRAFT)],
+            [_rhythm(SceneSpec(name="s1", surface="sf1", story="ST-001"))],
+            [_story("ST-001", status=StoryStatus.DRAFT)],
             ["user"],
             "capability",
             "blocking",
             "DRAFT",
-            False,
             id="draft-story-blocking",
         ),
-        # Scene without story ref → advisory unmapped gap.
         pytest.param(
-            [_gaps_rhythm(SceneSpec(name="s1", surface="sf1"))],
+            [_rhythm(SceneSpec(name="s1", surface="sf1"))],
             [],
             ["user"],
             "unmapped",
             "advisory",
-            None,
-            True,
+            "s1",
             id="unmapped-scene-advisory",
         ),
-        # Story not referenced by any scene → advisory orphan gap.
         pytest.param(
-            [_gaps_rhythm(SceneSpec(name="s1", surface="sf1", story="ST-002"))],
-            [_make_story("ST-001", actor="user"), _make_story("ST-002", actor="user")],
+            [_rhythm(SceneSpec(name="s1", surface="sf1", story="ST-002"))],
+            [_story("ST-001"), _story("ST-002")],
             ["user"],
             "orphan",
             "advisory",
             "ST-001",
-            True,
             id="orphan-story-advisory",
         ),
-        # Persona with rhythm but no ambient phase → advisory ambient gap.
         pytest.param(
-            [
-                _gaps_rhythm(
-                    SceneSpec(name="s1", surface="sf1", story="ST-001"),
-                    kind=PhaseKind.ACTIVE,
-                )
-            ],
-            [_make_story("ST-001", actor="user")],
+            [_rhythm(SceneSpec(name="s1", surface="sf1", story="ST-001"), kind=PhaseKind.ACTIVE)],
+            [_story("ST-001")],
             ["user"],
             "ambient",
             "advisory",
             "user",
-            True,
             id="no-ambient-phase-advisory",
         ),
-        # Persona with stories but no rhythm → advisory unscored gap.
         pytest.param(
             [],
-            [_make_story("ST-001", actor="lonely_persona")],
+            [_story("ST-001", actor="lonely_persona")],
             ["lonely_persona"],
             "unscored",
             "advisory",
             "lonely_persona",
-            True,
             id="unscored-persona-advisory",
         ),
     ],
 )
 def test_gaps_classification(
-    tmp_path,
-    rhythms: list[RhythmSpec],
-    stories: list[StorySpec],
-    persona_ids: list[str],
-    kind: str,
-    severity: str,
-    desc_contains: str | None,
-    exact_one: bool,
+    tmp_path, rhythms, stories, persona_ids, kind, severity, desc_contains
 ):
-    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
-
-    app = _make_gaps_appspec(rhythms=rhythms, stories=stories, persona_ids=persona_ids)
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(gaps_rhythm_handler(project, {}))
-
-    matched = [g for g in result["gaps"] if g["kind"] == kind]
-    if exact_one:
-        assert len(matched) == 1
-    else:
-        assert len(matched) >= 1
-    assert matched[0]["severity"] == severity
-    if desc_contains is not None:
-        assert desc_contains in matched[0]["description"]
+    app = _app(rhythms, stories=stories, personas=persona_ids)
+    result = _run("gaps", app, project=tmp_path)
+    [gap] = [g for g in result["gaps"] if g["kind"] == kind]
+    assert gap["severity"] == severity
+    assert desc_contains in gap["description"]
 
 
-def test_gaps_roadmap_blocking_first(tmp_path):
-    """Blocking gaps appear before advisory in roadmap_order."""
-    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(name="unmapped_scene", surface="sf1"),  # advisory
-                    SceneSpec(name="bad_ref", surface="sf2", story="ST-NOPE"),  # blocking
-                ],
-            ),
-        ],
+def test_gaps_report_orders_summarises_and_persists(tmp_path):
+    """Blocking gaps lead `roadmap_order`, the summary counts every gap by
+    kind, severity and persona, and the report is written to `gaps-*.json`.
+    The rhythm's phase has no kind, so the persona also gets an ambient gap."""
+    rhythm = _rhythm(
+        SceneSpec(name="unmapped_scene", surface="sf1"),  # advisory: unmapped
+        SceneSpec(name="bad_ref", surface="sf2", story="ST-NOPE"),  # blocking: capability
     )
-    app = _make_gaps_appspec(rhythms=[rhythm], stories=[], persona_ids=["user"])
-    project = tmp_path / "proj"
-    project.mkdir()
+    app = _app([rhythm], stories=[_story("ST-ORPHAN")])  # advisory: orphan
+    result = _run("gaps", app, project=tmp_path)
 
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(gaps_rhythm_handler(project, {}))
-
-    roadmap = result["roadmap_order"]
-    assert len(roadmap) >= 2
-    blocking_indices = [i for i, g in enumerate(roadmap) if g["severity"] == "blocking"]
-    advisory_indices = [i for i, g in enumerate(roadmap) if g["severity"] == "advisory"]
-    assert blocking_indices
-    assert advisory_indices
-    assert max(blocking_indices) < min(advisory_indices)
-
-
-def test_gaps_summary_counts(tmp_path):
-    """Summary totals are correct."""
-    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
-
-    orphan_story = _make_story("ST-ORPHAN", actor="user")
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(name="s1", surface="sf1"),  # unmapped
-                    SceneSpec(name="s2", surface="sf2", story="ST-NOPE"),  # capability
-                ],
-            ),
-        ],
-    )
-    app = _make_gaps_appspec(rhythms=[rhythm], stories=[orphan_story], persona_ids=["user"])
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(gaps_rhythm_handler(project, {}))
-
-    summary = result["summary"]
-    assert summary["total"] == len(result["gaps"])
-    assert sum(summary["by_kind"].values()) == summary["total"]
-    assert sum(summary["by_severity"].values()) == summary["total"]
-
-
-def test_gaps_persists_report(tmp_path):
-    """Report written to .dazzle/evaluations/gaps-*.json."""
-    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="s1", surface="sf1")],
-            ),
-        ],
-    )
-    app = _make_gaps_appspec(rhythms=[rhythm], stories=[], persona_ids=["user"])
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        gaps_rhythm_handler(project, {})
-
-    eval_dir = project / ".dazzle" / "evaluations"
-    assert eval_dir.exists()
-    gap_files = list(eval_dir.glob("gaps-*.json"))
-    assert len(gap_files) == 1
-    stored = json.loads(gap_files[0].read_text())
-    assert "gaps" in stored
-    assert "summary" in stored
-    assert "roadmap_order" in stored
+    assert [g["severity"] for g in result["roadmap_order"]] == [
+        "blocking",
+        "advisory",
+        "advisory",
+        "advisory",
+    ]
+    assert result["summary"] == {
+        "total": 4,
+        "by_kind": {"unmapped": 1, "capability": 1, "orphan": 1, "ambient": 1},
+        "by_severity": {"advisory": 3, "blocking": 1},
+        "by_persona": {"user": 4},
+    }
+    [report] = (tmp_path / ".dazzle" / "evaluations").glob("gaps-*.json")
+    assert json.loads(report.read_text()) == result
 
 
 def test_gaps_layers_evaluated_failures(tmp_path):
-    """Evaluation failures from stored eval files are layered in."""
-    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
-
-    story = _make_story("ST-001", actor="user")
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
-            ),
-        ],
+    """A failed dimension in a stored `eval-*.json` becomes a blocking gap."""
+    app = _app(
+        [_rhythm(SceneSpec(name="s1", surface="sf1", story="ST-001"))],
+        stories=[_story("ST-001")],
     )
-    app = _make_gaps_appspec(rhythms=[rhythm], stories=[story], persona_ids=["user"])
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    # Write an eval file with a failure
-    eval_dir = project / ".dazzle" / "evaluations"
+    eval_dir = tmp_path / ".dazzle" / "evaluations"
     eval_dir.mkdir(parents=True)
-    eval_data = {
-        "rhythm": "r1",
-        "timestamp": "20260101-000000",
-        "evaluations": [
+    (eval_dir / "eval-20260101-000000.json").write_text(
+        json.dumps(
             {
-                "scene_name": "s1",
-                "phase_name": "p1",
-                "dimensions": [
-                    {"dimension": "action", "score": "fail", "evidence": "broken"},
+                "rhythm": "r1",
+                "timestamp": "20260101-000000",
+                "evaluations": [
+                    {
+                        "scene_name": "s1",
+                        "phase_name": "p1",
+                        "dimensions": [
+                            {"dimension": "action", "score": "fail", "evidence": "broken"}
+                        ],
+                        "gap_type": "capability",
+                        "story_ref": "ST-001",
+                    }
                 ],
-                "gap_type": "capability",
-                "story_ref": "ST-001",
-            },
-        ],
-    }
-    (eval_dir / "eval-20260101-000000.json").write_text(json.dumps(eval_data))
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(gaps_rhythm_handler(project, {}))
-
-    eval_gaps = [g for g in result["gaps"] if "failed action" in g.get("description", "")]
-    assert len(eval_gaps) == 1
-    assert eval_gaps[0]["severity"] == "blocking"
+            }
+        )
+    )
+    result = _run("gaps", app, project=tmp_path)
+    [gap] = [g for g in result["gaps"] if "failed action" in g["description"]]
+    assert gap["severity"] == "blocking"
 
 
 # ---------------------------------------------------------------------------
-# Lifecycle handler tests
+# lifecycle
 # ---------------------------------------------------------------------------
 
-
-def _make_lifecycle_appspec(
-    *,
-    entities: list[MagicMock] | None = None,
-    stories: list[StorySpec] | None = None,
-    rhythms: list[RhythmSpec] | None = None,
-    persona_ids: list[str] | None = None,
-) -> MagicMock:
-    """Build a mock appspec for lifecycle tests."""
-    spec = MagicMock()
-    spec.domain.entities = entities or []
-    spec.stories = stories or []
-    spec.rhythms = rhythms or []
-    personas = []
-    for pid in persona_ids or []:
-        p = MagicMock()
-        p.id = pid
-        personas.append(p)
-    spec.personas = personas
-    spec.surfaces = []
-    spec.workspaces = []
-    return spec
-
-
-def _make_entity(name: str, field_count: int = 2) -> MagicMock:
-    """Build a mock entity with fields."""
-    entity = MagicMock()
-    entity.name = name
-    entity.fields = [MagicMock() for _ in range(field_count)]
-    return entity
-
-
-def test_lifecycle_empty_project(tmp_path):
-    """Empty project -> new_domain, all steps not_started."""
-    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
-
-    app = _make_lifecycle_appspec()
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(lifecycle_rhythm_handler(project, {}))
-
-    assert result["maturity"] == "new_domain"
-    assert len(result["steps"]) == 8
-    assert result["steps"][0]["name"] == "model_domain"
-    assert result["steps"][0]["status"] == "not_started"
-    assert result["current_focus"] == "model_domain"
-
-
-def test_lifecycle_with_entities(tmp_path):
-    """Project with entities -> step 1 complete."""
-    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
-
-    app = _make_lifecycle_appspec(entities=[_make_entity("Task")])
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(lifecycle_rhythm_handler(project, {}))
-
-    assert result["steps"][0]["status"] == "complete"
-    assert result["steps"][0]["name"] == "model_domain"
-    # Still new_domain since only step 1 complete
-    assert result["maturity"] == "new_domain"
-    assert result["current_focus"] == "write_stories"
-
-
-def test_lifecycle_maturity_building(tmp_path):
-    """Steps 1-3 complete -> building."""
-    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
-
-    story = _make_story("ST-001", actor="user", status=StoryStatus.ACCEPTED)
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
-            ),
-        ],
-    )
-    app = _make_lifecycle_appspec(
-        entities=[_make_entity("Task")],
-        stories=[story],
-        rhythms=[rhythm],
-        persona_ids=["user"],
-    )
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(lifecycle_rhythm_handler(project, {}))
-
-    assert result["steps"][0]["status"] == "complete"  # model_domain
-    assert result["steps"][1]["status"] == "complete"  # write_stories
-    assert result["steps"][2]["status"] == "complete"  # write_rhythms
-    assert result["maturity"] == "building"
-
-
-def test_lifecycle_write_rhythms_partial_persona_coverage(tmp_path):
-    """Rhythms exist but don't cover all personas -> partial."""
-    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
-
-    story = _make_story("ST-001", actor="user", status=StoryStatus.ACCEPTED)
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
-            ),
-        ],
-    )
-    app = _make_lifecycle_appspec(
-        entities=[_make_entity("Task")],
-        stories=[story],
-        rhythms=[rhythm],
-        persona_ids=["user", "admin"],  # admin has no rhythm
-    )
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(lifecycle_rhythm_handler(project, {}))
-
-    assert result["steps"][2]["status"] == "partial"
-    assert result["steps"][2]["name"] == "write_rhythms"
-
-
-def test_lifecycle_map_scenes_partial(tmp_path):
-    """Some scenes missing story refs -> step 4 partial."""
-    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
-
-    story = _make_story("ST-001", actor="user", status=StoryStatus.ACCEPTED)
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(name="s1", surface="sf1", story="ST-001"),
-                    SceneSpec(name="s2", surface="sf2"),  # no story ref
-                ],
-            ),
-        ],
-    )
-    app = _make_lifecycle_appspec(
-        entities=[_make_entity("Task")],
-        stories=[story],
-        rhythms=[rhythm],
-        persona_ids=["user"],
-    )
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(lifecycle_rhythm_handler(project, {}))
-
-    assert result["steps"][3]["status"] == "partial"
-    assert result["steps"][3]["name"] == "map_scenes_to_stories"
-
-
-def test_lifecycle_current_focus_is_first_incomplete(tmp_path):
-    """current_focus points to first non-complete step."""
-    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
-
-    # Only entities -> steps 2-8 incomplete, focus should be write_stories
-    app = _make_lifecycle_appspec(entities=[_make_entity("Task")])
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(lifecycle_rhythm_handler(project, {}))
-
-    assert result["current_focus"] == "write_stories"
-
-
-def test_lifecycle_build_from_stories(tmp_path):
-    """Step 5 complete when test_designs dir has JSON files."""
-    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
-
-    story = _make_story("ST-001", actor="user", status=StoryStatus.ACCEPTED)
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
-            ),
-        ],
-    )
-    app = _make_lifecycle_appspec(
-        entities=[_make_entity("Task")],
-        stories=[story],
-        rhythms=[rhythm],
-        persona_ids=["user"],
-    )
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    # Create test_designs directory with a JSON file
-    td_dir = project / ".dazzle" / "test_designs"
-    td_dir.mkdir(parents=True)
-    (td_dir / "design1.json").write_text("{}")
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(lifecycle_rhythm_handler(project, {}))
-
-    assert result["steps"][4]["status"] == "complete"
-    assert result["steps"][4]["name"] == "build_from_stories"
-
-
-def test_lifecycle_evaluating_maturity(tmp_path):
-    """Steps 1-5 complete -> evaluating."""
-    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
-
-    story = _make_story("ST-001", actor="user", status=StoryStatus.ACCEPTED)
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
-            ),
-        ],
-    )
-    app = _make_lifecycle_appspec(
-        entities=[_make_entity("Task")],
-        stories=[story],
-        rhythms=[rhythm],
-        persona_ids=["user"],
-    )
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    # Step 5: test_designs
-    td_dir = project / ".dazzle" / "test_designs"
-    td_dir.mkdir(parents=True)
-    (td_dir / "design1.json").write_text("{}")
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(lifecycle_rhythm_handler(project, {}))
-
-    assert result["maturity"] == "evaluating"
-
-
-def test_lifecycle_mature(tmp_path):
-    """Steps 1-7 complete -> mature."""
-    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
-
-    story = _make_story("ST-001", actor="user", status=StoryStatus.ACCEPTED)
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
-            ),
-        ],
-    )
-    app = _make_lifecycle_appspec(
-        entities=[_make_entity("Task")],
-        stories=[story],
-        rhythms=[rhythm],
-        persona_ids=["user"],
-    )
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    # Step 5: test_designs
-    td_dir = project / ".dazzle" / "test_designs"
-    td_dir.mkdir(parents=True)
-    (td_dir / "design1.json").write_text("{}")
-
-    # Step 6: evaluations/eval-*.json
-    eval_dir = project / ".dazzle" / "evaluations"
-    eval_dir.mkdir(parents=True)
-    (eval_dir / "eval-20260101-000000.json").write_text("{}")
-
-    # Step 7: evaluations/gaps-*.json
-    (eval_dir / "gaps-20260101-000000.json").write_text("{}")
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(lifecycle_rhythm_handler(project, {}))
-
-    assert result["maturity"] == "mature"
-    # Step 8 should be partial (since other steps are complete)
-    assert result["steps"][7]["status"] == "partial"
-    assert result["steps"][7]["name"] == "iterate"
-
-
-def test_lifecycle_iterate_not_started_when_nothing_complete(tmp_path):
-    """Step 8 (iterate) is not_started when no other step is complete."""
-    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
-
-    app = _make_lifecycle_appspec()
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(lifecycle_rhythm_handler(project, {}))
-
-    assert result["steps"][7]["status"] == "not_started"
-    assert result["steps"][7]["name"] == "iterate"
-
-
-def test_lifecycle_steps_have_suggestions(tmp_path):
-    """Incomplete steps include actionable suggestions."""
-    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
-
-    app = _make_lifecycle_appspec()
-    project = tmp_path / "proj"
-    project.mkdir()
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=app,
-    ):
-        result = json.loads(lifecycle_rhythm_handler(project, {}))
-
-    # not_started steps should have suggestions
-    for step in result["steps"]:
-        if step["status"] == "not_started":
-            assert len(step["suggestions"]) > 0, f"Step {step['name']} has no suggestions"
-
-
-def test_propose_rhythm_includes_ambient_phase(mock_appspec):
-    """Proposed rhythm includes an ambient phase."""
-    from dazzle.mcp.server.handlers.rhythm import propose_rhythm_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec,
-    ):
-        result = propose_rhythm_handler(Path("/fake"), {"persona": "new_user"})
-    data = json.loads(result)
-    dsl = data["proposed_dsl"]
-    assert "kind: ambient" in dsl
-    assert "phase ambient:" in dsl
-
-
-# ---------------------------------------------------------------------------
-# Action vocabulary tests
-# ---------------------------------------------------------------------------
-
-
-def test_evaluate_standard_actions_no_advisory(mock_appspec):
-    """Standard action verbs produce no advisory warnings."""
-    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=mock_appspec,
-    ):
-        result = evaluate_rhythm_handler(Path("/fake"), {"name": "onboarding"})
-    data = json.loads(result)
-    # mock_appspec has scene with actions=["submit"] which is standard
-    action_checks = [c for c in data["checks"] if c["check"] == "action_standard"]
-    assert len(action_checks) == 1
-    assert action_checks[0]["pass"] is True
-    assert "advisory_warnings" not in data
-
-
-def test_evaluate_nonstandard_actions_advisory():
-    """Non-standard action verbs produce advisory warnings."""
-    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(
-                        name="s1",
-                        surface="sf1",
-                        actions=["submit", "wiggle", "yeet"],
-                    ),
-                ],
-            ),
-        ],
-    )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-    spec.surfaces = []
-    spec.workspaces = []
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = evaluate_rhythm_handler(Path("/fake"), {"name": "r1"})
-    data = json.loads(result)
-
-    action_checks = [c for c in data["checks"] if c["check"] == "action_standard"]
-    assert len(action_checks) == 3
-    passed = [c for c in action_checks if c["pass"]]
-    failed = [c for c in action_checks if not c["pass"]]
-    assert len(passed) == 1  # submit
-    assert len(failed) == 2  # wiggle, yeet
-    # All action checks are advisory
-    assert all(c.get("advisory") is True for c in action_checks)
-
-    # Advisory warnings count and vocabulary hint
-    assert data["advisory_warnings"] == 2
-    assert "action_vocabulary" in data
-    assert "submit" in data["action_vocabulary"]
-    assert "browse" in data["action_vocabulary"]
-
-
-def test_evaluate_advisory_not_counted_in_summary():
-    """Advisory checks do not affect the pass/total summary."""
-    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(name="s1", surface="sf1", actions=["custom_verb"]),
-                ],
-            ),
-        ],
-    )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-
-    s1 = MagicMock()
-    s1.name = "sf1"
-    s1.entity_ref = None
-    spec.surfaces = [s1]
-    spec.workspaces = []
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = evaluate_rhythm_handler(Path("/fake"), {"name": "r1"})
-    data = json.loads(result)
-
-    # Hard checks: persona_exists (pass) + surface_exists (pass) = 2/2
-    assert data["summary"] == "2/2 checks passed"
-    # But there's an advisory warning for custom_verb
-    assert data["advisory_warnings"] == 1
-
-
-# ---------------------------------------------------------------------------
-# Surface reuse / specialization signal tests
-# ---------------------------------------------------------------------------
-
-
-def test_evaluate_surface_reuse_different_expects():
-    """Surface used in multiple scenes with different expects produces advisory."""
-    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(
-                        name="confirm_stmt",
-                        surface="deadline_detail",
-                        expects="confirmation_statement_visible",
-                    ),
-                ],
-            ),
-            PhaseSpec(
-                name="p2",
-                scenes=[
-                    SceneSpec(
-                        name="ct600_review",
-                        surface="deadline_detail",
-                        expects="ct600_deadline_with_filing_status",
-                    ),
-                ],
-            ),
-        ],
-    )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-    spec.surfaces = []
-    spec.workspaces = []
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = evaluate_rhythm_handler(Path("/fake"), {"name": "r1"})
-    data = json.loads(result)
-
-    spec_checks = [c for c in data["checks"] if c["check"] == "surface_specialization"]
-    assert len(spec_checks) == 1
-    assert spec_checks[0]["surface"] == "deadline_detail"
-    assert spec_checks[0]["pass"] is False
-    assert spec_checks[0]["advisory"] is True
-    assert "deadline_detail" in spec_checks[0]["message"]
-    assert set(spec_checks[0]["scenes"]) == {"confirm_stmt", "ct600_review"}
-
-
-# One no-advisory contract: a surface reused across scenes with identical
-# (or absent) expects produces no specialization advisory. Collapsed from
-# the same-expects / no-expects pair (#1530); expects=None is the SceneSpec
-# field default, so the no-expects row is byte-equivalent to omitting it.
+_STEPS = [
+    "model_domain",
+    "write_stories",
+    "write_rhythms",
+    "map_scenes_to_stories",
+    "build_from_stories",
+    "evaluate_from_scenes",
+    "find_gaps",
+    "iterate",
+]
+_NS, _P, _C = "not_started", "partial", "complete"
+_MAPPED_SCENE = SceneSpec(name="s1", surface="sf1", story="ST-001")
+
+
+# One lifecycle contract: each artefact the project carries completes its
+# step; maturity follows the completed prefix (1–3 building, 1–5 evaluating,
+# 1–7 mature); `current_focus` is the first incomplete step; `iterate` is
+# partial once anything is complete; every not-started step carries a
+# suggestion.
 @pytest.mark.parametrize(
-    "expects",
-    ["data_visible", None],
-    ids=["same-expects", "no-expects"],
+    ("entities", "scenes", "persona_ids", "artefacts", "statuses", "maturity", "focus"),
+    [
+        pytest.param(
+            False, None, [], [], [_NS] * 8, "new_domain", "model_domain", id="empty-project"
+        ),
+        pytest.param(
+            True,
+            None,
+            [],
+            [],
+            [_C, _NS, _NS, _NS, _NS, _NS, _NS, _P],
+            "new_domain",
+            "write_stories",
+            id="entities-only",
+        ),
+        pytest.param(
+            True,
+            [_MAPPED_SCENE],
+            ["user"],
+            [],
+            [_C, _C, _C, _C, _NS, _NS, _NS, _P],
+            "building",
+            "build_from_stories",
+            id="stories-and-rhythms-building",
+        ),
+        pytest.param(
+            True,
+            [_MAPPED_SCENE],
+            ["user", "admin"],
+            [],
+            [_C, _C, _P, _C, _NS, _NS, _NS, _P],
+            "new_domain",
+            "write_rhythms",
+            id="rhythm-misses-a-persona-partial",
+        ),
+        pytest.param(
+            True,
+            [_MAPPED_SCENE, SceneSpec(name="s2", surface="sf2")],
+            ["user"],
+            [],
+            [_C, _C, _C, _P, _NS, _NS, _NS, _P],
+            "building",
+            "map_scenes_to_stories",
+            id="scene-without-story-partial",
+        ),
+        pytest.param(
+            True,
+            [_MAPPED_SCENE],
+            ["user"],
+            ["test_designs/design1.json"],
+            [_C, _C, _C, _C, _C, _NS, _NS, _P],
+            "evaluating",
+            "evaluate_from_scenes",
+            id="test-designs-evaluating",
+        ),
+        pytest.param(
+            True,
+            [_MAPPED_SCENE],
+            ["user"],
+            [
+                "test_designs/design1.json",
+                "evaluations/eval-20260101-000000.json",
+                "evaluations/gaps-20260101-000000.json",
+            ],
+            [_C] * 7 + [_P],
+            "mature",
+            "iterate",
+            id="evaluations-and-gaps-mature",
+        ),
+    ],
 )
-def test_evaluate_surface_reuse_no_advisory(expects: str | None):
-    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(name="s1", surface="dashboard", expects=expects),
-                    SceneSpec(name="s2", surface="dashboard", expects=expects),
-                ],
-            ),
-        ],
+def test_lifecycle(tmp_path, entities, scenes, persona_ids, artefacts, statuses, maturity, focus):
+    app = _app(
+        [_rhythm(*scenes)] if scenes else [],
+        personas=persona_ids,
+        entities=[_entity("Task")] if entities else [],
+        stories=[_story("ST-001")] if scenes else [],
     )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-    spec.surfaces = []
-    spec.workspaces = []
-    spec.domain.entities = []
+    for rel in artefacts:
+        path = tmp_path / ".dazzle" / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}")
 
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = evaluate_rhythm_handler(Path("/fake"), {"name": "r1"})
-    data = json.loads(result)
+    result = _run("lifecycle", app, project=tmp_path)
 
-    spec_checks = [c for c in data["checks"] if c["check"] == "surface_specialization"]
-    assert spec_checks == []
+    assert [s["name"] for s in result["steps"]] == _STEPS
+    assert [s["status"] for s in result["steps"]] == statuses
+    assert result["maturity"] == maturity
+    assert result["current_focus"] == focus
+    for step in result["steps"]:
+        if step["status"] == _NS:
+            assert step["suggestions"], step["name"]
 
 
 # ---------------------------------------------------------------------------
-# Rhythm fidelity tests
+# propose
 # ---------------------------------------------------------------------------
 
 
-def _make_fidelity_surface(
+def test_propose_rhythm_includes_ambient_phase():
+    dsl = _run("propose", _onboarding_app(), {"persona": "new_user"})["proposed_dsl"]
+    assert "phase ambient:" in dsl
+    assert "kind: ambient" in dsl
+
+
+# ---------------------------------------------------------------------------
+# fidelity
+# ---------------------------------------------------------------------------
+
+
+def _fidelity_surface(
     name: str, field_names: list[str], action_names: list[str] | None = None
-):
-    """Build a mock surface with fields and optional actions."""
-    surf = MagicMock()
-    surf.name = name
-
-    elements = []
-    for fn in field_names:
-        elem = MagicMock()
-        elem.field_name = fn
-        elements.append(elem)
-
+) -> MagicMock:
     section = MagicMock()
-    section.elements = elements
+    section.elements = [MagicMock(field_name=fn) for fn in field_names]
+    surf = _surface(name)
     surf.sections = [section]
-
-    actions = []
-    for an in action_names or []:
-        act = MagicMock()
-        act.name = an
-        actions.append(act)
-    surf.actions = actions
-    surf.access = None
-    surf.entity_ref = None
-
+    surf.actions = [_named(an) for an in action_names or []]
     return surf
 
 
-def _make_fidelity_spec(
-    scenes: list[SceneSpec],
+def _fidelity_app(
+    *scenes: SceneSpec,
     surfaces: list[MagicMock] | None = None,
-    workspace_names: list[str] | None = None,
+    workspaces: list[str] | None = None,
 ) -> MagicMock:
-    """Single-phase rhythm 'r1' for persona 'user' — the fidelity-test shape."""
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[PhaseSpec(name="p1", scenes=scenes)],
-    )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-    spec.surfaces = surfaces or []
-    workspaces = []
-    for wn in workspace_names or []:
-        w = MagicMock()
-        w.name = wn
-        workspaces.append(w)
-    spec.workspaces = workspaces
-    spec.domain.entities = []
-    return spec
+    return _app([_rhythm(*scenes)], surfaces=surfaces, workspaces=workspaces)
 
 
 # One scoring contract: fidelity = served / total scenes, where a scene is
-# served when it is STRUCTURALLY aligned with the target surface — the scene's
-# action(s) are supported and its entity matches (or the target is a workspace).
-# An `expects` string that shares no keyword with surface fields is a soft
-# ADVISORY, not a gap (#1559: `expects` is free-form intent, not a field echo,
-# so it must not gate served). Collapsed from seven scenario tests (#1530); each
-# row asserts exactly the fields the original test asserted. The proxy-detail
-# reporting contract stays named below (test_fidelity_scene_proxied).
+# served when it is STRUCTURALLY aligned with the target surface — its
+# action(s) are supported and its entity matches (or the target is a
+# workspace). An `expects` string that shares no keyword with surface fields
+# is a soft ADVISORY, not a gap (#1559), so `scenes_with_advisories` is where
+# keyword matching (and its stemming, #457) shows. Collapsed from seven
+# scenario tests (#1530).
 @pytest.mark.parametrize(
-    ("spec", "expected"),
+    ("app", "expected"),
     [
-        # Scene with expects matching surface fields is served.
         pytest.param(
-            _make_fidelity_spec(
-                [
-                    SceneSpec(
-                        name="check_balance",
-                        surface="wallet_detail",
-                        expects="balance_visible",
-                    )
-                ],
+            _fidelity_app(
+                SceneSpec(name="check_balance", surface="wallet_detail", expects="balance_visible"),
                 surfaces=[
-                    _make_fidelity_surface("wallet_detail", ["balance", "currency", "last_updated"])
+                    _fidelity_surface("wallet_detail", ["balance", "currency", "last_updated"])
                 ],
             ),
-            {"rhythm_fidelity": 1.0, "scenes_served": 1, "scenes_proxied": 0},
+            {
+                "rhythm_fidelity": 1.0,
+                "scenes_served": 1,
+                "scenes_proxied": 0,
+                "scenes_with_advisories": 0,
+            },
             id="served-expects-match",
         ),
-        # Mix of served and proxied scenes gives correct fidelity score. s2 is
-        # proxied by a STRUCTURAL gap: it needs an `approve` action the surface
-        # doesn't support (an expects/field mismatch alone is only advisory).
+        # s2 is proxied by a STRUCTURAL gap: it needs `approve`, the surface
+        # only exposes `export`.
         pytest.param(
-            _make_fidelity_spec(
-                [
-                    SceneSpec(name="s1", surface="task_list", expects="task_title_visible"),
-                    SceneSpec(
-                        name="s2",
-                        surface="company_detail",
-                        actions=["approve"],
-                    ),
-                ],
+            _fidelity_app(
+                SceneSpec(name="s1", surface="task_list", expects="task_title_visible"),
+                SceneSpec(name="s2", surface="company_detail", actions=["approve"]),
                 surfaces=[
-                    _make_fidelity_surface("task_list", ["title", "status", "due_date"]),
-                    _make_fidelity_surface("company_detail", ["name", "address"], ["export"]),
+                    _fidelity_surface("task_list", ["title", "status", "due_date"]),
+                    _fidelity_surface("company_detail", ["name", "address"], ["export"]),
                 ],
             ),
             {"rhythm_fidelity": 0.5, "scenes_served": 1, "scenes_proxied": 1},
             id="mixed-half-served",
         ),
-        # Scenes targeting workspaces are treated as served.
         pytest.param(
-            _make_fidelity_spec(
-                [SceneSpec(name="arrive", surface="director_dash")],
-                workspace_names=["director_dash"],
+            _fidelity_app(
+                SceneSpec(name="arrive", surface="director_dash"), workspaces=["director_dash"]
             ),
-            {"rhythm_fidelity": 1.0, "scenes_served": 1},
+            {"rhythm_fidelity": 1.0, "scenes_served": 1, "scenes_proxied": 0},
             id="workspace-target-served",
         ),
-        # Scenes without expects are served (no expectation to violate).
         pytest.param(
-            _make_fidelity_spec(
-                [SceneSpec(name="browse", surface="task_list")],
-                surfaces=[_make_fidelity_surface("task_list", ["title"])],
+            _fidelity_app(
+                SceneSpec(name="browse", surface="task_list"),
+                surfaces=[_fidelity_surface("task_list", ["title"])],
             ),
-            {"rhythm_fidelity": 1.0},
+            {"rhythm_fidelity": 1.0, "scenes_proxied": 0, "scenes_with_advisories": 0},
             id="no-expects-served",
         ),
-        # Standard action 'approve' fuzzy-matches 'client_approve' /
-        # 'approve_return' even without an exact 'approve' action (#454).
+        # An expects with no field keyword is advisory only: still served.
         pytest.param(
-            _make_fidelity_spec(
-                [
-                    SceneSpec(
-                        name="vat_approval",
-                        surface="vat_return",
-                        actions=["approve"],
-                        expects="return_approved",
-                    )
-                ],
+            _fidelity_app(
+                SceneSpec(name="s1", surface="company_detail", expects="dividend_history_shown"),
+                surfaces=[_fidelity_surface("company_detail", ["name", "address"])],
+            ),
+            {"rhythm_fidelity": 1.0, "scenes_proxied": 0, "scenes_with_advisories": 1},
+            id="expects-mismatch-is-advisory-not-gap-#1559",
+        ),
+        # Standard action 'approve' fuzzy-matches 'client_approve' /
+        # 'approve_return' without an exact 'approve' action (#454).
+        pytest.param(
+            _fidelity_app(
+                SceneSpec(
+                    name="vat_approval",
+                    surface="vat_return",
+                    actions=["approve"],
+                    expects="return_approved",
+                ),
                 surfaces=[
-                    _make_fidelity_surface(
+                    _fidelity_surface(
                         "vat_return",
                         ["return", "status", "amount"],
                         ["client_approve", "approve_return", "submit_hmrc"],
                     )
                 ],
             ),
-            {"scenes_proxied": 0, "rhythm_fidelity": 1.0},
+            {"rhythm_fidelity": 1.0, "scenes_proxied": 0},
             id="fuzzy-action-match-#454",
         ),
         # Passive actions (browse, review) match any surface (#454).
         pytest.param(
-            _make_fidelity_spec(
-                [
-                    SceneSpec(
-                        name="check_pnl",
-                        surface="pnl_dashboard",
-                        actions=["browse", "review"],
-                        expects="pnl_visible",
-                    )
-                ],
+            _fidelity_app(
+                SceneSpec(
+                    name="check_pnl",
+                    surface="pnl_dashboard",
+                    actions=["browse", "review"],
+                    expects="pnl_visible",
+                ),
                 surfaces=[
-                    _make_fidelity_surface(
-                        "pnl_dashboard",
-                        ["pnl", "revenue", "expense"],
-                        ["export_csv"],
+                    _fidelity_surface(
+                        "pnl_dashboard", ["pnl", "revenue", "expense"], ["export_csv"]
                     )
                 ],
             ),
-            {"scenes_proxied": 0},
+            {"rhythm_fidelity": 1.0, "scenes_proxied": 0},
             id="passive-actions-always-match-#454",
         ),
-        # Stemmed keywords match: 'deadlines' matches field 'deadline_type' (#457).
+        # Stemmed keywords match: 'deadlines' meets field 'deadline_type', so
+        # no advisory is raised (#457).
         pytest.param(
-            _make_fidelity_spec(
-                [
-                    SceneSpec(
-                        name="review_deadlines",
-                        surface="deadline_view",
-                        expects="upcoming_deadlines_visible_for_next_90_days",
-                    )
-                ],
+            _fidelity_app(
+                SceneSpec(
+                    name="review_deadlines",
+                    surface="deadline_view",
+                    expects="upcoming_deadlines_visible_for_next_90_days",
+                ),
                 surfaces=[
-                    _make_fidelity_surface(
-                        "deadline_view",
-                        ["deadline_type", "due_date", "entity_type", "status"],
+                    _fidelity_surface(
+                        "deadline_view", ["deadline_type", "due_date", "entity_type", "status"]
                     )
                 ],
             ),
-            {"scenes_proxied": 0, "rhythm_fidelity": 1.0},
+            {"rhythm_fidelity": 1.0, "scenes_proxied": 0, "scenes_with_advisories": 0},
             id="keyword-stemming-#457",
         ),
     ],
 )
-def test_fidelity_scoring(spec: MagicMock, expected: dict):
-    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
-
-    for key, value in expected.items():
-        assert result[key] == value, key
+def test_fidelity_scoring(app: MagicMock, expected: dict):
+    result = _run("fidelity", app, {"name": "r1"})
+    assert {key: result[key] for key in expected} == expected
 
 
 def test_fidelity_scene_proxied():
-    """Scene whose action the surface can't support is flagged as a proxy.
+    """Scene whose action the surface can't support is reported as a proxy.
 
-    Proxy status is a STRUCTURAL judgement now (#1559): the scene needs an
-    `approve` action, but `company_detail` only exposes `export`, so the
-    surface can't serve the scene. (An expects/field mismatch alone would be a
-    soft advisory, not a proxy.)
+    Proxy status is a STRUCTURAL judgement (#1559): the scene needs an
+    `approve` action, but `company_detail` only exposes `export`.
     """
-    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
-
-    rhythm = RhythmSpec(
-        name="r1",
-        title="R1",
-        persona="user",
-        phases=[
-            PhaseSpec(
-                name="p1",
-                scenes=[
-                    SceneSpec(
-                        name="dividend_review",
-                        surface="company_detail",
-                        actions=["approve"],
-                    ),
-                ],
-            ),
+    app = _fidelity_app(
+        SceneSpec(name="dividend_review", surface="company_detail", actions=["approve"]),
+        surfaces=[
+            _fidelity_surface(
+                "company_detail", ["name", "registration_number", "address"], ["export"]
+            )
         ],
     )
-    spec = MagicMock()
-    spec.rhythms = [rhythm]
-    persona = MagicMock()
-    persona.id = "user"
-    spec.personas = [persona]
-    spec.surfaces = [
-        _make_fidelity_surface(
-            "company_detail", ["name", "registration_number", "address"], ["export"]
-        )
-    ]
-    spec.workspaces = []
-    spec.domain.entities = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
+    result = _run("fidelity", app, {"name": "r1"})
 
     assert result["rhythm_fidelity"] == 0.0
     assert result["scenes_proxied"] == 1
-    assert len(result["proxy_scenes"]) == 1
-    assert result["proxy_scenes"][0]["scene"] == "dividend_review"
-    assert "approve" in result["proxy_scenes"][0]["gaps"][0]
-
-
-def test_fidelity_not_found():
-    """Fidelity returns error for unknown rhythm."""
-    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
-
-    spec = MagicMock()
-    spec.rhythms = []
-
-    with patch(
-        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
-        return_value=spec,
-    ):
-        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "nope"}))
-
-    assert "error" in result
-
-
-def test_naive_stem():
-    """_naive_stem strips common suffixes correctly."""
-    from dazzle.mcp.server.handlers.rhythm import _naive_stem
-
-    assert _naive_stem("deadlines") == "deadline"
-    assert _naive_stem("visible") == "vis"  # strips 'ible'
-    assert _naive_stem("upcoming") == "upcom"  # strips 'ing'
-    assert _naive_stem("vat") == "vat"  # too short to strip
-    assert _naive_stem("visibility") == "visibil"  # strips 'ity'
-
-
-# ---------------------------------------------------------------------------
-# Story injection (#455 / #456) — stories are now DSL-only
-# ---------------------------------------------------------------------------
-
-
-def _make_json_story_data(story_id: str, title: str = "Test Story") -> dict:
-    """Build a story dict compatible with StorySpec."""
-    return {
-        "story_id": story_id,
-        "title": title,
-        "actor": "user",
-        "trigger": "user_click",
-        "scope": [],
-        "given": [],
-        "when": [],
-        "then": [{"expression": "it works"}],
-    }
+    [proxy] = result["proxy_scenes"]
+    assert (proxy["scene"], proxy["phase"], proxy["surface"]) == (
+        "dividend_review",
+        "p1",
+        "company_detail",
+    )
+    [gap] = proxy["gaps"]
+    assert "'approve'" in gap
 
 
 # ---------------------------------------------------------------------------
