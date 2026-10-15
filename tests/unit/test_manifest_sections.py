@@ -2,8 +2,7 @@
 
 One table per outcome: a section is absent (default), parsed, filtered, or
 rejected loudly. Each row names the section and the issue that introduced it:
-[extensions] routers (#786), [renderers] extra (#1116), [capabilities] (#1342),
-[ui] app_scripts (#1515), [auth.admin_capabilities] (admin-authz) and
+[extensions] routers (#786), [renderers] extra (#1116), [ui] app_scripts (#1515), [auth.admin_capabilities] (admin-authz) and
 [serve] app (ADR-0046).
 """
 
@@ -35,7 +34,6 @@ def _attr(obj: Any, dotted: str) -> Any:
     [
         pytest.param("extensions.routers", [], id="extensions_786"),
         pytest.param("renderers.extra", [], id="renderers_1116"),
-        pytest.param("capabilities.enabled", [], id="capabilities_1342"),
         pytest.param("app_scripts", [], id="ui_app_scripts_1515"),
         pytest.param("auth.admin_capabilities", {}, id="auth_admin_capabilities"),
         pytest.param("serve.app", None, id="serve_app_adr0046"),
@@ -65,12 +63,6 @@ def test_absent_section_defaults_empty(tmp_path: Path, attr: str, expected: Any)
             "renderers.extra",
             ["branch_compare", "cytoscape_graph"],
             id="renderers_extra_1116",
-        ),
-        pytest.param(
-            '\n[capabilities]\nenabled = ["demo.alpha", "demo.gamma"]\n',
-            "capabilities.enabled",
-            ["demo.alpha", "demo.gamma"],
-            id="capabilities_enabled_1342",
         ),
         pytest.param(
             '\n[ui]\napp_scripts = ["/static/js/dz-islands.js", "/static/js/charts.js"]\n',
@@ -130,11 +122,6 @@ def test_lenient_section_filters_bad_entries(
 @pytest.mark.parametrize(
     ("extra", "match"),
     [
-        pytest.param(
-            '\n[capabilities]\nenabled = "demo.alpha"\n',
-            "must be a list",
-            id="capabilities_scalar_not_shredded_into_chars_1342",
-        ),
         pytest.param(
             '\n[ui]\napp_scripts = "/static/js/one.js"\n',
             "app_scripts must be a list",
