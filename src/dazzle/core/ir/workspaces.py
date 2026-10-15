@@ -1104,8 +1104,8 @@ class WorkspaceRegion(BaseModel):
     # region's dashboard card append `, every Ns` to its HTMX trigger so the
     # existing region-fetch endpoint re-renders on a poll. Seconds; `None` =
     # no polling (legacy). Validated `>= 5` at link time (load/cost floor —
-    # see docs/architecture/model-driven-failure-modes.md). SSE push and
-    # terminal-state-stop are deferred follow-ups, not this field.
+    # see docs/architecture/model-driven-failure-modes.md). SSE push (`live:`)
+    # is parked in DD-006; terminal-state-stop is a deferred follow-up.
     refresh_interval: int | None = Field(None, ge=5)
 
     model_config = ConfigDict(frozen=True)
@@ -1265,7 +1265,6 @@ class WorkspaceSpec(BaseModel):
     # `nav_groups` so the workspace's own `nav_group` blocks (if any)
     # append after the inherited ones.
     nav_ref: str | None = None
-    live: bool = False  # #1399 slice 1 — SSE live push (poll retained as fallback)
     ux: UXSpec | None = None  # Workspace-level UX (e.g., persona variants)
     access: WorkspaceAccessSpec | None = None  # v0.22.0: Access control
     context_selector: ContextSelectorSpec | None = None  # v0.38.0

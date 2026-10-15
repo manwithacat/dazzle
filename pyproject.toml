@@ -504,7 +504,6 @@ disallow_any_explicit = false
 module = [
     "dazzle.http.runtime.island_routes",
     "dazzle.http.runtime.debug_routes",
-    "dazzle.http.runtime.event_explorer",
     "dazzle.http.runtime.audit_routes",
     "dazzle.http.runtime.test_routes",
     "dazzle.http.runtime.social_auth",

@@ -2162,7 +2162,6 @@ class WorkspaceParserMixin:
             access=state.access_spec,
             context_selector=state.context_selector,
             primary_actions=state.primary_actions,
-            live=state.live,
             source=loc,
         )
 
@@ -2241,14 +2240,18 @@ class WorkspaceParserMixin:
             and self.current_token().value == "live"
             and self.peek_token().type == TokenType.COLON
         ):
-            # #1399 slice 1: `live: on` opts the workspace into SSE live push.
-            # Intercepted as an IDENTIFIER+COLON before the region fallback,
-            # mirroring `primary_actions:` above. on/true/yes/1 ⇒ enabled.
-            self.advance()  # consume `live`
+            # `live: on` (#1399 SSE live push) is parked in DD-006 (flense
+            # ship AR). Intercepted as an IDENTIFIER+COLON before the region
+            # fallback so an existing declaration still parses, and warned.
+            live_tok = self.advance()  # consume `live`
             self.expect(TokenType.COLON)
-            value = str(self.expect_identifier_or_keyword().value).strip().lower()
-            state.live = value in ("on", "true", "yes", "1")
+            self.expect_identifier_or_keyword()
             self.skip_newlines()
+            self._parse_warning(
+                live_tok,
+                "W_DECLARED_NOT_READ: workspace: `live:` declared but not read by the "
+                "runtime; SSE live push is parked in DD-006",
+            )
             return True
         if self.match(TokenType.IDENTIFIER):
             # Fallback: any unrecognised identifier names a workspace region.
@@ -2586,7 +2589,6 @@ class _WorkspaceState:
     context_selector: ir.ContextSelectorSpec | None = None
     # #1324 FR-5: authored heading-CTA buttons (primary_actions: block).
     primary_actions: list[ir.WorkspacePrimaryActionSpec] = field(default_factory=list)
-    live: bool = False  # #1399 slice 1 — `live: on` enables SSE push
 
 
 @dataclass

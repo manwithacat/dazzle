@@ -10,8 +10,7 @@ creates exactly that set. Do not re-list tables here — the registry is the sin
 source (it also carries each table's class / owner / RLS posture / boot-DDL gating).
 
 **Excluded classes (registry rows too, ``in_baseline=False``):** ops_database
-tables (separate DB); event-bus ``{prefix}events/offsets/dlq`` (dynamic prefix,
-created by PostgresBus); tenant registry ``public.tenants`` + per-tenant schemas.
+tables (separate DB); tenant registry ``public.tenants`` + per-tenant schemas.
 
 **Advisory lock strategy:**
   A single ``pg_advisory_xact_lock(0x667A646C)`` ("fzdl" = framework-schema
@@ -40,7 +39,6 @@ from typing import Any
 # DDL constants re-used from their canonical home modules (no duplication).
 # All imports are at module top — none of these create circular imports.
 from dazzle.core.coordination.claim import queue_columns_ddl
-from dazzle.http.channels.outbox import ensure_outbox_table
 from dazzle.http.events.inbox import CREATE_INBOX_INDEXES, CREATE_INBOX_TABLE
 from dazzle.http.events.outbox import CREATE_OUTBOX_INDEXES, CREATE_OUTBOX_TABLE
 from dazzle.http.runtime.audit_log import ensure_audit_log_table
@@ -189,8 +187,8 @@ def _ensure_framework_schema_ddl(cur: Any) -> None:  # cur: psycopg.Cursor
 
     # ── EVENT INBOX / OUTBOX (fixed names) ───────────────────────────────
     # The FIXED framework tables _dazzle_event_inbox and _dazzle_event_outbox
-    # are in-scope.  The PREFIXED {prefix}events/offsets/dlq tables (created
-    # by PostgresBus._create_tables) are EXCLUDED (dynamic prefix).
+    # are in-scope. (The PostgresBus {prefix}events/offsets/dlq tables went
+    # with the Postgres bus in flense ship AR, DD-006.)
     # DDL constants from inbox.py / outbox.py.
     cur.execute(CREATE_INBOX_TABLE)
     for _ix in CREATE_INBOX_INDEXES:
@@ -199,12 +197,6 @@ def _ensure_framework_schema_ddl(cur: Any) -> None:  # cur: psycopg.Cursor
     cur.execute(CREATE_OUTBOX_TABLE)
     for _ix_name, _ix_sql in CREATE_OUTBOX_INDEXES:
         cur.execute(_ix_sql)
-
-    # ── CHANNEL DELIVERY OUTBOX (_dazzle_outbox) ─────────────────────────
-    # #1499: a fixed-name framework table that was previously created ungated at
-    # boot by ChannelManager (and missing from this baseline). Now delegated to the
-    # single ensure_outbox_table DDL (channels/outbox.py), like the other tables.
-    ensure_outbox_table(cur)
 
     # ── USAGE SIGNAL (_dazzle_usage_events) ──────────────────────────────
     # ADR-0050 Option A: first-party usage-frequency capture feeding UX inference.

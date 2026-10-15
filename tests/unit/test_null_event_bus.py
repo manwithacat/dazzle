@@ -105,15 +105,5 @@ async def test_null_framework_bus_property(framework):
     assert isinstance(framework.bus, NullBus)
 
 
-async def test_null_framework_outbox_stats(framework):
-    stats = await framework.get_outbox_stats()
-    assert stats["pending"] == 0
-
-
-async def test_null_framework_recent_outbox_entries(framework):
-    entries = await framework.get_recent_outbox_entries()
-    assert entries == []
-
-
 async def test_null_framework_is_not_running(framework):
     assert framework.is_running is False

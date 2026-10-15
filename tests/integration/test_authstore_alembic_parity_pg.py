@@ -73,7 +73,7 @@ def test_alembic_head_coexists_with_init_db(scratch_url: str) -> None:
         # alembic head recorded, and the new tables/columns are present (from _init_db, and
         # 0013/0014/0015 no-op over them) — schema intact after both ran.
         version = eng.connect().execute(sa.text("SELECT version_num FROM alembic_version")).scalar()
-        assert version == "0024_flense_park_two_factor"
+        assert version == "0025_flense_park_event_transport"
         # 0019 (PG coordination Phase 1): the framework process-runtime tables.
         assert insp.has_table("process_runs")
         assert insp.has_table("process_tasks")
@@ -88,6 +88,8 @@ def test_alembic_head_coexists_with_init_db(scratch_url: str) -> None:
         # the two-factor tables were dropped by 0024 (DD-014); the users columns stay.
         for parked in ("_dazzle_otp_codes", "_dazzle_recovery_codes"):
             assert not insp.has_table(parked)
+        # the channel delivery outbox was dropped by 0025 (DD-006); the event inbox stays.
+        assert not insp.has_table("_dazzle_outbox")
         # the partial unique index 0014 mirrors must exist (from _init_db; 0014 no-ops over it)
         index_names = {ix["name"] for ix in insp.get_indexes("memberships")}
         assert "uq_memberships_tenant_external" in index_names

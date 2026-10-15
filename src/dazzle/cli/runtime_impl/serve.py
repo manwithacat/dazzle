@@ -60,7 +60,7 @@ def _validate_infrastructure() -> tuple[str, str]:
     """Validate infrastructure env vars.
 
     PostgreSQL (``DATABASE_URL``) is required. Redis (``REDIS_URL``) is OPTIONAL:
-    when unset, the Postgres-backed event bus is used. When ``REDIS_URL`` *is*
+    when unset, the event bus is the null tier (events are dropped). When ``REDIS_URL`` *is*
     set, the ``redis`` extra must be installed — otherwise we fail loud rather
     than boot with a silently-dead Redis bus while the banner claims Redis
     Streams (#1561).
@@ -89,7 +89,7 @@ def _validate_infrastructure() -> tuple[str, str]:
         )
         typer.echo("", err=True)
         typer.echo(
-            "Redis is optional (REDIS_URL) — without it the Postgres event bus is used.",
+            "Redis is optional (REDIS_URL) — without it events are not delivered.",
             err=True,
         )
         typer.echo("Skip this check with DAZZLE_SKIP_INFRA_CHECK=1 (tests only).", err=True)
@@ -103,7 +103,7 @@ def _validate_infrastructure() -> tuple[str, str]:
             typer.echo("REDIS_URL is set, but the 'redis' extra is not installed.", err=True)
             typer.echo("Install it:  pip install 'dazzle-dsl[redis]'", err=True)
             typer.echo(
-                "Or unset REDIS_URL to use the Postgres-backed event bus instead.",
+                "Or unset REDIS_URL to run without an event bus.",
                 err=True,
             )
             raise typer.Exit(code=1)
@@ -607,10 +607,12 @@ def _serve_combined(ctx: _ServeContext) -> None:
         event_tier = "Redis Streams"
         process_backend = "EventBus"
     elif ctx.database_url:
-        event_tier = "PostgreSQL"
-        process_backend = "EventBus (PostgreSQL)"
+        # No Redis: the event bus is the null tier (the PostgreSQL bus was
+        # parked in flense ship AR, DD-006); processes run on PostgreSQL.
+        event_tier = "None (set REDIS_URL)"
+        process_backend = "PostgreSQL"
     else:
-        event_tier = "Memory"
+        event_tier = "None (set REDIS_URL)"
         process_backend = "None (set REDIS_URL or DATABASE_URL)"
     _print_infra_banner(ctx.database_url, ctx.redis_url, event_tier, process_backend)
 

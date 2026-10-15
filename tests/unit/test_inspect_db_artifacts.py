@@ -15,7 +15,7 @@ def test_db_artifacts_text() -> None:
     res = runner.invoke(inspect_app, ["db-artifacts"])
     assert res.exit_code == 0
     assert "_dazzle_event_inbox" in res.stdout
-    assert "{prefix}events" in res.stdout
+    assert "public.tenants" in res.stdout
     assert "framework_internal" in res.stdout
 
 
@@ -31,11 +31,11 @@ def test_db_artifacts_json() -> None:
 
 
 def test_db_artifacts_class_filter() -> None:
-    res = runner.invoke(inspect_app, ["db-artifacts", "--class", "event_bus_transport", "--json"])
+    res = runner.invoke(inspect_app, ["db-artifacts", "--class", "tenant_registry", "--json"])
     assert res.exit_code == 0
     payload = json.loads(res.stdout)
     classes = {a["cls"] for a in payload["artifacts"]}
-    assert classes == {"event_bus_transport"}
+    assert classes == {"tenant_registry"}
 
 
 def test_db_artifacts_exposes_gating_fields() -> None:

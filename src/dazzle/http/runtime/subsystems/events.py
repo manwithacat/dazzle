@@ -3,9 +3,9 @@
 Initialises the Dazzle event framework (pub/sub: bus, outbox publisher,
 consumers) and registers its lifespan hooks.  Falls back to
 ``NullEventFramework`` when the optional ``dazzle.http.events`` package is
-unavailable.  CRUD lifecycle events do not pass through here: they reach the
-in-process ``EntityEventBus`` (``SystemRoutesSubsystem._wire_entity_events_to_bus``)
-and, for ``live: on`` workspaces, the bus as SSE nudges (``sse_wiring``).
+unavailable.  The bus is Redis Streams when ``REDIS_URL`` is set and the null
+tier otherwise.  CRUD lifecycle events do not pass through here: they reach the
+in-process ``EntityEventBus`` (``SystemRoutesSubsystem._wire_entity_events_to_bus``).
 """
 
 import logging

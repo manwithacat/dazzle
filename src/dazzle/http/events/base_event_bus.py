@@ -2,8 +2,9 @@
 Base Event Bus with shared consumer loop infrastructure.
 
 Provides a BaseEventBus that implements the common consumer loop,
-subscription management, DLQ replay, and stop/unsubscribe patterns shared
-across the PostgreSQL, Redis, and SQLite event bus implementations.
+subscription management, DLQ replay, and stop/unsubscribe patterns for the
+Redis Streams bus (the PostgreSQL bus that also used it was parked in
+flense ship AR, DD-006).
 
 Subclasses must implement:
 - All abstract methods from EventBus (publish, subscribe storage, ack, nack, etc.)
@@ -18,7 +19,6 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
 
 from dazzle.http.events.bus import (
     ConsumerNotFoundError,
@@ -188,36 +188,3 @@ class BaseEventBus(EventBus):
         Subclasses must override this with backend-specific update.
         """
         raise NotImplementedError
-
-    # ── DLQ filter helpers ───────────────────────────────────────────
-
-    @staticmethod
-    def _build_dlq_filter_clause(
-        topic: str | None,
-        group_id: str | None,
-        *,
-        placeholder: str = "?",
-    ) -> tuple[str, list[Any]]:
-        """Build a WHERE clause for DLQ queries from optional topic/group_id.
-
-        Args:
-            topic: Optional topic filter.
-            group_id: Optional group_id filter.
-            placeholder: SQL parameter placeholder ("%s" for PostgreSQL).
-
-        Returns:
-            (where_clause, params) — clause is empty string when no filters.
-        """
-        conditions: list[str] = []
-        params: list[Any] = []
-
-        if topic:
-            conditions.append(f"topic = {placeholder}")
-            params.append(topic)
-
-        if group_id:
-            conditions.append(f"group_id = {placeholder}")
-            params.append(group_id)
-
-        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-        return where_clause, params

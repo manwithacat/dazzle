@@ -16,11 +16,10 @@ followed by ``render_snapshot_literal``.
     This is SEPARATE from ``project_schema``'s lossy ``list[str]`` format used
     by the #1431 app-entity migration-diffing path.  Do not conflate the two.
 
-**In-scope tables** (23): every entry in the FRAMEWORK_SCHEMA_SNAPSHOT dict
+**In-scope tables** (22): every entry in the FRAMEWORK_SCHEMA_SNAPSHOT dict
 key set (see the global-constraints list in the migration-baseline plan).
 
-**Excluded (not in this snapshot):** ops-database tables, event-bus
-``{prefix}events/offsets/dlq`` tables (dynamic prefix), tenant registry
+**Excluded (not in this snapshot):** ops-database tables, tenant registry
 ``public.tenants``, per-tenant schemas, and app-entity tables.
 
 **Regeneration:** run ``dazzle db reframework-baseline`` (Task 5).
@@ -162,55 +161,6 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "idx_outbox_created": {"columns": ["created_at"], "predicate": None, "unique": False},
             "idx_outbox_status": {"columns": ["status"], "predicate": None, "unique": False},
             "idx_outbox_topic": {"columns": ["topic"], "predicate": None, "unique": False},
-        },
-        "uniques": [],
-    },
-    "_dazzle_outbox": {
-        "columns": {
-            "attempts": {"default": "0", "nullable": True, "pk": False, "type": "integer"},
-            "build_id": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "channel_name": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "correlation_id": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "created_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "id": {"default": None, "nullable": False, "pk": True, "type": "text"},
-            "last_error": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "max_attempts": {"default": "3", "nullable": True, "pk": False, "type": "integer"},
-            "message_type": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "metadata": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "operation_name": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "payload": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "recipient": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "scheduled_for": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "status": {
-                "default": "'pending'::text",
-                "nullable": False,
-                "pk": False,
-                "type": "text",
-            },
-            "updated_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
-        },
-        "fks": {},
-        "indexes": {
-            "idx__dazzle_outbox_channel": {
-                "columns": ["channel_name"],
-                "predicate": None,
-                "unique": False,
-            },
-            "idx__dazzle_outbox_recipient": {
-                "columns": ["recipient", "channel_name"],
-                "predicate": None,
-                "unique": False,
-            },
-            "idx__dazzle_outbox_scheduled": {
-                "columns": ["scheduled_for"],
-                "predicate": None,
-                "unique": False,
-            },
-            "idx__dazzle_outbox_status": {
-                "columns": ["status"],
-                "predicate": None,
-                "unique": False,
-            },
         },
         "uniques": [],
     },

@@ -45,7 +45,7 @@ Files dominated by tests that pin internal call shapes (high mocks, short body, 
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 7074
+- **Twin pairs**: 6984
 
 ### Top 30 twin pairs
 

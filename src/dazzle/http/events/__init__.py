@@ -4,12 +4,12 @@ Dazzle Event-First Architecture.
 This package provides the core event infrastructure for Dazzle applications:
 - EventEnvelope: Canonical event schema
 - EventBus: Abstract interface for event publish/subscribe
-- DevBusMemory: In-memory bus for tests
-- PostgresBus / RedisBus: the two production tiers
+- RedisBus: the production tier (``NullBus`` when ``REDIS_URL`` is unset)
 - Outbox/Inbox: Transactional guarantees for at-least-once delivery
 
 The event DSL (``event_model``, ``subscribe``, ``projection``, ``stream``,
-``hless``, ``ingest``) and the Kafka tier are parked under DD-006.
+``hless``, ``ingest``), the Kafka tier (flense ship F) and the PostgreSQL and
+in-memory tiers (flense ship AR) are parked under DD-006.
 """
 
 # --- Zero-dep imports (always available) ---
@@ -39,7 +39,6 @@ if EVENTS_AVAILABLE:
         IdempotentConsumer,
         idempotent,
     )
-    from dazzle.http.events.dev_memory import DevBusMemory
     from dazzle.http.events.framework import (
         EventFramework,
         EventFrameworkConfig,
@@ -47,15 +46,9 @@ if EVENTS_AVAILABLE:
     )
     from dazzle.http.events.inbox import EventInbox, InboxEntry, ProcessingResult
     from dazzle.http.events.outbox import EventOutbox, OutboxEntry, OutboxStatus
-
-    # v0.22.0 - PostgreSQL event bus (Tier 1 - Heroku pilots)
-    from dazzle.http.events.postgres_bus import (
-        ASYNCPG_AVAILABLE,
-        PostgresConfig,
-    )
     from dazzle.http.events.publisher import OutboxPublisher, PublisherConfig, PublisherStats
 
-    # v0.22.0 - Redis Streams event bus (Tier 2 - Heroku growth)
+    # v0.22.0 - Redis Streams event bus (the production tier)
     from dazzle.http.events.redis_bus import (
         REDIS_AVAILABLE,
         RedisConfig,
@@ -69,12 +62,6 @@ if EVENTS_AVAILABLE:
         detect_tier,
         get_tier_info,
     )
-
-    # Conditional import for PostgresBus
-    if ASYNCPG_AVAILABLE:
-        from dazzle.http.events.postgres_bus import PostgresBus
-    else:
-        PostgresBus = None  # type: ignore[misc,assignment]
 
     # Conditional import for RedisBus
     if REDIS_AVAILABLE:
@@ -109,7 +96,6 @@ if EVENTS_AVAILABLE:
     __all__ += [
         # Bus implementations
         "BaseEventBus",
-        "DevBusMemory",
         # Outbox (transactional publishing)
         "EventOutbox",
         "OutboxEntry",
@@ -131,11 +117,7 @@ if EVENTS_AVAILABLE:
         "EventFramework",
         "EventFrameworkConfig",
         "FrameworkStats",
-        # v0.22.0 - PostgreSQL event bus (Tier 1)
-        "ASYNCPG_AVAILABLE",
-        "PostgresBus",
-        "PostgresConfig",
-        # v0.22.0 - Redis Streams event bus (Tier 2)
+        # Redis Streams event bus (the production tier)
         "REDIS_AVAILABLE",
         "RedisBus",
         "RedisConfig",

@@ -29,11 +29,11 @@ Each artifact declares:
 | **class** | which family it belongs to (below) |
 | **creator** | the function that issues the `CREATE TABLE/INDEX` DDL |
 | **boot_entry** | the *independent* startup path that runs the creator at every boot (or `None` if it is created only by the orchestrator) |
-| **owner** | `owner_role` (the `dazzle_owner` owns it; the runtime serves as a non-owner) · `runtime_self` (the creating connection owns it) |
+| **owner** | `owner_role` (the `dazzle_owner` owns it; the runtime serves as a non-owner) · `n_a` |
 | **rls** | `fenced` (ENABLE + FORCE RLS) · `non_fenced` · `not_applicable` |
 | plus | `in_baseline` (in the ADR-0044 migration baseline) and `boot_ddl_gated` |
 
-## The five classes — and the rule for each
+## The three classes — and the rule for each
 
 1. **framework_internal** — the tables in the ADR-0044 migration baseline (auth,
    audit, files, params, process, event inbox/outbox, …). The `dazzle_owner` role owns
@@ -44,20 +44,17 @@ Each artifact declares:
    created only by the orchestrator (`ensure_framework_schema`) need no self-gate; the
    server-level startup call is already gated.
 
-2. **event_bus_transport** — the `{prefix}events` / `{prefix}consumer_offsets` /
-   `{prefix}dlq` tables created by `PostgresBus`. **Excluded** from the baseline (dynamic
-   prefix); they **self-create** on their own connection. Not subject to the non-owner
-   posture.
-
-3. **app_entity** — the per-DSL entity tables. Created by the migration engine
+2. **app_entity** — the per-DSL entity tables. Created by the migration engine
    (ADR-0045) the framework generates per app; tenant-scoped entities are RLS-**fenced**.
    Not enumerated here (per-app) — represented as one class row.
 
-4. **tenant_registry** — `public.tenants` + per-tenant schemas; separate tenant
+3. **tenant_registry** — `public.tenants` + per-tenant schemas; separate tenant
    lifecycle. One class row.
 
 (The former **ops_db** class — tables on the separate `ops_integration` database —
-was retired with the orphaned ops platform in #1525.)
+was retired with the orphaned ops platform in #1525, and the **event_bus_transport**
+class — the `{prefix}events` / `{prefix}consumer_offsets` / `{prefix}dlq` tables the
+PostgreSQL event bus self-created — went with that bus in flense ship AR; see DD-006.)
 
 ## The gating rule (the #1495 class)
 
@@ -97,7 +94,8 @@ remind the fixer to clear the marker.
 
 **Currently: none.** Building the registry surfaced four siblings of #1495, all now
 resolved — `refresh_tokens` (#1496), `_grants`/`_grant_events` (#1497), `devices`
-(#1498), and `_dazzle_outbox` (#1499, which also joined the ADR-0044 baseline). The
+(#1498), and `_dazzle_outbox` (#1499, which also joined the ADR-0044 baseline; dropped
+by revision `0025_flense_park_event_transport` in flense ship AR). The
 mechanism stays in place: any future ungated boot path is registered with a
 `known_ungated_issue` until gated.
 

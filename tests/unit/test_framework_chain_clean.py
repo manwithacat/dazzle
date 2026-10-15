@@ -51,6 +51,9 @@ _ALLOWED_VERSIONS: dict[str, str] = {
     "0024_flense_park_two_factor": (
         "drops the two-factor tables parked in flense ship AG (DD-014)"
     ),
+    "0025_flense_park_event_transport": (
+        "drops the channel delivery outbox removed in flense ship AR (DD-006)"
+    ),
 }
 
 

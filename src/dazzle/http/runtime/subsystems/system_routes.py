@@ -154,11 +154,6 @@ class SystemRoutesSubsystem:
             )
             ctx.app.include_router(debug_router)
 
-            from dazzle.http.runtime.event_explorer import create_event_explorer_routes
-
-            event_explorer_router = create_event_explorer_routes(ctx.event_framework)
-            ctx.app.include_router(event_explorer_router)
-
             # Integration retries explorer (#1194) —
             # /_dazzle/integrations/{name}/retries. Only registered when
             # `integration` blocks are declared. Reads from the

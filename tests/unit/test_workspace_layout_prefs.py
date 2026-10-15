@@ -449,7 +449,6 @@ def _make_workspace(stage: str, region_count: int = 3, *, ux: object | None = No
         regions=regions,
         nav_groups=[],
         context_selector=None,
-        sse_url="",
         fold_count=None,
         access=None,
         ux=ux,

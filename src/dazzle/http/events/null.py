@@ -4,7 +4,8 @@ No-op event system implementations.
 Provides NullBus and NullEventFramework for use when the full event system
 dependencies (psycopg, etc.) are not installed. These implementations
 silently accept all operations, allowing application code to use the event
-API without conditional checks.
+API without conditional checks. ``NullBus`` is also the bus tier when
+``REDIS_URL`` is not set (``tier.EventTier.NULL``, flense ship AR).
 """
 
 from __future__ import annotations  # required: forward reference
@@ -95,6 +96,9 @@ class NullBus(EventBus):
     async def get_topic_info(self, topic: str) -> dict[str, Any]:
         return {"event_count": 0, "consumer_groups": []}
 
+    async def start_consumer_loop(self, poll_interval: float | None = None) -> None:
+        """No loop to start: ``EventFramework`` calls this when it is the null tier."""
+
 
 class NullEventFramework:
     """
@@ -148,12 +152,6 @@ class NullEventFramework:
             "outbox": {},
             "bus": {"topics": [], "topic_count": 0},
         }
-
-    async def get_outbox_stats(self) -> dict[str, Any]:
-        return {"pending": 0, "publishing": 0, "published": 0, "failed": 0}
-
-    async def get_recent_outbox_entries(self, limit: int = 10) -> list[Any]:
-        return []
 
     async def __aenter__(self) -> NullEventFramework:
         await self.start()

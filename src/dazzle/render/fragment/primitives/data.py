@@ -1535,11 +1535,6 @@ class DashboardCard:
     vs `'intersect once'` (lazy — defer until scrolled into view).
     Adapter sets `eager = (row_order < fold_count)` per #864.
 
-    `sse_enabled` is true when the workspace declared an `sse_url`;
-    adds `, sse:entity.created, sse:entity.updated, sse:entity.deleted`
-    to the `hx-trigger` so the card refreshes when the runtime pushes
-    a relevant entity event.
-
     `display` is the lowercased region display value (e.g. `list`,
     `kanban`) — drives the `data-display` attribute the contract
     checker keys off."""
@@ -1552,14 +1547,13 @@ class DashboardCard:
     row_order: int
     hx_endpoint: str
     eager: bool = False
-    sse_enabled: bool = False
     eyebrow: str = ""
     css_class: str = ""
     notice: DashboardNotice | None = None
     # #1391: declarative live-refresh. When set (seconds, >= 5), the card's
     # HTMX trigger appends `, every Ns` so the region-fetch endpoint re-renders
-    # on a poll. `None` = no polling (legacy). Composes with `sse_enabled` and
-    # the lazy/eager base trigger.
+    # on a poll. `None` = no polling (legacy). Composes with the lazy/eager
+    # base trigger.
     refresh_interval: int | None = None
     # #1204: edit-mode chrome gating. When False (the safe default), the
     # `dz-card-actions` div (Remove card × button) is omitted entirely
@@ -1567,7 +1561,7 @@ class DashboardCard:
     # screen-reader click target. The page-route call site flips this to
     # True only for permitted users (currently `is_superuser`).
     edit_enabled: bool = False
-    # Leftover-honest temporal (cycle 2183). Raw query pair so SSE / poll
+    # Leftover-honest temporal (cycle 2183). Raw query pair so poll
     # / lazy-load hx-get can echo valid include_closed / as_of. Empty or
     # leftover junk omits (open-only / current). Rest-state gallery
     # leaves these empty (oral #33).
@@ -1590,13 +1584,11 @@ class DashboardCard:
 @dataclass(frozen=True, slots=True)
 class DashboardGrid:
     """The card grid container — emits `<div class="dz-dashboard-grid"
-    data-grid-container role="application" aria-label="Dashboard card grid">`
-    with optional `hx-ext="sse" sse-connect="..."` when the workspace
-    declared an `sse_url`.
+    data-grid-container role="application" aria-label="Dashboard card grid">`.
 
     Cards are pre-built by the adapter; per-card `card_id`,
-    `eager` (loop.index0 < fold_count), `hx_endpoint`, and
-    `sse_enabled` are all computed there.
+    `eager` (loop.index0 < fold_count) and `hx_endpoint` are computed
+    there.
 
     `edit_enabled` (#1204) gates edit-mode chrome — both the server-rendered
     Remove-card buttons on cards AND the `data-grid-editable` attribute the
@@ -1605,7 +1597,6 @@ class DashboardGrid:
     existing `is_superuser` check."""
 
     cards: tuple[DashboardCard, ...] = ()
-    sse_url: str = ""
     edit_enabled: bool = False
     # dual_pane master-detail shell HTML (pre-escaped production string from
     # ``render_master_detail_shell``). Emitted first inside the grid so the

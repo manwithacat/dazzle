@@ -3,7 +3,6 @@ Unit tests for Dazzle Event-First Architecture.
 
 Tests the core event infrastructure:
 - EventEnvelope: Event schema and serialization
-- DevBusMemory: In-memory bus for tests
 - EventOutbox: Transactional event publishing
 - EventInbox: Idempotent consumer deduplication
 - OutboxPublisher: Background publishing
@@ -11,7 +10,7 @@ Tests the core event infrastructure:
 - EventFramework: Central orchestrator
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
@@ -20,20 +19,18 @@ import pytest
 
 from dazzle.http.events import (
     ConsumerConfig,
-    ConsumerNotFoundError,
-    DevBusMemory,
     EventEnvelope,
     EventFramework,
     EventFrameworkConfig,
     EventInbox,
     EventOutbox,
     IdempotentConsumer,
-    NackReason,
     OutboxPublisher,
     OutboxStatus,
     ProcessingResult,
     PublisherConfig,
 )
+from tests.unit.helpers.event_bus import RecordingBus
 
 
 def _mock_cursor(rows: list[Any] | None = None, one: Any = None) -> MagicMock:
@@ -195,128 +192,7 @@ class TestEventEnvelope:
 
 
 # =============================================================================
-# DevBusMemory Tests
-# =============================================================================
-
-
-class TestDevBusMemory:
-    """Tests for in-memory event bus."""
-
-    @pytest.fixture
-    def bus(self) -> DevBusMemory:
-        """Create a fresh in-memory bus."""
-        return DevBusMemory()
-
-    @pytest.mark.asyncio
-    async def test_publish_and_subscribe(self, bus: DevBusMemory) -> None:
-        """Every consumer group gets the published event once; processing acks it."""
-        received: dict[str, list[EventEnvelope]] = {"group1": [], "group2": []}
-
-        def make_handler(group: str) -> Any:
-            async def handler(event: EventEnvelope) -> None:
-                received[group].append(event)
-
-            return handler
-
-        for group in received:
-            await bus.subscribe("app.Order", group, make_handler(group))
-
-        envelope = EventEnvelope.create(
-            event_type="app.Order.created",
-            key="order-123",
-            payload={"id": "order-123"},
-        )
-        await bus.publish("app.Order", envelope)
-
-        for group in received:
-            await bus.process_pending("app.Order", group)
-
-        assert {g: [e.event_id for e in evs] for g, evs in received.items()} == {
-            "group1": [envelope.event_id],
-            "group2": [envelope.event_id],
-        }
-        # process_pending acks what it handled
-        for group in received:
-            status = await bus.get_consumer_status("app.Order", group)
-            assert status.pending_count == 0
-
-    @pytest.mark.asyncio
-    async def test_nack_to_dlq(self, bus: DevBusMemory) -> None:
-        """Test nacking event to DLQ."""
-        envelope = EventEnvelope.create(
-            event_type="app.Order.created",
-            key="order-123",
-            payload={},
-        )
-        await bus.publish("app.Order", envelope)
-
-        # Subscribe with failing handler
-        async def failing_handler(event: EventEnvelope) -> None:
-            raise ValueError("Processing failed")
-
-        await bus.subscribe("app.Order", "test_group", failing_handler)
-
-        # Process will call nack on failure (with retryable reason)
-        await bus.process_pending("app.Order", "test_group")
-
-        # Manually nack to DLQ with non-retryable reason
-        await bus.nack(
-            "app.Order",
-            "test_group",
-            envelope.event_id,
-            NackReason.permanent_error("Permanent failure"),
-        )
-
-        dlq_events = await bus.get_dlq_events("app.Order")
-        assert len(dlq_events) == 1
-
-    @pytest.mark.asyncio
-    async def test_replay_and_list_topics(self, bus: DevBusMemory) -> None:
-        """Replay returns all events in order, honours from_timestamp; topics are listed."""
-        now = datetime.now(UTC)
-        old = EventEnvelope.create(event_type="app.Order.created", key="old", payload={})
-        object.__setattr__(old, "timestamp", now - timedelta(hours=2))
-        await bus.publish("app.Order", old)
-        for i in range(2):
-            await bus.publish(
-                "app.Order",
-                EventEnvelope.create(event_type="app.Order.created", key=f"new-{i}", payload={}),
-            )
-        await bus.publish(
-            "app.Shipment",
-            EventEnvelope.create(event_type="app.Shipment.created", key="s", payload={}),
-        )
-
-        all_keys = [e.key async for e in bus.replay("app.Order")]
-        recent_keys = [
-            e.key async for e in bus.replay("app.Order", from_timestamp=now - timedelta(hours=1))
-        ]
-
-        assert all_keys == ["old", "new-0", "new-1"]
-        assert recent_keys == ["new-0", "new-1"]
-        assert set(await bus.list_topics()) == {"app.Order", "app.Shipment"}
-
-    @pytest.mark.asyncio
-    async def test_unsubscribe(self, bus: DevBusMemory) -> None:
-        """An unsubscribed group is gone: it receives nothing and cannot be processed."""
-        received: list[EventEnvelope] = []
-
-        async def handler(event: EventEnvelope) -> None:
-            received.append(event)
-
-        await bus.subscribe("app.Order", "test_group", handler)
-        await bus.unsubscribe("app.Order", "test_group")
-
-        await bus.publish(
-            "app.Order",
-            EventEnvelope.create(event_type="app.Order.created", key="1", payload={}),
-        )
-
-        with pytest.raises(ConsumerNotFoundError):
-            await bus.process_pending("app.Order", "test_group")
-        assert received == []
-
-
+# EventOutbox Tests
 # =============================================================================
 
 
@@ -615,7 +491,7 @@ class TestIdempotentConsumer:
     async def test_handler_decorator(self) -> None:
         """Test handler decorator for idempotent processing."""
         inbox = EventInbox()
-        bus = DevBusMemory()
+        bus = RecordingBus()
 
         mock_conn = _mock_pg_conn()
 
@@ -694,7 +570,7 @@ class TestOutboxPublisher:
     @pytest.mark.asyncio
     async def test_drain_outbox(self) -> None:
         """Test draining events from outbox."""
-        bus = DevBusMemory()
+        bus = RecordingBus()
         outbox = EventOutbox()
 
         # Build 3 envelopes that will appear in the outbox
@@ -767,15 +643,14 @@ class TestOutboxPublisher:
         assert count == 3
 
         # Events should be in bus
-        all_events = await bus.get_all_events("app.Order")
-        assert len(all_events) == 3
+        assert len(bus.published["app.Order"]) == 3
 
     @pytest.mark.asyncio
     async def test_connection_opened_in_autocommit(self) -> None:
         """#1325: the publisher must put its connection in autocommit mode so
         the steady-state no-events poll never parks idle-in-transaction holding
         AccessShare on the outbox table (which blocks DDL)."""
-        bus = DevBusMemory()
+        bus = RecordingBus()
         outbox = EventOutbox()
         mock_conn = _mock_pg_conn()
 
@@ -800,7 +675,7 @@ class TestOutboxPublisher:
         """#1325: the per-batch claim runs inside an explicit transaction so the
         lock UPDATE + SELECT stay atomic even though the connection is in
         autocommit mode."""
-        bus = DevBusMemory()
+        bus = RecordingBus()
         outbox = EventOutbox()
         mock_conn = _mock_pg_conn()
         # No pending events: fetch_pending's SELECT returns empty.
@@ -849,7 +724,7 @@ class TestEventFramework:
         assert not framework.is_running
 
         with (
-            patch("dazzle.http.events.tier.create_bus", return_value=DevBusMemory()),
+            patch("dazzle.http.events.tier.create_bus", return_value=RecordingBus()),
             patch.object(
                 framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
             ),
@@ -873,7 +748,7 @@ class TestEventFramework:
 
         framework = EventFramework(config)
         with (
-            patch("dazzle.http.events.tier.create_bus", return_value=DevBusMemory()),
+            patch("dazzle.http.events.tier.create_bus", return_value=RecordingBus()),
             patch.object(
                 framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
             ),
@@ -898,7 +773,7 @@ class TestEventFramework:
         framework = EventFramework(config)
 
         with (
-            patch("dazzle.http.events.tier.create_bus", return_value=DevBusMemory()),
+            patch("dazzle.http.events.tier.create_bus", return_value=RecordingBus()),
             patch.object(
                 framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
             ),
@@ -937,7 +812,7 @@ class TestEventFramework:
             pass
 
         with (
-            patch("dazzle.http.events.tier.create_bus", return_value=DevBusMemory()),
+            patch("dazzle.http.events.tier.create_bus", return_value=RecordingBus()),
             patch.object(
                 framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
             ),
@@ -960,7 +835,7 @@ class TestConnectFnInjection:
     @pytest.mark.asyncio
     async def test_publisher_with_connect_fn(self) -> None:
         """Verify OutboxPublisher works with connect= kwarg."""
-        bus = DevBusMemory()
+        bus = RecordingBus()
         outbox = EventOutbox()
         mock_conn = _mock_pg_conn()
 
@@ -982,7 +857,7 @@ class TestConnectFnInjection:
     @pytest.mark.asyncio
     async def test_consumer_with_connect_fn(self) -> None:
         """Verify IdempotentConsumer works with connect= kwarg."""
-        bus = DevBusMemory()
+        bus = RecordingBus()
         inbox = EventInbox()
         mock_conn = _mock_pg_conn()
 
@@ -1002,7 +877,7 @@ class TestConnectFnInjection:
 
     def test_publisher_requires_connect_or_db_path(self) -> None:
         """Verify OutboxPublisher raises if connect not provided."""
-        bus = DevBusMemory()
+        bus = RecordingBus()
         with pytest.raises(ValueError, match="connect is required"):
             OutboxPublisher(bus=bus)
 
@@ -1024,7 +899,7 @@ class TestConnectFnInjection:
 
         framework = EventFramework(config)
         with (
-            patch("dazzle.http.events.tier.create_bus", return_value=DevBusMemory()),
+            patch("dazzle.http.events.tier.create_bus", return_value=RecordingBus()),
             patch.object(
                 framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
             ),
@@ -1032,8 +907,8 @@ class TestConnectFnInjection:
             async with framework:
                 health = await framework.health_check()
 
-                assert health["tier"] in ("memory", "postgres", "redis")
-                assert health["bus_type"] in ("DevBusMemory", "PostgresBus", "RedisBus")
+                assert health["tier"] == "null"
+                assert health["bus_type"] == "RecordingBus"
                 assert health["publisher_running"] is False
                 assert health["consumer_count"] == 0
                 assert "outbox_depth" in health
@@ -1043,7 +918,7 @@ class TestConnectFnInjection:
     @pytest.mark.asyncio
     async def test_connect_fn_failure_logged(self) -> None:
         """Verify that when connect() raises, an error is logged (not swallowed)."""
-        bus = DevBusMemory()
+        bus = RecordingBus()
         outbox = EventOutbox()
 
         async def _failing_connect() -> Any:

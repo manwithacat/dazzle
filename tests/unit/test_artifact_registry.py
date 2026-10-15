@@ -38,7 +38,6 @@ _EXPECTED_BASELINE = frozenset(
         "_grant_events",
         "_dazzle_event_inbox",
         "_dazzle_event_outbox",
-        "_dazzle_outbox",
         "_dazzle_usage_events",
         "tenant_host_aliases",
     }

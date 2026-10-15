@@ -21,14 +21,12 @@ from enum import StrEnum
 
 class ArtifactClass(StrEnum):
     FRAMEWORK_INTERNAL = "framework_internal"  # in the ADR-0044 baseline; owner-created
-    EVENT_BUS_TRANSPORT = "event_bus_transport"  # {prefix}* ; excluded; self-creating
     APP_ENTITY = "app_entity"  # per-DSL; migration-engine generated
     TENANT_REGISTRY = "tenant_registry"  # public.tenants + per-tenant schemas
 
 
 class Ownership(StrEnum):
     OWNER_ROLE = "owner_role"  # dazzle_owner owns; runtime serves as non-owner
-    RUNTIME_SELF = "runtime_self"  # the creating connection owns what it makes
     N_A = "n_a"
 
 
@@ -149,13 +147,6 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
         "dazzle.http.events.outbox.EventOutbox.create_table",
         boot_entry="dazzle.http.events.outbox.EventOutbox.create_table",
     ),
-    # _dazzle_outbox (channel delivery) — #1499 fixed: added to the ADR-0044 baseline
-    # (orchestrator delegates to ensure_outbox_table) and the boot path now self-gates.
-    _fw(
-        "_dazzle_outbox",
-        "dazzle.http.channels.outbox.ensure_outbox_table",
-        boot_entry="dazzle.http.channels.outbox.OutboxRepository._ensure_table",
-    ),
     # _dazzle_usage_events (ADR-0050 Option A) — first-party usage-frequency capture
     # for UX inference. Orchestrator-only (no request-path boot entry → boot_entry=None).
     _fw(
@@ -169,22 +160,6 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
         boot_entry=None,
         notes="orchestrator-only; composing host aliases (ADR-0055 PR4)",
     ),
-    # ── event-bus transport (excluded; dynamic prefix; self-creating) ──────
-    *[
-        Artifact(
-            name=n,
-            cls=ArtifactClass.EVENT_BUS_TRANSPORT,
-            creator="dazzle.http.events.postgres_bus.PostgresBus._create_tables",
-            boot_entry=None,
-            owner=Ownership.RUNTIME_SELF,
-            rls=RlsPosture.NOT_APPLICABLE,
-            in_baseline=False,
-            boot_ddl_gated=False,
-            notes="dynamic {prefix}; excluded from baseline",
-            is_pattern=True,
-        )
-        for n in ("{prefix}events", "{prefix}consumer_offsets", "{prefix}dlq")
-    ],
     # ── dynamic classes (described, not enumerated) ────────────────────────
     Artifact(
         name="<app entities>",

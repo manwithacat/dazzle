@@ -251,6 +251,14 @@
     ]
   },
   {
+    "signature": "2c086de34614857e5d9b103558bff2c8",
+    "count": 2,
+    "names": [
+      "dazzle/http/alembic/versions/0022_flense_park_tables.py::downgrade",
+      "dazzle/http/alembic/versions/0025_flense_park_event_transport.py::downgrade"
+    ]
+  },
+  {
     "signature": "exact:3d4d16185bc18804deb536fe2df5a1e4",
     "count": 2,
     "names": [
@@ -280,22 +288,6 @@
     "names": [
       "dazzle/http/channels/adapters/email.py::provider_name",
       "dazzle/http/channels/providers/email.py::provider_name"
-    ]
-  },
-  {
-    "signature": "690b3090fc2628ca3db75340fa94653b",
-    "count": 2,
-    "names": [
-      "dazzle/http/channels/outbox.py::get_dead_letters",
-      "dazzle/http/channels/outbox.py::get_recent"
-    ]
-  },
-  {
-    "signature": "3d12e6fa6c29b415ca16955a99f5fd8d",
-    "count": 2,
-    "names": [
-      "dazzle/http/channels/outbox.py::mark_processing",
-      "dazzle/http/channels/outbox.py::retry_dead_letter"
     ]
   },
   {
@@ -350,9 +342,8 @@
   },
   {
     "signature": "exact:80d81c206dc465d8a2b945a4acfadd1c",
-    "count": 4,
+    "count": 3,
     "names": [
-      "dazzle/http/events/null.py::get_recent_outbox_entries",
       "dazzle/http/events/null.py::list_consumer_groups",
       "dazzle/http/events/null.py::list_topics",
       "dazzle/http/runtime/workspace_card_fetchers.py::_empty_list_coro"

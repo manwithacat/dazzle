@@ -656,3 +656,56 @@ class TestAppIntegration:
         from dazzle.core.process import EventBusProcessAdapter
 
         assert EventBusProcessAdapter is not None
+
+
+# =============================================================================
+# Redis path wiring (flense ship AR: the consumer path that stays)
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_redis_framework_bus_carries_process_adapter_events() -> None:
+    """With REDIS_URL the framework builds the Redis tier, and EventBusProcessAdapter
+    publishes onto that bus through the auth-events framework slot (cyfuture's path)."""
+    from unittest.mock import AsyncMock
+
+    from dazzle.core.process.eventbus_adapter import EventBusProcessAdapter
+    from dazzle.http.events.framework import EventFramework, EventFrameworkConfig
+    from dazzle.http.events.tier import EventTier
+    from dazzle.http.runtime.auth.events import configure_auth_events
+    from tests.unit.helpers.event_bus import RecordingBus
+
+    bus = RecordingBus()
+    built: list[EventTier] = []
+
+    def _fake_redis_bus(config):  # stands in for RedisBus (the redis extra is optional)
+        built.append(config.tier)
+        return bus
+
+    framework = EventFramework(
+        EventFrameworkConfig(
+            database_url="postgresql://test@localhost/test",
+            redis_url="redis://localhost:6379/0",
+            auto_start_publisher=False,
+            auto_start_consumers=False,
+        )
+    )
+    connect = AsyncMock(return_value=AsyncMock())
+    with (
+        patch("dazzle.http.events.tier._create_redis_bus", side_effect=_fake_redis_bus),
+        patch.object(framework, "_make_connect_fn", return_value=connect),
+    ):
+        await framework.start()
+    try:
+        assert built == [EventTier.REDIS]
+        assert (await framework.health_check())["tier"] == "redis"
+        configure_auth_events(framework)
+        publish = EventBusProcessAdapter._get_publish_fn()
+        assert publish is not None
+        await publish("process.order_flow.started", "run-1", {"run_id": "run-1"}, None)
+        envelopes = [e for topic in bus.published.values() for e in topic]
+        assert [e.event_type for e in envelopes] == ["process.order_flow.started"]
+        assert envelopes[0].producer == "dazzle-process"
+    finally:
+        configure_auth_events(None)
+        await framework.stop()

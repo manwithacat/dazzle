@@ -178,7 +178,6 @@ class WorkspaceContext(BaseModel):
     stage: str = ""
     regions: list[RegionContext] = Field(default_factory=list)
     endpoint: str = ""  # Base API endpoint for workspace data
-    sse_url: str = ""  # SSE stream URL (empty = no live updates)
     fold_count: int = 3  # Regions above the fold (eager load); rest use intersect
     context_selector_entity: str = ""  # v0.38.0: entity for context selector
     context_selector_label: str = ""  # Human-readable label for context selector
@@ -634,10 +633,6 @@ def build_workspace_context(
         context_selector_entity=ctx_entity,
         context_selector_label=ctx_label,
         context_options_url=ctx_options_url,
-        # #1399 slice 1 — live: on activates the already-wired client SSE
-        # connect + sse:entity.* card triggers. Tenant is resolved server-side
-        # by the /_ops/sse/events endpoint, so the URL carries no query params.
-        sse_url="/_ops/sse/events" if getattr(workspace, "live", False) else "",
         persona_focus=persona_focus,
         persona_purposes=persona_purposes,
         content_measure=content_measure,
@@ -857,13 +852,12 @@ def render_workspace_content_typed(
                 row_order=index,
                 # Leftover-honest temporal (cycle 2183). Bare
                 # hx_endpoint="/api/workspaces/{ws}/regions/{r}" used
-                # to drop include_closed / as_of so SSE / poll /
+                # to drop include_closed / as_of so poll /
                 # lazy-load invented open-only / current. Thread the
                 # raw pair; leftover-honest emit echoes valid true /
                 # YYYY-MM-DD and omits leftover junk.
                 hx_endpoint=f"/api/workspaces/{workspace.name}/regions/{r.name}",
                 eager=eager,
-                sse_enabled=bool(workspace.sse_url),
                 eyebrow=r.eyebrow,
                 css_class=getattr(r, "css_class", "") or "",
                 notice=notice,
@@ -922,7 +916,6 @@ def render_workspace_content_typed(
     inner_pieces.append(
         DashboardGrid(
             cards=tuple(cards),
-            sse_url=workspace.sse_url or "",
             edit_enabled=can_edit_layout,
             leading_html=leading_html,
         )

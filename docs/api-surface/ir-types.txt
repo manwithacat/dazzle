@@ -2522,7 +2522,6 @@ ir_class: WorkspaceSpec
   optional:
     - access: WorkspaceAccessSpec | None = None
     - context_selector: ContextSelectorSpec | None = None
-    - live: bool = False
     - nav_groups: list[NavGroupSpec] = []
     - nav_ref: str | None = None
     - primary_actions: list[WorkspacePrimaryActionSpec] = []

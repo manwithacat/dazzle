@@ -213,17 +213,15 @@ class EventFramework:
         # Create event bus via unified tier factory
         from dazzle.http.events.tier import EventTier, TierConfig, create_bus
 
-        # Determine tier from config values (don't rely on env detection alone)
+        # Determine tier from config values (don't rely on env detection alone).
+        # Without Redis the bus is the null tier: the Postgres bus that used to
+        # serve here was parked in flense ship AR (DD-006).
         if self._config.redis_url:
             explicit_tier = EventTier.REDIS
         else:
-            explicit_tier = EventTier.POSTGRES
+            explicit_tier = EventTier.NULL
 
-        tier_config = TierConfig(
-            tier=explicit_tier,
-            redis_url=self._config.redis_url,
-            postgres_url=self._config.database_url,
-        )
+        tier_config = TierConfig(tier=explicit_tier, redis_url=self._config.redis_url)
         self._bus = create_bus(tier_config)
         if hasattr(self._bus, "connect"):
             await self._bus.connect()
@@ -249,7 +247,7 @@ class EventFramework:
         self._stats.started_at = datetime.now(UTC)
 
         bus_type = type(self._bus).__name__
-        tier = "redis" if self._config.redis_url else "postgres"
+        tier = "redis" if self._config.redis_url else "null"
         logger.info(
             "Event framework started",
             extra={
@@ -468,7 +466,7 @@ class EventFramework:
 
         publisher_stats = self._publisher.stats if self._publisher else None
 
-        tier = "redis" if self._config.redis_url else "postgres"
+        tier = "redis" if self._config.redis_url else "null"
 
         result: dict[str, Any] = {
             "tier": tier,
@@ -494,15 +492,3 @@ class EventFramework:
                 result["redis_connected"] = False
 
         return result
-
-    async def get_outbox_stats(self) -> dict[str, Any]:
-        """Get outbox statistics for the event explorer."""
-        if self._outbox is None or self._conn is None:
-            return {"pending": 0, "publishing": 0, "published": 0, "failed": 0}
-        return await self._outbox.get_stats(self._conn)
-
-    async def get_recent_outbox_entries(self, limit: int = 10) -> list[Any]:
-        """Get recent outbox entries for the event explorer."""
-        if self._outbox is None or self._conn is None:
-            return []
-        return await self._outbox.get_recent_entries(self._conn, limit=limit)

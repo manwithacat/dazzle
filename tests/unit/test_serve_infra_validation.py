@@ -1,6 +1,6 @@
 """Tests for serve's infrastructure validation (#1561).
 
-Redis is optional (Postgres event bus is the fallback), but if REDIS_URL is set
+Redis is optional (without it the event bus is the null tier), but if REDIS_URL is set
 without the `redis` extra installed, serve must fail loud rather than boot with a
 silently-dead Redis bus.
 """

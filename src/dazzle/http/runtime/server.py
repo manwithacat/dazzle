@@ -40,7 +40,7 @@ from dazzle.http.runtime.exception_handlers import register_exception_handlers
 from dazzle.http.runtime.file_routes import create_file_routes, create_static_file_routes
 from dazzle.http.runtime.file_storage import FileService
 from dazzle.http.runtime.integration_manager import IntegrationManager
-from dazzle.http.runtime.lifespan_hooks import init_lifespan_registry, register_lifespan_hook
+from dazzle.http.runtime.lifespan_hooks import init_lifespan_registry
 from dazzle.http.runtime.migrations import MigrationPlan
 from dazzle.http.runtime.model_generator import (
     generate_all_entity_models,
@@ -58,7 +58,7 @@ from dazzle.http.runtime.repository import RepositoryFactory
 from dazzle.http.runtime.richtext_field import rich_text_fields_by_entity
 from dazzle.http.runtime.rls_schema import build_all_rls_ddl, physical_cast_overrides
 from dazzle.http.runtime.route_generator import RouteGenerator
-from dazzle.http.runtime.route_validator import route_paths, validate_routes
+from dazzle.http.runtime.route_validator import validate_routes
 from dazzle.http.runtime.sa_schema import (
     build_metadata,
     ensure_missing_entity_columns,
@@ -69,8 +69,6 @@ from dazzle.http.runtime.security_middleware import apply_security_middleware
 from dazzle.http.runtime.service_generator import CRUDService, ServiceFactory
 from dazzle.http.runtime.service_loader import ServiceLoader
 from dazzle.http.runtime.services import RuntimeServices
-from dazzle.http.runtime.sse_stream import SSEStreamManager, create_sse_routes
-from dazzle.http.runtime.sse_wiring import LazyFrameworkBus, register_sse_callbacks
 from dazzle.http.runtime.storage import build_entity_storage_bindings
 from dazzle.http.runtime.subsystems import SubsystemContext
 from dazzle.http.runtime.subsystems.auth import AuthSubsystem
@@ -304,11 +302,6 @@ def _maybe_instrument_for_perf(app: Any) -> None:
 # =============================================================================
 # Application Builder
 # =============================================================================
-
-
-def _any_workspace_live(workspaces: list[Any]) -> bool:
-    """#1399 slice 1 — True if any workspace opted into SSE live push."""
-    return any(getattr(ws, "live", False) for ws in workspaces)
 
 
 class DazzleBackendApp:
@@ -1305,58 +1298,6 @@ class DazzleBackendApp:
                         await fn(entity_name, entity_id, file_meta)
 
                     self._upload_callbacks.append(_upload_hook)
-
-    def _wire_sse_live_push(self, optional_auth_dep: Any = None) -> None:
-        """#1399 slice 1 — wire SSE live push when a workspace declares `live: on`.
-
-        Must run AFTER ``_run_subsystems()`` (which sets ``self._event_framework``).
-        The framework's concrete bus only exists after its start lifespan hook
-        runs, so we bind everything to a ``LazyFrameworkBus`` proxy that resolves
-        the live bus at call time. Three wirings, all gated on opt-in + framework:
-
-        1. Nudge publishers on every CRUD service (entity mutation -> bus).
-        2. An ``SSEStreamManager`` + ``/_ops/sse/events`` route (bus -> browser),
-           mounted independently of the ops dashboard.
-        3. Lifespan start/stop for the manager, registered AFTER the framework's
-           start hook so subscription happens against a started bus.
-        """
-        if not _any_workspace_live(list(self._appspec.workspaces)):
-            return
-        framework = self._event_framework
-        if framework is None:
-            logger.warning(
-                "Workspace declares `live: on` but no event framework is available; "
-                "SSE live push disabled."
-            )
-            return
-
-        assert self._app is not None
-        # Defensive: never double-mount the SSE router (e.g. if a future ops
-        # dashboard also mounts /_ops/sse). validate_routes() would reject the
-        # collision otherwise.
-        if "/_ops/sse/events" in route_paths(self._app):
-            logger.info("SSE routes already mounted; skipping live-push mount.")
-            return
-        lazy_bus = LazyFrameworkBus(framework)
-        register_sse_callbacks(self._services, lazy_bus)
-
-        sse_manager = SSEStreamManager(event_bus=lazy_bus)
-        self._app.include_router(
-            create_sse_routes(
-                sse_manager,
-                optional_auth_dep=optional_auth_dep,
-                require_auth=self._enable_auth and not self._enable_test_mode,
-            )
-        )
-
-        async def _start_sse() -> None:
-            await sse_manager.start()
-
-        async def _stop_sse() -> None:
-            await sse_manager.stop()
-
-        register_lifespan_hook(self._app, startup=_start_sse, shutdown=_stop_sse)
-        logger.info("SSE live push enabled (mounted /_ops/sse/events).")
 
     def _wire_storage_routes(self) -> None:
         """Register storage upload-ticket routes (#932 cycle 3).
@@ -2492,9 +2433,6 @@ class DazzleBackendApp:
         # _setup_system_routes.
         self._subsystem_ctx = self._build_subsystem_context(auth_dep, optional_auth_dep)
         self._run_subsystems()
-        # #1399 slice 1 — SSE live push. After subsystems so self._event_framework
-        # is set; before route validation so the SSE route is counted.
-        self._wire_sse_live_push(optional_auth_dep)
         # Sync integration_mgr and workspace_builder back from subsystem context
         if self._subsystem_ctx.integration_mgr is not None:
             self._integration_mgr = self._subsystem_ctx.integration_mgr

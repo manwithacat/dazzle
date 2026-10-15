@@ -2119,21 +2119,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_channel_outbox.py",
-    "class": "TestOutboxRepository",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 4,
-    "members": [
-      "test_get_pending_by_channel",
-      "test_mark_sent",
-      "test_mark_failed_dead_letter",
-      "test_get_dead_letters"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_cli_run_viewport_exit.py",
     "class": "(module)",
     "assertion_shape": "('eq',)",
@@ -5470,6 +5455,20 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
+    "file": "tests/unit/test_declaration_lints.py",
+    "class": "(module)",
+    "assertion_shape": "('eq', 'eq')",
+    "size": 3,
+    "members": [
+      "test_unknown_list_item_in_parallel_block_warns_and_skips_the_item",
+      "test_unknown_list_item_in_process_steps_warns_and_skips_the_item",
+      "test_parked_workspace_live_clause_warns_and_still_parses"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
     "file": "tests/unit/test_demo_blueprint.py",
     "class": "TestBlueprintDataGenerator",
     "assertion_shape": "('eq',)",
@@ -7774,20 +7773,6 @@
       "test_loud_when_no_matching_surface",
       "test_loud_when_surface_ambiguous",
       "test_loud_when_trigger_has_no_surface_mode"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_rhythm_ir.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_phase_spec_kind_set",
-      "test_gaps_summary",
-      "test_lifecycle_step"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",

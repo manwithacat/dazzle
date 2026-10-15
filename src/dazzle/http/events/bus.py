@@ -9,7 +9,8 @@ must follow. The interface is Kafka-shaped, supporting:
 - Replay capability for recovery and debugging
 
 Implementations:
-- DevBusMemory: In-memory bus for unit tests
+- RedisBus: Redis Streams (production)
+- NullBus: no transport (``REDIS_URL`` unset)
 """
 
 from __future__ import annotations  # required: forward reference

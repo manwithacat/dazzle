@@ -51,18 +51,13 @@ if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
 
 
-_SSE_EVENTS = "sse:entity.created, sse:entity.updated, sse:entity.deleted"
-
-
 def _dashboard_card_hx_trigger(c: DashboardCard, *, ssr_html: str) -> str:
     """HTMX trigger list for a dashboard card body (#1677).
 
     SSR first-paint skips ``load`` so the inlined body is not immediately
-    refetched. SSE / poll remain as refresh.
+    refetched. A poll (`refresh_interval`) remains as refresh.
     """
     extras: list[str] = []
-    if c.sse_enabled:
-        extras.append(_SSE_EVENTS)
     if c.refresh_interval:
         extras.append(f"every {c.refresh_interval}s")
     if ssr_html:
@@ -85,19 +80,14 @@ class _RenderDashboardMixin:
         block byte-for-byte (Phase 4B.5.b.2.ii).
 
         Outer wrapper carries `data-grid-container` (the JS grid handler
-        keys off it), `role="application"` + `aria-label` for a11y, and
-        optional `hx-ext="sse" sse-connect="..."` when the workspace
-        declared an `sse_url`. Cards inside are rendered as
-        DashboardCard primitives."""
+        keys off it) and `role="application"` + `aria-label` for a11y.
+        Cards inside are rendered as DashboardCard primitives."""
         from dazzle.perf.tracer import dazzle_span
 
         with dazzle_span("region.render", region_kind=type(g).__name__):
             return self._emit_dashboard_grid_impl(g, ctx)
 
     def _emit_dashboard_grid_impl(self, g: DashboardGrid, ctx: RenderContext) -> str:
-        sse_attrs = ""
-        if g.sse_url:
-            sse_attrs = f' hx-ext="sse" sse-connect="{ctx.escape_attr(g.sse_url)}"'
         # #1204: data-grid-editable is the contract between Python (server-
         # rendered cards) and JS (dashboard-builder.js dynamic card injection)
         # for whether the Remove-card chrome should appear at all. The JS
@@ -115,8 +105,7 @@ class _RenderDashboardMixin:
             f"data-grid-container "
             f'role="application" '
             f'aria-label="Dashboard card grid"'
-            f"{editable_attr}"
-            f"{sse_attrs}>"
+            f"{editable_attr}>"
             f"{leading}"
             f"{cards_html}"
             f"</div>"
@@ -138,8 +127,7 @@ class _RenderDashboardMixin:
           3. `<div class="dz-card-resize">` aria-hidden trailing handle.
 
         Trigger is `'load'` when `eager=True` (above-the-fold; #864) and
-        `'intersect once'` when lazy. SSE adds three entity events to
-        the trigger when the workspace's grid carries `sse_url`."""
+        `'intersect once'` when lazy; `refresh_interval` appends a poll."""
         wrapper_class = (
             f"dz-card-wrapper {c.css_class} is-animating"
             if c.css_class

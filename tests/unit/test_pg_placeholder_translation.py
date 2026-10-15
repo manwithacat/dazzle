@@ -2,7 +2,7 @@
 Tests for PostgreSQL backend compatibility.
 
 Verifies that PgConnectionWrapper passes SQL through to cursor,
-and that outbox/relation_loader use db.placeholder correctly.
+and that relation_loader and the event inbox use db.placeholder correctly.
 """
 
 from unittest.mock import MagicMock
@@ -74,71 +74,6 @@ class TestPgConnectionWrapper:
         wrapper, mock_cursor = self._make_wrapper()
         wrapper.execute("SELECT 1")
         mock_cursor.execute.assert_called_once_with("SELECT 1", ())
-
-
-# =============================================================================
-# Outbox Placeholder Tests
-# =============================================================================
-
-
-class TestOutboxPlaceholder:
-    """Verify OutboxRepository uses db.placeholder, not hardcoded ?."""
-
-    def test_outbox_create_uses_placeholder(self) -> None:
-        """OutboxRepository.create() uses db.placeholder for INSERT."""
-        from dazzle.http.channels.outbox import (
-            OutboxRepository,
-            create_outbox_message,
-        )
-
-        mock_db = MagicMock()
-        mock_db.placeholder = "%s"
-        mock_conn = MagicMock()
-        mock_db.connection.return_value.__enter__ = MagicMock(return_value=mock_conn)
-        mock_db.connection.return_value.__exit__ = MagicMock(return_value=False)
-
-        repo = OutboxRepository.__new__(OutboxRepository)
-        repo.db = mock_db
-        repo.TABLE_NAME = "_dazzle_outbox"
-
-        msg = create_outbox_message(
-            channel_name="test",
-            operation_name="send",
-            message_type="TestMsg",
-            payload={"key": "val"},
-            recipient="user@test.com",
-        )
-
-        repo.create(msg)
-
-        # Verify the SQL used %s, not ?
-        call_args = mock_conn.execute.call_args
-        sql = call_args[0][0]
-        assert "?" not in sql
-        assert "%s" in sql
-
-    def test_outbox_get_uses_placeholder(self) -> None:
-        """OutboxRepository.get() uses db.placeholder."""
-        from dazzle.http.channels.outbox import OutboxRepository
-
-        mock_db = MagicMock()
-        mock_db.placeholder = "%s"
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_cursor.fetchone.return_value = None
-        mock_conn.execute.return_value = mock_cursor
-        mock_db.connection.return_value.__enter__ = MagicMock(return_value=mock_conn)
-        mock_db.connection.return_value.__exit__ = MagicMock(return_value=False)
-
-        repo = OutboxRepository.__new__(OutboxRepository)
-        repo.db = mock_db
-        repo.TABLE_NAME = "_dazzle_outbox"
-
-        repo.get("test-id")
-
-        sql = mock_conn.execute.call_args[0][0]
-        assert "?" not in sql
-        assert "%s" in sql
 
 
 # =============================================================================

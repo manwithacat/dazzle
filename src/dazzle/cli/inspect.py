@@ -990,8 +990,7 @@ def db_artifacts_command(
     cls_filter: str | None = typer.Option(
         None,
         "--class",
-        help="Filter by class (framework_internal, event_bus_transport, "
-        "app_entity, tenant_registry)",
+        help="Filter by class (framework_internal, app_entity, tenant_registry)",
     ),
 ) -> None:
     """List every database artifact the framework manages, with its class, creator,

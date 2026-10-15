@@ -8,11 +8,12 @@ Tests cover:
 """
 
 import sys
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from dazzle.http.events.framework import EventFramework, EventFrameworkConfig
+from dazzle.http.events.null import NullBus
 
 pytestmark = pytest.mark.postgres
 
@@ -47,8 +48,8 @@ class TestEventFrameworkPgMode:
         assert not framework._use_postgres
 
     @pytest.mark.asyncio
-    async def test_start_postgres_imports_psycopg(self) -> None:
-        """Test that start in postgres mode imports psycopg and PostgresBus."""
+    async def test_start_without_redis_uses_null_bus(self) -> None:
+        """Without REDIS_URL the bus is the null tier (Postgres bus parked, ship AR)."""
         config = EventFrameworkConfig(database_url="postgresql://localhost/test")
         framework = EventFramework(config)
 
@@ -66,29 +67,15 @@ class TestEventFrameworkPgMode:
         sys.modules["psycopg"] = mock_psycopg
         sys.modules["psycopg.rows"] = mock_rows
 
-        mock_pg_bus = AsyncMock()
-        mock_pg_config = MagicMock()
-
         try:
-            with (
-                patch(
-                    "dazzle.http.events.postgres_bus.PostgresBus",
-                    return_value=mock_pg_bus,
-                ),
-                patch(
-                    "dazzle.http.events.postgres_bus.PostgresConfig",
-                    mock_pg_config,
-                ),
-            ):
-                await framework.start()
+            await framework.start()
 
-                # Should have connected via psycopg (framework conn + publisher conn)
-                assert mock_psycopg.AsyncConnection.connect.call_count >= 1
+            # Should have connected via psycopg (framework conn + publisher conn)
+            assert mock_psycopg.AsyncConnection.connect.call_count >= 1
+            assert isinstance(framework._bus, NullBus)
+            assert (await framework.health_check())["tier"] == "null"
 
-                # Bus should exist
-                assert framework._bus is not None
-
-                await framework.stop()
+            await framework.stop()
         finally:
             if saved_psycopg is None:
                 sys.modules.pop("psycopg", None)
@@ -149,25 +136,13 @@ class TestEventFrameworkPgMode:
         sys.modules["psycopg"] = mock_psycopg
         sys.modules["psycopg.rows"] = mock_rows
 
-        mock_pg_bus = AsyncMock()
-
         try:
-            with (
-                patch(
-                    "dazzle.http.events.postgres_bus.PostgresBus",
-                    return_value=mock_pg_bus,
-                ),
-                patch(
-                    "dazzle.http.events.postgres_bus.PostgresConfig",
-                    MagicMock(),
-                ),
-            ):
-                await framework.start()
+            await framework.start()
 
-                assert framework._outbox is not None
-                assert framework._inbox is not None
+            assert framework._outbox is not None
+            assert framework._inbox is not None
 
-                await framework.stop()
+            await framework.stop()
         finally:
             if saved_psycopg is None:
                 sys.modules.pop("psycopg", None)

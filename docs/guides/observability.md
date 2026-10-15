@@ -30,17 +30,9 @@ application — no sidecar or separate management port required.
 | `/_dazzle/audit/logs` | GET | Audit trail query (filterable) | Admin auth required |
 | `/_dazzle/audit/logs/{entity}/{id}` | GET | Audit trail for one record | Admin auth required |
 | `/_dazzle/audit/stats` | GET | Aggregated audit statistics | Admin auth required |
-| `/_dazzle/events/status` | GET | Event system summary | None (all environments) |
-| `/_dazzle/events/topics` | GET | Topic list with event counts | None (all environments) |
-| `/_dazzle/events/topics/{topic}` | GET | Events in a topic (paginated) | None (all environments) |
-| `/_dazzle/events/event/{id}` | GET | Full detail for one event | None (all environments) |
-| `/_dazzle/events/consumers` | GET | Consumer groups + lag | None (all environments) |
-| `/_dazzle/events/outbox` | GET | Transactional outbox stats + recent entries | None (all environments) |
-| `/_dazzle/events/dlq` | GET | Dead-letter queue contents | None (all environments) |
-| `/_dazzle/events/dlq/{event_id}/replay` | POST | Re-queue one DLQ event | None (all environments) |
 | `/_dazzle/integrations/{name}/retries` | GET | Recent retry attempts (in-process, volatile) | None; only when `integration` blocks declared |
 
-**Gating note:** The `/_dazzle/*` debug and event endpoints are
+**Gating note:** The `/_dazzle/*` debug endpoints are
 registered unconditionally — there is no `DAZZLE_ENV`-based removal
 of those routes in production. The audit endpoints require an
 authenticated superuser (`is_superuser=True` on the user record).
@@ -49,7 +41,7 @@ is present and HTTP 403 when the authenticated user is not a superuser.
 
 In production deployments, protect the `/_dazzle/*` surface (except
 `/health`, `/live`, `/ready`) at your load balancer or ingress — do not
-expose entity, tables, events, or spec endpoints to public traffic.
+expose entity, tables, or spec endpoints to public traffic.
 
 **Additional system endpoints (no `/_dazzle/` prefix):**
 
@@ -172,159 +164,24 @@ Use `dsl_hash` to confirm which DSL revision is running — it is the first
 
 ## 3. The Event Subsystem Operationally
 
-The event subsystem endpoints are under `/_dazzle/events/*`. They respond
-whether the broker is Redis-backed or PostgreSQL-backed. When the event
-framework is not running (e.g., no broker configured), all endpoints
-return empty/inactive responses rather than errors.
+The event framework starts in every app. With `REDIS_URL` set it runs on
+Redis Streams: auth lifecycle events (`auth.user.registered` and siblings),
+process events from the `EventBusProcessAdapter`, and handlers registered with
+`EventFramework.register_handler` (deduplicated per consumer group through the
+`_dazzle_event_inbox` table). Without `REDIS_URL` the bus is the null tier:
+publishes are accepted and dropped and registered handlers never fire. The
+startup log line `Event framework started` names the tier (`redis` or `null`)
+and the bus type.
 
-**Infrastructure note:** `/_dazzle/events/*` endpoints reflect the event
-bus broker in use. The default broker for apps without `REDIS_URL` is a
-PostgreSQL-backed bus — the subsystem still starts and all endpoints are
-functional. A Redis-backed bus is used when `REDIS_URL` is set; the
-operational surface is identical.
+`EventFramework.health_check()` returns the tier, the bus type, whether the
+outbox publisher is running, the consumer count and the outbox depth; with
+Redis it also reports `redis_connected` and the topic count. Inspect the Redis
+streams and their consumer groups with `redis-cli` (`XINFO GROUPS <topic>`).
 
-### `GET /_dazzle/events/status` — event system summary
-
-**Verified live output** (`invoice_ops`, PostgreSQL broker):
-```json
-{
-  "running": true,
-  "broker_type": "PostgresBus",
-  "topics_count": 0,
-  "consumers_count": 0,
-  "outbox_pending": 0,
-  "dlq_count": 0
-}
-```
-
-`running: false` means the event framework did not start — check startup
-logs for `WARNING: Process manager requires REDIS_URL` or similar.
-
-When the event bus is a Redis-backed broker, `broker_type` will be the
-class name of the Redis bus implementation.
-
-### `GET /_dazzle/events/topics` — topic list
-
-**Verified live output:**
-```json
-{
-  "topics": [],
-  "total_events": 0
-}
-```
-
-Each topic entry carries: `name`, `event_count`, `consumer_groups`,
-`dlq_count`, `oldest_event`, `newest_event`.
-
-In `invoice_ops`, the `invoice_events` topic appears here once events have
-been published. If `invoice_events` is missing, no `InvoiceSubmitted` /
-`InvoiceApproved` / `InvoicePaid` events have reached the bus yet.
-
-### `GET /_dazzle/events/consumers` — consumer groups and lag
-
-**Verified live output:**
-```json
-{"consumers": []}
-```
-
-Each consumer entry carries:
-
-```json
-{
-  "group_id": "invoice-processor",
-  "topic": "invoice_events",
-  "last_sequence": 1420,
-  "lag": 3
-}
-```
-
-`lag` is the number of events the consumer has not yet processed
-(bus sequence − consumer's `last_sequence`). A non-zero lag is normal
-under load; a steadily growing lag indicates a stuck consumer.
-
-**Diagnosing a stuck consumer:**
-
-1. `GET /_dazzle/events/consumers` — identify the group with growing lag.
-2. `GET /_dazzle/events/topics/{topic}` — inspect recent events in the
-   topic; look for one event type that correlates with the lag start.
-3. `GET /_dazzle/events/event/{event_id}` — read the full payload of the
-   problematic event.
-4. Check application logs for exceptions from the consumer's handler.
-5. If the event is unprocessable, it will eventually exhaust retries and
-   land in the DLQ — see [DLQ section below](#dead-letter-queue).
-
-### `GET /_dazzle/events/outbox` — transactional outbox
-
-The transactional outbox is the mechanism that guarantees events are
-published atomically with the database write that produced them. An
-application writes to the outbox row in the same DB transaction as the
-entity change; a background relay then publishes to the bus.
-
-**Verified live output:**
-```json
-{
-  "stats": {
-    "pending": 0,
-    "publishing": 0,
-    "published": 0,
-    "failed": 0,
-    "oldest_pending": null
-  },
-  "recent_entries": []
-}
-```
-
-**Outbox pipeline states:**
-
-| State | Meaning |
-|---|---|
-| `pending` | Written to outbox, not yet picked up by the relay |
-| `publishing` | Relay has picked it up, attempting bus publish |
-| `published` | Successfully delivered to the event bus |
-| `failed` | Relay publish failed; will be retried |
-
-**Diagnosing a backed-up outbox:**
-
-- High `pending` count with a very old `oldest_pending`: the relay
-  background task is not running. Check startup logs for `Outbox publisher
-  started`; if missing, the event framework did not initialise. Restart
-  the application.
-- High `failed` count: the event bus is unreachable. Check `REDIS_URL`
-  (if Redis-backed) or the PostgreSQL connection (if PostgreSQL-backed).
-- `publishing` items that never progress to `published`: the relay started
-  a publish but the process crashed mid-flight. These become `failed` on
-  next startup and are retried.
-
-### Dead-letter queue
-
-The DLQ holds events that a consumer could not process after exhausting
-its retry budget.
-
-**`GET /_dazzle/events/dlq`** — list DLQ entries:
-
-**Verified live output:**
-```json
-{"entries": [], "total": 0}
-```
-
-Each entry carries: `event_id`, `topic`, `group_id`, `reason_code`,
-`reason_message`, `attempts`, `created_at`.
-
-**`POST /_dazzle/events/dlq/{event_id}/replay`** — replay a DLQ event:
-
-```bash
-curl -X POST "/_dazzle/events/dlq/{event_id}/replay?group_id=invoice-processor"
-```
-
-The `group_id` query parameter is required — it specifies which consumer
-group should receive the replayed event. A successful replay removes the
-event from the DLQ and re-queues it for processing. Response:
-
-```json
-{"success": true, "message": "Event abc123 replayed successfully"}
-```
-
-Or on failure: `{"success": false, "error": "Event abc123 not found in DLQ"}`.
+There is no HTTP event inspector. The unauthenticated `/_dazzle/events/*`
+explorer, the PostgreSQL and in-memory buses and the `/_ops/sse/events` live
+push were parked in flense ship AR; see
+[DD-006](../decisions/DD-006-events-dsl.md).
 
 ---
 
@@ -465,74 +322,35 @@ That trade-off is deliberate: the surface exists for in-flight and
 recent-restart inspection only. For durable retry history use the
 integration provider's own logs, or wait for a future persistent-retry
 feature. Do not build operational alerting against this endpoint's
-contents — alert on the DLQ (`/_dazzle/events/dlq`) or your integration
-provider's logs instead.
+contents — alert on your integration provider's logs instead.
 
 ---
 
 ## 6. Worked Example — `invoice_ops` in Production
 
-`examples/invoice_ops` is a production-grade accounts-payable system:
-10 entities, maker-checker approval, entity lifecycle events through
-the transactional outbox, and a settlement process (`settle_invoice`)
-that calls the `payment_provider` integration.
+`examples/invoice_ops` is an accounts-payable system: maker-checker
+approval and a settlement process (`settle_invoice`) that calls the
+`payment_provider` integration.
 
-### Which endpoints answer "is settlement healthy?"
+### Which checks answer "is settlement healthy?"
 
-For an operator watching a running `invoice_ops` instance, settlement
-health maps directly to the event surfaces:
-
-**1. Is the event bus running and are events flowing?**
+**1. Is the app up and the database reachable?**
 
 ```bash
-GET /_dazzle/events/status
-# Expect: "running": true, "broker_type": "PostgresBus" (or RedisBackedBus)
+GET /_dazzle/ready
+# Expect: "ready": true
 ```
 
-**2. Are entity events publishing?**
-
-```bash
-GET /_dazzle/events/topics
-# Look for the Invoice entity topic in the topics list.
-# "event_count" should grow as invoices are submitted and approved.
-```
-
-**3. Is the outbox relay current?**
-
-```bash
-GET /_dazzle/events/outbox
-# Healthy: {"pending": 0, "published": <n>, "failed": 0}
-# Concern: "pending" or "failed" non-zero and growing
-```
-
-A growing `pending` count on the outbox means events are being written
-to the DB but not reaching the bus — the outbox relay has stalled.
-Check for `Outbox publisher started` in the startup logs; if absent,
-restart the application.
-
-**4. Is the settlement process completing?**
+**2. Is the settlement process completing?**
 
 The `settle_invoice` process executes when `Invoice.status` transitions
 to `approved`. Inspect its runs in the `process_runs` table
 (`status`, `error`, `current_step`); a cluster of
 failed runs means the `payment_provider` integration is failing
 persistently — check the mock scenario (in dev: the `mock` MCP tool)
-or the live integration logs.
+or the live integration logs and `/_dazzle/integrations/payment_provider/retries`.
 
-**5. Are consumers keeping up?**
-
-```bash
-GET /_dazzle/events/consumers
-# Look for the invoice_events consumer group.
-# "lag": 0 = current. A growing lag = consumer is behind.
-```
-
-The `InvoiceStatusView` projection (declared in `events.dsl`) is the
-primary consumer of `invoice_events`. If its lag is non-zero and growing,
-status projections are stale — the Invoice list will show outdated statuses
-until the consumer catches up.
-
-**6. Is settlement deadlocked on approval?**
+**3. Is settlement deadlocked on approval?**
 
 ```bash
 # How many invoices are waiting for approval?
@@ -548,11 +366,8 @@ been notified.
 
 | Check | Endpoint | Healthy value |
 |---|---|---|
-| Event bus running | `/_dazzle/events/status` | `running: true` |
-| Outbox clean | `/_dazzle/events/outbox` | `pending: 0, failed: 0` |
-| Consumer current | `/_dazzle/events/consumers` | `lag: 0` for `invoice_events` |
-| No DLQ events | `/_dazzle/events/dlq` | `total: 0` |
 | DB reachable | `/_dazzle/ready` | `ready: true` |
+| Integration retries quiet | `/_dazzle/integrations/payment_provider/retries` | no recent failures |
 | No stuck settlements | Entity API | `status=dead_letter` count: 0 |
 
 ---

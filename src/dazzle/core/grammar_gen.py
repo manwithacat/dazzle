@@ -663,6 +663,7 @@ workspace_decl ::= "workspace" IDENT STRING? ":" NEWLINE
                    INDENT
                      ("purpose" ":" STRING NEWLINE)?
                      ("access" ":" IDENT NEWLINE)?
+                     ("live" ":" IDENT NEWLINE)?  (* parked in DD-006: W_DECLARED_NOT_READ *)
                      workspace_region+
                      ux_block?
                    DEDENT ;

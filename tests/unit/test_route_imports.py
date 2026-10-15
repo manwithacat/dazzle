@@ -18,7 +18,6 @@ ROUTE_MODULES = [
     "dazzle.http.runtime.site_routes",
     "dazzle.http.runtime.tenant_middleware",
     "dazzle.http.runtime.debug_routes",
-    "dazzle.http.runtime.event_explorer",
     "dazzle.http.runtime.route_generator",
     "dazzle.http.runtime.audit_routes",
     "dazzle.http.runtime.fragment_routes",

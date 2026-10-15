@@ -208,7 +208,7 @@ def fail_work(
 ) -> str:
     """Retry (reset to pending with deliver_at=retry_at) until max_attempts, then dead-letter.
 
-    Mirrors PostgresBus's nack/DLQ split (spike 'carry forward'): ``attempts``
+    Mirrors the (parked, DD-006) PostgresBus's nack/DLQ split (spike 'carry forward'): ``attempts``
     is the discriminator; a row at or over *max_attempts* goes
     ``status='dead'``.
 

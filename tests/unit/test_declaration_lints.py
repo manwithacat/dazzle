@@ -445,6 +445,17 @@ def test_construct_without_unread_clause_is_silent(case: str) -> None:
     assert _parse_warnings(clean) == []
 
 
+def test_parked_workspace_live_clause_warns_and_still_parses() -> None:
+    """`live: on` (SSE live push) is parked in DD-006 (flense ship AR)."""
+    body = "workspace w:\n  live: on\n  tasks:\n    source: Task\n"
+    fragment = _parse(body)
+    assert [r.name for r in fragment.workspaces[0].regions] == ["tasks"]
+    assert fragment.parse_warnings == [
+        "W_DECLARED_NOT_READ: workspace: `live:` declared but not read by the runtime; "
+        "SSE live push is parked in DD-006 (test.dsl:5)"
+    ]
+
+
 def test_scalar_concurrency_warns_instead_of_failing_the_parse() -> None:
     fragment = _parse("llm_config:\n  concurrency: 3\n  default_model: m1\n")
     assert fragment.llm_config is not None

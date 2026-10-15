@@ -1,17 +1,13 @@
 """
 Event Bus Tier Configuration and Factory.
 
-Provides a unified way to configure and instantiate the appropriate event bus
-based on deployment environment. Supports automatic tier detection and explicit
-configuration.
+Selects and builds the event bus for a deployment:
 
-Tiers:
-- Tier 0: In-memory (testing)
-- Tier 1: PostgreSQL (Heroku pilots)
-- Tier 2: Redis Streams (Heroku growth)
-- Tier 3: EventBridge (AWS serverless) - future
+- Redis Streams — every production consumer (``REDIS_URL`` set).
+- Null — no ``REDIS_URL``: publish is accepted and dropped, nothing is delivered.
 
-A Kafka tier is parked under DD-006.
+The PostgreSQL and in-memory tiers were parked in flense ship AR, the Kafka tier
+in flense ship F; both are recorded in DD-006.
 """
 
 from __future__ import annotations
@@ -23,32 +19,25 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from dazzle.http.events.bus import EventBus
-from dazzle.http.events.dev_memory import DevBusMemory
+from dazzle.http.events.null import NullBus
 
 if TYPE_CHECKING:
-    from dazzle.http.events.postgres_bus import PostgresBus
     from dazzle.http.events.redis_bus import RedisBus
 
 logger = logging.getLogger(__name__)
 
 
 class EventTier(StrEnum):
-    """Event bus tiers in order of increasing capability/complexity."""
+    """Event bus tiers."""
 
-    MEMORY = "memory"
-    """Tier 0: In-memory, no durability. For testing only."""
-
-    POSTGRES = "postgres"
-    """Tier 1: PostgreSQL-backed. For Heroku pilots with existing Postgres."""
+    NULL = "null"
+    """No transport: publish is a no-op and nothing is delivered."""
 
     REDIS = "redis"
-    """Tier 2: Redis Streams. For higher throughput on Heroku."""
-
-    EVENTBRIDGE = "eventbridge"
-    """Tier 3: AWS EventBridge. For serverless/AWS deployments."""
+    """Redis Streams. The production tier."""
 
     AUTO = "auto"
-    """Auto-detect based on available environment variables."""
+    """Redis when ``REDIS_URL`` is set, otherwise null."""
 
 
 @dataclass
@@ -58,64 +47,23 @@ class TierConfig:
     tier: EventTier = EventTier.AUTO
     """Which tier to use. AUTO detects from environment."""
 
-    # PostgreSQL config
-    postgres_url: str | None = None
-    """PostgreSQL connection URL. Defaults to DATABASE_URL env var."""
-
-    postgres_table_prefix: str = "_dazzle_"
-    """Prefix for PostgreSQL event tables."""
-
-    # Redis config
     redis_url: str | None = None
     """Redis connection URL. Defaults to REDIS_URL env var."""
 
     redis_max_stream_length: int = 10000
     """Maximum entries per Redis stream."""
 
-    # General config
     max_retries: int = 3
     """Maximum retry attempts before moving to DLQ."""
 
-    poll_interval: float = 0.5
-    """Seconds between polls when no events available."""
-
 
 def detect_tier() -> EventTier:
-    """
-    Auto-detect the appropriate tier based on environment.
-
-    Detection order:
-    1. EVENT_BACKEND explicitly set -> use that tier
-    2. REDIS_URL -> Redis (no longer requires EVENT_BACKEND=redis)
-    3. DATABASE_URL starting with postgres -> PostgreSQL
-    4. Default -> Memory (test-only)
-    """
-    # Explicit override via EVENT_BACKEND
-    explicit = os.getenv("EVENT_BACKEND", "").lower()
-    if explicit:
-        tier_map = {
-            "memory": EventTier.MEMORY,
-            "postgres": EventTier.POSTGRES,
-            "redis": EventTier.REDIS,
-        }
-        if explicit in tier_map:
-            logger.info("Using explicit tier: %s (EVENT_BACKEND=%s)", explicit, explicit)
-            return tier_map[explicit]
-
-    # Check for Redis — auto-select when REDIS_URL is set
+    """Redis when ``REDIS_URL`` is set, otherwise the null tier."""
     if os.getenv("REDIS_URL"):
         logger.info("Auto-detected tier: Redis (REDIS_URL set)")
         return EventTier.REDIS
-
-    # Check for PostgreSQL
-    db_url = os.getenv("DATABASE_URL", "")
-    if db_url.startswith("postgres"):
-        logger.info("Auto-detected tier: PostgreSQL (DATABASE_URL is postgres)")
-        return EventTier.POSTGRES
-
-    # Default to in-memory (test-only)
-    logger.info("Auto-detected tier: Memory (no external backends configured)")
-    return EventTier.MEMORY
+    logger.info("Auto-detected tier: null (REDIS_URL not set; events are dropped)")
+    return EventTier.NULL
 
 
 def create_bus(config: TierConfig | None = None) -> EventBus:
@@ -129,18 +77,8 @@ def create_bus(config: TierConfig | None = None) -> EventBus:
         Configured EventBus instance (not connected).
 
     Raises:
-        ImportError: If required dependencies for the tier are not installed.
-        ValueError: If tier is not supported.
-
-    Example:
-        # Auto-detect tier
-        bus = create_bus()
-        async with bus:
-            await bus.publish("app.Order", envelope)
-
-        # Explicit tier
-        config = TierConfig(tier=EventTier.POSTGRES)
-        bus = create_bus(config)
+        ImportError: If the ``redis`` extra is missing for the Redis tier.
+        ValueError: If the tier is unknown or Redis has no URL.
     """
     if config is None:
         config = TierConfig()
@@ -149,63 +87,17 @@ def create_bus(config: TierConfig | None = None) -> EventBus:
     if tier == EventTier.AUTO:
         tier = detect_tier()
 
-    if tier == EventTier.MEMORY:
-        return _create_memory_bus()
-
-    if tier == EventTier.POSTGRES:
-        return _create_postgres_bus(config)
+    if tier == EventTier.NULL:
+        return NullBus()
 
     if tier == EventTier.REDIS:
         return _create_redis_bus(config)
 
-    if tier == EventTier.EVENTBRIDGE:
-        raise NotImplementedError(
-            "EventBridge tier is not yet implemented. "
-            "Provision your own AWS SQS/EventBridge and wire it via configuration."
-        )
-
     raise ValueError(f"Unknown tier: {tier}")
 
 
-def _create_memory_bus() -> DevBusMemory:
-    """Create in-memory bus for testing."""
-    logger.debug("Creating in-memory event bus (Tier 0)")
-    return DevBusMemory()
-
-
-def _create_postgres_bus(config: TierConfig) -> PostgresBus:
-    """Create PostgreSQL-backed bus for Heroku pilots."""
-    from dazzle.http.events.postgres_bus import (
-        ASYNCPG_AVAILABLE,
-        PostgresBus,
-        PostgresConfig,
-    )
-
-    if not ASYNCPG_AVAILABLE:
-        raise ImportError(
-            "psycopg is required for PostgreSQL event bus. Install with: pip install dazzle"
-        )
-
-    dsn = config.postgres_url or os.getenv("DATABASE_URL")
-    if not dsn:
-        raise ValueError(
-            "PostgreSQL URL not configured. "
-            "Set DATABASE_URL environment variable or postgres_url in config."
-        )
-
-    pg_config = PostgresConfig(
-        dsn=dsn,
-        table_prefix=config.postgres_table_prefix,
-        max_retries=config.max_retries,
-        poll_interval=config.poll_interval,
-    )
-
-    logger.debug("Creating PostgreSQL event bus (Tier 1)")
-    return PostgresBus(pg_config)
-
-
 def _create_redis_bus(config: TierConfig) -> RedisBus:
-    """Create Redis Streams bus for higher throughput."""
+    """Create the Redis Streams bus."""
     from dazzle.http.events.redis_bus import REDIS_AVAILABLE, RedisBus, RedisConfig
 
     if not REDIS_AVAILABLE:
@@ -225,7 +117,7 @@ def _create_redis_bus(config: TierConfig) -> RedisBus:
         retry_count=config.max_retries,
     )
 
-    logger.debug("Creating Redis Streams event bus (Tier 2)")
+    logger.debug("Creating Redis Streams event bus")
     return RedisBus(redis_config)
 
 
@@ -236,7 +128,6 @@ def get_tier_info() -> dict[str, Any]:
     Returns:
         Dict with available tiers and detected configuration.
     """
-    from dazzle.http.events.postgres_bus import ASYNCPG_AVAILABLE
     from dazzle.http.events.redis_bus import REDIS_AVAILABLE
 
     detected = detect_tier()
@@ -244,21 +135,14 @@ def get_tier_info() -> dict[str, Any]:
     return {
         "detected_tier": detected.value,
         "available_tiers": {
-            "memory": {"available": True, "description": "In-memory (testing)"},
-            "postgres": {
-                "available": ASYNCPG_AVAILABLE,
-                "description": "PostgreSQL (Heroku pilots)",
-                "install": "pip install dazzle",
-            },
+            "null": {"available": True, "description": "No transport (REDIS_URL not set)"},
             "redis": {
                 "available": REDIS_AVAILABLE,
-                "description": "Redis Streams (Heroku growth)",
+                "description": "Redis Streams",
                 "install": "pip install dazzle-dsl[redis]",
             },
         },
         "environment": {
-            "DATABASE_URL": bool(os.getenv("DATABASE_URL")),
             "REDIS_URL": bool(os.getenv("REDIS_URL")),
-            "EVENT_BACKEND": os.getenv("EVENT_BACKEND"),
         },
     }

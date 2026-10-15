@@ -141,6 +141,8 @@ _ALLOWLIST = frozenset(
         "dazzle.http.alembic.versions.0023_flense_park_enterprise_auth.downgrade",
         # 0024.downgrade recreates the two-factor tables parked in ship AG (DD-014).
         "dazzle.http.alembic.versions.0024_flense_park_two_factor.downgrade",
+        # 0025.downgrade recreates the channel delivery outbox removed in ship AR (DD-006).
+        "dazzle.http.alembic.versions.0025_flense_park_event_transport.downgrade",
     }
 )
 
