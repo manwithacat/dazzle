@@ -115,6 +115,8 @@ consumer when a real channel is needed). Prove the rest:
      `semantics(operation="extract_guards")`, which now always returns `[]`; drop that step.
    - 23 fields on 15 entities are rich text (`Communication.body`, `MLROFlag.narrative`, the
      `CustomerDueDiligence` EDD fields, …): run `db resanitize-rich-text`.
+   - `scripts/probe_jinja_usage.py:55` imports `dazzle.ui.runtime.page_routes`, a path dead since
+     ADR-0041 (`dazzle.page.runtime` / `dazzle.http.runtime.page_routes`); fix or delete the probe.
    - `AGENTS.md:130` advertises `dazzle test coverage`, which does not exist; the kept `dazzle test`
      commands are `run`, `dsl-run`, `generate`, `walk`, `create-sessions`, `diff-personas`,
      `verify-story`, `populate`, `agent` and `tier2-generate` (`dazzle test --help`).

@@ -272,3 +272,104 @@ Open for the operator: drop revisions for the `devices` table (ship O) need sign
 Known nuisances: the HaTchi-MaXchi prose-drift tests fail when run from the framework root
 (pre-existing; they pass in the package's own gate), and `test_api_surface_drift[ir_types]`
 is order-dependent after the presentation MCP tests in one process.
+
+## 9. Phase 6 — the second flense (planned 2026-10-15, after v0.117.0)
+
+Phases 0–3 and the surgical loop removed ~800k lines across src, tests, docs and the
+archive branch without changing the consumer-facing feature set. §8.1 concluded that the
+reachability walks find no unreached *module*; this phase works one level down and on the
+test suite, which is now larger than the framework it tests (351k test lines for 339k src).
+
+### 9.1 Principles carried forward, one added
+
+- Everything in §3 and ADR-0057 still applies: a thing stays only with a named consumer, a
+  named future consumer gets a Deferred Decision and the code goes, evidence is `rg` across
+  the framework, the three checkouts, scripts, hooks, skills, Makefile and CI, never a guess.
+- **HaTchi-MaXchi is exempt.** `packages/hatchi-maxchi/` is a design system pursuing parity
+  with shadcn-class component libraries; a Hyperpart without a consumer is a deliberate,
+  speculative asset, not flense mass (operator ruling 2026-10-15). No Phase 6 ship touches
+  HM components, controllers, CSS, gallery or baselines; the HM standalone CI stays the gate.
+- A test is kept for the behaviour it pins, not for its name or count. The distillation
+  reports under `tests/audit/` are the evidence; one behaviour = one test; a cluster that
+  asserts one shape over N inputs becomes one parametrised test.
+
+### 9.2 Evidence (measured 2026-10-15 against v0.117.0 and the three checkouts)
+
+| Finding | Size (src / tests) | Evidence |
+|---|---:|---|
+| Enterprise auth (SAML, SCIM, enterprise OIDC, connections, domain verification, `dazzle auth connection`) | ≈ 5,500 / ≈ 13,000 | gated on `[capabilities] enabled` in `dazzle.toml`; no consumer declares the section; AegisMark's `docs/enterprise-auth-enablement.md` records the capability as "inert" and names go-live as a reviewed architecture change |
+| Two-factor auth (TOTP, recovery codes, `/2fa/*` pages) | ≈ 1,100 / ≈ 1,400 | mounted for every app; no consumer declares `security: two_factor`; zero `/2fa` references in any checkout |
+| `dazzle init` and the bundled `dazzle.examples` package | ≈ 8,100 (4,700 of it a Vite/`dnr-ui` SPA and a Docker frontend) / 9 test files | no consumer runs `init`; `bootstrap` (MCP) is the documented entry point and does not use it; a bundled SPA contradicts ADR-0011 |
+| `/_ops/sse` streaming, `/_site/*` JSON API | ≈ 600 / ≈ 100 | no JS, HM, test or consumer caller beyond registration |
+| `fixtures/investigator_smoke` | 0 DSL, 3 files | fixture for the fitness investigator removed in ship B1; zero test references |
+| Function clones | 138 clone pairs, 76 exact families (`tests/unit/fixtures/clone_*.json`) | `dazzle fitness clones` |
+| Test redundancy | 989 clusters of ≥3 same-shape tests (3,899 tests; ≈ 2,910 collapsible), 21 cross-file clusters (205 tests), 74 implementation mirrors | `tests/audit/redundancy_report.md`, `cross_file_report.md`, `taxonomy_report.md` |
+| Test mass by area | `tests/unit` 323k of 351k; largest files `test_parser.py` 3.7k, `test_region_adapter.py` 2.5k, `test_rhythm_mcp.py` 2.1k, `test_validator.py` 1.8k, `test_template_compiler.py` 1.5k | 16,750 test functions, 1,459 parametrised |
+| Kept and load-bearing (not candidates) | `http/events` (cyfuture subscribes to the entity bus and runs `EventBusProcessAdapter`), `http/channels` (the email kernel the auth subsystem uses), social OAuth via `authlib` (cyfuture google/github/apple), magic link (AegisMark), S3 storage (AegisMark), `sitespec`/`themespec`/`brandspec`, `/__test__` seed routes (all three), `dazzle pipeline` (AegisMark, cyfuture), `dazzle test` (cyfuture, 14 files) | inventory + `rg` |
+
+Not a cut, noted for the operator: `src/dazzle/examples/simple_task/build/` holds 700 MB of
+ignored `node_modules` on disk (safe to delete locally); cyfuture's
+`scripts/probe_jinja_usage.py:55` imports the dead `dazzle.ui.runtime` path (consumer action,
+added to `FLENSE_CYFUTURE.md`).
+
+### 9.3 Ships
+
+Letters continue from the surgical loop. **D** = needs an operator decision before dispatch;
+the rest run on evidence alone, same mechanics as §8.1 (Opus worktree agents, harvest by
+cherry-pick, `make ci-fast`, push gate, no bump mid-loop; a `minor` bump closes the phase).
+
+| Ship | Scope | Disposition | Expected Δ (src / tests) |
+|---|---|---|---:|
+| **AD** (D) | Enterprise auth: `auth/saml_*`, `scim_*`, `oidc_provider`, `enterprise_*`, `connection_*`, `connections`, `leftover_*`, `sso_session`, DNS resolvers, `connection_crypto`, `cli/auth_connection.py`, the `auth.enterprise.*` capability registrations, their tables (drop revision, operator sign-off like `devices`), the `saml` extra and python3-saml/xmlsec | **Park** as DD-013 "Enterprise SSO / SCIM connections"; reopen when AegisMark (or any consumer) declares the capability. Social OAuth (`sso_routes`, `sso_config`, authlib) and magic link stay | −5.5k / −13k |
+| **AE** | `/_ops/sse` (`sse_stream.py`), the `/_site/*` JSON API in `site_routes.py`, `/_dazzle/metrics` if the operator confirms the constant document goes (§8.1), `fixtures/investigator_smoke` | Delete | −1k / −0.3k |
+| **AF** (D) | `dazzle init`, `dazzle.examples` (bundled `simple_task` with `dnr-ui` SPA, Docker frontend, testspec, generated e2e), `cli/project.py` paths that only serve them | Delete; `bootstrap` + `examples/simple_task` in the repo remain the way a new app starts. If the operator wants `init` kept, it scaffolds from `examples/simple_task` with no bundled copy | −8k / −1k |
+| **AG** (D) | Two-factor auth: `routes_2fa`, `two_factor_*`, `leftover_2fa_code`, TOTP/recovery helpers, the `/2fa/*` pages in `site_routes.py`, `security.two_factor` IR | **Park** as DD-014 "Two-factor authentication"; reopen when a consumer declares `security: two_factor`. Alternative the operator may prefer: keep, and make a consumer adopt it in Phase 4 as part of its assurance pack | −1.1k / −1.4k |
+| **AH** | Exact clone families (`clone_families.json`): one definition per family, callers updated; clone baseline lowered | Consolidate | −1k / 0 |
+| **AI** | Dead-definition ratchet round 2 after AD–AH (vulture ≥60%, verified by `rg` across src/tests/consumers; never a dispatch-table or registry target) | Delete | −1k / −0.5k |
+| **AJ–AN** | Test distillation, one ship per area, in this order: (AJ) `test_region_adapter.py` + `tests/unit/render/`; (AK) `tests/unit/http_runtime/` + `test_datatable_handler.py` + `test_query_builder.py` + `test_document_routes.py`; (AL) `tests/unit/mcp/` + `test_rhythm_mcp.py` + `test_sentinel*`; (AM) `test_parser.py` + `test_validator.py` + `test_template_compiler.py` + `tests/unit/test_signing/`; (AN) cross-file clusters → shared parametrised helpers in `tests/unit/helpers/`, and the 74 implementation mirrors rewritten against public behaviour or deleted | Collapse same-shape clusters to parametrised tests; delete tautologies and mirrors; never delete a regression pin (`#nnnn` in the name or docstring) without proving the behaviour is pinned elsewhere | 0 / −40k to −55k |
+
+Rules for AJ–AN, in the brief of every agent: regenerate `tests/audit/` with
+`scripts/distill/{classify,cluster,cross_file}.py` after the change; the ship's own cluster
+count must fall; `make ci-fast` and the full unit run (`uv run pytest -n auto -m "not e2e"`)
+both green; a test removed because another test pins the same behaviour names that test in
+the commit body; HM tests (`test_hm_*`, `packages/hatchi-maxchi/tests`) are out of scope.
+
+### 9.4 Decisions needed (before AD, AF, AG are dispatched)
+
+1. **AD — park enterprise auth.** The ADR says park: no consumer declares the capability and
+   the only named future consumer has written down that enabling it is a reviewed go-live.
+   The design, the schema and the CLI live on in DD-013 and the `archive` branch. Against:
+   SSO/SCIM is part of the enterprise sales story for a regulated SaaS. Recommendation: park;
+   reopening is a cherry-pick, and a consumer adopting it would do so through the FORCED path
+   with a real IdP to test against, which none has today.
+2. **AF — delete `dazzle init` and the bundled example.** Recommendation: delete; the wheel
+   should not ship a Vite SPA, and `bootstrap` is the entry point. If `init` stays, it
+   scaffolds from the repo example without a bundled copy.
+3. **AG — park two-factor auth.** Recommendation: park (DD-014) with the explicit note that a
+   regulated consumer's assurance pack is the forcing function to bring it back; the
+   alternative is to make AegisMark adopt it now under Phase 4.
+
+### 9.5 Targets for this phase
+
+| Measure | After ship AC | Phase 6 target | Note |
+|---|---:|---:|---|
+| Framework src lines | 339,095 | ≤ 322,000 | AD, AE, AF, AG, AH, AI |
+| Test lines | 350,984 | ≤ 295,000 | AJ–AN carry most of it |
+| Docs lines in tree | 47,806 | ≤ 48,000 | DD-013/014 add, removed-feature docs go |
+| Top-level constructs | 31 | 31 | unchanged |
+| Clone families | 76 | ≤ 20 | AH |
+| Redundancy clusters ≥3 | 989 | ≤ 600 | AJ–AN |
+
+The §7 targets (≤ 250k src, ≤ 200k tests) stay out of reach without retiring features
+consumers use or re-architecting `http/runtime` (`page_routes.py` 3.9k, `server.py` 2.7k,
+`auth/store.py` 2.9k are the monoliths); that is Phase 7 material and a product decision.
+
+### 9.6 Mechanics
+
+Same loop as §8.1: the session orchestrates, up to three Opus worktree agents in flight,
+harvest by `git cherry-pick --no-commit`, CHANGELOG under Unreleased in house style, mass
+baseline lowered per ship (`--force --reason` only when a ship adds lines, e.g. a DD), push
+under the push gate, CI checked each wake, one line per wake in `.dazzle/flense-log.md`.
+AJ–AN may run concurrently with AD–AI because they touch disjoint files; two distillation
+ships never run at once. The phase closes with a `minor` bump, plan §9 updated with the
+measured numbers, and `FLENSE_*.md` refreshed if any consumer action results.

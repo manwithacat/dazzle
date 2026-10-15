@@ -1,9 +1,9 @@
 {
   "src_lines": 339095,
   "test_lines": 350984,
-  "docs_lines": 47845,
+  "docs_lines": 47946,
   "construct_count": 31,
-  "written": "2026-10-14",
+  "written": "2026-10-15",
   "exceptions": [
     {
       "date": "2026-10-11",
@@ -153,6 +153,13 @@
         "docs_lines"
       ],
       "reason": "closing: plan \u00a78.1 and FLENSE \u00a78 consumer actions (+docs)"
+    },
+    {
+      "date": "2026-10-15",
+      "rose": [
+        "docs_lines"
+      ],
+      "reason": "Phase 6 plan \u00a79, HM exemption in AGENTS.md, cyfuture brief line (+docs)"
     }
   ]
 }
