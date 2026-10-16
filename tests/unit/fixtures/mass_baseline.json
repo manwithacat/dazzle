@@ -1,7 +1,7 @@
 {
   "src_lines": 318202,
   "test_lines": 309076,
-  "docs_lines": 47931,
+  "docs_lines": 47952,
   "construct_count": 31,
   "written": "2026-10-16",
   "exceptions": [
@@ -234,6 +234,13 @@
         "docs_lines"
       ],
       "reason": "DD-013 discussion starter and CHANGELOG entries for the enterprise-auth ruling (docs only; src/tests unchanged)"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "docs_lines"
+      ],
+      "reason": "DD-013 agreed plan for enterprise auth (OIDC+SCIM only) and CHANGELOG; docs only"
     }
   ]
 }

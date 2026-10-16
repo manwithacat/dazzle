@@ -29,6 +29,9 @@ Restore from the commit this DD was parked at
 (`23cf59372dc91d2636dbde0e6aceb549cd40efd3`, the parent of flense ship AD);
 `git show 23cf59372:<path>` returns every file below. The operator guide was
 `docs/reference/enterprise-sso.md` at the same commit; its substance is here.
+**Scope agreed 2026-10-16: OIDC and SCIM only.** The SAML paragraphs below
+describe what existed and stay as reference; they are not restored (see
+**Agreed plan** and **Explicitly out of scope**).
 
 **Gating.** Three capabilities in `dazzle.core.capabilities.registry`:
 `auth.enterprise.oidc` (probe `authlib`, extra `sso`), `auth.enterprise.saml`
@@ -136,8 +139,9 @@ requirement* of the platform even though no consumer has declared it yet, and
 the retired implementation is the starting point for the design discussion, not
 a design to restore verbatim. That ruling is a second route to `FORCED`: the
 operator may move this DD to `FORCED` with `consumer: platform (core
-requirement)` once the **Discussion starter** below is resolved, without the
-consumer evidence in items 2 and 3. Until then the status stays `PARKED` and
+requirement)` whenever the work is scheduled, without the consumer evidence in
+items 2 and 3; the design questions were settled the same day (see **Agreed
+plan**). Until then the status stays `PARKED` and
 the `memberships.external_id` drop that plan §10 listed as "open for the
 operator" is **off the table** (SCIM identity is `externalId`-first).
 
@@ -161,62 +165,75 @@ When a force lands:
    tests; re-add the `saml` extra only for SAML.
 4. When shipped, set `status: DONE` and close issues.
 
-## Discussion starter (2026-10-16)
+## Agreed plan (2026-10-16)
 
-What flense ship AD removed, as a size: 153 files, 20,757 lines deleted
-(about 7.4k `src`, 11.6k `tests`, the 262-line operator guide, the `saml`
-extra). `git show 23cf59372:<path>` for any file; `git show --stat 229226a88`
-for the list. The largest pieces were `scim_routes.py` (951), `store.py`'s
-enterprise mixins (about 1.1k), `cli/auth_connection.py` (841),
-`scim_provisioning.py` (617), `saml_provider.py` (492) and the admin surface
-(about 1.1k across routes, views, form, doctor, probe).
+The discussion between the operator and the session agent on 2026-10-16
+settled the questions the first write-up raised. What flense ship AD removed,
+as a size: 153 files, 20,757 lines deleted (about 7.4k `src`, 11.6k `tests`,
+the 262-line operator guide, the `saml` extra). `git show 23cf59372:<path>` for
+any file; `git show --stat 229226a88` for the list.
 
-**Worth keeping as designed** (the parts that encode hard-won judgement):
-the `Connection` runtime-data model with org fencing; verified-domain routing
-and provisioning as the anti-hijack gate; AES-GCM secrets with the two-key
+**Kept as designed** (the parts that encode hard-won judgement): the
+`Connection` runtime-data model with org fencing; verified-domain routing and
+provisioning as the anti-hijack gate; AES-GCM secrets with the two-key
 rotation window; default-deny group → role mapping matched on name or IdP
-`externalId`; SAML delegated entirely to python3-saml in strict mode with
-one-time `InResponseTo` and the consumed-assertion cache; SCIM identity
-`externalId`-first with org-scoped session kill on deprovision;
-`finish_login_session` as the single session-minting point. The counter-priors
-listed above hold whatever the new shape is.
+`externalId`; SCIM identity `externalId`-first with org-scoped session kill on
+deprovision; `finish_login_session` as the single session-minting point; the
+boot guard that logs loudly when connection rows exist for an unmounted
+protocol. The counter-priors above hold.
 
-**Open questions the discussion has to settle before `FORCED`:**
+**Decisions:**
 
-1. *Gating.* The removed code mounted behind `[capabilities] enabled =
-   ["auth.enterprise.*"]`, and the capability framework itself went in ship
-   AI. If enterprise auth is core, is it gated at all, or does it mount when
-   the `[auth.enterprise]` config (or a connection row) exists and the extra
-   imports? A core requirement argues for a declared `[auth]` setting a
-   consumer writes (DD-014's counter-prior), not a capability registry rebuilt
-   for one tenant.
-2. *Protocol order.* OIDC first (Entra ID and Google Workspace are both OIDC;
-   no native dependency), SCIM second (independent of the sign-in protocol),
-   SAML last and only with a customer that cannot do OIDC (python3-saml needs
-   `libxmlsec1`, an `Aptfile` on Heroku). Restore one protocol at a time.
-3. *Scope boundary with DD-014.* With IdP sign-in, MFA is the IdP's job; local
-   two-factor only matters for password accounts. Decide whether "enterprise
-   auth" means SSO + SCIM (this DD) or also MFA for non-SSO users (DD-014), and
-   whether an org can *require* SSO for its members (the removed code did not).
-4. *Admin surface.* `admin_policy.CAPABILITIES` is now `("manage_members",)`;
-   `manage_connections` and the `/auth/connections` pages went with ship AD.
-   Decide whether connection admin is CLI-only at first (the runbook's
-   onboarding is CLI-driven) and the pages come back with the first
-   self-service customer.
-5. *Tests.* Of the 11.6k test lines, about 3.5k were improve-loop
-   `test_scim_*_leftover.py` files (one per SCIM attribute). Restore the
-   behaviour tests and the integration doubles (`saml_idp_double.py`); fold the
-   leftover files into one parametrised gate (flense ship AX principle: one
-   gate per invariant).
-6. *Consumer shape.* AegisMark's ADR-0012 (Proposed 2026-06-18) chose the full
-   migration onto the framework membership model and its runbook
-   (`docs/enterprise-auth-enablement.md`) still describes the two-layer story
-   (shared app-level OIDC vs per-org connections) and the Heroku enablement
-   steps. It is the design partner for the discussion even without a signed
-   customer; cyfuture and pennydreadful have no enterprise identity need.
-7. *Schema.* Five tables return by a new Alembic revision from the
-   `downgrade` of `0023_flense_park_enterprise_auth`; keep
-   `memberships.external_id` and its unique index now (see the ruling above).
+1. **Gating is `[auth.enterprise]` in `dazzle.toml`, not a capability
+   registry.** `protocols = ["oidc", "scim"]` names what mounts. A declared
+   protocol whose extra does not import is a boot error, never a silent skip,
+   so the old "declared but inert" posture cannot recur. The capability
+   framework removed in ship AI is not rebuilt.
+2. **OIDC and SCIM only.** OIDC covers Google Workspace, Microsoft Entra ID,
+   ADFS (since 2016) and Sign in with Apple, which are every exemplar; SCIM is
+   independent of the sign-in protocol. Restore OIDC first, SCIM second.
+3. **SAML is not restored** (operator's view: obsolete for Dazzle's market).
+   It was the riskiest piece of the old stack (XML signature handling,
+   `python3-saml` plus native `libxmlsec1` on every dyno, the most
+   special-case code). If a customer arrives on a SAML-only IdP, the answer is
+   a hosted broker (Keycloak, Auth0, Entra External ID) that terminates SAML
+   and presents OIDC to Dazzle, as a per-customer deployment choice. The
+   known triggers are UK education federations: RM Unify and UK Access
+   Management Federation (Shibboleth). AegisMark's pilot material names
+   neither.
+4. **`require_sso` per org is the gate.** New behaviour, not a restore: once
+   an org has a verified domain and an active connection and sets
+   `require_sso`, password and magic-link login for that domain are refused
+   and the user is sent to the IdP; the group mapping is then the only source
+   of roles for those users. With IdP sign-in, MFA is the IdP's job; local
+   two-factor (DD-014) stays parked for orgs without an IdP and ships
+   separately if a consumer's assurance pack names it.
+5. **Admin surface is CLI first.** `dazzle auth connection …` comes back; the
+   `/auth/connections` pages and the `manage_connections` admin capability
+   wait for the first customer whose IT admin self-serves. The one exception
+   is `connection_doctor`'s readiness checklist, exposed read-only on the
+   existing org admin page because support will ask for it.
+6. **Tests.** Restore the behaviour tests and the OIDC double verbatim; fold
+   the eleven `test_scim_*_leftover.py` files (improve-loop outputs, one per
+   SCIM attribute, about 3.5k of the 11.6k test lines) into one parametrised
+   gate (flense ship AX principle: one gate per invariant). The SAML tests
+   and `saml_idp_double.py` are not restored.
+7. **Consumer shape.** AegisMark is the design partner. Its ADR-0012
+   migration onto the framework membership model **did** ship (AegisMark
+   CHANGELOG, "Enterprise-auth membership migration, EAM P1–P4": native
+   `tenant_host:` routing, login-time membership gating, the custom
+   `pipeline/tenant` gate retired), so the group → role mapping has a
+   membership to write to. Its `docs/enterprise-auth-enablement.md` runbook
+   (per-org connections alongside session login; Heroku enablement steps)
+   is the acceptance script, minus the SAML and `[saml]` extra lines.
+8. **Schema.** `connections`, `connection_secret_events`, `scim_groups` and
+   `scim_group_members` return by one new Alembic revision built from the
+   `downgrade` of `0023_flense_park_enterprise_auth` (not
+   `saml_consumed_assertions`), registered in `dazzle.db.artifact_registry`
+   with the snapshot regenerated. `memberships.external_id` and its unique
+   index stay. The connection-secret crypto becomes the single
+   secret-at-rest mechanism, so a later DD-014 restore encrypts `totp_secret`
+   with it rather than adding a second.
 
 ## Already shipped (do not re-litigate)
 
@@ -229,8 +246,11 @@ listed above hold whatever the new shape is.
 
 ## Explicitly out of scope until force
 
+- **SAML 2.0** (decision 3 above): not restored; a SAML-only IdP is bridged
+  by a hosted broker that presents OIDC. Reopen this line only for a signed
+  customer on RM Unify or UK federation Shibboleth who refuses a broker.
 - WS-Federation, LDAP, Kerberos; SCIM Bulk; just-in-time org creation from an
-  IdP; per-connection custom SP entity ids beyond what the restored code had.
+  IdP.
 - Re-adding a protocol no consumer asked for because the others came back.
 
 ## Trail
@@ -239,3 +259,4 @@ listed above hold whatever the new shape is.
 |------|--------|
 | 2026-10-15 | Parked (this DD); enterprise auth removed in flense ship AD, tables dropped by `0023_flense_park_enterprise_auth` |
 | 2026-10-16 | Operator ruling: enterprise auth is a core requirement without a named consumer; the retired implementation is the discussion starting point; `memberships.external_id` drop withdrawn; **Discussion starter** added |
+| 2026-10-16 | Discussion resolved (operator + session agent): OIDC and SCIM only, SAML out of scope with the broker route, `[auth.enterprise]` gating, `require_sso` per org, CLI-first admin; **Agreed plan** replaces the discussion starter |
