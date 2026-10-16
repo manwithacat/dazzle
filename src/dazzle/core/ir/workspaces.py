@@ -73,14 +73,12 @@ class DisplayMode(StrEnum):
     CONFIRM_ACTION_PANEL = (
         "confirm_action_panel"  # v0.61.72 (#6): irreversible-action consent panel
     )
-    SEARCH_BOX = "search_box"  # #954 cycle 4: htmx search input + ranked results
     # AegisMark Day-One demo region primitives (#1015–#1018).
-    # Currently driven by `cohort_strip_config` / `task_inbox_config` /
+    # Currently driven by `cohort_strip_config` /
     # `day_timeline_config` / `entity_card_config` typed config blocks
     # on WorkspaceRegion — discriminated by the `display` value here.
     COHORT_STRIP = "cohort_strip"  # #1018: cohort-skim with lens toggle
     DAY_TIMELINE = "day_timeline"  # #1016: chronological MIS landing
-    TASK_INBOX = "task_inbox"  # #1015: workflow-led landing surface
     ENTITY_CARD = "entity_card"  # #1017: 360° single-entity drill-down composite
     COMPARISON = "comparison"  # #1470: ranked-league (rank rows by metric + flag outliers)
     INSIGHT_SUMMARY = "insight_summary"  # #1470: deterministic grounded narrative
@@ -768,99 +766,6 @@ class EntityCardConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class TaskSourceTemplate(BaseModel):
-    """Per-source `as_task` template (#1015).
-
-    Defines how one row from a `TaskSource` renders as a typed task
-    item. Title and meta are template strings with `{field}`
-    placeholders resolved against the source row at runtime by the
-    adapter (this IR carries the unresolved templates).
-
-    Attributes:
-        icon: Named icon token (`register`, `pupil`, `message`,
-            etc.) — adapter maps to the framework's icon vocabulary.
-        title: Template string for the task's primary line.
-            Placeholders reference fields on the source row or
-            FK-resolved targets.
-        meta: Template string for the secondary copy (period,
-            deadline, age). Optional.
-        via_joins: Cross-entity alias map (#1145 part 2). Each key
-            is an alias usable in ``title``/``meta`` templates; each
-            value is a dotted path resolved against the source row
-            (typically walking through FK-hydrated sub-dicts). At
-            render time the runtime resolves each path and injects
-            the result under ``row[alias]`` before template
-            interpolation, so ``{{ student.forename }}`` can reach
-            ``BehaviourIncident → BehaviourStudent → StudentProfile``
-            without route overrides. Empty dict (default) preserves
-            pre-#1145-part-2 behaviour.
-    """
-
-    icon: str
-    title: str
-    meta: str = ""
-    via_joins: dict[str, str] = Field(default_factory=dict)
-
-    model_config = ConfigDict(frozen=True)
-
-
-class TaskSource(BaseModel):
-    """One source feeding a `task_inbox` region (#1015).
-
-    Each source resolves to 0..N rows on the source entity scoped by
-    `filter`. Either `as_task` (per-row task item) or `count_as`
-    (collapsed summary chip) must be set — they are mutually
-    exclusive: an `as_task` source emits one task per row, a
-    `count_as` source emits one summary chip with the row count
-    regardless of cardinality.
-
-    Attributes:
-        source: Entity name (the source's row type).
-        filter: Optional scope/predicate evaluated against the
-            source rows. None = match all (within RBAC scope).
-        as_task: Per-row task template. Mutually exclusive with
-            `count_as`.
-        count_as: Singular noun phrase for the collapsed-summary
-            chip (e.g. ``"manuscripts ready to review"``). Mutually
-            exclusive with `as_task`.
-    """
-
-    source: str
-    filter: ConditionExpr | None = None
-    as_task: TaskSourceTemplate | None = None
-    count_as: str = ""
-
-    model_config = ConfigDict(frozen=True)
-
-
-class TaskInboxConfig(BaseModel):
-    """Per-region config for `display: task_inbox` (#1015).
-
-    Discriminated config block — only populated when
-    `WorkspaceRegion.display == DisplayMode.TASK_INBOX`. Models the
-    workflow-led "due actions" landing pattern: heterogeneous entity
-    states gathered into one prioritised inbox, framed as
-    tasks-of-actions rather than entity-of-records.
-
-    Attributes:
-        sources: Ordered list of contributing sources. Each is
-            either an `as_task` row template or a `count_as`
-            summary chip; the runtime adapter resolves both.
-        order: Ordered list of sort keys evaluated left-to-right
-            against the merged task list. ``urgency`` is the
-            built-in priority bucket; other keys reference
-            temporal fields on the source rows.
-        empty_state: Message rendered when zero tasks AND zero
-            summary chips resolve.
-    """
-
-    sources: list[TaskSource]
-    order: list[str] = Field(default_factory=lambda: ["urgency", "deadline"])
-    empty_state: str = "All caught up."
-
-    model_config = ConfigDict(frozen=True)
-
-
 class DayTimelineConfig(BaseModel):
     """Per-region config for `display: day_timeline` (#1016).
 
@@ -879,8 +784,7 @@ class DayTimelineConfig(BaseModel):
             timestamp.
         card: ``{{ field }}`` / ``{{ field.path }}`` template
             rendered against each slot's source row to produce the
-            slot body (#1146 part 1). Same grammar as
-            ``task_inbox`` templates — graceful
+            slot body (#1146 part 1). Graceful
             degradation when a path is unresolved (renders as empty
             string). When ``card == ""`` slots render with a minimal
             default body (start/end label only).
@@ -1039,7 +943,6 @@ class WorkspaceRegion(BaseModel):
     # bloating the flat field set with mutually-exclusive options.
     cohort_strip_config: CohortStripConfig | None = None  # #1018 (v0.67.2)
     day_timeline_config: DayTimelineConfig | None = None  # #1016 (v0.67.3)
-    task_inbox_config: TaskInboxConfig | None = None  # #1015 (v0.67.4)
     entity_card_config: EntityCardConfig | None = None  # #1017 (v0.67.5)
     # #1148: per-row click-to-POST action for row-oriented displays
     # (list, cohort_strip, day_timeline, status_list). One typed block,
@@ -1048,8 +951,8 @@ class WorkspaceRegion(BaseModel):
     # author `row_action:` ahead of full renderer support, the IR is
     # ready and the parser locks the shape.
     row_action: RowActionSpec | None = None
-    # #1303: per-row drill-to-detail on row-oriented displays (list,
-    # task_inbox). Values: None (default) → AUTO (rows link to
+    # #1303: per-row drill-to-detail on row-oriented displays (list).
+    # Values: None (default) → AUTO (rows link to
     # `/app/<entity>/{id}` when the source entity has a VIEW surface,
     # mirroring the standalone list); "none" → opt out (no row links even
     # if a detail surface exists); "detail" → explicit auto (same as

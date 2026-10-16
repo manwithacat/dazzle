@@ -69,7 +69,7 @@ from dazzle.render.fragment.primitives.data import (
             # would produce a colliding/missing id.
             lambda: SearchBox(name="", fts_endpoint=URL("/_dazzle/fts/X")),
             "non-empty name",
-            id="search_box.name",
+            id="fts_search_input.name",
         ),
         pytest.param(
             lambda: ConfirmCheckItem(title=""),
@@ -408,7 +408,7 @@ _TEMPORAL_EMPTY = {"include_closed": "", "as_of": ""}
         pytest.param(
             lambda: SearchBox(name="x", fts_endpoint=URL("/_dazzle/fts/X")),
             {"placeholder": "Search…", "coaching_message": "Type to search", "label": ""},
-            id="search_box",
+            id="fts_search_input",
         ),
         pytest.param(
             lambda: ConfirmCheckItem(title="X"),

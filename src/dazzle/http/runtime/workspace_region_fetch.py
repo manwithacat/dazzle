@@ -309,8 +309,7 @@ async def fetch_region_items(
             result: dict[str, Any] = {"items": [], "total": 0}
         else:
             # Free-text find-by-name (?q= / ?search=) when surface/FTS declares
-            # search_fields — filters the list in place (ILIKE). Distinct from
-            # display:search_box FTS results panel under the input.
+            # search_fields — filters the list in place (ILIKE).
             search_q = (
                 request.query_params.get("q") or request.query_params.get("search") or ""
             ).strip()

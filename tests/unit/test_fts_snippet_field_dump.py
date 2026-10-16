@@ -1,4 +1,4 @@
-"""FTS search_box must not dump schema keys as snippet labels (oral #180)."""
+"""FTS SearchBox snippets must not dump schema keys as snippet labels (oral #180)."""
 
 from __future__ import annotations
 

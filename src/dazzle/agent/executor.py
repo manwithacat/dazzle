@@ -38,8 +38,8 @@ def _dom_hash(html: str) -> str:
     return hashlib.sha256(html.encode("utf-8")).hexdigest()[:16]
 
 
-def _search_box_results_selector(target: str) -> str | None:
-    """Map a search_box input selector to its results panel id.
+def _search_results_selector(target: str) -> str | None:
+    """Map a SearchBox input selector to its results panel id.
 
     Inputs are ``#dz-search-results-<name>-input``; results live in
     ``#dz-search-results-<name>``. Returns None for non-search targets.
@@ -58,7 +58,7 @@ def _search_box_results_selector(target: str) -> str | None:
 def _is_list_search_input(target: str) -> bool:
     """True when TYPE target is workspace list free-text chrome (``?q=`` filter).
 
-    Distinct from FTS ``display:search_box`` (results panel under the input).
+    Distinct from the FTS SearchBox (results panel under the input).
     dual_pane directories use ``#dz-list-q-<region>`` / ``data-dz-list-search-input``
     so the A–Z list shrinks in place — panels that only know the FTS id pattern
     miss this affordance and re-file "search broken" after list search works
@@ -91,7 +91,7 @@ except ImportError:  # pragma: no cover — playwright is an optional extra
     pass
 
 
-async def _search_box_results_summary(page: Any, results_sel: str) -> str:
+async def _search_results_summary(page: Any, results_sel: str) -> str:
     """Human-readable hit list for TYPE action messages (agent history).
 
     The A–Z directory list stays full by design; panels that only watch that
@@ -126,7 +126,7 @@ async def _search_box_results_summary(page: Any, results_sel: str) -> str:
         # Best-effort history enrichment only — never abort TYPE for a summary
         # miss. warning (not debug) so swallow ratchet stays green (cycle 1337).
         logger.warning(
-            "search_box results summary failed for %s: %s",
+            "SearchBox results summary failed for %s: %s",
             results_sel,
             exc,
             exc_info=True,
@@ -275,7 +275,7 @@ class PlaywrightExecutor:
         capture_state = action.type not in (ActionType.TOOL, ActionType.DONE)
         from_url: str | None = None
         from_hash: str | None = None
-        search_box_settled = False
+        search_settled = False
         if capture_state:
             from_url = self._page.url
             from_hash = _dom_hash(await self._page.content())
@@ -296,12 +296,12 @@ class PlaywrightExecutor:
             elif action.type == ActionType.TYPE:
                 locator = self._resolve_locator(action.target or "")
                 await locator.fill(action.value or "", timeout=5000)
-                # HTMX search_box / filter inputs use delay:250ms (or longer).
+                # HTMX SearchBox / filter inputs use delay:250ms (or longer).
                 # fill() dispatches input but without a settle wait the agent
                 # snapshots "NO state change" before results swap — false
                 # search-broken friction in qa trial (contact_manager panel).
                 # Prefer waiting on the results panel when the target is a
-                # search_box input: networkidle often never settles under
+                # SearchBox input: networkidle often never settles under
                 # SSE/lazy regions, so a fixed 400ms race still mis-scores
                 # working FTS as broken (cycle 1332 panel).
                 # List free-text chrome (?q= / #dz-list-q-*) reloads the region
@@ -310,7 +310,7 @@ class PlaywrightExecutor:
                 list_search_settled = False
                 try:
                     target_sel = action.target or ""
-                    results_sel = _search_box_results_selector(target_sel)
+                    results_sel = _search_results_selector(target_sel)
                     if results_sel:
                         await self._page.wait_for_timeout(300)  # HTMX debounce
                         try:
@@ -327,13 +327,11 @@ class PlaywrightExecutor:
                                 arg=results_sel,
                                 timeout=5000,
                             )
-                            search_box_settled = True
-                            results_summary = await _search_box_results_summary(
-                                self._page, results_sel
-                            )
+                            search_settled = True
+                            results_summary = await _search_results_summary(self._page, results_sel)
                         except _SETTLE_TIMEOUT_TYPES:
                             logger.debug(
-                                "search_box results settle timeout for %s",
+                                "SearchBox results settle timeout for %s",
                                 target_sel,
                                 exc_info=True,
                             )
@@ -389,9 +387,9 @@ class PlaywrightExecutor:
                         exc_info=True,
                     )
                 msg = f"Typed '{action.value}' into {action.target}"
-                if search_box_settled and results_summary:
+                if search_settled and results_summary:
                     msg += f" — search results panel: {results_summary}"
-                elif search_box_settled:
+                elif search_settled:
                     msg += " — search results panel updated (A–Z list stays full by design)"
                 elif list_search_settled and results_summary:
                     msg += f" — {results_summary}"
@@ -399,7 +397,7 @@ class PlaywrightExecutor:
                     msg += " — list search chrome updated (directory filters in place)"
                 if list_search_settled:
                     # Treat like FTS settle for state_changed below.
-                    search_box_settled = True
+                    search_settled = True
                 base = ActionResult(message=msg)
 
             elif action.type == ActionType.SELECT:
@@ -481,7 +479,7 @@ class PlaywrightExecutor:
                 base.state_changed = True  # optimistic
             elif action.type == ActionType.ASSERT:
                 base.state_changed = False  # optimistic
-            elif search_box_settled:
+            elif search_settled:
                 # FTS results panel updated — never report NO state change when
                 # the settle predicate already saw hits/empty (cycle 1336).
                 base.state_changed = True

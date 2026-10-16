@@ -6,8 +6,6 @@ Pairs the I/O layer with the pure data shapers in
 
 - `_fetch_entity_card_section_rows`: fan out per-section queries for
   an entity_card region.
-- `_fetch_task_inbox_items_per_source`: fan out per-source queries
-  for a multi-source task_inbox.
 - `_empty_list_coro` / `_safe_fetch`: shared concurrency helpers.
 - `_build_entity_card_sections`: assemble the resolved section dicts
   by dispatching to the per-mode body renderers.
@@ -62,7 +60,7 @@ async def _fetch_entity_card_section_rows(
     have no entry in the returned dict — those modes don't need
     per-section rows.
 
-    Per-section failure isolation: same as task_inbox — one bad
+    Per-section failure isolation: one bad
     query logs at warning level and yields an empty list rather
     than crashing the whole entity_card render.
     """
@@ -149,123 +147,9 @@ async def _fetch_entity_card_section_rows(
     return rows_per_section
 
 
-async def _fetch_task_inbox_items_per_source(
-    *,
-    config: Any,
-    ctx: Any,
-    request: Any,
-    auth_context: Any,
-    user_id: str | None,
-) -> dict[int, list[dict[str, Any]]]:
-    """Fan out per-source queries for a task_inbox region (#1015).
-
-    For each source declared in the config:
-      1. Look up the source entity's repository (`ctx.repositories`).
-      2. Look up the source entity's access spec (`ctx.entity_access_specs`).
-      3. Convert the source's `filter:` ConditionExpr (if any) to a
-         repo-filter dict via the existing `_extract_condition_filters`.
-      4. Apply per-entity scope filters via `_apply_workspace_scope_filters`
-         using a synthesized per-source context.
-      5. Fetch rows in parallel via `asyncio.gather`.
-
-    Returns a dict mapping source index → list of fetched row dicts.
-    A scope-denied source (no matching scope rule) maps to an empty
-    list (default-deny). Failed queries also map to empty lists with
-    an operator-visible warning log — one source's failure must not
-    block the rest of the inbox from rendering.
-
-    The returned dict keys ONLY appear for as_task or count_as
-    sources that successfully fetched rows; missing keys signal
-    "treat as empty" downstream (matches the helper's defensive
-    behaviour at `_resolve_task_inbox_multi_source`).
-    """
-    from contextlib import suppress
-    from dataclasses import replace as _dc_replace
-
-    sources = list(getattr(config, "sources", []) or [])
-    if not sources:
-        return {}
-    repositories = getattr(ctx, "repositories", None) or {}
-    entity_access_specs = getattr(ctx, "entity_access_specs", None) or {}
-    if not repositories:
-        return {}
-
-    # Gather per-source fetch coroutines along with their indices.
-    coros: list[Any] = []
-    indices: list[int] = []
-    for idx, src in enumerate(sources):
-        source_entity = str(getattr(src, "source", "") or "")
-        if not source_entity:
-            continue
-        repo = repositories.get(source_entity)
-        if repo is None:
-            continue
-
-        # Build per-source ctx for scope evaluation. Cedar access
-        # spec comes from the source entity, NOT the region's own
-        # primary entity.
-        per_source_ctx = _dc_replace(
-            ctx,
-            source=source_entity,
-            cedar_access_spec=entity_access_specs.get(source_entity),
-        )
-        scope_filters, scope_denied = _apply_workspace_scope_filters(
-            per_source_ctx, auth_context, user_id, None
-        )
-        if scope_denied:
-            # Default-deny when no scope rule matched.
-            indices.append(idx)
-            coros.append(_empty_list_coro())
-            continue
-
-        # Convert source.filter (ConditionExpr) to repo filter dict.
-        merged_filters: dict[str, Any] = {}
-        if scope_filters:
-            merged_filters.update(scope_filters)
-        source_filter = getattr(src, "filter", None)
-        if source_filter is not None:
-            from dazzle.http.runtime.scope_filters import _extract_condition_filters
-
-            # #1232 — thread the source entity's FK→target map so dotted
-            # left-side paths (`teacher.user = current_user`) resolve via
-            # subquery JOINs in `_extract_condition_filters` instead of
-            # falling through as an unrecognised `teacher.user` filter key.
-            entity_ref_targets = getattr(ctx, "entity_ref_targets", None) or {}
-            _ref_targets = entity_ref_targets.get(source_entity)
-            with suppress(Exception):
-                _extract_condition_filters(
-                    source_filter,
-                    user_id or "",
-                    merged_filters,
-                    logger,
-                    auth_context,
-                    _ref_targets,
-                    None,
-                )
-
-        # Per-source row cap is intentionally small — the inbox
-        # composes typed task items, not paginated lists. 50 per
-        # source is generous and keeps fan-out cost bounded.
-        coros.append(_safe_fetch(repo, filters=merged_filters, page_size=50, label=source_entity))
-        indices.append(idx)
-
-    if not coros:
-        return {}
-
-    results = await asyncio.gather(*coros, return_exceptions=True)
-    items_per_source: dict[int, list[dict[str, Any]]] = {}
-    for idx, result in zip(indices, results, strict=True):
-        if isinstance(result, BaseException):
-            logger.warning("task_inbox source %d fetch failed: %s — treating as empty", idx, result)
-            items_per_source[idx] = []
-        else:
-            items_per_source[idx] = list(result or [])
-    return items_per_source
-
-
 async def _empty_list_coro() -> list[dict[str, Any]]:
     """Awaitable that resolves to an empty list. Used by the
-    fan-out helper to keep the gather shape uniform when a source
+    fan-out helper to keep the gather shape uniform when a section
     is scope-denied."""
     return []
 
@@ -273,7 +157,7 @@ async def _empty_list_coro() -> list[dict[str, Any]]:
 async def _safe_fetch(
     repo: Any, *, filters: dict[str, Any], page_size: int, label: str
 ) -> list[dict[str, Any]]:
-    """Wrap a repo.list call so per-source failures don't propagate.
+    """Wrap a repo.list call so per-section failures don't propagate.
 
     Returns the items list on success, an empty list on any
     exception (logged at warning level so operators can audit)."""
@@ -287,7 +171,7 @@ async def _safe_fetch(
             fk_display_only=True,
         )
     except Exception as exc:  # noqa: BLE001 — surface to ops log
-        logger.warning("task_inbox source %s fetch raised %s", label, exc)
+        logger.warning("entity_card section %s fetch raised %s", label, exc)
         return []
     # Normalise rows to plain dicts so downstream `row.get(field)` calls
     # in `_render_mini_bars_body` / `_render_stamps_body` /

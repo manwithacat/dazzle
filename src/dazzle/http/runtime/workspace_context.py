@@ -45,13 +45,13 @@ class WorkspaceRegionContext:
     fk_graph: Any = None
     # DSL user entity name for current_user resolution (#588)
     user_entity_name: str = "User"
-    # #1015 (v0.67.16) — per-entity access specs for multi-source
-    # task_inbox fan-out. Maps entity name → access spec so each
-    # source can apply its own scope rules at fetch time. Default
-    # empty dict keeps single-source paths cost-free.
+    # #1015 (v0.67.16) — per-entity access specs for per-section
+    # entity_card fan-out and drill gating. Maps entity name → access
+    # spec so each section can apply its own scope rules at fetch time.
+    # Default empty dict keeps single-source paths cost-free.
     entity_access_specs: dict[str, Any] = field(default_factory=dict)
     # #1232 — per-entity FK → target-entity maps for dotted-path
-    # filter resolution in task_inbox sources (and any other path
+    # filter resolution (any path
     # that needs to call _extract_condition_filters with a non-None
     # ref_targets). Maps entity_name → {fk_field: target_entity}.
     # Default empty dict keeps callers that don't need it cost-free;
@@ -65,17 +65,11 @@ class WorkspaceRegionContext:
     # in this app (cost-free).
     row_action_routes: dict[str, str] = field(default_factory=dict)
     # #1303 — resolved per-row drill-to-detail URL template for row-oriented
-    # displays (list, task_inbox), e.g. "/app/assessment-event/{id}". Set by
+    # displays (list), e.g. "/app/assessment-event/{id}". Set by
     # WorkspaceRouteBuilder when the region's source entity has a VIEW surface
     # AND the region didn't opt out via `drill: none`; empty string means no
-    # row links. The list/task_inbox adapters substitute "{id}" per row.
+    # row links. The list adapters substitute "{id}" per row.
     detail_url_template: str = ""
-    # #1303 — entity_name → detail-URL template map for MULTI-source
-    # task_inbox regions (where each source is a different entity, so the
-    # single `detail_url_template` above isn't enough). Drill-gated the same
-    # way (empty when the region set `drill: none`). The task_inbox builder
-    # looks up each source's template by entity name.
-    entity_detail_urls: dict[str, str] = field(default_factory=dict)
     # dual_pane_flow master-detail: list rows hx-get into the sibling detail
     # pane (``.dz-master-detail__detail``) instead of full-page body drill.
     # When True, ``detail_url_template`` points at the DETAIL region endpoint

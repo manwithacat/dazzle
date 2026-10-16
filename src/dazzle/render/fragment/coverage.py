@@ -193,7 +193,6 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "conversation",
         "pipeline_steps",
         "confirm_action_panel",
-        "search_box",
         "comparison",  # #1470 ranked league
         "insight_summary",  # #1470 deterministic narrative
         "diagram",
@@ -201,7 +200,6 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "radar",
         "cohort_strip",  # #1018 (v0.67.7) — adapter live; data resolution pending
         "day_timeline",  # #1016 (v0.67.8) — adapter live; data resolution pending
-        "task_inbox",  # #1015 (v0.67.8) — adapter live; data resolution pending
         "entity_card",  # #1017 (v0.67.8) — adapter live; data resolution pending
     }
 )

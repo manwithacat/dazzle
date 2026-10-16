@@ -42,7 +42,6 @@ from dazzle.render.fragment.ingest.models import (
     Skeleton,
     StatusListEntry,
     TagsField,
-    TaskInbox,
     TimelineEvent,
     TimeSeries,
 )
@@ -259,7 +258,7 @@ def _hub_open_discovery_attrs(drill_url: str, *, via: str = "id") -> tuple[str, 
 def drill_open_discovery_attrs(drill_url: str, *, via: str = "id") -> str:
     """Single-anchor open discovery (link + chain) for dashboard drills.
 
-    Cycle 1617 — task-inbox / cohort-strip / day-timeline wrap the whole
+    Cycle 1617 — cohort-strip / day-timeline wrap the whole
     cell in ``<a href=drill>`` (no separate host root). Agents need the same
     ``data-dz-open-*`` attrs as queue/kanban without scraping titles.
     Cycle 1714 — optional ``via`` for FK person/ref chips; leaf assembly in
@@ -272,10 +271,9 @@ def drill_anchor_open_attrs(drill_url: str, *, kind: str) -> str:
     """Open discovery + drill marker for a whole-card/cell ``<a href=drill>``.
 
     Sole-emitter for ``data-dz-*-drill`` markers (cycle 1617). ``kind`` is one
-    of ``task_inbox`` / ``cohort`` / ``day_timeline`` / ``grid`` (cycle 1645).
+    of ``cohort`` / ``day_timeline`` / ``grid`` (cycle 1645).
     """
     markers = {
-        "task_inbox": "data-dz-task-inbox-drill",
         "cohort": "data-dz-cohort-drill",
         "day_timeline": "data-dz-day-timeline-drill",
         "grid": "data-dz-grid-drill",
@@ -712,10 +710,6 @@ def diagram_root_attrs(_d: Diagram) -> str:
     return "data-dz-diagram"
 
 
-def task_inbox_root_attrs(_t: TaskInbox) -> str:
-    return "data-dz-task-inbox"
-
-
 def calendar_root_attrs(_c: Calendar) -> str:
     return "data-dz-calendar"
 
@@ -802,16 +796,6 @@ def render_diagram(d: Diagram) -> str:
         f'<ul class="dz-diagram__nodes">{nodes_html}</ul>'
         f'<ul class="dz-diagram__edges">{edges_html}</ul>'
         f"</section>"
-    )
-
-
-def render_task_inbox(t: TaskInbox) -> str:
-    """Model → task-inbox region (matches HM contracts/task_inbox.py)."""
-    root_attrs = task_inbox_root_attrs(t)
-    rname = _html.escape(t.region_name, quote=True)
-    return (
-        f'<div class="dz-task-inbox-region" {root_attrs} '
-        f'data-dz-region-name="{rname}">{t.body_html}</div>'
     )
 
 
@@ -982,7 +966,7 @@ def render_pagination(p: Pagination) -> str:
 
 
 def render_search_box(s: SearchBox) -> str:
-    """Model → search-box region (matches HM contracts/search_box.py)."""
+    """Model → search-box Hyperpart (matches HM contracts/search_box.py)."""
     root_attrs = search_box_root_attrs(s)
     results_id = f"dz-search-results-{_html.escape(s.name, quote=True)}"
     endpoint = _html.escape(s.endpoint, quote=True)

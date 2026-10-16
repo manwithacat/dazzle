@@ -74,7 +74,6 @@ from dazzle.render.fragment.primitives.data import (
     SortHeader,
     StatusList,
     Table,
-    TaskInboxRegion,
     Timeline,
     TimeSeries,
     WorkspaceContextSelector,
@@ -203,7 +202,6 @@ Fragment = (
     | BulkActionToolbar
     | CohortStripRegion
     | DayTimelineRegion
-    | TaskInboxRegion
     | EntityCardRegion
     | DashboardGrid
     | DashboardCard

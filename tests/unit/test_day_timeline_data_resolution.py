@@ -289,7 +289,7 @@ def test_unresolvable_detail_url_template_yields_empty_drill() -> None:
 
 # ── #1146 part 1: `card:` body interpolation ──
 # Each slot body is the `{{ field }}` expansion of `DayTimelineConfig.card`
-# against the row dict (same grammar as profile_card / task_inbox).
+# against the row dict (same grammar as profile_card).
 
 
 @pytest.mark.parametrize(

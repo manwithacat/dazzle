@@ -74,19 +74,19 @@ def test_dispatch_ctx_region_name(surface: Any, expected: str) -> None:
             {"search_enabled": True, "search_fields": ["first_name", "email"]},
             ["/_dazzle/fts/Contact", "dz-search-results-contact_list_search"],
             [],
-            id="search_box_when_search_configured",
+            id="search_input_when_search_configured",
         ),
         pytest.param(
             {"search_enabled": False, "search_fields": []},
             [],
             ["/_dazzle/fts/"],
-            id="no_search_box_when_search_disabled",
+            id="no_search_input_when_search_disabled",
         ),
         pytest.param(
             {"search_enabled": True, "search_fields": []},
             [],
             ["/_dazzle/fts/"],
-            id="no_search_box_when_search_fields_empty",
+            id="no_search_input_when_search_fields_empty",
         ),
         pytest.param(
             {"columns": [_NAME, _STATUS]},
@@ -130,7 +130,7 @@ def test_list_toolbar_render(table: dict[str, Any], present: list[str], absent: 
         assert fragment not in html
 
 
-def test_list_search_box_precedes_filter_bar() -> None:
+def test_list_search_input_precedes_filter_bar() -> None:
     """Search and filter coexist; SearchBox renders before FilterBar."""
     html = render_list(
         list_ctx(

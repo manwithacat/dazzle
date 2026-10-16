@@ -7,16 +7,16 @@ Three structural views the per-file Pass-2 redundancy report doesn't capture.
 Tests sharing the same `(class_name, assertion_shape, public_target)` across multiple files — same assert shape AND the same deduped set of public dazzle callables. A cluster here is a genuinely copy-pasted pattern that one shared parametrised helper could replace. (Pre-#1530 this view keyed on shape alone, which matched hundreds of unrelated files; the target discriminator makes the numbers actionable.)
 
 - **Clusters of size ≥4 across ≥2 files**: 4
-- **Tests inside cross-file clusters**: 31
-- **Theoretical saving**: ~27 if each cluster collapses to one parametric test
-- **Skipped (no attributable public target)**: 822 tests — shape matches without a shared target are not actionable
+- **Tests inside cross-file clusters**: 30
+- **Theoretical saving**: ~26 if each cluster collapses to one parametric test
+- **Skipped (no attributable public target)**: 824 tests — shape matches without a shared target are not actionable
 
 ### Top 25 cross-file clusters
 
 | Class | Size | Target | Files | Sample tests |
 |---|---:|---|---|---|
 | `(module)` | 12 | load_project_appspec | `test_hr_records_goal_b.py`, `test_invoice_ops_goal_b.py`, `test_fixture_signing_validation.py` (+1 more) | test_workspace_regions, test_workspace_focus… |
-| `(module)` | 8 | ParseError | `test_cohort_strip_composite_parser_1144.py`, `test_day_timeline_config_parser.py`, `test_entity_card_config_parser.py` (+2 more) | test_default_separator_when_omitted, test_parses_minimal_config… |
+| `(module)` | 7 | ParseError | `test_cohort_strip_composite_parser_1144.py`, `test_day_timeline_config_parser.py`, `test_entity_card_config_parser.py` (+1 more) | test_default_separator_when_omitted, test_parses_minimal_config… |
 | `(module)` | 7 | load_project_appspec | `test_hr_records_goal_b.py`, `test_invoice_ops_goal_b.py`, `test_simple_task_goal_b.py` | test_entity_shape, test_person_detail_related_groups… |
 | `(module)` | 4 | ir | `test_ir.py`, `test_repository_temporal_retry.py`, `test_rhythm_ir_integration.py` | test_api, test_end_date_fallback_resolves_after_rollback… |
 
@@ -45,7 +45,7 @@ Files dominated by tests that pin internal call shapes (high mocks, short body, 
 
 Pairs of files whose tests' assertion-shape distributions match. One may supersede the other; or they're testing the same shape on two entities (consolidate).
 
-- **Twin pairs**: 6984
+- **Twin pairs**: 7099
 
 ### Top 30 twin pairs
 
@@ -56,11 +56,14 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_css_clip_check.py` | `test_workspace_layout_prefs.py` | 21 | 31 | 20 | 0.95 |
 | `test_curl_test_generator.py` | `test_list_chrome_parity_phase1.py` | 28 | 33 | 20 | 0.71 |
 | `test_parser.py` | `test_workspace_layout_prefs.py` | 25 | 31 | 20 | 0.8 |
+| `test_scim_routes.py` | `test_python_audit_agent.py` | 37 | 27 | 19 | 0.7 |
 | `test_css_clip_check.py` | `test_expression_lang.py` | 21 | 43 | 19 | 0.9 |
 | `test_css_clip_check.py` | `test_rbac_enforcement.py` | 21 | 30 | 19 | 0.9 |
 | `test_css_clip_check.py` | `test_sla_manager.py` | 21 | 32 | 19 | 0.9 |
 | `test_expression_lang.py` | `test_grant_store.py` | 43 | 23 | 19 | 0.83 |
 | `test_expression_lang.py` | `test_session_manager.py` | 43 | 26 | 19 | 0.73 |
+| `test_scim_routes.py` | `test_css_clip_check.py` | 37 | 21 | 18 | 0.86 |
+| `test_scim_routes.py` | `test_parser.py` | 37 | 25 | 18 | 0.72 |
 | `test_aws_config.py` | `test_peek_when_empty_1494.py` | 24 | 50 | 18 | 0.75 |
 | `test_computed_evaluator.py` | `test_expression_lang.py` | 21 | 43 | 18 | 0.86 |
 | `test_css_clip_check.py` | `test_parser.py` | 21 | 25 | 18 | 0.86 |
@@ -69,15 +72,12 @@ Pairs of files whose tests' assertion-shape distributions match. One may superse
 | `test_parser.py` | `test_rbac_enforcement.py` | 25 | 30 | 18 | 0.72 |
 | `test_app_error_views.py` | `test_pdf_viewer_component.py` | 22 | 36 | 17 | 0.77 |
 | `test_bar_chart_bucketed_aggregate.py` | `test_css_clip_check.py` | 40 | 21 | 17 | 0.81 |
-| `test_bar_chart_bucketed_aggregate.py` | `test_task_inbox_data_resolution.py` | 40 | 20 | 17 | 0.85 |
 | `test_css_clip_check.py` | `test_python_audit_agent.py` | 21 | 27 | 17 | 0.81 |
 | `test_grant_store.py` | `test_session_manager.py` | 23 | 26 | 17 | 0.74 |
 | `test_grant_store.py` | `test_viewport.py` | 23 | 43 | 17 | 0.74 |
 | `test_workspace_layout_prefs.py` | `test_workspace_rendering.py` | 31 | 19 | 17 | 0.89 |
+| `test_scim_routes.py` | `test_workspace_rendering.py` | 37 | 19 | 16 | 0.84 |
 | `test_app_error_views.py` | `test_curl_test_generator.py` | 22 | 28 | 16 | 0.73 |
 | `test_app_error_views.py` | `test_error_views.py` | 22 | 19 | 16 | 0.84 |
 | `test_app_error_views.py` | `test_list_chrome_parity_phase1.py` | 22 | 33 | 16 | 0.73 |
 | `test_badge_wcag_icon_1493.py` | `test_peek_when_empty_1494.py` | 19 | 50 | 16 | 0.84 |
-| `test_bar_chart_bucketed_aggregate.py` | `test_tenant_middleware.py` | 40 | 19 | 16 | 0.84 |
-| `test_css_clip_check.py` | `test_persona_journey.py` | 21 | 33 | 16 | 0.76 |
-| `test_entity_card_primitive.py` | `test_task_inbox_primitive.py` | 20 | 27 | 16 | 0.8 |

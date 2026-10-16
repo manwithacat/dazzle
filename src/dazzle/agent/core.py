@@ -300,7 +300,7 @@ def _history_state_true_suffix(result: ActionResult) -> str:
     """Render the trailing clause when ``state_changed is True``."""
     if result.from_url and result.to_url and result.from_url != result.to_url:
         return f" -> navigated {result.from_url} → {result.to_url}"
-    # Prefer TYPE search_box settle summaries over bare "state changed"
+    # Prefer TYPE SearchBox settle summaries over bare "state changed"
     # so panels see FTS hit titles (A–Z list stays full by design).
     msg = result.message or ""
     if "search results panel" in msg:

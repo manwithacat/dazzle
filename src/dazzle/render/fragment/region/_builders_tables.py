@@ -433,9 +433,9 @@ class _BuildersTablesMixin:
         # Build chrome elements in declared order.
         chrome_parts: list[Fragment] = []
 
-        # Free-text list search (?q=) — filters the table via region reload.
-        # Distinct from display:search_box FTS results panel (agent panels and
-        # pilots expect the directory list to shrink when finding a name).
+        # Free-text list search (?q=) — filters the table via region reload
+        # (agent panels and pilots expect the directory list to shrink when
+        # finding a name).
         search_fields_raw = ctx.get("search_fields") or []
         active_search = str(ctx.get("active_search") or "").strip()
         if endpoint and isinstance(search_fields_raw, list) and search_fields_raw:
@@ -451,7 +451,7 @@ class _BuildersTablesMixin:
             hx_get = f"{ep}?{temporal}" if temporal else ep
             val = _html.escape(active_search, quote=True)
             # Pilot-facing copy from declared search fields (name/email/…) so
-            # the single list filter is obvious when FTS search_box is absent.
+            # the single list filter is obvious.
             field_labels: list[str] = []
             for f in search_fields_raw[:4]:
                 s = clerk_list_search_field_label(f)

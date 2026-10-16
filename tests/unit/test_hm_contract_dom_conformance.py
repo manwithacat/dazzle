@@ -69,8 +69,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|tree|calendar|dashboard-card|cohort-strip|day-timeline|entity-card|grid-region|pipeline|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|tree|calendar|dashboard-card|cohort-strip|day-timeline|entity-card|grid-region|pipeline|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|tree|calendar|dashboard-card|cohort-strip|day-timeline|entity-card|grid-region|pipeline|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|tree|calendar|dashboard-card|cohort-strip|day-timeline|entity-card|grid-region|pipeline|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -547,6 +547,9 @@ def test_search_box_emission_conforms_to_search_box_contract() -> None:
     assert not violations, violations
     assert "data-dz-search-box" in html
     assert "dz-search-box-input" in html
+    assert 'hx-get="/mock/search"' in html
+    # Empty / whitespace queries never exchange (trigger filter, no Alpine).
+    assert "this.value.trim().length>0" in html
     assert 'aria-live="polite"' in html
     assert "Type a title or keyword" in html
 
@@ -659,34 +662,6 @@ def test_diagram_emission_conforms_to_diagram_contract() -> None:
     assert "data-dz-diagram" in html
     assert "Customer" in html
     assert "dz-diagram__edge" in html
-
-
-def test_task_inbox_emission_conforms_to_task_inbox_contract() -> None:
-    """Real FragmentRenderer TaskInboxRegion path satisfies contracts/task_inbox.py."""
-    pytest.importorskip("fastapi")
-    from dazzle.render.fragment.primitives.data import TaskInboxItem, TaskInboxRegion
-    from dazzle.render.fragment.renderer import FragmentRenderer
-
-    ti_mod = load_hm_module("contracts/task_inbox.py")
-    kit = load_hm_module("contracts/_kit.py")
-    html = FragmentRenderer().render(
-        TaskInboxRegion(
-            region_name="inbox",
-            items=(
-                TaskInboxItem(
-                    item_id="t1",
-                    icon="inbox",
-                    title="Approve refund",
-                    urgency="overdue",
-                ),
-            ),
-        )
-    )
-    violations = kit.validate_dom(html, ti_mod.DOM_CONTRACT, require_root=True)
-    assert not violations, violations
-    assert "data-dz-task-inbox" in html
-    assert "Approve refund" in html
-    assert 'data-dz-urgency="overdue"' in html
 
 
 def test_calendar_emission_conforms_to_calendar_contract() -> None:

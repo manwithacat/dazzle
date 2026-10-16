@@ -136,9 +136,6 @@ from dazzle.render.fragment import (
     Tabs,
     TagsField,
     TargetSelector,
-    TaskInboxItem,
-    TaskInboxRegion,
-    TaskInboxSummaryChip,
     Text,
     Timeline,
     TimelineEvent,
@@ -443,12 +440,6 @@ def _sample_for(primitive_type: type) -> object:
         return DayTimelineRegion(region_name="day", slots=())
     if primitive_type is DayTimelineSlot:
         return DayTimelineSlot(slot_id="s1", label="P1")
-    if primitive_type is TaskInboxRegion:
-        return TaskInboxRegion(region_name="inbox", items=())
-    if primitive_type is TaskInboxItem:
-        return TaskInboxItem(item_id="i1", icon="register", title="x")
-    if primitive_type is TaskInboxSummaryChip:
-        return TaskInboxSummaryChip(chip_id="c1", count=0, label="x")
     if primitive_type is EntityCardRegion:
         return EntityCardRegion(region_name="card", sections=())
     if primitive_type is EntityCardSection:

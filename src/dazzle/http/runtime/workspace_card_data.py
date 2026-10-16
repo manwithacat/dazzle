@@ -1,4 +1,4 @@
-"""Card-data shapers: cohort cells, day timeline slots, task inbox items.
+"""Card-data shapers: cohort cells, day timeline slots.
 
 Extracted from workspace_rendering.py in #1057 cut 3 (v0.67.102).
 Pure synchronous shapers — no I/O, no DB, no IR dispatch. Take
@@ -12,8 +12,7 @@ Contents:
 - `_initials_from`: 1–2 character initials from a name string.
 - `_build_cohort_cells`: cohort_strip cell list.
 - `_build_day_timeline_slots`: day_timeline slot list with overlap layout.
-- `_build_task_inbox_payload`: (items, chips) tuple for task_inbox display.
-- `_items_from_template`: card item template interpolation.
+- `_interpolate_card_template`: card template interpolation.
 """
 
 import datetime as _dt
@@ -487,8 +486,8 @@ def _build_day_timeline_slots(
     Slot label uses a sensible default: "{starts_at_value} — {ends_at_value}"
     for time-bucketed display. Slot body is the
     ``_interpolate_card_template`` expansion of ``config.card`` against
-    the row dict — same ``{{ field }}`` / ``{{ field.path }}`` grammar
-    as ``task_inbox`` uses (#1146 part 1). Empty
+    the row dict — the ``{{ field }}`` / ``{{ field.path }}`` grammar
+    (#1146 part 1). Empty
     ``config.card`` keeps the body empty (minimal slot rendering).
 
     #1303 / cycle 1416: ``detail_url_template`` (e.g. ``/app/alert/{id}`` or
@@ -607,7 +606,7 @@ def _build_day_timeline_slots(
         label_raw = item.get("name") or item.get("title") or item.get("message") or ""
         label = str(label_raw) if label_raw else f"{starts.isoformat() if starts else ''}"
         # #1146 part 1: composite-card body interpolation. `config.card`
-        # is a `{{ field }}` template (same grammar as task_inbox). Empty template → empty body (no regression for
+        # is a `{{ field }}` template. Empty template → empty body (no regression for
         # configs that don't set `card:`).
         card_template = str(getattr(config, "card", "") or "")
         body = _interpolate_card_template(card_template, item) if card_template else ""
@@ -650,162 +649,6 @@ def _build_day_timeline_slots(
             }
         )
     return slots
-
-
-def _build_task_inbox_payload(
-    *,
-    items: list[dict[str, Any]],
-    config: Any,
-    items_per_source: dict[int, list[dict[str, Any]]] | None = None,
-    entity_detail_urls: dict[str, str] | None = None,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Build (task_inbox_items, task_inbox_chips) from already-scoped
-    source rows (#1015).
-
-    The task_inbox config declares N sources, each either an
-    ``as_task`` per-row template or a ``count_as`` collapsed-summary
-    chip. Two resolution paths:
-
-    * **Multi-source (preferred when available)** — `items_per_source`
-      maps each source index to its already-scoped row list (one
-      query per source, scoped via the source's own entity-level
-      RBAC). Each source contributes its own typed items (for
-      `as_task` sources) or chip count (for `count_as` sources).
-      The upstream fan-out that builds this dict scopes per-entity
-      and applies each source's `filter:` expression.
-    * **Single-source MVP fallback** — when `items_per_source` is
-      None or empty, falls through to the prior behavior: folds the
-      region's primary `items` list against the FIRST `as_task`
-      source, emits chips with count=0 for `count_as` sources. Used
-      when the upstream fan-out hasn't been wired (or the
-      task_inbox sits over a single homogeneous entity).
-
-    `items` is the region's primary source query result (used by the
-    fallback path). `config` is ``WorkspaceRegion.task_inbox_config``.
-    """
-    if config is None:
-        return [], []
-    sources = list(getattr(config, "sources", []) or [])
-    if not sources:
-        return [], []
-    # #1303: entity → detail-URL template map (drill-gated upstream — empty
-    # when the region opted out via `drill: none`). Per-source lookup
-    # populates each item's drill_url.
-    detail_urls = entity_detail_urls or {}
-
-    if items_per_source:
-        return _resolve_task_inbox_multi_source(sources, items_per_source, detail_urls)
-
-    # Single-source MVP fallback — used when the upstream fan-out
-    # hasn't been wired yet.
-    primary_template = None
-    primary_source = ""
-    for src in sources:
-        if getattr(src, "as_task", None) is not None:
-            primary_template = getattr(src, "as_task", None)
-            primary_source = str(getattr(src, "source", "") or "")
-            break
-
-    inbox_items: list[dict[str, Any]] = []
-    if primary_template is not None and items:
-        for entry in _items_from_template(
-            items,
-            primary_template,
-            prefix="",
-            detail_url_template=detail_urls.get(primary_source, ""),
-        ):
-            inbox_items.append(entry)
-
-    inbox_chips: list[dict[str, Any]] = []
-    for idx, src in enumerate(sources):
-        count_as = str(getattr(src, "count_as", "") or "")
-        if not count_as:
-            continue
-        inbox_chips.append(
-            {
-                "chip_id": f"src{idx}",
-                "count": 0,
-                "label": count_as,
-                "drill_url": "",
-            }
-        )
-
-    return inbox_items, inbox_chips
-
-
-def _items_from_template(
-    items: list[dict[str, Any]], template: Any, *, prefix: str, detail_url_template: str = ""
-) -> list[dict[str, Any]]:
-    """Materialise typed task items from an `as_task` template +
-    pre-scoped row list. Shared by single- and multi-source paths.
-
-    `prefix` namespaces the resulting `item_id` so multiple sources
-    can produce items with the same row-level id without collision
-    (e.g. source 0's row "i1" → item_id "src0-i1").
-
-    `detail_url_template` (#1303), when set (e.g. "/app/assessment-event/{id}"),
-    is substituted per row to populate each item's `drill_url` so the inbox
-    item links to the entity detail. The task_inbox item renderer already
-    wraps items in `<a href=drill_url>` when set; an unresolvable template
-    (row missing the key) yields no link rather than crashing."""
-    icon = str(getattr(template, "icon", "") or "")
-    title_tmpl = str(getattr(template, "title", "") or "")
-    meta_tmpl = str(getattr(template, "meta", "") or "")
-    via_joins = dict(getattr(template, "via_joins", {}) or {})
-    out: list[dict[str, Any]] = []
-    for item in items:
-        row_id = str(item.get("id", "") or "")
-        if not row_id:
-            continue
-        item_id = f"{prefix}{row_id}" if prefix else row_id
-        # #1145 part 2: resolve each via_joins alias against the row
-        # (walking FK-hydrated sub-dicts) and stash under that alias
-        # so the template can reference `{{ alias.field }}`. Pure
-        # local-row resolution — no extra queries. Resolved values
-        # written to a shallow copy so the input row isn't mutated.
-        if via_joins:
-            row = dict(item)
-            for alias, path in via_joins.items():
-                row[alias] = _resolve_path(item, path)
-        else:
-            row = item
-        title = _interpolate_card_template(title_tmpl, row) if title_tmpl else ""
-        meta = _interpolate_card_template(meta_tmpl, row) if meta_tmpl else ""
-        urgency_raw = row.get("urgency") or row.get("severity") or row.get("priority") or "later"
-        urgency = _coerce_urgency(str(urgency_raw))
-        drill_url = ""
-        if detail_url_template:
-            try:
-                drill_url = detail_url_template.format(**item)
-            except (KeyError, IndexError, ValueError):
-                drill_url = ""  # row missing the template key — no link
-        out.append(
-            {
-                "item_id": item_id,
-                "icon": icon,
-                "title": title,
-                "meta": meta,
-                "urgency": urgency,
-                "drill_url": drill_url,
-            }
-        )
-    return out
-
-
-def _coerce_urgency(value: str) -> str:
-    """Map a free-form urgency/severity/priority string to one of
-    the four task_inbox bands (overdue / due / soon / later)."""
-    normalized = value.strip().lower()
-    if normalized in ("overdue", "due", "soon", "later"):
-        return normalized
-    # Common aliases — severity-style and priority-style values.
-    if normalized in ("critical", "high", "blocker", "urgent"):
-        return "overdue"
-    if normalized in ("medium", "warning", "warn"):
-        return "due"
-    if normalized in ("low", "minor", "info"):
-        return "soon"
-    return "later"
 
 
 def _interpolate_card_template(template: str, item: dict[str, Any]) -> str:
@@ -872,45 +715,3 @@ def _coerce_pipeline_progress(raw: Any) -> tuple[int | None, bool]:
     if value < 0:
         return 0, False
     return int(round(value)), False
-
-
-def _resolve_task_inbox_multi_source(
-    sources: list[Any],
-    items_per_source: dict[int, list[dict[str, Any]]],
-    entity_detail_urls: dict[str, str] | None = None,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Fan-out resolution: each source's pre-scoped row list maps to
-    typed items (as_task) or a count chip (count_as).
-
-    Order discipline: items are emitted in source-declaration order
-    so the `urgency`-then-`deadline` sort downstream sees a stable
-    base ordering. Chips emit in the same source order as the IR
-    declares them.
-    """
-    detail_urls = entity_detail_urls or {}
-    inbox_items: list[dict[str, Any]] = []
-    inbox_chips: list[dict[str, Any]] = []
-    for idx, src in enumerate(sources):
-        rows = items_per_source.get(idx, []) or []
-        as_task = getattr(src, "as_task", None)
-        count_as = str(getattr(src, "count_as", "") or "")
-        if as_task is not None:
-            src_name = str(getattr(src, "source", "") or "")
-            inbox_items.extend(
-                _items_from_template(
-                    rows,
-                    as_task,
-                    prefix=f"src{idx}-",
-                    detail_url_template=detail_urls.get(src_name, ""),
-                )
-            )
-        elif count_as:
-            inbox_chips.append(
-                {
-                    "chip_id": f"src{idx}",
-                    "count": len(rows),
-                    "label": count_as,
-                    "drill_url": "",
-                }
-            )
-    return inbox_items, inbox_chips

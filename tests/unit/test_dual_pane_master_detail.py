@@ -24,7 +24,7 @@ pytestmark = pytest.mark.gate
 
 def test_detect_same_source_list_detail() -> None:
     regions = [
-        SimpleNamespace(name="search", display="SEARCH_BOX", source="Contact"),
+        SimpleNamespace(name="search", display="METRICS", source="Contact"),
         SimpleNamespace(name="contact_list", display="LIST", source="Contact"),
         SimpleNamespace(name="contact_detail", display="DETAIL", source="Contact"),
     ]

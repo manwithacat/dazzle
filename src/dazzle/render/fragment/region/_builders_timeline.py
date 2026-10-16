@@ -6,7 +6,6 @@ Houses the timeline-family builders. Chronological / event-stream Surfaces:
   - _build_activity_feed  chronological dot + bubble feed
   - _build_conversation   MessageScroller of Message (+Bubble) hyperparts (display: conversation)
   - _build_day_timeline   vertical scroll of slot cards (#1016)
-  - _build_task_inbox     workflow-led prioritised due-action list (#1015)
 
 No family-local helpers — all cross-cutting plumbing lives in `_shared`
 (_region_title, _wrap_surface, _render_typed_value). The legacy
@@ -29,9 +28,6 @@ from dazzle.render.fragment import (
     Message,
     MessageScroller,
     Surface,
-    TaskInboxItem,
-    TaskInboxRegion,
-    TaskInboxSummaryChip,
     Timeline,
     TimelineEvent,
 )
@@ -620,84 +616,5 @@ class _BuildersTimelineMixin:
             region_name=region_name,
             slots=tuple(slots),
             empty_message=str(empty_msg),
-        )
-        return _wrap_surface(title, "dashboard", body)
-
-    def _build_task_inbox(self, region: Any, ctx: RegionContext) -> Surface:
-        """`display: task_inbox` regions render as a workflow-led
-        prioritised list of due actions (#1015, v0.67.8).
-
-        ctx shape:
-            task_inbox_items: list of dicts {"item_id": str, "icon":
-                str, "title": str, "meta": str (default ""),
-                "urgency": "overdue"|"due"|"soon"|"later" (default
-                "later"), "drill_url": str (default "")}.
-            task_inbox_chips: list of dicts {"chip_id": str, "count":
-                int, "label": str, "drill_url": str (default "")} —
-                collapsed-summary chips for `count_as` sources.
-
-        The data resolution layer is responsible for resolving
-        `as_task` template strings against source rows AND for
-        sorting items by the IR's `order` keys (urgency + deadline).
-        This adapter just renders the resolved + sorted shape.
-        """
-        title = _region_title(region)
-        region_name = str(getattr(region, "name", "") or "task_inbox")
-        empty_msg = getattr(region, "empty_message", None)
-        cfg = getattr(region, "task_inbox_config", None)
-        # Empty-state copy comes from the IR config when set;
-        # region.empty_message overrides if present.
-        if empty_msg is None and cfg is not None:
-            empty_msg = getattr(cfg, "empty_state", None)
-        empty_msg = str(empty_msg or "All caught up.")
-
-        valid_urgencies = ("overdue", "due", "soon", "later")
-        items: list[TaskInboxItem] = []
-        for entry in ctx.get("task_inbox_items") or []:
-            if not isinstance(entry, dict):
-                continue
-            item_id = str(entry.get("item_id") or "")
-            if not item_id:
-                continue
-            urgency_raw = str(entry.get("urgency") or "later")
-            urgency = urgency_raw if urgency_raw in valid_urgencies else "later"
-            items.append(
-                TaskInboxItem(
-                    item_id=item_id,
-                    icon=str(entry.get("icon") or ""),
-                    title=str(entry.get("title") or ""),
-                    meta=str(entry.get("meta") or ""),
-                    urgency=urgency,  # type: ignore[arg-type]
-                    drill_url=str(entry.get("drill_url") or ""),
-                )
-            )
-
-        chips: list[TaskInboxSummaryChip] = []
-        for entry in ctx.get("task_inbox_chips") or []:
-            if not isinstance(entry, dict):
-                continue
-            chip_id = str(entry.get("chip_id") or "")
-            if not chip_id:
-                continue
-            try:
-                count = int(entry.get("count") or 0)
-            except (TypeError, ValueError):
-                count = 0
-            if count < 0:
-                count = 0  # primitive rejects negative; defensive coercion
-            chips.append(
-                TaskInboxSummaryChip(
-                    chip_id=chip_id,
-                    count=count,
-                    label=str(entry.get("label") or ""),
-                    drill_url=str(entry.get("drill_url") or ""),
-                )
-            )
-
-        body: Fragment = TaskInboxRegion(
-            region_name=region_name,
-            items=tuple(items),
-            summary_chips=tuple(chips),
-            empty_message=empty_msg,
         )
         return _wrap_surface(title, "dashboard", body)

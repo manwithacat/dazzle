@@ -30,7 +30,7 @@ Group `stories.dsl` (or product jobs) by `persona:`. Flag:
 | Readiness / checklist / policy strip | `display: status_list` |
 | Move through states on a board | `display: kanban` |
 | Lifecycle pressure | `bar_chart` grouped by state / `pipeline_steps` |
-| “What needs me” multi-source | `task_inbox` |
+| “What needs me” multi-source | one `queue` per source, primary first |
 | My scoped history | filtered `list` or `queue` |
 
 Dogfood: `examples/support_tickets` (agent queue, `manager_ops`).

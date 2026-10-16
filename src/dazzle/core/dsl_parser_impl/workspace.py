@@ -1201,278 +1201,6 @@ class WorkspaceParserMixin:
             as_of=as_of_str,
         )
 
-    def _parse_task_inbox_config_block(self) -> ir.TaskInboxConfig:
-        """Parse the indented body of a ``task_inbox_config:`` block (#1015).
-
-        Syntax::
-
-            task_inbox_config:
-              empty_state: "All caught up."
-              order: [urgency, deadline]
-              sources:
-                - source: AssessmentEvent
-                  filter: state = "due_today"
-                  as_task:
-                    icon: register
-                    title: "Register {class.name}"
-                    meta: "{period.label}"
-                - source: ManuscriptFeedback
-                  filter: state = "ready_for_review"
-                  count_as: "manuscripts ready to review"
-
-        ``sources`` is required (the inbox needs at least one
-        contributing source). Each source must declare exactly one
-        of ``as_task`` (per-row task template) or ``count_as``
-        (collapsed-summary chip) — the mutex is enforced at parse
-        time so the runtime adapter sees a clean shape.
-        """
-        empty_state_str: str | None = None
-        order_keys: list[str] = []
-        sources: list[ir.TaskSource] = []
-        _VALID_KEYS = {"empty_state", "order", "sources"}
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-
-            key_tok = self.current_token()
-            key = key_tok.value
-            self.advance()
-            self.expect(TokenType.COLON)
-
-            if key == "empty_state":
-                empty_state_str = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-            elif key == "order":
-                # Bracketed list of bare identifiers: [urgency, deadline]
-                self.expect(TokenType.LBRACKET)
-                while not self.match(TokenType.RBRACKET):
-                    order_keys.append(self.expect_identifier_or_keyword().value)
-                    if self.match(TokenType.COMMA):
-                        self.advance()
-                self.expect(TokenType.RBRACKET)
-                self.skip_newlines()
-            elif key == "sources":
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                sources = self._parse_task_inbox_sources_block()
-                self.expect(TokenType.DEDENT)
-            else:
-                raise make_parse_error(
-                    f"Unknown task_inbox_config key {key!r}. "
-                    f"Expected one of: {sorted(_VALID_KEYS)}.",
-                    self.file,
-                    key_tok.line,
-                    key_tok.column,
-                )
-
-        if not sources:
-            tok = self.current_token()
-            raise make_parse_error(
-                "task_inbox_config requires at least one source. Add a "
-                "`sources:` block with one or more dash-list entries.",
-                self.file,
-                tok.line,
-                tok.column,
-            )
-        # Build kwargs only including overrides — preserves the
-        # config-level defaults (`order=["urgency","deadline"]`,
-        # `empty_state="All caught up."`) when the DSL omits them.
-        kwargs: dict[str, Any] = {"sources": sources}
-        if order_keys:
-            kwargs["order"] = order_keys
-        if empty_state_str is not None:
-            kwargs["empty_state"] = empty_state_str
-        return ir.TaskInboxConfig(**kwargs)
-
-    def _parse_task_inbox_sources_block(self) -> list[ir.TaskSource]:
-        """Parse the indented dash-list body of a ``sources:`` block (#1015).
-
-        Refactored to per-entry helper extraction. Outer loop drives the
-        dash-list; ``_parse_task_inbox_source_entry`` consumes one entry.
-
-        Each entry leads with ``- source: <EntityName>``; the rest of
-        the entry's keys land in its INDENT block. Exactly one of
-        ``as_task`` (nested template block) or ``count_as`` (string)
-        must be set per entry.
-        """
-        sources: list[ir.TaskSource] = []
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-            sources.append(self._parse_task_inbox_source_entry())
-        return sources
-
-    def _parse_task_inbox_source_entry(self) -> ir.TaskSource:
-        """Parse one ``- source: EntityName`` entry + its kv block + mutex check."""
-        if not self.match(TokenType.MINUS):
-            tok = self.current_token()
-            raise make_parse_error(
-                "sources entries must start with `- source: <EntityName>`",
-                self.file,
-                tok.line,
-                tok.column,
-            )
-        self.advance()  # consume MINUS
-        self._expect_entry_head("source", "sources")
-        source_str: str = self.expect_identifier_or_keyword().value
-        self.skip_newlines()
-        filter_expr, as_task, count_as_str = self._parse_task_inbox_source_kv_block()
-        self._validate_task_inbox_source_mutex(source_str, as_task, count_as_str)
-        return ir.TaskSource(
-            source=source_str,
-            filter=filter_expr,
-            as_task=as_task,
-            count_as=count_as_str,
-        )
-
-    def _parse_task_inbox_source_kv_block(
-        self,
-    ) -> tuple["ir.ConditionExpr | None", "ir.TaskSourceTemplate | None", str]:
-        """Consume the optional indented filter / as_task / count_as block."""
-        valid_keys = {"source", "filter", "as_task", "count_as"}
-        filter_expr: ir.ConditionExpr | None = None
-        as_task: ir.TaskSourceTemplate | None = None
-        count_as_str: str = ""
-
-        if not self.match(TokenType.INDENT):
-            return filter_expr, as_task, count_as_str
-        self.advance()  # consume INDENT
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-            key_tok = self.current_token()
-            key = key_tok.value
-            self.advance()
-            self.expect(TokenType.COLON)
-            if key == "filter":
-                filter_expr = self.parse_condition_expr()
-                self.skip_newlines()
-            elif key == "as_task":
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                as_task = self._parse_task_source_template_block()
-                self.expect(TokenType.DEDENT)
-            elif key == "count_as":
-                count_as_str = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-            else:
-                raise make_parse_error(
-                    f"Unknown sources entry key {key!r}. Expected one of: {sorted(valid_keys)}.",
-                    self.file,
-                    key_tok.line,
-                    key_tok.column,
-                )
-        self.expect(TokenType.DEDENT)
-        return filter_expr, as_task, count_as_str
-
-    def _validate_task_inbox_source_mutex(
-        self,
-        source_str: str,
-        as_task: "ir.TaskSourceTemplate | None",
-        count_as_str: str,
-    ) -> None:
-        """Enforce the as_task XOR count_as mutex on each sources entry."""
-        if as_task is None and not count_as_str:
-            tok = self.current_token()
-            raise make_parse_error(
-                f"sources entry source={source_str!r} requires exactly "
-                "one of `as_task:` (per-row template) or `count_as:` "
-                "(collapsed-summary chip).",
-                self.file,
-                tok.line,
-                tok.column,
-            )
-        if as_task is not None and count_as_str:
-            tok = self.current_token()
-            raise make_parse_error(
-                f"sources entry source={source_str!r}: `as_task:` and "
-                "`count_as:` are mutually exclusive.",
-                self.file,
-                tok.line,
-                tok.column,
-            )
-
-    def _parse_task_source_template_block(self) -> ir.TaskSourceTemplate:
-        """Parse a per-row ``as_task:`` template block (#1015).
-
-        Three string keys: ``icon`` (icon-token identifier),
-        ``title`` (template string with ``{field}`` placeholders),
-        ``meta`` (template string, optional).
-        """
-        icon_str: str = ""
-        title_str: str = ""
-        meta_str: str = ""
-        via_joins: dict[str, str] = {}
-        _VALID_KEYS = {"icon", "title", "meta", "via"}
-
-        while not self.match(TokenType.DEDENT):
-            self.skip_newlines()
-            if self.match(TokenType.DEDENT):
-                break
-            key_tok = self.current_token()
-            key = key_tok.value
-            self.advance()
-            self.expect(TokenType.COLON)
-            if key == "icon":
-                # Accept STRING (lucide-style names with hyphens are
-                # not valid identifiers — `alert-triangle` etc.) or
-                # bare identifier (`register`, `pupil`).
-                if self.match(TokenType.STRING):
-                    icon_str = self.advance().value
-                else:
-                    icon_str = self.expect_identifier_or_keyword().value
-                self.skip_newlines()
-            elif key == "title":
-                # Always a template string (placeholders need quoting).
-                title_str = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-            elif key == "meta":
-                meta_str = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-            elif key == "via":
-                # #1145 part 2: alias → dotted-path map. Indented
-                # `alias: dotted.path` lines, no string quoting (paths
-                # are bare identifier chains, same shape as scope
-                # field refs).
-                self.skip_newlines()
-                self.expect(TokenType.INDENT)
-                while not self.match(TokenType.DEDENT):
-                    self.skip_newlines()
-                    if self.match(TokenType.DEDENT):
-                        break
-                    alias = self.expect_identifier_or_keyword().value
-                    self.expect(TokenType.COLON)
-                    path_parts: list[str] = [self.expect_identifier_or_keyword().value]
-                    while self.match(TokenType.DOT):
-                        self.advance()
-                        path_parts.append(self.expect_identifier_or_keyword().value)
-                    via_joins[alias] = ".".join(path_parts)
-                    self.skip_newlines()
-                self.expect(TokenType.DEDENT)
-            else:
-                raise make_parse_error(
-                    f"Unknown as_task key {key!r}. Expected one of: {sorted(_VALID_KEYS)}.",
-                    self.file,
-                    key_tok.line,
-                    key_tok.column,
-                )
-
-        if not icon_str or not title_str:
-            tok = self.current_token()
-            raise make_parse_error(
-                "as_task template requires both `icon:` and `title:`.",
-                self.file,
-                tok.line,
-                tok.column,
-            )
-        return ir.TaskSourceTemplate(
-            icon=icon_str, title=title_str, meta=meta_str, via_joins=via_joins
-        )
-
     def _parse_entity_card_config_block(self) -> ir.EntityCardConfig:
         """Parse the indented body of an ``entity_card_config:`` block (#1017).
 
@@ -2639,7 +2367,6 @@ class _WorkspaceRegionState:
     pipeline_stages: list[ir.PipelineStageSpec] = field(default_factory=list)
     cohort_strip_config: ir.CohortStripConfig | None = None
     day_timeline_config: ir.DayTimelineConfig | None = None
-    task_inbox_config: ir.TaskInboxConfig | None = None
     entity_card_config: ir.EntityCardConfig | None = None
     row_action: ir.RowActionSpec | None = None  # #1148
     drill: str | None = None  # #1303 — per-row drill-to-detail (detail|none)
@@ -3228,15 +2955,6 @@ def _kw_day_timeline_config(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.expect(TokenType.DEDENT)
 
 
-def _kw_task_inbox_config(parser: Any, state: _WorkspaceRegionState) -> None:
-    parser.advance()
-    parser.expect(TokenType.COLON)
-    parser.skip_newlines()
-    parser.expect(TokenType.INDENT)
-    state.task_inbox_config = parser._parse_task_inbox_config_block()
-    parser.expect(TokenType.DEDENT)
-
-
 def _kw_entity_card_config(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
@@ -3288,7 +3006,6 @@ _WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]
     "secondary_action": _kw_secondary_action,
     "cohort_strip_config": _kw_cohort_strip_config,
     "day_timeline_config": _kw_day_timeline_config,
-    "task_inbox_config": _kw_task_inbox_config,
     "entity_card_config": _kw_entity_card_config,
     "row_action": _kw_row_action,  # #1148
     "drill": _kw_drill,  # #1303
@@ -3385,7 +3102,6 @@ def _build_workspace_region(
         render=state.render,
         cohort_strip_config=state.cohort_strip_config,
         day_timeline_config=state.day_timeline_config,
-        task_inbox_config=state.task_inbox_config,
         entity_card_config=state.entity_card_config,
         row_action=state.row_action,
         drill=state.drill,  # #1303

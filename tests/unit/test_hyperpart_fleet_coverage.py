@@ -52,7 +52,9 @@ SIGNALS: dict[str, object] = {
     # regex was an oracle lie: design_studio has used slider all along
     "slider": r"widget\s*[:=]\s*slider",
     "confirm-panel": r"display:\s*confirm_action_panel",
-    "search-box": r"display:\s*search_box",
+    # list surfaces with `ux: search:` → list-toolbar SearchBox (the
+    # FTS search region display mode was cut 2026-10-16, ADR-0057).
+    "search-box": r"^\s*search:\s*\w",
     "form-chrome": r"^\s*section\b|section:",  # form/surface sections
     # the stepper renders only for experience steps whose SURFACE is
     # create/edit mode — checked structurally per app (see
@@ -105,7 +107,7 @@ SIGNALS: dict[str, object] = {
     "time-series": r"display:\s*line_chart",
     "progress-region": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     "profile-card": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
-    "task-inbox": r"display:\s*task_inbox",
+    "task-inbox": "exempt:display mode retired — no consumer (ADR-0057, cut 2026-10-16); HM gallery only",
     "tree": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     "diagram": r"display:\s*diagram",
     "separator": "exempt:visual primitive, no DSL surface",
@@ -160,10 +162,8 @@ KNOWN_GAPS: set[str] = {
     "diagram",
     "menubar",
     "pdf",
-    "search-box",
     "search-select",
     "tabs",
-    "task-inbox",
 }
 
 

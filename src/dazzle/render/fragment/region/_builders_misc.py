@@ -5,7 +5,6 @@ metrics, or timeline families:
 
   - _build_grid                  CSS-driven responsive card grid
   - _build_confirm_action_panel  three-state consent panel (ConfirmGate)
-  - _build_search_box            HTMX FTS input + lazy results
 
 See issue #1065 for the full decomposition plan.
 """
@@ -15,13 +14,11 @@ from __future__ import annotations
 from typing import Any
 
 from dazzle.render.fragment import (
-    URL,
     ConfirmCheckItem,
     ConfirmGate,
     Fragment,
     GridCell,
     GridRegion,
-    SearchBox,
     Surface,
 )
 from dazzle.render.fragment.region._context import RegionContext
@@ -31,26 +28,6 @@ from dazzle.render.fragment.region._shared import (
     _render_typed_value,
     _wrap_surface,
 )
-
-
-def _search_box_placeholder(ctx: RegionContext, region: Any, empty_msg: Any) -> str:
-    """Resolve visible search input chrome.
-
-    Prefer explicit placeholder → *author* region.title (not auto-derived
-    name titles) → short empty: coaching. Bare "Search…" is last resort —
-    pilots and panel agents otherwise watch the A–Z list and report
-    "search broken" when FTS results land in the results panel (cycle 1332).
-    """
-    explicit_ph = str(ctx.get("placeholder") or "").strip()
-    if explicit_ph:
-        return explicit_ph
-    author_title = getattr(region, "title", None)
-    if author_title and str(author_title).strip():
-        return str(author_title).strip()
-    if empty_msg:
-        clause = str(empty_msg).split(".")[0].strip()
-        return clause[:72] if clause else "Type to search"
-    return "Search…"
 
 
 class _BuildersMiscMixin:
@@ -135,55 +112,6 @@ class _BuildersMiscMixin:
             secondary_label=str(ctx.get("secondary_label") or "Save as draft"),
         )
         return _wrap_surface(title or "Confirm", "dashboard", body)
-
-    def _build_search_box(self, region: Any, ctx: RegionContext) -> Surface:
-        """`display: search_box` renders a `SearchBox` primitive — HTMX
-        FTS input + lazy-loaded results panel + Alpine coaching toggle.
-
-        Phase 4B.1.d — replaces the prior plain-`Field` rendering, which
-        had no HTMX wiring, no result panel, and no coaching message.
-        Now byte-equivalent to the legacy `workspace/regions/search_box.html`.
-
-        ctx shape (Phase 4B preferred):
-            source_entity: str — entity name for the FTS endpoint URL
-                (e.g. "Manuscript" → /_dazzle/fts/Manuscript?html=1)
-            name: optional results-id slug; defaults to region.name
-            placeholder: optional input placeholder
-            display_field: optional (for documentation; the endpoint owns
-                result-row rendering)
-            coaching_message: optional pre-translated string shown until
-                the user types (default "Type to search")
-
-        ctx shape (Phase 4A fallback):
-            placeholder + label only — produces a SearchBox with a
-            self-referential endpoint (`/_dazzle/fts/{region.name}?html=1`)
-            so existing tests don't crash. The runtime should always
-            supply `source_entity` ahead of the Phase 4B.2 translator.
-        """
-        title = _region_title(region)
-        source_entity = str(ctx.get("source_entity") or "")
-        name = str(ctx.get("name") or getattr(region, "name", "") or "searchbox")
-        # Prefer explicit coaching_message; else region empty: copy (DSL empty
-        # on search_box is pilot coaching — cycle 1280 contact_manager).
-        empty_msg = getattr(region, "empty_message", None) or ctx.get("empty_message")
-        coaching = str(ctx.get("coaching_message") or empty_msg or "Type to search")
-        # Placeholder is the only visible input chrome (label is
-        # visually-hidden). See `_search_box_placeholder` for priority.
-        placeholder = _search_box_placeholder(ctx, region, empty_msg)
-        label = str(ctx.get("label") or title or placeholder)
-
-        # Prefer source_entity; fall back to region name (tests / missing ctx).
-        entity_hint = source_entity or name
-        endpoint = URL(f"/_dazzle/fts/{entity_hint}?html=1")
-
-        body: Fragment = SearchBox(
-            name=name,
-            fts_endpoint=endpoint,
-            placeholder=placeholder,
-            coaching_message=coaching,
-            label=label,
-        )
-        return _wrap_surface(title, "form", body)
 
     def _build_grid(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: grid` regions render items as cards in a CSS-driven

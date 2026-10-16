@@ -177,12 +177,6 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "Diagram",
     ),
     (
-        "contracts/task_inbox.py",
-        "TaskInbox",
-        "dazzle.render.fragment.ingest",
-        "TaskInbox",
-    ),
-    (
         "contracts/calendar.py",
         "Calendar",
         "dazzle.render.fragment.ingest",
@@ -691,6 +685,10 @@ DOM_ONLY_DEFERRED: list[tuple[str, str]] = [
     (
         "contracts/tree.py",
         "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
+    (
+        "contracts/task_inbox.py",
+        "Dazzle emitter retired — no consumer (ADR-0057, task inbox display mode cut 2026-10-16); HM gallery only",
     ),
     # Gallery + build-site highlighter (site/highlight.py); fleet-exempt as
     # "HM gallery + agent-pack snippets". Promote to DOM_ONLY_CONTRACTS only

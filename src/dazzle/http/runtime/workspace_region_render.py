@@ -14,16 +14,15 @@ Pipeline (post phases 1-5):
 4. Wrap the typed-primitive HTML in the ``<div data-dz-region>``
    chrome and return the string.
 
-Family layout (24 displays):
+Family layout (22 displays):
 
 - **chart** (5): BAR_CHART, LINE_CHART, RADAR, COMPARISON, INSIGHT_SUMMARY
 - **list** (7): LIST, KANBAN, QUEUE, TIMELINE, GRID, ACTIVITY_FEED,
   CONVERSATION
 - **card** (5): ENTITY_CARD (async), CONFIRM_ACTION_PANEL, METRICS,
   SUMMARY, STATUS_LIST
-- **dashboard** (4): COHORT_STRIP, DAY_TIMELINE, TASK_INBOX (async),
-  PIPELINE_STEPS
-- **specialty** (4): DIAGRAM, SEARCH_BOX, TABBED_LIST, PIVOT_TABLE
+- **dashboard** (3): COHORT_STRIP, DAY_TIMELINE, PIPELINE_STEPS
+- **specialty** (3): DIAGRAM, TABBED_LIST, PIVOT_TABLE
 
 The two ``RenderEnv`` + ``RegionRenderInputs`` dataclasses thread
 named state into every builder without 8-arg signatures — agents
@@ -39,18 +38,15 @@ from typing import Any
 from dazzle.core.ir import BucketRef as _BucketRef
 from dazzle.http.runtime.handlers.list_handlers import (
     gate_edit_path_drill_for_principal,
-    gate_edit_path_drill_map_for_principal,
 )
 from dazzle.http.runtime.next_record import stamp_queue_after_next
 from dazzle.http.runtime.workspace_card_data import (
     _build_cohort_cells,
     _build_day_timeline_slots,
-    _build_task_inbox_payload,
 )
 from dazzle.http.runtime.workspace_card_fetchers import (
     _build_entity_card_sections,
     _fetch_entity_card_section_rows,
-    _fetch_task_inbox_items_per_source,
 )
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
@@ -138,8 +134,8 @@ class RenderEnv:
     - ``inputs``: every pre-computed shape from phases 1-5.
     - ``request``: needed by displays that read query params
       (COHORT_STRIP's `?lens=`, LIST's date-range/`sort_field`).
-    - ``user_ctx``: passed to the per-section async fetchers
-      (TASK_INBOX, ENTITY_CARD).
+    - ``user_ctx``: passed to the per-section async fetcher
+      (ENTITY_CARD).
     - ``sort``, ``sort_dir``: LIST display surfaces these to the
       filter chrome.
     """
@@ -198,14 +194,11 @@ _DASHBOARD_FAMILY: frozenset[str] = frozenset(
     {
         "COHORT_STRIP",
         "DAY_TIMELINE",
-        "TASK_INBOX",
         "PIPELINE_STEPS",
     }
 )
 
-_SPECIALTY_FAMILY: frozenset[str] = frozenset(
-    {"DIAGRAM", "SEARCH_BOX", "TABBED_LIST", "PIVOT_TABLE"}
-)
+_SPECIALTY_FAMILY: frozenset[str] = frozenset({"DIAGRAM", "TABBED_LIST", "PIVOT_TABLE"})
 
 # Full whitelist — union of all families.
 _TYPED_REGION_DISPLAYS: frozenset[str] = (
@@ -469,25 +462,6 @@ def _set_detail_url_template(
             auth,
         )
     adapter_ctx["detail_url_template"] = tmpl
-
-
-def _gated_entity_detail_urls(ctx: Any, user_ctx: Any | None = None) -> dict[str, str]:
-    """Request-time EDIT demote for multi-entity drill maps (task_inbox).
-
-    Compile-time ``entity_detail_urls`` may stamp ``…/{id}/edit`` when the
-    region authors ``action:`` an EDIT surface (cycle 1403). List-family
-    templates already demote via :func:`_set_detail_url_template`; task_inbox
-    needs the map form (cycle 1409).
-    """
-    raw = dict(getattr(ctx, "entity_detail_urls", None) or {})
-    auth = getattr(user_ctx, "auth_ctx_for_filters", None) if user_ctx is not None else None
-    if not raw or auth is None:
-        return raw
-    return gate_edit_path_drill_map_for_principal(
-        raw,
-        getattr(ctx, "entity_access_specs", None) or None,
-        auth,
-    )
 
 
 def _active_list_search(request: Any) -> str:
@@ -754,16 +728,14 @@ def _leftover_honest_lens_id(request: Any, cohort_cfg: Any) -> str:
     )
 
 
-async def _build_dashboard_adapter_ctx(
+def _build_dashboard_adapter_ctx(
     display_upper: str,
     env: RenderEnv,
     base_ctx: dict[str, Any],
 ) -> dict[str, Any]:
     """Populate adapter_ctx for dashboard-chrome displays.
 
-    TASK_INBOX is async — it fans out per-source queries to the
-    declared inbox sources. The others read from already-computed
-    shapes upstream.
+    Each reads from already-computed shapes upstream.
     """
     import datetime as _dt
 
@@ -819,26 +791,6 @@ async def _build_dashboard_adapter_ctx(
                 row_action_routes=getattr(env.ctx, "row_action_routes", None),
                 detail_url_template=str(day_drill.get("detail_url_template") or ""),
             )
-    elif display_upper == "TASK_INBOX":
-        inbox_cfg = getattr(ir_region, "task_inbox_config", None)
-        if inbox_cfg is not None:
-            # #1015 (v0.67.16) — fan out per-source queries.
-            items_per_source = await _fetch_task_inbox_items_per_source(
-                config=inbox_cfg,
-                ctx=ctx,
-                request=env.request,
-                auth_context=env.user_ctx.auth_ctx_for_filters,
-                user_id=env.user_ctx.user_id,
-            )
-            inbox_items, inbox_chips = _build_task_inbox_payload(
-                items=inputs.items,
-                config=inbox_cfg,
-                items_per_source=items_per_source,
-                # #1303 / cycle 1409 — EDIT demote on multi-entity drill map.
-                entity_detail_urls=_gated_entity_detail_urls(ctx, env.user_ctx),
-            )
-            adapter_ctx["task_inbox_items"] = inbox_items
-            adapter_ctx["task_inbox_chips"] = inbox_chips
     elif display_upper == "PIPELINE_STEPS":
         adapter_ctx["pipeline_stage_data"] = inputs.pipeline_stage_data
 
@@ -857,7 +809,6 @@ def _build_specialty_adapter_ctx(
     that don't fit chart/list/card/dashboard.
 
     DIAGRAM: Mermaid source / nodes-edges.
-    SEARCH_BOX: source entity + placeholder copy.
     TABBED_LIST: HTMX-driven lazy panels via source_tabs.
     PIVOT_TABLE: multi-dim aggregate — its own pivot_buckets + dim_specs.
     """
@@ -873,11 +824,6 @@ def _build_specialty_adapter_ctx(
         adapter_ctx["diagram_data"] = getattr(ctx, "diagram_data", "") or ""
         adapter_ctx["nodes"] = getattr(ctx_region, "nodes", []) or []
         adapter_ctx["edges"] = getattr(ctx_region, "edges", []) or []
-    elif display_upper == "SEARCH_BOX":
-        adapter_ctx["source_entity"] = getattr(ctx, "source", "") or ""
-        adapter_ctx["name"] = getattr(ctx_region, "name", "")
-        adapter_ctx["placeholder"] = getattr(ctx_region, "search_placeholder", "") or ""
-        adapter_ctx["coaching_message"] = getattr(ctx_region, "coaching_message", "") or ""
     elif display_upper == "TABBED_LIST":
         adapter_ctx["region_name"] = getattr(ctx_region, "name", "")
         adapter_ctx["active_tab"] = _request_catalog_tab(env.request)
@@ -961,7 +907,7 @@ async def render_region_html(
             elif display_upper in _CARD_FAMILY:
                 adapter_ctx = await _build_card_adapter_ctx(display_upper, env, base_ctx)
             elif display_upper in _DASHBOARD_FAMILY:
-                adapter_ctx = await _build_dashboard_adapter_ctx(display_upper, env, base_ctx)
+                adapter_ctx = _build_dashboard_adapter_ctx(display_upper, env, base_ctx)
             else:  # _SPECIALTY_FAMILY
                 adapter_ctx = _build_specialty_adapter_ctx(display_upper, env, base_ctx)
 

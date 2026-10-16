@@ -30,7 +30,6 @@ class RegionContext(TypedDict, total=False):
     description: str
     message: str
     empty_message: str
-    placeholder: str
     prompt: str
 
     # --- list / table ---
@@ -72,7 +71,6 @@ class RegionContext(TypedDict, total=False):
     metrics: Any
     total: Any
     aggregates: Any
-    coaching_message: str
     audit_enabled: bool
 
     # --- charts (bar / line / radar / comparison / cohort / pivot) ---
@@ -131,11 +129,9 @@ class RegionContext(TypedDict, total=False):
     state_value: Any
     status_entries: Any
 
-    # --- cards (profile / entity / task-inbox) ---
+    # --- cards (profile / entity) ---
     entity_card_sections: Any
     entity_card_record_label: str
-    task_inbox_items: Any
-    task_inbox_chips: Any
 
     # --- misc ---
     confirmations: Any

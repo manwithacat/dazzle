@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 278 BaseModels, 103 Enums, 17 other (functions / typealiases / constants)
+# Counts: 275 BaseModels, 103 Enums, 17 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -2169,29 +2169,6 @@ ir_class: SurfaceSpec
     - ux: UXSpec | None = None
     - view_ref: str | None = None
 
-ir_class: TaskInboxConfig
-  required:
-    - sources: list[TaskSource]
-  optional:
-    - empty_state: str = 'All caught up.'
-    - order: list[str] = <factory:TaskInboxConfig.<lambda>>
-
-ir_class: TaskSource
-  required:
-    - source: str
-  optional:
-    - as_task: TaskSourceTemplate | None = None
-    - count_as: str = ''
-    - filter: ConditionExpr | None = None
-
-ir_class: TaskSourceTemplate
-  required:
-    - icon: str
-    - title: str
-  optional:
-    - meta: str = ''
-    - via_joins: dict[str, str] = {}
-
 ir_class: Tautology
   required: (none)
   optional:
@@ -2508,7 +2485,6 @@ ir_class: WorkspaceRegion
     - sources: list[str] = []
     - state_field: str | None = None
     - status_entries: list[StatusListEntrySpec] = []
-    - task_inbox_config: TaskInboxConfig | None = None
     - title: str | None = None
     - tone_bands: list[ToneBandSpec] = []
     - tones: dict[str, str] = {}
@@ -2743,11 +2719,9 @@ enum: DisplayMode
     - PIVOT_TABLE = 'pivot_table'
     - QUEUE = 'queue'
     - RADAR = 'radar'
-    - SEARCH_BOX = 'search_box'
     - STATUS_LIST = 'status_list'
     - SUMMARY = 'summary'
     - TABBED_LIST = 'tabbed_list'
-    - TASK_INBOX = 'task_inbox'
     - TIMELINE = 'timeline'
 
 enum: DomainServiceKind

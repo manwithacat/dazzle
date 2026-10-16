@@ -452,16 +452,6 @@ class Diagram(BaseModel):
     edges: list[tuple[str, str]] = Field(default_factory=list)
 
 
-# ── Task-inbox seam copy (contracts/task_inbox.py) ───────────────────
-
-
-class TaskInbox(BaseModel):
-    """Task inbox shell — dual-lock unit for task-inbox."""
-
-    region_name: str = ""
-    body_html: str = ""
-
-
 # ── Calendar seam copy (contracts/calendar.py) ───────────────────────
 
 

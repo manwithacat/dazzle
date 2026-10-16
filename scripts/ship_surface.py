@@ -211,7 +211,7 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_iban_cell_dump.py",
     # cycle 2313: audit-history must not dump ISO clocks / snake_case schema (oral #179)
     "tests/unit/test_audit_history_dump.py",
-    # cycle 2314: FTS search_box snippets must not dump schema keys (oral #180)
+    # cycle 2314: FTS SearchBox snippets must not dump schema keys (oral #180)
     "tests/unit/test_fts_snippet_field_dump.py",
     # cycle 2315: conversation author suffix must not dump status_page (oral #181)
     "tests/unit/test_conversation_channel_dump.py",

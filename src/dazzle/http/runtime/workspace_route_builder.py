@@ -113,7 +113,7 @@ class WorkspaceRouteBuilder:
         self._fk_graph = getattr(appspec, "fk_graph", None)
         self._user_entity_name = user_entity_name
         # #1232 — entity → {fk_field: target_entity} for dotted-path
-        # filter resolution in task_inbox sources.
+        # filter resolution in region filters.
         self._entity_ref_targets = entity_ref_targets or {}
 
     def init_workspace_routes(self) -> None:
@@ -137,7 +137,7 @@ class WorkspaceRouteBuilder:
             entity_auto_includes = self._entity_auto_includes
 
             # #1015 (v0.67.16) — per-entity access spec lookup, used
-            # by multi-source task_inbox fan-out so each source's
+            # by per-section entity_card fan-out so each section's
             # rows are scoped against its own entity-level RBAC. Built
             # once per app boot; constant for the request lifetime.
             entity_access_specs: dict[str, Any] = {
@@ -161,7 +161,7 @@ class WorkspaceRouteBuilder:
                     surface_titles[_sname] = _stitle
 
             # #1303 — entities that have a VIEW (detail) surface. Rows in a
-            # workspace list/task_inbox region drill to the entity detail
+            # workspace list region drill to the entity detail
             # (the same `/app/<slug>/{id}` route the standalone list links to)
             # when the source has one, unless the region opts out via
             # `drill: none`. Mirrors the `entities_with_create_surface` guard
@@ -305,7 +305,6 @@ class WorkspaceRouteBuilder:
                                 detail_url_template=_detail_url_template_for(
                                     ir_region, _src_name
                                 ),  # #1303
-                                entity_detail_urls=_detail_urls_for(ir_region),  # #1303
                                 diagram_data=_diagram_data_for(_src_ctx_region, ir_region, appspec),
                             )
                             # Override the IR filter for this source
@@ -371,7 +370,6 @@ class WorkspaceRouteBuilder:
                             row_action_routes=row_action_routes,
                             surface_titles=surface_titles,
                             detail_url_template="",
-                            entity_detail_urls=_detail_urls_for(ir_region),
                             diagram_data=_diagram_data_for(ctx_region, ir_region, appspec),
                         )
                         _ws_region_ctxs.append(_base_region_ctx)
@@ -496,7 +494,6 @@ class WorkspaceRouteBuilder:
                         row_action_routes=row_action_routes,
                         surface_titles=surface_titles,
                         detail_url_template=_detail_url_template_for(ir_region, _source),  # #1303
-                        entity_detail_urls=_detail_urls_for(ir_region),  # #1303
                         diagram_data=_diagram_data_for(ctx_region, ir_region, appspec),
                     )
                     _ws_region_ctxs.append(_region_ctx)

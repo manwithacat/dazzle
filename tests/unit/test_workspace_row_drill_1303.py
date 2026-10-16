@@ -1,4 +1,4 @@
-"""#1303: workspace list/task_inbox/kanban/timeline rows drill to entity detail.
+"""#1303: workspace list/kanban/timeline rows drill to entity detail.
 
 Standalone `/app/<entity>` lists already emit a per-row drill link; workspace
 list regions rendered plain `<tr>` with no link. This pins:
@@ -7,8 +7,6 @@ list regions rendered plain `<tr>` with no link. This pins:
   carries a `detail_url_template` (threaded by the route builder when the
   source has a VIEW surface and the region didn't `drill: none`).
 - The `drill:` keyword parses (detail | none; invalid rejected).
-- task_inbox items get a `drill_url` resolved per source from the
-  entity → detail-URL map; an empty map (drill-gated) leaves them inert.
 - Kanban cards (cycle 1410) put the same template on the card title as
   ``data-dz-kanban-drill`` (EDIT paths demoted request-time when UPDATE denied).
 - Timeline events (cycle 1412) put the same template on the title as
@@ -22,7 +20,6 @@ import pytest
 
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.errors import ParseError
-from dazzle.http.runtime.workspace_card_data import _build_task_inbox_payload
 from dazzle.render.fragment.primitives.data import ListColumn, ListRegion
 from dazzle.render.fragment.region import WorkspaceRegionAdapter
 from dazzle.render.fragment.renderer import FragmentRenderer
@@ -138,62 +135,6 @@ def test_drill_keyword_parses() -> None:
 def test_drill_invalid_value_rejected() -> None:
     with pytest.raises(ParseError, match="drill"):
         _parse_region_drill("    drill: sideways")
-
-
-# ── task_inbox drill_url ──────────────────────────────────────────────────
-
-
-class _Tmpl:
-    def __init__(self) -> None:
-        self.icon = ""
-        self.title = "{{ title }}"
-        self.meta = ""
-        self.via_joins = {}
-
-
-class _Source:
-    def __init__(self, source: str, *, as_task: object = None, count_as: str = "") -> None:
-        self.source = source
-        self.as_task = as_task
-        self.count_as = count_as
-
-
-class _Config:
-    def __init__(self, sources: list[_Source]) -> None:
-        self.sources = sources
-
-
-def test_task_inbox_single_source_populates_drill_url() -> None:
-    cfg = _Config([_Source("Task", as_task=_Tmpl())])
-    items, _ = _build_task_inbox_payload(
-        items=[{"id": "t1", "title": "Do X"}],
-        config=cfg,
-        entity_detail_urls={"Task": "/app/task/{id}"},
-    )
-    assert items[0]["drill_url"] == "/app/task/t1"
-
-
-def test_task_inbox_empty_map_leaves_drill_url_blank() -> None:
-    """drill: none → route builder passes an empty map → items stay inert."""
-    cfg = _Config([_Source("Task", as_task=_Tmpl())])
-    items, _ = _build_task_inbox_payload(
-        items=[{"id": "t1", "title": "Do X"}],
-        config=cfg,
-        entity_detail_urls={},
-    )
-    assert items[0]["drill_url"] == ""
-
-
-def test_task_inbox_multi_source_per_source_drill_url() -> None:
-    cfg = _Config([_Source("Task", as_task=_Tmpl()), _Source("Bug", as_task=_Tmpl())])
-    items, _ = _build_task_inbox_payload(
-        items=[],
-        config=cfg,
-        items_per_source={0: [{"id": "t1", "title": "T"}], 1: [{"id": "b1", "title": "B"}]},
-        entity_detail_urls={"Task": "/app/task/{id}", "Bug": "/app/bug/{id}"},
-    )
-    by_url = sorted(i["drill_url"] for i in items)
-    assert by_url == ["/app/bug/b1", "/app/task/t1"]
 
 
 # ── ListRegion.row_links arity ────────────────────────────────────────────

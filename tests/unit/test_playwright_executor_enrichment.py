@@ -202,7 +202,7 @@ class TestStateCapture:
         assert result.console_errors_during_action == ["TypeError in handler"]
 
     async def test_type_waits_for_htmx_settle(self) -> None:
-        """TYPE settles HTMX delay:250ms search_box before state_changed snapshot."""
+        """TYPE settles HTMX delay:250ms SearchBox before state_changed snapshot."""
         page = _make_mock_page(url="http://localhost/app", content="<html>before</html>")
         locator = MagicMock()
         locator.fill = AsyncMock()
@@ -318,15 +318,15 @@ class TestStateCapture:
             ex_mod._SETTLE_TIMEOUT_TYPES = prev
 
 
-def test_search_box_results_selector_helper() -> None:
-    from dazzle.agent.executor import _search_box_results_selector
+def test_search_results_selector_helper() -> None:
+    from dazzle.agent.executor import _search_results_selector
 
     assert (
-        _search_box_results_selector("#dz-search-results-contact_search-input")
+        _search_results_selector("#dz-search-results-contact_search-input")
         == "#dz-search-results-contact_search"
     )
-    assert _search_box_results_selector("button.submit") is None
-    assert _search_box_results_selector("#other-input") is None
+    assert _search_results_selector("button.submit") is None
+    assert _search_results_selector("#other-input") is None
 
 
 def test_is_list_search_input_helper() -> None:

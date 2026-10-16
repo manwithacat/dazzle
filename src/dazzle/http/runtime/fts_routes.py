@@ -23,7 +23,6 @@ Out of scope here (cycle 4+):
   * Cross-entity / federated search (the legacy ``/_dazzle/search``
     endpoint covers the multi-entity ILIKE fallback).
   * Highlight / snippet rendering (``ts_headline``).
-  * ``display: search_box`` workspace region wiring.
 """
 
 import logging
@@ -149,9 +148,9 @@ def _render_results_html(
     result: dict[str, Any],
     catalog: dict[str, str] | None = None,
 ) -> HTMLResponse:
-    """Render the htmx fragment for the search_box region (#954 cycle 4).
+    """Render the htmx fragment for the `SearchBox` results panel (#954 cycle 4).
 
-    Used when the request carries `?html=1` (the search_box region's
+    Used when the request carries `?html=1` (the list-toolbar `SearchBox`
     htmx swap target). Pre-renders an OOB-style result list so the
     HTMX swap can drop it into `#dz-search-results-…` directly.
 
@@ -162,8 +161,7 @@ def _render_results_html(
     `html.escape`.
 
     Phase 4 (v0.67.62): inline-rendered with stdlib html.escape. The
-    legacy `fragments/search_box_results.html` template is preserved
-    on disk for downstream Jinja consumers.
+    legacy Jinja results template went with Jinja (#1042).
     """
     import html
 
@@ -245,7 +243,7 @@ def _render_results_html(
                 )
 
         # Cycle 1824 — stamp open-discovery so agents attr-read FTS result
-        # hops (search_box region) without scraping titles. Logical href
+        # hops (SearchBox results panel) without scraping titles. Logical href
         # before attr-escape; marker data-dz-search-drill (command/breadcrumb
         # parity via _view_drill_open_attr_suffix).
         href = f"/app/{str(entity).lower()}/{id_str}"

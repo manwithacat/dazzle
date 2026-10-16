@@ -1,9 +1,38 @@
 [
   {
+    "file": "tests/unit/test_auth_connection_cli.py",
+    "class": "(module)",
+    "assertion_shape": "('expr',)",
+    "size": 18,
+    "members": [
+      "test_list_shows_claimed_and_verified_domains",
+      "test_delete_removes_connection",
+      "test_verify_domain_not_found_prints_record",
+      "test_show_verification",
+      "test_doctor_ready_exit_0",
+      "test_doctor_not_ready_exit_1",
+      "test_doctor_json_carries_ready",
+      "test_doctor_no_key_blocks_before_load",
+      "test_doctor_probe_json_carries_probe_key",
+      "test_doctor_json_without_probe_omits_probe_key",
+      "test_rotate_secret_oidc_requires_client_secret",
+      "test_set_require_sso_unknown_connection_exits_1",
+      "test_rotate_secret_grace_refused_for_oidc",
+      "test_rotate_secret_grace_bad_duration",
+      "test_revoke_previous_secret",
+      "test_revoke_previous_secret_none_active",
+      "test_secret_history_lists_events",
+      "test_secret_history_empty"
+    ],
+    "recommendation": "parametrise",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
     "file": "tests/unit/test_hm_contract_dom_conformance.py",
     "class": "(module)",
     "assertion_shape": "('in', 'in', 'in', 'not')",
-    "size": 15,
+    "size": 14,
     "members": [
       "test_money_field_fixed_conforms_to_money_contract",
       "test_search_result_row_conforms_to_result_contract",
@@ -12,7 +41,6 @@
       "test_bar_track_emission_conforms_to_bar_track_contract",
       "test_empty_state_emission_conforms_to_empty_state_contract",
       "test_diagram_emission_conforms_to_diagram_contract",
-      "test_task_inbox_emission_conforms_to_task_inbox_contract",
       "test_calendar_emission_conforms_to_calendar_contract",
       "test_dashboard_card_emission_conforms_to_dashboard_card_contract",
       "test_cohort_strip_emission_conforms_to_cohort_strip_contract",
@@ -24,6 +52,28 @@
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/integration/test_scim_routes.py",
+    "class": "(module)",
+    "assertion_shape": "('eq',)",
+    "size": 11,
+    "members": [
+      "test_no_bearer_is_401",
+      "test_bad_bearer_is_401",
+      "test_create_user_unverified_domain_is_400",
+      "test_filter_no_match_is_empty_list",
+      "test_cross_org_get_is_404",
+      "test_malformed_json_body_is_400",
+      "test_group_cross_org_member_400",
+      "test_group_duplicate_name_409",
+      "test_groups_require_bearer",
+      "test_group_put_requires_displayname_400",
+      "test_group_routes_malformed_json_is_400"
+    ],
+    "recommendation": "parametrise",
+    "recommended_form": "property",
+    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
   },
   {
     "file": "tests/unit/test_dedup_footgun_gates.py",
@@ -46,6 +96,48 @@
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_enterprise_login.py",
+    "class": "(module)",
+    "assertion_shape": "('eq',)",
+    "size": 11,
+    "members": [
+      "test_no_verified_domains_refuses_everyone",
+      "test_empty_email_refuses",
+      "test_unsigned_fallback_without_email_verified_refuses",
+      "test_already_verified_identity_is_not_rewritten",
+      "test_existing_unverified_identity_is_marked_verified",
+      "test_jit_disabled_refuses_when_no_membership",
+      "test_jit_disabled_still_reuses_existing_membership",
+      "test_jit_membership_maps_groups_to_roles",
+      "test_concurrent_unique_violation_reresolves",
+      "test_only_id_token_is_a_trusted_claims_source",
+      "test_sso_redirect_for_builds_enterprise_login_url"
+    ],
+    "recommendation": "parametrise",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/integration/test_scim_routes.py",
+    "class": "(module)",
+    "assertion_shape": "('eq', 'eq')",
+    "size": 9,
+    "members": [
+      "test_service_provider_config_requires_bearer",
+      "test_leftover_users_filter_is_invalid_filter",
+      "test_delete_user",
+      "test_cross_org_patch_is_404",
+      "test_cross_org_delete_is_404",
+      "test_group_patch_add_remove_member_recomputes",
+      "test_group_patch_remove_foreign_member_cannot_zero_roles",
+      "test_group_put_replaces_members",
+      "test_resource_types_requires_bearer"
+    ],
+    "recommendation": "parametrise",
+    "recommended_form": "property",
+    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
   },
   {
     "file": "tests/unit/test_auth_views_password_reset.py",
@@ -280,25 +372,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_task_inbox_data_resolution.py",
-    "class": "(module)",
-    "assertion_shape": "('eq', 'eq')",
-    "size": 8,
-    "members": [
-      "test_returns_empty_when_no_items_and_no_chips",
-      "test_returns_empty_when_config_missing",
-      "test_chips_only_config_emits_chips_no_items",
-      "test_first_as_task_source_wins_when_multiple_declared",
-      "test_coerce_urgency_uppercase_normalizes",
-      "test_multi_source_missing_source_index_treated_as_empty",
-      "test_multi_source_overrides_single_source_fallback",
-      "test_multi_source_empty_dict_falls_through_to_single_source"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_tenant_host_validator.py",
     "class": "(module)",
     "assertion_shape": "('call_any',)",
@@ -391,6 +464,24 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
+    "file": "tests/unit/test_auth_connection_cli.py",
+    "class": "(module)",
+    "assertion_shape": "('eq', 'expr')",
+    "size": 7,
+    "members": [
+      "test_verify_domain_already_owned_elsewhere",
+      "test_verify_domain_success",
+      "test_doctor_probe_does_not_change_exit_code",
+      "test_scaffold_prints_sequence",
+      "test_doctor_rotated_key_json_parity",
+      "test_wrong_connection_type_refused",
+      "test_set_require_sso_refuses_non_oidc"
+    ],
+    "recommendation": "parametrise",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
     "file": "tests/unit/test_auth_views_password_mode.py",
     "class": "(module)",
     "assertion_shape": "('in',)",
@@ -457,6 +548,24 @@
       "test_resolve_row_links_emits_none_for_missing_key",
       "test_resolve_row_links_empty_template_returns_empty_tuple",
       "test_table_primitive_accepts_empty_row_links"
+    ],
+    "recommendation": "parametrise",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_enterprise_login.py",
+    "class": "(module)",
+    "assertion_shape": "('expr',)",
+    "size": 7,
+    "members": [
+      "test_verified_domain_match_is_case_insensitive",
+      "test_unsigned_fallback_with_email_verified_true_allowed",
+      "test_id_token_path_tolerates_missing_email_verified",
+      "test_existing_identity_is_reused",
+      "test_absent_identity_is_created",
+      "test_existing_membership_reused_not_duplicated",
+      "test_membership_in_other_org_does_not_satisfy"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -871,23 +980,6 @@
       "test_agent_console_selector_lists_agents_only",
       "test_related_groups",
       "test_manager_nav_puts_people_desk_after_ops"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_task_inbox_data_resolution.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 6,
-    "members": [
-      "test_skips_rows_without_id",
-      "test_urgency_defaults_to_later_without_signal",
-      "test_no_as_task_source_means_no_per_row_items",
-      "test_coerce_urgency_passes_through_known_bands",
-      "test_coerce_urgency_unknown_falls_through_to_later",
-      "test_multi_source_namespaces_item_ids_to_avoid_collision"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -1490,6 +1582,38 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
+    "file": "tests/unit/test_scim_provisioning.py",
+    "class": "(module)",
+    "assertion_shape": "('eq',)",
+    "size": 5,
+    "members": [
+      "test_provision_empty_email_rejects",
+      "test_provision_reactivates_suspended_on_active_true",
+      "test_set_active_true_reactivates",
+      "test_set_active_unknown_membership_raises",
+      "test_provision_external_id_match_same_email_no_warning"
+    ],
+    "recommendation": "parametrise",
+    "recommended_form": "property",
+    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
+  },
+  {
+    "file": "tests/unit/test_scim_provisioning.py",
+    "class": "(module)",
+    "assertion_shape": "('eq', 'eq')",
+    "size": 5,
+    "members": [
+      "test_provision_does_not_sync_roles_from_groups_attribute",
+      "test_parse_group_patch_skips_unknown_ops",
+      "test_provision_captures_external_id_on_create",
+      "test_provision_backfills_external_id_on_email_matched_membership",
+      "test_provision_create_race_converges_on_winner"
+    ],
+    "recommendation": "parametrise",
+    "recommended_form": "property",
+    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
+  },
+  {
     "file": "tests/unit/test_scope_default_deny_returns.py",
     "class": "(module)",
     "assertion_shape": "('is',)",
@@ -1580,22 +1704,6 @@
       "test_experience_step_surfaces_are_exempt_1512",
       "test_single_list_surface_per_entity_is_clean",
       "test_tenant_admin_suppressed_when_user_list_exists"
-    ],
-    "recommendation": "parametrise",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_task_inbox_fan_out.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 5,
-    "members": [
-      "test_returns_empty_when_no_sources",
-      "test_returns_empty_when_no_repositories",
-      "test_fetches_each_source_independently",
-      "test_source_filter_lands_in_repo_filters",
-      "test_repo_returning_list_directly_handled"
     ],
     "recommendation": "parametrise",
     "recommended_form": "parametrise",
@@ -1753,6 +1861,36 @@
       "test_get_forgot_password_sent_chrome_off_also_renders_typed_view",
       "test_get_reset_password_done_chrome_on_renders_typed_view",
       "test_get_reset_password_done_chrome_off_also_renders_typed_view"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/integration/test_enterprise_routes.py",
+    "class": "(module)",
+    "assertion_shape": "('eq', 'eq')",
+    "size": 4,
+    "members": [
+      "test_login_redirects_to_idp_and_stashes_connection",
+      "test_login_resolves_by_verified_email_domain",
+      "test_require_sso_inert_when_oidc_not_mounted",
+      "test_require_sso_redirect_lands_on_the_idp"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/integration/test_enterprise_routes.py",
+    "class": "(module)",
+    "assertion_shape": "('eq',)",
+    "size": 4,
+    "members": [
+      "test_login_inactive_connection_rejected",
+      "test_callback_without_stashed_connection_fails",
+      "test_require_sso_refuses_local_sign_in",
+      "test_require_sso_form_login_carries_next"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -2209,6 +2347,21 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
+    "file": "tests/unit/test_connection_probe.py",
+    "class": "(module)",
+    "assertion_shape": "('expr',)",
+    "size": 4,
+    "members": [
+      "test_oidc_no_issuer_or_discovery_warns_without_network",
+      "test_oidc_unreachable_warns_with_reason",
+      "test_oidc_ssrf_reject_surfaces_as_warn_not_raise",
+      "test_unknown_type_warns"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
     "file": "tests/unit/test_constraint_errors.py",
     "class": "(module)",
     "assertion_shape": "('eq',)",
@@ -2503,6 +2656,21 @@
       "test_every_reference_page_is_linked_from_index",
       "test_coverage_tool_constructs_all_exist_in_parser",
       "test_generated_reference_pages_match_disk"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_domain_verification.py",
+    "class": "(module)",
+    "assertion_shape": "('eq', 'is')",
+    "size": 4,
+    "members": [
+      "test_verify_success_claims_domain",
+      "test_verify_missing_txt_returns_false",
+      "test_verify_wrong_token_returns_false",
+      "test_verify_normalizes_domain_input"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -3439,6 +3607,21 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
+    "file": "tests/unit/test_scim_provisioning.py",
+    "class": "(module)",
+    "assertion_shape": "('expr',)",
+    "size": 4,
+    "members": [
+      "test_provision_reuses_existing_identity",
+      "test_provision_active_false_suspends_and_revokes",
+      "test_set_active_idempotent_no_op",
+      "test_provision_dedup_syncs_active_state"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "property",
+    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
+  },
+  {
     "file": "tests/unit/test_search_entity_leftover.py",
     "class": "(module)",
     "assertion_shape": "('eq', 'eq', 'eq', 'eq')",
@@ -3885,6 +4068,20 @@
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/integration/test_scim_routes.py",
+    "class": "(module)",
+    "assertion_shape": "('expr',)",
+    "size": 3,
+    "members": [
+      "test_get_user_by_id",
+      "test_filter_by_username",
+      "test_patch_entra_value_dict_form"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "property",
+    "form_rationale": "input-boundary surface \u2014 collapse to a Hypothesis property (input space \u2192 invariant)"
   },
   {
     "file": "tests/integration/test_scope_runtime_pg.py",
@@ -5105,6 +5302,48 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
+    "file": "tests/unit/test_connection_doctor.py",
+    "class": "(module)",
+    "assertion_shape": "('eq', 'is')",
+    "size": 3,
+    "members": [
+      "test_missing_issuer_and_discovery_fails",
+      "test_empty_group_mapping_warns_but_still_ready",
+      "test_missing_dns_extra_warns_but_still_ready"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_connection_doctor.py",
+    "class": "(module)",
+    "assertion_shape": "('expr',)",
+    "size": 3,
+    "members": [
+      "test_missing_client_id_fails",
+      "test_missing_client_secret_fails",
+      "test_claimed_unverified_domain_warns"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_connection_probe.py",
+    "class": "(module)",
+    "assertion_shape": "('eq',)",
+    "size": 3,
+    "members": [
+      "test_oidc_discovery_url_overrides_issuer",
+      "test_all_probe_checks_are_recommended_level",
+      "test_validate_probe_url_rejects_unresolvable_host"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
     "file": "tests/unit/test_consent_csrf_exempt.py",
     "class": "TestConsentEndpointBehindCSRFMiddleware",
     "assertion_shape": "('eq',)",
@@ -5659,6 +5898,20 @@
       "test_current_user_attribute_resolution",
       "test_current_user_tenant_id_binds_the_active_membership",
       "test_current_user_attribute_denies_without_auth_context"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_domain_verification.py",
+    "class": "(module)",
+    "assertion_shape": "('eq',)",
+    "size": 3,
+    "members": [
+      "test_token_is_deterministic",
+      "test_token_normalizes_domain",
+      "test_verify_atomic_claim_conflict_raises"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -6223,20 +6476,6 @@
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "fuzz",
     "form_rationale": "DSL/parser surface \u2014 collapse to a property + add a fuzz target (corpus+mutators)"
-  },
-  {
-    "file": "tests/unit/test_hm_contract_dom_conformance.py",
-    "class": "(module)",
-    "assertion_shape": "('in', 'in', 'in', 'in', 'not')",
-    "size": 3,
-    "members": [
-      "test_money_field_selector_conforms_to_money_contract",
-      "test_search_box_emission_conforms_to_search_box_contract",
-      "test_radar_emission_conforms_to_radar_contract"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
     "file": "tests/unit/test_hm_standalone_ci_status.py",
@@ -6821,6 +7060,20 @@
       "test_no_backward_compat_shim_markers",
       "test_retired_names_stay_gone",
       "test_deleted_shim_modules_stay_deleted"
+    ],
+    "recommendation": "review (could parametrise or be intentional independent cases)",
+    "recommended_form": "parametrise",
+    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
+  },
+  {
+    "file": "tests/unit/test_oidc_provider.py",
+    "class": "(module)",
+    "assertion_shape": "('eq',)",
+    "size": 3,
+    "members": [
+      "test_callback_id_token_claims_source",
+      "test_callback_missing_email_verified_is_tolerated",
+      "test_callback_custom_groups_claim"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",
@@ -8689,62 +8942,6 @@
     "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
   },
   {
-    "file": "tests/unit/test_task_inbox_data_resolution.py",
-    "class": "(module)",
-    "assertion_shape": "('eq', 'eq', 'eq')",
-    "size": 3,
-    "members": [
-      "test_urgency_resolves_from_severity_or_priority_fields",
-      "test_count_as_source_emits_chip_with_label",
-      "test_multi_source_mixed_as_task_and_count_as"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_task_inbox_primitive.py",
-    "class": "(module)",
-    "assertion_shape": "('in', 'in')",
-    "size": 3,
-    "members": [
-      "test_renderer_emits_region_wrapper_with_data_attr",
-      "test_renderer_summary_chip_count_and_label",
-      "test_task_inbox_chip_count_and_label_styled"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_task_inbox_primitive.py",
-    "class": "(module)",
-    "assertion_shape": "('in',)",
-    "size": 3,
-    "members": [
-      "test_renderer_includes_icon_token",
-      "test_renderer_summary_chip_drill_wraps_in_anchor",
-      "test_renderer_unknown_urgency_falls_through_to_later"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_task_inbox_via_joins_1145.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_via_alias_with_scalar_target",
-      "test_via_alias_missing_path_renders_empty",
-      "test_multiple_via_aliases"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
     "file": "tests/unit/test_tenant_analytics_resolver.py",
     "class": "TestAppWideResolver",
     "assertion_shape": "('eq', 'eq')",
@@ -9201,20 +9398,6 @@
       "test_list_links_stay_aligned_when_non_dict_items_skipped",
       "test_kanban_cards_drill_when_detail_url_template_set",
       "test_timeline_events_drill_when_detail_url_template_set"
-    ],
-    "recommendation": "review (could parametrise or be intentional independent cases)",
-    "recommended_form": "parametrise",
-    "form_rationale": "enumerable cases \u2014 collapse to @pytest.mark.parametrize"
-  },
-  {
-    "file": "tests/unit/test_workspace_row_drill_1303.py",
-    "class": "(module)",
-    "assertion_shape": "('eq',)",
-    "size": 3,
-    "members": [
-      "test_task_inbox_single_source_populates_drill_url",
-      "test_task_inbox_empty_map_leaves_drill_url_blank",
-      "test_task_inbox_multi_source_per_source_drill_url"
     ],
     "recommendation": "review (could parametrise or be intentional independent cases)",
     "recommended_form": "parametrise",

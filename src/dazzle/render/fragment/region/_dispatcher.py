@@ -93,7 +93,6 @@ class WorkspaceRegionAdapter(
         "status_list": "_build_status_list",
         "pipeline_steps": "_build_pipeline_steps",
         "confirm_action_panel": "_build_confirm_action_panel",
-        "search_box": "_build_search_box",
         "comparison": "_build_comparison",  # #1470 ranked league
         "insight_summary": "_build_insight_summary",  # #1470 deterministic narrative
         "diagram": "_build_diagram",
@@ -103,7 +102,6 @@ class WorkspaceRegionAdapter(
         "conversation": "_build_conversation",  # bubble hyperpart stack
         "cohort_strip": "_build_cohort_strip",  # #1018 (v0.67.7)
         "day_timeline": "_build_day_timeline",  # #1016 (v0.67.8)
-        "task_inbox": "_build_task_inbox",  # #1015 (v0.67.8)
         "entity_card": "_build_entity_card",  # #1017 (v0.67.8)
     }
 

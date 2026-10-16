@@ -112,7 +112,6 @@ from dazzle.render.fragment.primitives import (
     Table,
     Tabs,
     TagsField,
-    TaskInboxRegion,
     Text,
     Timeline,
     TimeSeries,
@@ -351,8 +350,6 @@ class FragmentRenderer(
                 return self._emit_cohort_strip_region(fragment, ctx)
             case DayTimelineRegion():
                 return self._emit_day_timeline_region(fragment, ctx)
-            case TaskInboxRegion():
-                return self._emit_task_inbox_region(fragment, ctx)
             case EntityCardRegion():
                 return self._emit_entity_card_region(fragment, ctx)
             case DashboardGrid():

@@ -92,21 +92,6 @@ def _day_timeline_region(*, empty_message: str | None = None) -> object:
     return r
 
 
-def _task_inbox_region(*, empty_state: str = "All caught up.") -> object:
-    """Region exposing a TaskInboxConfig (#1015) — duck-typed."""
-    from dazzle.core.ir.workspaces import TaskInboxConfig
-
-    class _Region:
-        name = "today"
-        title = None
-        display = "task_inbox"
-        empty_message = None
-
-    r = _Region()
-    r.task_inbox_config = TaskInboxConfig(sources=[], empty_state=empty_state)  # type: ignore[attr-defined]
-    return r
-
-
 def _entity_card_region() -> object:
     """Region exposing an EntityCardConfig (#1017) — duck-typed."""
     from dazzle.core.ir.workspaces import EntityCardConfig
@@ -1119,71 +1104,6 @@ _RENDER_CASES = [
         },
         ("Valid item", 'data-dz-required-count="1"', "data-dz-confirm-gate"),
     ),
-    # ── search box ──
-    # Phase 4B.1.d: typed SearchBox — FTS input + lazy results + CSS-only
-    # coaching toggle (Alpine q-island retired in Tier F3).
-    _case(
-        "search-box-typed-primitive",
-        _r("search_box", name="manuscript_search"),
-        {
-            "source_entity": "Manuscript",
-            "placeholder": "Find a manuscript",
-            "coaching_message": "Type a title or keyword",
-        },
-        (
-            "dz-search-box-region",
-            'hx-get="/_dazzle/fts/Manuscript?html=1"',
-            "this.value.trim().length>0",
-            'aria-live="polite"',
-            "dz-search-box-empty",
-            "Type a title or keyword",
-        ),
-        ("x-show", "x-data", "x-model"),
-    ),
-    _case(
-        "search-box-endpoint-falls-back-to-region-name",
-        _r("search_box", name="ticket_search"),
-        {"placeholder": "Find tickets…"},
-        ('hx-get="/_dazzle/fts/ticket_search?html=1"', "Find tickets"),
-    ),
-    _case(
-        "search-box-default-coaching-message",
-        _r("search_box", name="s"),
-        {"source_entity": "Item"},
-        ("Type to search",),
-    ),
-    # Visible chrome surfaces the author title so FTS isn't mistaken for a list filter.
-    _case(
-        "search-box-placeholder-uses-author-title",
-        _r(
-            "search_box",
-            name="contact_search",
-            title="Find a contact — results appear below",
-            empty="Results appear below as you type. The A–Z list is not filtered.",
-        ),
-        {"source_entity": "Contact"},
-        ('placeholder="Find a contact — results appear below"', "Results appear below as you type"),
-    ),
-    _case(
-        "search-box-placeholder-falls-back-to-empty-clause",
-        _r(
-            "search_box",
-            name="find_contact",
-            empty="Results appear below as you type (name, company, or email).",
-        ),
-        {"source_entity": "Contact"},
-        ('placeholder="Results appear below as you type (name, company, or email)"',),
-    ),
-    # Several SearchBoxes on one page need distinct result panels (ctx `name`).
-    *(
-        _case(
-            f"search-box-results-panel-id-{name}",
-            _r("search_box"),
-            {"source_entity": entity, "name": name},
-            (f"dz-search-results-{name}",),
-        )
-        for entity, name in [("A", "search_a"), ("B", "search_b")]
-    ),
     # ── pipeline steps / status list ──
     # v0.66.106: authored pipeline_stage_data; None value → "—"; last stage has no connector.
     _case(
@@ -1524,83 +1444,6 @@ _RENDER_CASES = [
             ]
         },
         ('<span class="lesson-card">Year 8 Maths — Room B12</span>',),
-    ),
-    # ── task inbox (#1015) ──
-    _case(
-        "task-inbox-dispatches-to-builder",
-        _task_inbox_region(),
-        {},
-        ('class="dz-task-inbox-region"',),
-    ),
-    _case(
-        "task-inbox-uses-config-empty-state",
-        _task_inbox_region(empty_state="Nothing to do."),
-        {},
-        ("Nothing to do.",),
-    ),
-    # Unknown icon names keep the authored value for client hydration.
-    _case(
-        "task-inbox-builds-items-with-urgency",
-        _task_inbox_region(),
-        {
-            "task_inbox_items": [
-                {
-                    "item_id": "i1",
-                    "icon": "register",
-                    "title": "Register 8X",
-                    "meta": "Period 1",
-                    "urgency": "due",
-                    "drill_url": "/r/i1",
-                },
-                {"item_id": "i2", "icon": "message", "title": "Reply", "urgency": "overdue"},
-            ]
-        },
-        (
-            'data-dz-item-id="i1"',
-            'data-dz-urgency="due"',
-            'data-dz-urgency="overdue"',
-            'data-lucide="register"',
-            'href="/r/i1"',
-        ),
-    ),
-    _case(
-        "task-inbox-builds-summary-chips",
-        _task_inbox_region(),
-        {
-            "task_inbox_chips": [
-                {"chip_id": "c1", "count": 7, "label": "manuscripts ready", "drill_url": "/m"},
-                {"chip_id": "c2", "count": 3, "label": "drafts in review"},
-            ]
-        },
-        ('class="dz-task-inbox-chips"', ">7<", "manuscripts ready", 'href="/m"'),
-    ),
-    _case(
-        "task-inbox-skips-items-with-missing-id",
-        _task_inbox_region(),
-        {
-            "task_inbox_items": [
-                {"item_id": "i1", "icon": "x", "title": "ok"},
-                {"item_id": "", "icon": "x", "title": "bad"},
-            ]
-        },
-        ('data-dz-item-id="i1"',),
-        ("bad",),
-    ),
-    _case(
-        "task-inbox-unknown-urgency-falls-through-to-later",
-        _task_inbox_region(),
-        {"task_inbox_items": [{"item_id": "i", "icon": "x", "title": "t", "urgency": "weird"}]},
-        ('data-dz-urgency="later"',),
-    ),
-    # A buggy resolver's negative / non-int chip count clamps to 0.
-    *(
-        _case(
-            f"task-inbox-{label}-chip-count-coerces-to-zero",
-            _task_inbox_region(),
-            {"task_inbox_chips": [{"chip_id": "c", "count": count, "label": "x"}]},
-            (">0<",),
-        )
-        for label, count in [("negative", -5), ("non-int", "??")]
     ),
     # ── entity card (#1017) ──
     _case(

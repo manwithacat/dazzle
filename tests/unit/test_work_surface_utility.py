@@ -21,7 +21,6 @@ _REQUIRED_IDS = frozenset(
         "kanban",
         "timeline",
         "day_timeline",
-        "task_inbox",
         "queue",
         "list",
         "activity_feed",

@@ -65,8 +65,8 @@
       "_dom_hash": 1,
       "_is_list_search_input": 10,
       "_list_search_filter_summary": 4,
-      "_search_box_results_selector": 9,
-      "_search_box_results_summary": 3
+      "_search_results_selector": 9,
+      "_search_results_summary": 3
     },
     "mi_rank": "A"
   },
@@ -2787,15 +2787,9 @@
       "WorkspaceParserMixin._parse_status_entries_block": 3,
       "WorkspaceParserMixin._parse_status_entry": 2,
       "WorkspaceParserMixin._parse_status_entry_kv_block": 9,
-      "WorkspaceParserMixin._parse_task_inbox_config_block": 11,
-      "WorkspaceParserMixin._parse_task_inbox_source_entry": 2,
-      "WorkspaceParserMixin._parse_task_inbox_source_kv_block": 7,
-      "WorkspaceParserMixin._parse_task_inbox_sources_block": 3,
-      "WorkspaceParserMixin._parse_task_source_template_block": 13,
       "WorkspaceParserMixin._parse_tone_bands_block": 10,
       "WorkspaceParserMixin._parse_workspace_access": 5,
       "WorkspaceParserMixin._parse_workspace_primary_actions": 5,
-      "WorkspaceParserMixin._validate_task_inbox_source_mutex": 5,
       "WorkspaceParserMixin.parse_workspace": 4,
       "WorkspaceParserMixin.parse_workspace_region": 1,
       "_WorkspaceRegionState": 1,
@@ -2837,7 +2831,6 @@
       "_kw_source": 5,
       "_kw_stages": 1,
       "_kw_state_field": 1,
-      "_kw_task_inbox_config": 1,
       "_kw_title": 1,
       "_kw_tone_bands": 1,
       "_kw_tones": 3,
@@ -4051,9 +4044,6 @@
       "ReferenceLine": 1,
       "RowActionSpec": 1,
       "StatusListEntrySpec": 1,
-      "TaskInboxConfig": 1,
-      "TaskSource": 1,
-      "TaskSourceTemplate": 1,
       "ToneBandSpec": 1,
       "WhenEmpty": 1,
       "WorkspaceAccessLevel": 1,
@@ -7289,7 +7279,6 @@
       "create_list_handler": 3,
       "entity_name_for_app_path": 15,
       "gate_edit_path_drill_for_principal": 5,
-      "gate_edit_path_drill_map_for_principal": 3,
       "list_state_transitions": 5
     },
     "mi_rank": "A"
@@ -9252,17 +9241,13 @@
       "_apply_format_spec": 5,
       "_build_cohort_cells": 54,
       "_build_day_timeline_slots": 37,
-      "_build_task_inbox_payload": 15,
       "_coerce_pipeline_progress": 6,
       "_coerce_to_datetime": 13,
-      "_coerce_urgency": 5,
       "_default_round_numeric": 4,
       "_initials_from": 4,
       "_interpolate_card_template": 2,
-      "_items_from_template": 18,
       "_now_utc": 1,
       "_resolve_path": 5,
-      "_resolve_task_inbox_multi_source": 8,
       "_transform_age": 8,
       "_transform_minutes_until": 10,
       "_transform_until": 6
@@ -9274,7 +9259,6 @@
       "_build_entity_card_sections": 37,
       "_empty_list_coro": 1,
       "_fetch_entity_card_section_rows": 20,
-      "_fetch_task_inbox_items_per_source": 19,
       "_safe_fetch": 7
     },
     "mi_rank": "A"
@@ -9423,7 +9407,6 @@
       "_entity_display_field": 2,
       "_entity_text_identity_key": 8,
       "_field_is_textish": 5,
-      "_gated_entity_detail_urls": 6,
       "_is_measurement_title_key": 5,
       "_leftover_honest_lens_id": 6,
       "_overlays_to_series": 5,
@@ -12284,7 +12267,6 @@
       "render_search_result_row": 3,
       "render_skeleton": 3,
       "render_status_list_entry": 4,
-      "render_task_inbox": 1,
       "render_time_series": 17,
       "render_timeline_event": 4,
       "search_box_root_attrs": 1,
@@ -12294,7 +12276,6 @@
       "status_list_entry_root_attrs": 1,
       "tags_from_form": 3,
       "tags_marker_attrs": 1,
-      "task_inbox_root_attrs": 1,
       "time_series_root_attrs": 1,
       "timeline_item_root_attrs": 1
     },
@@ -12348,7 +12329,6 @@
       "StatusListEntry._title_nonempty": 3,
       "TagsField": 5,
       "TagsField._split": 4,
-      "TaskInbox": 1,
       "TimeSeries": 1,
       "TimeSeriesLayer": 1,
       "TimeSeriesPoint": 1,
@@ -12558,12 +12538,6 @@
       "StatusListEntry.__post_init__": 3,
       "Table": 13,
       "Table.__post_init__": 12,
-      "TaskInboxItem": 3,
-      "TaskInboxItem.__post_init__": 2,
-      "TaskInboxRegion": 3,
-      "TaskInboxRegion.__post_init__": 2,
-      "TaskInboxSummaryChip": 4,
-      "TaskInboxSummaryChip.__post_init__": 3,
       "TimeSeries": 5,
       "TimeSeries.__post_init__": 4,
       "TimeSeriesSeries": 3,
@@ -12727,9 +12701,7 @@
     "functions": {
       "_BuildersMiscMixin": 27,
       "_BuildersMiscMixin._build_confirm_action_panel": 27,
-      "_BuildersMiscMixin._build_grid": 40,
-      "_BuildersMiscMixin._build_search_box": 10,
-      "_search_box_placeholder": 7
+      "_BuildersMiscMixin._build_grid": 40
     },
     "mi_rank": "A"
   },
@@ -12757,7 +12729,6 @@
       "_BuildersTimelineMixin._build_activity_feed": 7,
       "_BuildersTimelineMixin._build_conversation": 44,
       "_BuildersTimelineMixin._build_day_timeline": 16,
-      "_BuildersTimelineMixin._build_task_inbox": 26,
       "_BuildersTimelineMixin._build_timeline": 27,
       "_activity_actor_col": 1,
       "_activity_actor_html": 10,
@@ -12949,7 +12920,6 @@
       "_RenderDashboardMixin._emit_dashboard_grid_impl": 4,
       "_RenderDashboardMixin._emit_day_timeline_region": 6,
       "_RenderDashboardMixin._emit_entity_card_region": 7,
-      "_RenderDashboardMixin._emit_task_inbox_region": 11,
       "_dashboard_card_hx_trigger": 4
     },
     "mi_rank": "A"

@@ -1,6 +1,6 @@
-"""Cycle 1824 — FTS search_box result open-discovery stamps.
+"""Cycle 1824 — FTS SearchBox result open-discovery stamps.
 
-Agents attr-read ``display: search_box`` destinations without scraping
+Agents attr-read list-toolbar FTS result destinations without scraping
 titles. Empty result panels stay unstamped; non-app paths skip suffix.
 """
 

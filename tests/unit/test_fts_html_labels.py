@@ -1,4 +1,4 @@
-"""FTS search_box HTML labels (cycle 1280 — no UUID titles for Contact rows)."""
+"""FTS SearchBox HTML labels (cycle 1280 — no UUID titles for Contact rows)."""
 
 from __future__ import annotations
 

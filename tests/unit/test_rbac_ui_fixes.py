@@ -557,40 +557,6 @@ class TestEditPathRowDrillGate:
         specs = {"Task": _update_cedar(["admin", "viewer"], with_list=True)}
         assert gate_edit_path_drill_for_principal(url, specs, _make_auth_ctx([role])) == expected
 
-    @pytest.mark.parametrize(
-        ("urls", "role", "expected"),
-        [
-            # task_inbox multi-entity map: EDIT demotes, VIEW stays (cycle 1409)
-            pytest.param(
-                {"Task": "/app/task/{id}/edit", "Note": "/app/note/{id}"},
-                "role_viewer",
-                {"Task": "/app/task/{id}", "Note": "/app/note/{id}"},
-                id="demotes-per-entity-1409",
-            ),
-            pytest.param(
-                {"Task": "/app/task/{id}/edit"},
-                "role_admin",
-                {"Task": "/app/task/{id}/edit"},
-                id="kept-for-admin",
-            ),
-            pytest.param(None, None, {}, id="none-map-empty"),
-            pytest.param({}, None, {}, id="empty-map-empty"),
-        ],
-    )
-    def test_gate_edit_path_drill_map(
-        self, urls: dict[str, str] | None, role: str | None, expected: dict[str, str]
-    ) -> None:
-        from dazzle.http.runtime.handlers.list_handlers import (
-            gate_edit_path_drill_map_for_principal,
-        )
-
-        specs: dict[str, Any] = {}
-        auth = None
-        if role is not None:
-            specs = {"Task": _update_cedar(["admin", "viewer"], with_list=True)}
-            auth = _make_auth_ctx([role])
-        assert gate_edit_path_drill_map_for_principal(urls, specs, auth) == expected
-
 
 # ---------------------------------------------------------------------------
 # #585 — ColumnContext visible_condition

@@ -81,6 +81,7 @@ below, link from the issue body (not only a comment).
 | [DD-012](DD-012-string-translation-catalogue.md) | String translation catalogue (`.po`/`.mo`, `translate`, `dazzle i18n`) | PARKED | #955 | Removed in flense ship AB (display-locale profile kept, middleware now mounted); restore from `3844ec995` when a consumer ships `.po` files |
 | [DD-013](DD-013-enterprise-sso-scim-connections.md) | Enterprise SSO / SCIM connections (OIDC, SCIM, domain verification, `dazzle auth connection`; SAML out, broker route) | FORCED | #1342 | Removed in flense ship AD (revision 0023); operator ruled it a core requirement 2026-10-16; restoring OIDC + SCIM from `23cf59372` per `docs/plans/2026-10-16-enterprise-auth-restore.md` |
 | [DD-014](DD-014-two-factor-authentication.md) | Two-factor authentication (TOTP, email code, recovery codes, `/2fa/*` pages) | PARKED | #829, #838 | Removed in flense ship AG with its two tables (revision 0024); restore from `229226a88` when a consumer declares 2FA or its assurance pack names MFA |
+| [DD-015](DD-015-task-inbox-region.md) | Multi-source task inbox region (`display: task_inbox`, `task_inbox_config:`) | PARKED | #1015, #1145, #1232, #1303 | Removed 2026-10-16 after AegisMark fb673bc8 dropped its last use; HM `task-inbox` Hyperpart kept; restore from `a112b3d34` when a consumer needs one landing list across entities |
 
 ## Related
 

@@ -32,10 +32,9 @@
         "tests/unit/test_cohort_strip_composite_parser_1144.py",
         "tests/unit/test_day_timeline_config_parser.py",
         "tests/unit/test_entity_card_config_parser.py",
-        "tests/unit/test_rhythm_parser.py",
-        "tests/unit/test_task_inbox_config_parser.py"
+        "tests/unit/test_rhythm_parser.py"
       ],
-      "size": 8,
+      "size": 7,
       "samples": [
         "tests/unit/test_cohort_strip_composite_parser_1144.py::test_default_separator_when_omitted",
         "tests/unit/test_day_timeline_config_parser.py::test_parses_minimal_config",
@@ -211,6 +210,14 @@
       "overlap_ratio": 0.8
     },
     {
+      "file_a": "tests/integration/test_scim_routes.py",
+      "file_b": "tests/unit/test_python_audit_agent.py",
+      "tests_a": 37,
+      "tests_b": 27,
+      "shared_shape_count": 19,
+      "overlap_ratio": 0.7
+    },
+    {
       "file_a": "tests/unit/test_css_clip_check.py",
       "file_b": "tests/unit/test_expression_lang.py",
       "tests_a": 21,
@@ -249,6 +256,22 @@
       "tests_b": 26,
       "shared_shape_count": 19,
       "overlap_ratio": 0.73
+    },
+    {
+      "file_a": "tests/integration/test_scim_routes.py",
+      "file_b": "tests/unit/test_css_clip_check.py",
+      "tests_a": 37,
+      "tests_b": 21,
+      "shared_shape_count": 18,
+      "overlap_ratio": 0.86
+    },
+    {
+      "file_a": "tests/integration/test_scim_routes.py",
+      "file_b": "tests/unit/test_parser.py",
+      "tests_a": 37,
+      "tests_b": 25,
+      "shared_shape_count": 18,
+      "overlap_ratio": 0.72
     },
     {
       "file_a": "tests/unit/test_aws_config.py",
@@ -315,14 +338,6 @@
       "overlap_ratio": 0.81
     },
     {
-      "file_a": "tests/unit/test_bar_chart_bucketed_aggregate.py",
-      "file_b": "tests/unit/test_task_inbox_data_resolution.py",
-      "tests_a": 40,
-      "tests_b": 20,
-      "shared_shape_count": 17,
-      "overlap_ratio": 0.85
-    },
-    {
       "file_a": "tests/unit/test_css_clip_check.py",
       "file_b": "tests/unit/test_python_audit_agent.py",
       "tests_a": 21,
@@ -353,6 +368,14 @@
       "tests_b": 19,
       "shared_shape_count": 17,
       "overlap_ratio": 0.89
+    },
+    {
+      "file_a": "tests/integration/test_scim_routes.py",
+      "file_b": "tests/unit/test_workspace_rendering.py",
+      "tests_a": 37,
+      "tests_b": 19,
+      "shared_shape_count": 16,
+      "overlap_ratio": 0.84
     },
     {
       "file_a": "tests/unit/test_app_error_views.py",
@@ -403,22 +426,6 @@
       "overlap_ratio": 0.76
     },
     {
-      "file_a": "tests/unit/test_entity_card_primitive.py",
-      "file_b": "tests/unit/test_task_inbox_primitive.py",
-      "tests_a": 20,
-      "tests_b": 27,
-      "shared_shape_count": 16,
-      "overlap_ratio": 0.8
-    },
-    {
-      "file_a": "tests/unit/test_expression_lang.py",
-      "file_b": "tests/unit/test_rbac_ui_fixes.py",
-      "tests_a": 43,
-      "tests_b": 20,
-      "shared_shape_count": 16,
-      "overlap_ratio": 0.8
-    },
-    {
       "file_a": "tests/unit/test_expression_lang.py",
       "file_b": "tests/unit/test_signable_wiring.py",
       "tests_a": 43,
@@ -459,20 +466,28 @@
       "overlap_ratio": 0.73
     },
     {
-      "file_a": "tests/unit/test_structured_content.py",
-      "file_b": "tests/unit/test_task_inbox_data_resolution.py",
-      "tests_a": 32,
-      "tests_b": 20,
-      "shared_shape_count": 16,
-      "overlap_ratio": 0.8
-    },
-    {
       "file_a": "tests/unit/test_ux_contract_checker.py",
       "file_b": "tests/unit/test_workspace_rendering.py",
       "tests_a": 36,
       "tests_b": 19,
       "shared_shape_count": 16,
       "overlap_ratio": 0.84
+    },
+    {
+      "file_a": "tests/integration/test_scim_routes.py",
+      "file_b": "tests/unit/test_css_raw_ramp_check.py",
+      "tests_a": 37,
+      "tests_b": 15,
+      "shared_shape_count": 15,
+      "overlap_ratio": 1.0
+    },
+    {
+      "file_a": "tests/integration/test_scim_routes.py",
+      "file_b": "tests/unit/test_tenant_middleware.py",
+      "tests_a": 37,
+      "tests_b": 19,
+      "shared_shape_count": 15,
+      "overlap_ratio": 0.79
     },
     {
       "file_a": "tests/unit/test_aggregate_sql.py",
@@ -551,22 +566,6 @@
       "file_b": "tests/unit/test_llm_driver.py",
       "tests_a": 21,
       "tests_b": 28,
-      "shared_shape_count": 15,
-      "overlap_ratio": 0.71
-    },
-    {
-      "file_a": "tests/unit/test_css_clip_check.py",
-      "file_b": "tests/unit/test_policy_handler.py",
-      "tests_a": 21,
-      "tests_b": 36,
-      "shared_shape_count": 15,
-      "overlap_ratio": 0.71
-    },
-    {
-      "file_a": "tests/unit/test_css_clip_check.py",
-      "file_b": "tests/unit/test_session_manager.py",
-      "tests_a": 21,
-      "tests_b": 26,
       "shared_shape_count": 15,
       "overlap_ratio": 0.71
     }

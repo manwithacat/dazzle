@@ -61,7 +61,7 @@ _QUEUE_ISH_NAME = re.compile(
 )
 _FORM_MODES = ("create", "edit", "form")
 _LISTISH_MODES = ("list", "view", "detail", "")
-_QUEUE_DISPLAYS = ("queue", "kanban", "task_inbox")
+_QUEUE_DISPLAYS = ("queue", "kanban")
 _PLAIN_DISPLAYS = ("", "list", "table", "none")
 _REF_KINDS = frozenset({"ref", "belongs_to"})
 

@@ -275,12 +275,10 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     # Original #1015–#1018 typed-only region primitives (v0.67.10).
     "COHORT_STRIP": _TYPED_SHIM,
     "DAY_TIMELINE": _TYPED_SHIM,
-    "TASK_INBOX": _TYPED_SHIM,
     "ENTITY_CARD": _TYPED_SHIM,
     # Phase 4 migrations (v0.67.46 → v0.67.51 prepared the adapter
     # plumbing; v0.67.52 flips the consumer to actually use it).
     "DIAGRAM": _TYPED_SHIM,
-    "SEARCH_BOX": _TYPED_SHIM,
     "TABBED_LIST": _TYPED_SHIM,
     "GRID": _TYPED_SHIM,
     "STATUS_LIST": _TYPED_SHIM,

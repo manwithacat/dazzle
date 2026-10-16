@@ -1,4 +1,4 @@
-"""Cycle 1617 — dashboard drill open discovery (task-inbox / cohort / day-timeline)."""
+"""Cycle 1617 — dashboard drill open discovery (cohort / day-timeline)."""
 
 from __future__ import annotations
 
@@ -9,9 +9,6 @@ from dazzle.render.fragment.primitives.data import (
     CohortStripRegion,
     DayTimelineRegion,
     DayTimelineSlot,
-    TaskInboxItem,
-    TaskInboxRegion,
-    TaskInboxSummaryChip,
 )
 from dazzle.render.fragment.renderer import FragmentRenderer
 
@@ -23,36 +20,6 @@ def test_drill_open_discovery_attrs_single_anchor() -> None:
     assert 'data-dz-open-chain="/app/ticket/t-9"' in attrs
     assert 'data-dz-open-hops="1"' in attrs
     assert "Open Ticket" in attrs
-
-
-def test_task_inbox_item_drill_stamps_open_discovery() -> None:
-    html = FragmentRenderer().render(
-        TaskInboxRegion(
-            region_name="inbox",
-            items=(
-                TaskInboxItem(
-                    item_id="i1",
-                    icon="check",
-                    title="Review refund",
-                    drill_url="/app/ticket/t-1",
-                ),
-            ),
-            summary_chips=(
-                TaskInboxSummaryChip(
-                    chip_id="overdue",
-                    count=2,
-                    label="overdue",
-                    drill_url="/app/ticket",
-                ),
-            ),
-        )
-    )
-    assert "data-dz-task-inbox-drill" in html
-    assert 'data-dz-open-entity="Ticket"' in html
-    assert 'data-dz-open-chain="/app/ticket/t-1"' in html
-    assert 'href="/app/ticket/t-1"' in html
-    # Chip also stamped (list-ish drill still gets attrs)
-    assert html.count("data-dz-task-inbox-drill") >= 2
 
 
 def test_cohort_strip_cell_drill_stamps_open_discovery() -> None:
