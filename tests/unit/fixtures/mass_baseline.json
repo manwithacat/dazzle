@@ -1,6 +1,6 @@
 {
-  "src_lines": 318193,
-  "test_lines": 309062,
+  "src_lines": 318202,
+  "test_lines": 309076,
   "docs_lines": 47863,
   "construct_count": 31,
   "written": "2026-10-16",
@@ -219,6 +219,14 @@
         "test_lines"
       ],
       "reason": "post-v0.119.0 follow-ups: introspection-route admin gate (+src/+tests, security), Alpine and packaging gates (+tests), plan \u00a710.4 decisions (+docs)"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "themespec attention rules reject unknown keys (+src docstrings/+tests), cyfuture brief consumer action (+docs)"
     }
   ]
 }

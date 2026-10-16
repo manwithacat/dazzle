@@ -113,6 +113,13 @@ consumer when a real channel is needed). Prove the rest:
      groups `dazzle rhythm`, `dazzle vocab` and `dazzle prove` are gone: use `dazzle agent
      prove` / `dazzle agent wall`; the MCP `rhythm` tool (`list`/`get`/`coverage`/`gaps`) and
      `dazzle analytics audit` stay.
+   - **After v0.119.0 (on `main`): `themespec.yaml` attention rules.** Your four `attention_map`
+     rules use `match: {entity_category: …}` + `accent_hue_offset`, a shape the schema never had;
+     Dazzle loaded them as empty rules and rendered nothing. The loader now rejects unknown keys,
+     so the MCP `sitespec` themespec calls fail with `ThemeSpecError: … accent_hue_offset` until
+     the rules are rewritten as `match_entity_category: financial` + `treatment: {bg_token|
+     border_token|text_token|icon|animation}` (hue offsets are not a treatment the schema has —
+     pick tokens, or drop the block; nothing in the runtime reads it).
    - **Removed, none used by a consumer:** the `dazzle i18n` CLI and string translation (DD-012),
      `dazzle serve --watch-source`, `dazzle test list|feedback|dsl-generate|dsl-coverage|run-all`,
      six `dazzle e2e` wrappers, the `mobile`, `push`, `sendgrid` and `i18n` extras, the

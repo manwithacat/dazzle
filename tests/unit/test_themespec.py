@@ -296,6 +296,20 @@ class TestThemeSpecLoader:
         assert ts_attn.attention_map.rules[0].match_signal_level == "critical"
         assert ts_attn.attention_map.rules[0].treatment.bg_token == "danger-bg"
 
+        # A rule in a shape the schema never had is an error, not an empty rule
+        # (cyfuture's `match: {entity_category: …}` + `accent_hue_offset` loaded
+        # as a no-op for months).
+        sub_g = tmp_path / "g"
+        sub_g.mkdir()
+        bad = {
+            "attention_map": {
+                "rules": [{"match": {"entity_category": "financial"}, "accent_hue_offset": 20}]
+            }
+        }
+        (sub_g / "themespec.yaml").write_text(yaml.dump(bad))
+        with pytest.raises(ThemeSpecError, match="accent_hue_offset"):
+            load_themespec(sub_g)
+
 
 # =============================================================================
 # Phase 5: DTCG + Imagery

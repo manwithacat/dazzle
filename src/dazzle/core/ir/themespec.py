@@ -228,9 +228,14 @@ class ShapeSpec(BaseModel):
 
 
 class VisualTreatment(BaseModel):
-    """Visual treatment to apply when an attention rule matches."""
+    """Visual treatment to apply when an attention rule matches.
 
-    model_config = ConfigDict(frozen=True)
+    Unknown keys are rejected: an attention rule written in a shape the schema
+    never had (cyfuture's ``match: {entity_category: …}`` + ``accent_hue_offset``)
+    used to load as an empty rule and render nothing, with no diagnostic.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     bg_token: str | None = Field(default=None, description="Background color token name")
     border_token: str | None = Field(default=None, description="Border color token name")
@@ -240,9 +245,13 @@ class VisualTreatment(BaseModel):
 
 
 class AttentionRule(BaseModel):
-    """Maps attention signal conditions to visual treatments."""
+    """Maps attention signal conditions to visual treatments.
 
-    model_config = ConfigDict(frozen=True)
+    Unknown keys are rejected (see :class:`VisualTreatment`); ``load_themespec``
+    turns the validation error into a ``ThemeSpecError`` naming the key.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     match_signal_level: str | None = Field(
         default=None, description="SignalLevel to match (critical, warning, notice, info)"
