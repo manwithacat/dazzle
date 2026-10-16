@@ -871,6 +871,7 @@ social-auth = [
 ]
 sso = [
     { name = "authlib" },
+    { name = "cryptography" },
     { name = "dnspython" },
 ]
 temporal = [
@@ -901,6 +902,7 @@ requires-dist = [
     { name = "boto3", marker = "extra == 'aws-test'", specifier = ">=1.35" },
     { name = "cryptography", marker = "extra == 'mobile-full'", specifier = ">=50.0.0" },
     { name = "cryptography", marker = "extra == 'signing'", specifier = ">=50.0.0" },
+    { name = "cryptography", marker = "extra == 'sso'", specifier = ">=50.0.0" },
     { name = "dazzle-dsl", extras = ["graph", "signing", "observability", "aws"], marker = "extra == 'test-full'" },
     { name = "dnspython", marker = "extra == 'sso'", specifier = ">=2.0" },
     { name = "faker", specifier = ">=20.0" },

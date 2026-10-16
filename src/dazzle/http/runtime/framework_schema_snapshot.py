@@ -267,6 +267,75 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "uniques": [],
     },
+    "connection_secret_events": {
+        "columns": {
+            "actor": {"default": None, "nullable": True, "pk": False, "type": "text"},
+            "at": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "connection_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "detail": {"default": "'{}'::text", "nullable": False, "pk": False, "type": "text"},
+            "event": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "id": {"default": None, "nullable": False, "pk": True, "type": "text"},
+            "seq": {"default": None, "nullable": False, "pk": False, "type": "bigint"},
+            "tenant_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
+        },
+        "fks": {},
+        "indexes": {
+            "ix_connection_secret_events_conn": {
+                "columns": ["connection_id", "seq"],
+                "predicate": None,
+                "unique": False,
+            }
+        },
+        "uniques": [],
+    },
+    "connections": {
+        "columns": {
+            "config": {"default": "'{}'::text", "nullable": False, "pk": False, "type": "text"},
+            "created_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "domains": {"default": "'[]'::text", "nullable": False, "pk": False, "type": "text"},
+            "encrypted_secret": {"default": None, "nullable": True, "pk": False, "type": "text"},
+            "group_mapping": {
+                "default": "'{}'::text",
+                "nullable": False,
+                "pk": False,
+                "type": "text",
+            },
+            "id": {"default": None, "nullable": False, "pk": True, "type": "text"},
+            "previous_encrypted_secret": {
+                "default": None,
+                "nullable": True,
+                "pk": False,
+                "type": "text",
+            },
+            "previous_secret_expires_at": {
+                "default": None,
+                "nullable": True,
+                "pk": False,
+                "type": "text",
+            },
+            "provider": {
+                "default": "'native'::text",
+                "nullable": False,
+                "pk": False,
+                "type": "text",
+            },
+            "status": {"default": "'active'::text", "nullable": False, "pk": False, "type": "text"},
+            "tenant_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "type": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "updated_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "verified_domains": {
+                "default": "'[]'::text",
+                "nullable": False,
+                "pk": False,
+                "type": "text",
+            },
+        },
+        "fks": {},
+        "indexes": {
+            "ix_connections_tenant": {"columns": ["tenant_id"], "predicate": None, "unique": False}
+        },
+        "uniques": [],
+    },
     "dazzle_files": {
         "columns": {
             "content_type": {"default": None, "nullable": False, "pk": False, "type": "text"},
@@ -608,6 +677,45 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             },
         },
         "uniques": [],
+    },
+    "scim_group_members": {
+        "columns": {
+            "group_id": {"default": None, "nullable": False, "pk": True, "type": "text"},
+            "membership_id": {"default": None, "nullable": False, "pk": True, "type": "text"},
+        },
+        "fks": {"group_id": "scim_groups"},
+        "indexes": {
+            "ix_scim_group_members_member": {
+                "columns": ["membership_id"],
+                "predicate": None,
+                "unique": False,
+            }
+        },
+        "uniques": [],
+    },
+    "scim_groups": {
+        "columns": {
+            "connection_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "created_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "display_name": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "external_id": {"default": None, "nullable": True, "pk": False, "type": "text"},
+            "id": {"default": None, "nullable": False, "pk": True, "type": "text"},
+            "updated_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
+        },
+        "fks": {},
+        "indexes": {
+            "ix_scim_groups_conn": {
+                "columns": ["connection_id"],
+                "predicate": None,
+                "unique": False,
+            },
+            "scim_groups_connection_id_display_name_key": {
+                "columns": ["connection_id", "display_name"],
+                "predicate": None,
+                "unique": True,
+            },
+        },
+        "uniques": ["connection_id", "display_name"],
     },
     "sessions": {
         "columns": {

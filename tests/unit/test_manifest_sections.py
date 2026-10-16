@@ -3,7 +3,7 @@
 One table per outcome: a section is absent (default), parsed, filtered, or
 rejected loudly. Each row names the section and the issue that introduced it:
 [extensions] routers (#786), [renderers] extra (#1116), [ui] app_scripts (#1515), [auth.admin_capabilities] (admin-authz) and
-[serve] app (ADR-0046).
+[serve] app (ADR-0046), [auth.enterprise] protocols (DD-013).
 """
 
 from pathlib import Path
@@ -37,6 +37,7 @@ def _attr(obj: Any, dotted: str) -> Any:
         pytest.param("app_scripts", [], id="ui_app_scripts_1515"),
         pytest.param("auth.admin_capabilities", {}, id="auth_admin_capabilities"),
         pytest.param("serve.app", None, id="serve_app_adr0046"),
+        pytest.param("auth.enterprise.protocols", [], id="auth_enterprise_dd013"),
     ],
 )
 def test_absent_section_defaults_empty(tmp_path: Path, attr: str, expected: Any) -> None:
@@ -82,6 +83,12 @@ def test_absent_section_defaults_empty(tmp_path: Path, attr: str, expected: Any)
             "serve.app",
             "server:app",
             id="serve_app_adr0046",
+        ),
+        pytest.param(
+            '\n[auth.enterprise]\nprotocols = ["oidc", "scim"]\n',
+            "auth.enterprise.protocols",
+            ["oidc", "scim"],
+            id="auth_enterprise_protocols_dd013",
         ),
     ],
 )
@@ -131,6 +138,21 @@ def test_lenient_section_filters_bad_entries(
             '\n[ui]\napp_scripts = ["/static/js/ok.js", 42]\n',
             "app_scripts must be a list",
             id="ui_app_scripts_non_string_entry_1515",
+        ),
+        pytest.param(
+            '\n[auth.enterprise]\nprotocols = ["oidc", "saml"]\n',
+            "DD-013",
+            id="auth_enterprise_out_of_scope_protocol_dd013",
+        ),
+        pytest.param(
+            '\n[auth.enterprise]\nprotocols = ["ldap"]\n',
+            "DD-013",
+            id="auth_enterprise_unknown_protocol_dd013",
+        ),
+        pytest.param(
+            '\n[auth.enterprise]\nprotocols = "oidc"\n',
+            "protocols must be a list",
+            id="auth_enterprise_scalar_protocols_dd013",
         ),
     ],
 )

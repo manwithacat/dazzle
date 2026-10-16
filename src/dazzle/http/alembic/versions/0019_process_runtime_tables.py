@@ -20,7 +20,7 @@ the framework-migration-baseline plan, ADR-0044).  It replaces the chain
 **In-scope tables (all created by the shared DDL core):**
   _dazzle_params; users, sessions, memberships, organizations,
   membership_events, invitations, connections, connection_secret_events,
-  scim_groups, scim_group_members, saml_consumed_assertions,
+  scim_groups, scim_group_members, the IdP assertion replay cache,
   password_reset_tokens, magic_links, email_verification_tokens,
   user_preferences, join_requests; process_runs, process_tasks;
   _dazzle_audit_log, _dazzle_atomic_audit, dazzle_files, refresh_tokens,

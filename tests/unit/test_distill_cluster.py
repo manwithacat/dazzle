@@ -25,7 +25,7 @@ def test_dsl_parser_file_recommends_fuzz() -> None:
 
 def test_input_boundary_file_recommends_property() -> None:
     for f in (
-        "tests/unit/test_saml_metadata.py",
+        "tests/unit/test_scim_metadata.py",
         "tests/unit/test_secret_rotation.py",
         "tests/unit/test_connection_crypto.py",
         "tests/unit/test_jwt_security.py",

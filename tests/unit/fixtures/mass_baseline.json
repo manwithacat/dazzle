@@ -1,6 +1,6 @@
 {
-  "src_lines": 318213,
-  "test_lines": 309098,
+  "src_lines": 319918,
+  "test_lines": 310492,
   "docs_lines": 48104,
   "construct_count": 31,
   "written": "2026-10-16",
@@ -250,6 +250,14 @@
         "docs_lines"
       ],
       "reason": "DD-013 FORCED (operator 2026-10-16): enterprise auth restore plan doc and DD wording; docs only"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "DD-013 FORCED (operator 2026-10-16): EA-1 enterprise auth substrate restored (OIDC/SCIM, no SAML)"
     }
   ]
 }

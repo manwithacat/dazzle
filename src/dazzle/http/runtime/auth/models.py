@@ -72,8 +72,9 @@ class MembershipRecord(BaseModel):
     # membership in a hierarchy (Trust ▸ School) it is the root (Trust). ``None``
     # for un-backfilled rows — the bind path falls back to ``tenant_id``.
     partition_root_id: str | None = None
-    # An IdP's stable user id for this membership. SCIM provisioning wrote it;
-    # SCIM is parked in DD-013, so only ``create_membership(external_id=...)`` sets it.
+    # The IdP's stable user id for this membership (Entra = user objectId GUID),
+    # captured from SCIM `externalId`. Lets a re-push under a changed email update
+    # this membership instead of forking a duplicate identity (#1342 gap 1).
     external_id: str | None = None
     joined_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -102,6 +103,23 @@ class OrganizationRecord(BaseModel):
     settings: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class ScimGroupRecord(BaseModel):
+    """A SCIM 2.0 Group, connection-scoped (#1342).
+
+    Members are tracked separately in ``scim_group_members`` and fetched on
+    demand; this record carries only the group's own fields.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    connection_id: str
+    display_name: str
+    external_id: str | None = None  # the IdP's stable group id (Entra objectId GUID) — #1342
+    created_at: str
+    updated_at: str
 
 
 class AuthContext(BaseModel):

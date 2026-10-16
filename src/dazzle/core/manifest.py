@@ -113,6 +113,35 @@ class AuthOAuthProvider:
     scopes: list[str] = field(default_factory=list)
 
 
+# Enterprise auth protocols a dazzle.toml may declare (DD-013 agreed plan). SAML is out
+# of scope: SAML-only IdPs go through a broker that speaks OIDC to Dazzle.
+ENTERPRISE_AUTH_PROTOCOLS: tuple[str, ...] = ("oidc", "scim")
+
+
+@dataclass
+class EnterpriseAuthConfig:
+    """``[auth.enterprise]``: which enterprise auth protocols this app mounts (DD-013).
+
+        [auth.enterprise]
+        protocols = ["oidc", "scim"]
+
+    Empty (the default) mounts nothing enterprise. Any name outside
+    ``ENTERPRISE_AUTH_PROTOCOLS`` is a manifest error.
+    """
+
+    protocols: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        unknown = [p for p in self.protocols if p not in ENTERPRISE_AUTH_PROTOCOLS]
+        if unknown:
+            raise ValueError(
+                f"[auth.enterprise] protocols {unknown!r} not supported; allowed: "
+                f"{list(ENTERPRISE_AUTH_PROTOCOLS)!r}. SAML is out of scope; put a broker "
+                "that speaks OIDC in front of a SAML-only IdP "
+                "(docs/decisions/DD-013-enterprise-sso-scim-connections.md)."
+            )
+
+
 @dataclass
 class AuthConfig:
     """Authentication configuration.
@@ -166,6 +195,9 @@ class AuthConfig:
 
     # OAuth2 providers
     oauth_providers: list[AuthOAuthProvider] = field(default_factory=list)
+
+    # Enterprise auth (DD-013): OIDC sign-in / SCIM provisioning, opt-in per protocol
+    enterprise: EnterpriseAuthConfig = field(default_factory=EnterpriseAuthConfig)
 
     # Security settings
     password_min_length: int = 8
@@ -669,6 +701,18 @@ _AUDIT_INTEGRITY_VALID = {"none", "hash_chain"}
 _STORAGE_VALID_BACKENDS = {"s3"}
 
 
+def _parse_enterprise_auth(data: object) -> EnterpriseAuthConfig:
+    """Parse ``[auth.enterprise]``; a malformed table or unknown protocol raises."""
+    if not isinstance(data, dict):
+        raise ValueError("[auth.enterprise] must be a TOML table")
+    protocols = data.get("protocols", [])
+    if not isinstance(protocols, list) or not all(isinstance(p, str) for p in protocols):
+        raise ValueError(
+            f"[auth.enterprise] protocols must be a list of strings; got {protocols!r}"
+        )
+    return EnterpriseAuthConfig(protocols=list(dict.fromkeys(protocols)))
+
+
 def _parse_storage_configs(data: dict[str, object]) -> dict[str, StorageConfig]:
     """Parse ``[storage.<name>]`` blocks from manifest TOML data (#932).
 
@@ -866,6 +910,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         session=session_config,
         jwt=jwt_config,
         oauth_providers=oauth_providers,
+        enterprise=_parse_enterprise_auth(auth_data.get("enterprise", {})),
         password_min_length=auth_data.get("password_min_length", 8),
         max_login_attempts=auth_data.get("max_login_attempts", 5),
         lockout_duration_minutes=auth_data.get("lockout_duration_minutes", 15),

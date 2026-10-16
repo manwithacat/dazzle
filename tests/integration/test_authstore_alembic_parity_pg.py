@@ -73,7 +73,7 @@ def test_alembic_head_coexists_with_init_db(scratch_url: str) -> None:
         # alembic head recorded, and the new tables/columns are present (from _init_db, and
         # 0013/0014/0015 no-op over them) — schema intact after both ran.
         version = eng.connect().execute(sa.text("SELECT version_num FROM alembic_version")).scalar()
-        assert version == "0025_flense_park_event_transport"
+        assert version == "0026_enterprise_auth_oidc_scim"
         # 0019 (PG coordination Phase 1): the framework process-runtime tables.
         assert insp.has_table("process_runs")
         assert insp.has_table("process_tasks")
@@ -82,9 +82,15 @@ def test_alembic_head_coexists_with_init_db(scratch_url: str) -> None:
         assert not insp.has_table("join_requests")
         assert insp.has_table("tenant_host_aliases")
         assert "external_id" in {c["name"] for c in insp.get_columns("memberships")}
-        # the enterprise-auth tables were dropped by 0023 (DD-013).
-        for parked in ("connections", "scim_groups", "scim_group_members"):
-            assert not insp.has_table(parked)
+        # 0023 dropped the enterprise-auth tables; 0026 restores the OIDC/SCIM four (DD-013).
+        for restored in (
+            "connections",
+            "connection_secret_events",
+            "scim_groups",
+            "scim_group_members",
+        ):
+            assert insp.has_table(restored)
+        assert "external_id" in {c["name"] for c in insp.get_columns("scim_groups")}
         # the two-factor tables were dropped by 0024 (DD-014); the users columns stay.
         for parked in ("_dazzle_otp_codes", "_dazzle_recovery_codes"):
             assert not insp.has_table(parked)

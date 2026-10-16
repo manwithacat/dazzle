@@ -8,10 +8,21 @@ optional_auth_dep) are set on SubsystemContext by DazzleBackendApp._setup_auth()
 import logging
 from typing import Any
 
+from dazzle.http.runtime.auth.enterprise_guard import (
+    require_protocol_extras,
+    undeclared_connection_errors,
+)
 from dazzle.http.runtime.jwt_middleware import JWTMiddleware
+from dazzle.http.runtime.lifespan_hooks import register_lifespan_hook
 from dazzle.http.runtime.subsystems import SubsystemContext
 
 logger = logging.getLogger(__name__)
+
+
+def _enterprise_protocols(ctx: SubsystemContext) -> list[str]:
+    """The ``[auth.enterprise] protocols`` this app declares (empty: nothing mounts)."""
+    enterprise = getattr(ctx.auth_config, "enterprise", None)
+    return list(getattr(enterprise, "protocols", None) or [])
 
 
 class AuthSubsystem:
@@ -241,14 +252,18 @@ class AuthSubsystem:
         configured = load_sso_providers_from_env()
         ctx.app.state.sso_providers = configured
 
+        # Enterprise (per-org) OIDC/SCIM connections are gated on [auth.enterprise]
+        # protocols in dazzle.toml (DD-013): a route group mounts only when declared.
+        protocols = _enterprise_protocols(ctx)
+
         # SessionMiddleware backs Authlib's `state` storage between the initiate
-        # redirect and the callback. The session cookie is signed (not encrypted)
-        # via itsdangerous — fine for the short-lived state token but DON'T put
-        # sensitive data in `request.session`. The secret defaults to a random per-process value; production deployments
-        # should set DAZZLE_SESSION_SECRET so the cookie survives restarts. Added at
-        # most once, and only when something actually needs it (no blast radius for
-        # non-SSO apps).
-        if configured:
+        # redirect and the callback (global SSO and enterprise OIDC). The session
+        # cookie is signed (not encrypted) via itsdangerous — fine for the short-lived
+        # state token but DON'T put sensitive data in `request.session`. The secret
+        # defaults to a random per-process value; production deployments should set
+        # DAZZLE_SESSION_SECRET so the cookie survives restarts. Added at most once,
+        # and only when something actually needs it (no blast radius for non-SSO apps).
+        if configured or "oidc" in protocols:
             import os
             import secrets
 
@@ -262,7 +277,10 @@ class AuthSubsystem:
                 https_only=False,  # cookie_secure() controls per-cookie
             )
 
+        if configured:
             ctx.app.include_router(create_sso_routes())
+
+        self._mount_enterprise(ctx, protocols)
 
         # SES webhook (if SES is configured)
         try:
@@ -271,6 +289,43 @@ class AuthSubsystem:
             register_ses_webhook(ctx.app)
         except Exception:
             logger.info("SES webhooks not available, skipping registration")
+
+    def _mount_enterprise(self, ctx: SubsystemContext, protocols: list[str]) -> None:
+        """Mount each declared enterprise protocol and register the boot guard (DD-013).
+
+        A declared protocol whose extra does not import raises
+        ``EnterpriseAuthBootError`` here, at subsystem setup: never a silent skip.
+        """
+        require_protocol_extras(protocols)
+        if "oidc" in protocols:
+            self._mount_oidc(ctx)
+        if "scim" in protocols:
+            self._mount_scim(ctx)
+        self._register_enterprise_boot_guard(ctx, protocols)
+
+    def _mount_oidc(self, ctx: SubsystemContext) -> None:
+        """Extension point: per-org OIDC sign-in routes (plan EA-2). Mounts nothing yet."""
+
+    def _mount_scim(self, ctx: SubsystemContext) -> None:
+        """Extension point: SCIM 2.0 provisioning routes (plan EA-3). Mounts nothing yet."""
+
+    def _register_enterprise_boot_guard(self, ctx: SubsystemContext, protocols: list[str]) -> None:
+        """Log at ERROR at startup if connection rows exist for an undeclared protocol (#1344).
+
+        Their routes silently don't mount (SSO/SCIM 404). A startup hook (not build-time)
+        because the DB pool only opens at lifespan startup; log-only, because the mismatch
+        is SAFE and aborting would crash-loop a safe deploy. Registered whatever the
+        protocols: the point is to fire when one is *absent*.
+        """
+        store = getattr(ctx, "auth_store", None)
+        if store is None:
+            return
+
+        def _startup() -> None:
+            for msg in undeclared_connection_errors(store.connection_type_counts(), protocols):
+                logger.error("Enterprise auth boot guard: %s", msg)
+
+        register_lifespan_hook(ctx.app, startup=_startup)
 
     def _ensure_jwt_service(self, ctx: SubsystemContext) -> bool:
         """Build (or reuse) JWTService + TokenStore, idempotently.

@@ -30,6 +30,7 @@ except ImportError:
     PSYCOPG_AVAILABLE = False
 
 from dazzle.http.runtime.auth.partition_root import resolve_partition_root
+from dazzle.http.runtime.auth.store_enterprise import ENTERPRISE_AUTH_DDL, EnterpriseStoreMixin
 
 from .crypto import hash_password, verify_password
 from .models import (
@@ -47,8 +48,8 @@ logger = logging.getLogger(__name__)
 # insert are not atomic across sessions, so concurrently cold-booting
 # workers can both pass the check and the loser dies with
 # `UniqueViolation: pg_class_relname_nsp_index`. Same hex-named
-# advisory-lock convention as MEMBERSHIP_EVENTS_LOCK_KEY.
-# ("dzdl" = dazzle DDL.)
+# advisory-lock convention as MEMBERSHIP_EVENTS_LOCK_KEY /
+# CONNECTION_DOMAIN_LOCK_KEY. ("dzdl" = dazzle DDL.)
 AUTH_DDL_LOCK_KEY = 0x647A646C
 
 
@@ -146,7 +147,7 @@ class UserStoreMixin:
         # when the app declares an `auth_identity:` bridge. The hook is set by the server
         # at build time; absent (or no binding) ⇒ no-op. This is the single production
         # choke point all auth-user creation funnels through (magic-link signup, SSO JIT,
-        # password signup). Best-effort — never break auth-user creation (D1).
+        # password signup, SCIM …). Best-effort — never break auth-user creation (D1).
         hook = getattr(self, "_on_user_created", None)
         if hook is not None:
             try:
@@ -928,6 +929,9 @@ class SessionStoreMixin:
             if row is None:
                 return False
             cur.execute("DELETE FROM memberships WHERE id = %s", (membership_id,))
+            # scim_group_members has no FK to memberships (see ENTERPRISE_AUTH_DDL) — clear
+            # the deleted membership's group rows here so no orphans survive.
+            cur.execute("DELETE FROM scim_group_members WHERE membership_id = %s", (membership_id,))
             record_membership_event(
                 cur,
                 event_type=MembershipEventType.REMOVED,
@@ -1357,6 +1361,10 @@ def ensure_auth_core_tables(cur: Any) -> None:
     for _ix in INVITATIONS_INDEXES:
         cur.execute(_ix)
 
+    # Enterprise auth (DD-013): connections, secret-rotation audit, SCIM groups.
+    for _stmt in ENTERPRISE_AUTH_DDL:
+        cur.execute(_stmt)
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
             token TEXT PRIMARY KEY,
@@ -1397,13 +1405,14 @@ def ensure_auth_core_tables(cur: Any) -> None:
     cur.execute("CREATE INDEX IF NOT EXISTS idx_user_prefs_user ON user_preferences(user_id)")
 
 
-class AuthStore(UserStoreMixin, SessionStoreMixin, LazyPgStore):
+class AuthStore(UserStoreMixin, SessionStoreMixin, EnterpriseStoreMixin, LazyPgStore):
     """
     Authentication store using PostgreSQL.
 
     Manages users and sessions in a separate auth database.
-    Combines UserStoreMixin (user CRUD, passwords) and
-    SessionStoreMixin (session lifecycle, validation).
+    Combines UserStoreMixin (user CRUD, passwords),
+    SessionStoreMixin (session lifecycle, validation) and
+    EnterpriseStoreMixin (connections, SCIM groups — DD-013).
     """
 
     def __init__(

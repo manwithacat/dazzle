@@ -54,6 +54,9 @@ _ALLOWED_VERSIONS: dict[str, str] = {
     "0025_flense_park_event_transport": (
         "drops the channel delivery outbox removed in flense ship AR (DD-006)"
     ),
+    "0026_enterprise_auth_oidc_scim": (
+        "restores the OIDC/SCIM enterprise-auth tables (DD-013 FORCED, plan EA-1)"
+    ),
 }
 
 
