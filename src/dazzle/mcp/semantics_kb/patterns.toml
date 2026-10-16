@@ -2,7 +2,49 @@
 # Auto-generated from semantics.py
 
 [meta]
-pattern_count = 28
+pattern_count = 29
+
+[patterns.enterprise_sso]
+category = "Auth"
+doc_page = "patterns"
+# parse_check: mixed-content (dazzle.toml config + shell commands, not DSL)
+parse_check = false
+triggers = [
+    "okta",
+    "entra",
+    "azure ad",
+    "ping identity",
+    "enterprise sso",
+    "single sign-on",
+    "oidc",
+    "openid connect",
+    "identity provider",
+    "scim",
+    "require_sso",
+]
+definition = "Per-org enterprise SSO via OIDC and SCIM provisioning, opt-in through [auth.enterprise] protocols in dazzle.toml (DD-013). Connections are runtime data (dazzle auth connection ...), fenced per org and gated by domain verification. require_sso sends a verified domain's users to their IdP. SAML is out of scope: a SAML-only IdP goes through a broker that presents OIDC. Guide: docs/reference/enterprise-auth.md."
+syntax = '''
+# 1. Opt in (dazzle.toml): a declared protocol whose extra is missing is a boot error.
+[auth.enterprise]
+protocols = ["oidc", "scim"]
+# 2. Create a per-org connection (runtime data, not DSL):
+dazzle auth connection create --tenant <org> --issuer <url> \
+    --client-id <id> --client-secret <secret>
+# 3. Verify the org's email domain (DNS-TXT), then sign in at /auth/enterprise/login.
+'''
+example = '''
+# dazzle.toml
+[auth.enterprise]
+protocols = ["oidc", "scim"]
+
+# Per org (CLI, runtime; secrets never in DSL):
+$ dazzle auth connection create --tenant acme --issuer https://acme.okta.com \
+    --client-id ... --client-secret ...
+$ dazzle auth connection add-domain <id> acme.com   # publish the printed TXT record
+$ dazzle auth connection verify-domain <id> acme.com
+$ dazzle auth connection doctor <id>                # exit 0 = activation-ready
+$ dazzle auth connection set-require-sso <id> --on  # refuse local sign-in for acme.com
+'''
 
 [patterns.audit_trail]
 doc_page = "patterns"

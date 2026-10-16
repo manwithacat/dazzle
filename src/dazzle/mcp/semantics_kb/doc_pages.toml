@@ -1322,6 +1322,13 @@ order = 110
 handwritten = true
 intro = "The security profile every app declares in its `app` block, and what each profile enforces."
 
+[pages.enterprise-auth]
+title = "Enterprise SSO & Provisioning"
+slug = "enterprise-auth"
+order = 111
+handwritten = true
+intro = "Per-org enterprise sign-in and provisioning with OIDC and SCIM, opted into through an enterprise protocols table in the manifest, plus require_sso (DD-013)."
+
 [pages.pii-privacy]
 title = "PII & Privacy Primitives"
 slug = "pii-privacy"

@@ -47,6 +47,7 @@
 | [RBAC Scope Rules](rbac-scope.md) | Operation-by-operation reference for `scope:` row-level authorization rules and their predicate algebra. |
 | [RBAC Verification Framework](rbac-verification.md) | The three-layer access-control verification system that proves DSL-declared security policies hold. |
 | [Security Profiles](security-profiles.md) | The security profile every app declares in its `app` block, and what each profile enforces. |
+| [Enterprise SSO & Provisioning](enterprise-auth.md) | Per-org enterprise sign-in and provisioning with OIDC and SCIM, opted into through an enterprise protocols table in the manifest, plus require_sso (DD-013). |
 | [PII & Privacy Primitives](pii-privacy.md) | Analytics, consent, and privacy primitives for marking and handling personally identifiable data. |
 | [Document Signing](document-signing.md) | Native PAdES B-T document signing as a first-class DSL primitive via `signable: true`. |
 | [Multi-Tenant Hosts](tenant-hosts.md) | The `tenant_host:` sub-block that auto-mounts Host-header-based tenant routing (#1289). |

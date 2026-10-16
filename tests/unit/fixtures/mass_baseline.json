@@ -1,7 +1,7 @@
 {
-  "src_lines": 323475,
+  "src_lines": 323476,
   "test_lines": 314701,
-  "docs_lines": 48113,
+  "docs_lines": 48364,
   "construct_count": 31,
   "written": "2026-10-16",
   "exceptions": [
@@ -315,6 +315,14 @@
         "test_lines"
       ],
       "reason": "DD-013 FORCED (operator 2026-10-16): EA-6 acceptance fixes (per-org domain ownership, doctor JSON)"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "src_lines",
+        "docs_lines"
+      ],
+      "reason": "DD-013 FORCED (operator 2026-10-16): EA-5 operator guide, KB pattern and doc page restored"
     }
   ]
 }

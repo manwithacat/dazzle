@@ -242,6 +242,7 @@ Example: [DD-001](docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md) for #1621/
 |------|-----------|------|
 | Chart / report regions (`bar_chart`, `pivot_table`, `heatmap`, `funnel_chart`, `metrics`) | `docs/reference/reports.md` — display-mode per cardinality, fast vs slow path, scope-safety, `dazzle db explain-aggregate` | one scope-aware `GROUP BY` per region, never N+1 |
 | Per-persona onboarding `guide` overlays | `docs/reference/guides.md` | `tests/unit/test_example_guide_bar.py`; `dazzle ux verify --guides`; declaring guides adds `OnboardingState` to RBAC + compliance evidence — regenerate `expected/` |
+| Enterprise auth (OIDC / SCIM connections, `require_sso`) | `docs/reference/enterprise-auth.md`; DD-013 | `dazzle auth connection doctor`; `tests/unit/test_enterprise_protocol_scope.py` (no SAML) |
 | Writing / editing `.dsl` | **dsl-authoring** skill; `docs/reference/grammar.md` | `dazzle validate` / `dazzle lint` |
 | PyPI | package `dazzle-dsl`, import name `dazzle`, console command `dazzle` | — |
 

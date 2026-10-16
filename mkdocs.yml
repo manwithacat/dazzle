@@ -76,6 +76,7 @@ nav:
       - LLM Models & Intents: reference/llm.md
       - Compliance: reference/compliance.md
       - RBAC Verification: reference/rbac-verification.md
+      - Enterprise SSO (OIDC/SCIM): reference/enterprise-auth.md
       - RBAC Scope Rules: reference/rbac-scope.md
       - Testing: reference/testing.md
       - Frontend & Templates: reference/frontend.md
