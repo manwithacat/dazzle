@@ -1,5 +1,5 @@
 {
-  "src_lines": 323453,
+  "src_lines": 323462,
   "test_lines": 314694,
   "docs_lines": 48113,
   "construct_count": 31,
@@ -300,6 +300,13 @@
         "test_lines"
       ],
       "reason": "DD-013 FORCED (operator 2026-10-16): EA-6 require_sso revokes verified-domain sessions"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "src_lines"
+      ],
+      "reason": "DD-013 FORCED (operator 2026-10-16): runtime-urls baseline now pins auth routes (docs/api-surface)"
     }
   ]
 }

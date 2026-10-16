@@ -1,6 +1,6 @@
 # DAZZLE Runtime URLs — API Surface (cycle 5 of #961)
 #
-# Source of truth: AST walk of src/dazzle/http/runtime/*_routes.py (+ EXTRA_ROUTE_FILES)
+# Source of truth: AST walk of src/dazzle/http/runtime/*_routes.py, auth/*_routes.py + auth/routes.py (+ EXTRA_ROUTE_FILES)
 # Regenerate: dazzle inspect api runtime-urls --write
 # Drift gate: tests/unit/test_api_surface_drift.py
 #
@@ -10,7 +10,7 @@
 # lens. Adding/removing a route, changing its path template, HTTP
 # method, handler name, or signature all fire the drift gate.
 
-# Counts: 51 routes across 17 modules
+# Counts: 95 routes across 28 modules
 
 module: audit_history_routes
   GET | /{entity_type}/{entity_id}
@@ -31,6 +31,116 @@ module: audit_routes
     handler: query_stats(auth_context: AuthContext = Depends(auth_dep), entity: str | None = Query(None, description='Filter by entity name'), window: int = Query(24, ge=1, le=720, description='Window in hours')) -> dict[str, Any]
   GET | /stats
     handler: query_stats_noauth(entity: str | None = Query(None, description='Filter by entity name'), window: int = Query(24, ge=1, le=720, description='Window in hours')) -> dict[str, Any]
+
+module: auth_email_verification_routes
+  POST | /auth/resend-verification
+    handler: resend_verification(request: Request, email: Annotated[str, Form()] = '', next: Annotated[str, Query()] = '/') -> RedirectResponse
+  POST | /auth/send-verification
+    handler: send_verification(request: Request, email: Annotated[str, Form()] = '', next: Annotated[str, Query()] = '/') -> RedirectResponse
+  GET | /auth/verify-email
+    handler: consume_verification_token(request: Request, token: Annotated[str, Query()] = '', next: Annotated[str, Query()] = '/') -> Response
+
+module: auth_enterprise_routes
+  GET | /auth/enterprise/callback
+    handler: enterprise_callback(request: Request) -> Response
+  GET | /auth/enterprise/login
+    handler: enterprise_login(request: Request, connection: Annotated[str, Query()] = '', email: Annotated[str, Query()] = '', next: Annotated[str, Query()] = '/') -> Response
+
+module: auth_invitation_routes
+  POST | /auth/accept-invite
+    handler: accept_submit(request: Request, token: Annotated[str, Query()] = '') -> HTMLResponse | RedirectResponse
+  GET | /auth/accept-invite/{token}
+    handler: accept_page(request: Request, token: str) -> HTMLResponse
+  POST | /auth/invite
+    handler: invite(request: Request, email: Annotated[str, Form()] = '', roles: Annotated[str, Form()] = '') -> HTMLResponse
+
+module: auth_magic_link_routes
+  POST | /auth/login/magic-link
+    handler: issue_magic_link(request: Request, email: Annotated[str, Form()] = '', next: Annotated[str, Query()] = '/') -> Response
+  GET | /auth/magic/{token}
+    handler: consume_magic_link(token: str, request: Request, next: Annotated[str, Query()] = '/') -> Response
+  POST | /auth/signup/magic-link
+    handler: signup_with_magic_link(request: Request, email: Annotated[str, Form()] = '', name: Annotated[str, Form()] = '', next: Annotated[str, Query()] = '/') -> Response
+
+module: auth_member_admin_routes
+  GET | /auth/members
+    handler: members_page(request: Request) -> HTMLResponse
+  POST | /auth/members/reactivate
+    handler: reactivate(request: Request, membership_id: Annotated[str, Query()] = '') -> Response
+  POST | /auth/members/remove
+    handler: remove(request: Request, membership_id: Annotated[str, Query()] = '') -> Response
+  POST | /auth/members/roles
+    handler: change_roles(request: Request, membership_id: Annotated[str, Query()] = '', roles: Annotated[str, Form()] = '') -> Response
+  POST | /auth/members/suspend
+    handler: suspend(request: Request, membership_id: Annotated[str, Query()] = '') -> Response
+
+module: auth_org_context_routes
+  GET | /auth/no-orgs
+    handler: no_orgs_page(request: Request) -> str
+  GET | /auth/select-org
+    handler: select_org_page(request: Request, next: Annotated[str, Query()] = '/app', error: Annotated[str, Query()] = '') -> Response
+  POST | /auth/select-org
+    handler: select_org_submit(request: Request, membership_id: Annotated[str, Form()] = '', next: Annotated[str, Query()] = '/app') -> HTMLResponse | RedirectResponse
+  POST | /auth/switch-org
+    handler: switch_org_submit(request: Request, membership_id: Annotated[str, Form()] = '', next: Annotated[str, Query()] = '/app') -> HTMLResponse | RedirectResponse
+
+module: auth_password_login_routes
+  POST | /auth/login/password
+    handler: submit_login_password(request: Request, email: Annotated[str, Form()] = '', password: Annotated[str, Form()] = '', next: Annotated[str, Query()] = '/') -> Response
+  POST | /auth/signup/password
+    handler: submit_signup_password(request: Request, email: Annotated[str, Form()] = '', name: Annotated[str, Form()] = '', password: Annotated[str, Form()] = '', confirm_password: Annotated[str, Form()] = '', next: Annotated[str, Query()] = '/') -> Response
+
+module: auth_password_reset_routes
+  POST | /auth/forgot-password/submit
+    handler: submit_forgot_password(request: Request, email: Annotated[str, Form()] = '') -> Response
+  POST | /auth/reset-password/submit
+    handler: submit_reset_password(request: Request, token: Annotated[str, Form()] = '', new_password: Annotated[str, Form()] = '', confirm_password: Annotated[str, Form()] = '') -> Response
+
+module: auth_profile_routes
+  GET | /me/profile
+    handler: my_profile(request: Request) -> HTMLResponse
+  POST | /me/profile
+    handler: upsert_my_profile(request: Request) -> Response
+
+module: auth_scim_routes
+  GET | /scim/v2/Groups
+    handler: scim_list_groups(request: Request) -> Any
+  POST | /scim/v2/Groups
+    handler: scim_create_group(request: Request) -> Any
+  DELETE | /scim/v2/Groups/{group_id}
+    handler: scim_delete_group(group_id: str, request: Request) -> Response
+  GET | /scim/v2/Groups/{group_id}
+    handler: scim_get_group(group_id: str, request: Request) -> Any
+  PATCH | /scim/v2/Groups/{group_id}
+    handler: scim_patch_group(group_id: str, request: Request) -> Any
+  PUT | /scim/v2/Groups/{group_id}
+    handler: scim_put_group(group_id: str, request: Request) -> Any
+  GET | /scim/v2/ResourceTypes
+    handler: resource_types(request: Request) -> JSONResponse
+  GET | /scim/v2/ResourceTypes/{type_id}
+    handler: resource_type(type_id: str, request: Request) -> JSONResponse
+  GET | /scim/v2/Schemas
+    handler: schemas(request: Request) -> JSONResponse
+  GET | /scim/v2/Schemas/{schema_id}
+    handler: schema(schema_id: str, request: Request) -> JSONResponse
+  GET | /scim/v2/ServiceProviderConfig
+    handler: service_provider_config(request: Request) -> JSONResponse
+  GET | /scim/v2/Users
+    handler: list_users(request: Request, filter: Annotated[str, Query()] = '') -> JSONResponse
+  POST | /scim/v2/Users
+    handler: create_user(request: Request) -> JSONResponse
+  DELETE | /scim/v2/Users/{membership_id}
+    handler: delete_user(request: Request, membership_id: str) -> Response
+  GET | /scim/v2/Users/{membership_id}
+    handler: get_user(request: Request, membership_id: str) -> JSONResponse
+  PATCH | /scim/v2/Users/{membership_id}
+    handler: patch_user(request: Request, membership_id: str) -> JSONResponse
+  PUT | /scim/v2/Users/{membership_id}
+    handler: replace_user(request: Request, membership_id: str) -> JSONResponse
+
+module: auth_sso_routes
+  GET | /auth/sso/{provider}
+    handler: sso_initiate(provider: str, request: Request, next: Annotated[str, Query()] = '/') -> Response
 
 module: consent_routes
   POST | (root)

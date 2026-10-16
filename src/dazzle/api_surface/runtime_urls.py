@@ -31,6 +31,11 @@ ROUTES_DIR = REPO_ROOT / "src" / "dazzle" / "http" / "runtime"
 # for the #1283 signing primitive).
 EXTRA_ROUTE_FILES: tuple[Path, ...] = (REPO_ROOT / "src" / "dazzle" / "signing" / "routes.py",)
 
+# The auth package keeps its route modules one level down. Every `*_routes.py` there
+# plus the core `routes.py` is walked too, so the sign-in, enterprise OIDC and SCIM
+# surfaces (DD-013) are pinned like the rest.
+AUTH_ROUTES_DIR = ROUTES_DIR / "auth"
+
 HTTP_METHODS = {"get", "post", "put", "patch", "delete", "head", "options", "websocket"}
 
 
@@ -125,6 +130,10 @@ def _collect_routes() -> list[dict[str, str]]:
     out: list[dict[str, str]] = []
     for path in sorted(ROUTES_DIR.glob("*_routes.py")):
         out.extend(_walk_module(path))
+    auth_files = sorted(AUTH_ROUTES_DIR.glob("*_routes.py")) + [AUTH_ROUTES_DIR / "routes.py"]
+    for path in auth_files:
+        if path.exists():
+            out.extend(_walk_module(path))
     for extra in EXTRA_ROUTE_FILES:
         if extra.exists():
             out.extend(_walk_module(extra))
@@ -143,7 +152,7 @@ def snapshot_runtime_urls() -> str:
     lines.append("# DAZZLE Runtime URLs — API Surface (cycle 5 of #961)")
     lines.append("#")
     lines.append(
-        "# Source of truth: AST walk of src/dazzle/http/runtime/*_routes.py (+ EXTRA_ROUTE_FILES)"
+        "# Source of truth: AST walk of src/dazzle/http/runtime/*_routes.py, auth/*_routes.py + auth/routes.py (+ EXTRA_ROUTE_FILES)"
     )
     lines.append("# Regenerate: dazzle inspect api runtime-urls --write")
     lines.append("# Drift gate: tests/unit/test_api_surface_drift.py")
