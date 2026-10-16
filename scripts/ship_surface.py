@@ -432,6 +432,11 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/integration/test_sso_routes.py::test_initiate_unknown_provider_stays_put",
     "tests/integration/test_sso_routes.py::test_callback_unknown_provider_stays_put",
     "tests/integration/test_sso_routes.py::test_initiate_when_no_providers_configured_redirects_with_error",
+    # 2026-10-16 v0.120.0: the DD-013 require_sso check reads user.email on the
+    # reset-submit path; the chrome-gate stub lacked it and only the integration
+    # suite (not Tier 0) caught it — three red Python jobs on main.
+    "tests/integration/test_auth_password_reset_chrome_gate.py",
+    "tests/integration/test_auth_password_mode_chrome_gate.py",
     # cycle 2234: 2233 pack missed chrome-gate 303 vs leftover 400 (×3 Pythons)
     "tests/integration/test_auth_password_mode_chrome_gate.py::test_post_signup_password_leftover_email_stays_put",
     "tests/integration/test_auth_password_mode_chrome_gate.py::test_post_signup_password_blank_email_redirects_with_error",
