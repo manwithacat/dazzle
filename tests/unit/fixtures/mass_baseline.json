@@ -1,7 +1,7 @@
 {
-  "src_lines": 319918,
-  "test_lines": 310492,
-  "docs_lines": 48104,
+  "src_lines": 320937,
+  "test_lines": 311520,
+  "docs_lines": 48112,
   "construct_count": 31,
   "written": "2026-10-16",
   "exceptions": [
@@ -258,6 +258,15 @@
         "test_lines"
       ],
       "reason": "DD-013 FORCED (operator 2026-10-16): EA-1 enterprise auth substrate restored (OIDC/SCIM, no SAML)"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "DD-013 FORCED (operator 2026-10-16): EA-4 connection CLI, doctor and probe restored (no SAML)"
     }
   ]
 }

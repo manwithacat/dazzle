@@ -239,10 +239,18 @@ dazzle auth COMMAND [OPTIONS]
 | `list-sessions` | List active sessions |
 | `cleanup-sessions` | Remove expired sessions |
 | `config` | Show auth system configuration |
+| `rotate-encryption-key` | Re-encrypt all enterprise connection secrets onto a new `DAZZLE_CONNECTION_SECRET` |
+| `connection` | Manage per-org enterprise connections (OIDC, SCIM) and verify their domains |
+
+`dazzle auth connection` subcommands: `create` (OIDC), `create-scim`, `list`, `add-domain`,
+`show-verification`, `verify-domain`, `doctor [--probe] [--json]`, `rotate-secret [--grace]`,
+`revoke-previous-secret`, `secret-history`, `scaffold`, `delete`. Connections are runtime data
+(DD-013); the `[auth.enterprise] protocols` manifest key gates which protocol routes mount.
 
 ```bash
 dazzle auth create-user --email admin@example.com --roles admin
 dazzle auth list-users
+dazzle auth connection doctor <connection-id> --probe
 ```
 
 ---
