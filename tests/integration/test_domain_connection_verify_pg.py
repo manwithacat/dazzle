@@ -15,6 +15,9 @@ from collections.abc import Iterator
 import psycopg
 import pytest
 
+from dazzle.http.runtime.auth.domain_verification import txt_record, verify_domain
+from dazzle.http.runtime.auth.enterprise_login import sso_required_for
+
 pytestmark = [pytest.mark.e2e, pytest.mark.postgres]
 
 _PG_URL = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
@@ -141,3 +144,63 @@ def test_domain_connection_one_owner_per_domain(store_url: str) -> None:
     refreshed2 = store.get_connection(conn2.id)
     assert refreshed2 is not None
     assert "bigcorp.com" not in (refreshed2.verified_domains or [])
+
+
+# ---------------------------------------------------------------------------
+# require_sso (DD-013, EA-2): the flag only bites through a verified domain
+# ---------------------------------------------------------------------------
+
+
+def _oidc_connection(store, tenant_id: str):
+    return store.create_connection(
+        tenant_id=tenant_id,
+        type="oidc",
+        config={"issuer": "https://idp.example", "client_id": "cid"},
+        secrets={"client_secret": "shh"},
+        domains=["acme.test"],
+    )
+
+
+def test_require_sso_resolves_only_once_domain_verified(store_url: str) -> None:
+    store = _store(store_url)
+    org = store.create_organization(slug="acme", name="Acme")
+    conn = _oidc_connection(store, org.id)
+    assert store.set_connection_require_sso(conn.id, True, tenant_id=org.id) is True
+
+    assert sso_required_for("jane@acme.test", store) is None  # claimed, not verified
+
+    resolver = _FakeResolver({"acme.test": [txt_record(conn.id, "acme.test")]})
+    assert verify_domain(store, conn, "acme.test", resolver=resolver) is True
+    found = sso_required_for("jane@acme.test", store)
+    assert found is not None and found.id == conn.id
+
+
+def test_set_connection_require_sso_is_tenant_fenced(store_url: str) -> None:
+    store = _store(store_url)
+    org = store.create_organization(slug="acme", name="Acme")
+    conn = _oidc_connection(store, org.id)
+    assert store.set_connection_require_sso(conn.id, True, tenant_id="other-org") is False
+    assert "require_sso" not in store.get_connection(conn.id).config
+
+
+def test_set_connection_require_sso_toggles_and_keeps_secret(store_url: str) -> None:
+    store = _store(store_url)
+    org = store.create_organization(slug="acme", name="Acme")
+    conn = _oidc_connection(store, org.id)
+    store.set_connection_require_sso(conn.id, True)
+    on = store.get_connection(conn.id)
+    assert on.config["require_sso"] is True
+    assert on.secrets == {"client_secret": "shh"}
+    assert on.updated_at > conn.updated_at  # rebuilds the OIDC client cache entry
+    store.set_connection_require_sso(conn.id, False)
+    assert "require_sso" not in store.get_connection(conn.id).config
+
+
+def test_set_connection_require_sso_is_oidc_only(store_url: str) -> None:
+    store = _store(store_url)
+    org = store.create_organization(slug="acme", name="Acme")
+    conn = store.create_connection(
+        tenant_id=org.id, type="domain", config={}, secrets={}, domains=["acme.test"]
+    )
+    with pytest.raises(ValueError, match="OIDC-only"):
+        store.set_connection_require_sso(conn.id, True)

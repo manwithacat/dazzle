@@ -14,6 +14,7 @@ from dazzle.core.strings import normalize_role
 
 from .cookie_name import clear_session_cookies, read_session_id, set_session_cookies
 from .crypto import verify_password
+from .enterprise_login import sso_redirect_for, sso_required_json
 from .events import emit_user_logged_in, emit_user_password_changed, emit_user_registered
 from .models import (
     ChangePasswordRequest,
@@ -107,8 +108,12 @@ def _resolve_redirect(persona_routes: dict[str, str] | None, roles: list[str] | 
 async def _login(deps: _AuthDeps, credentials: LoginRequest, request: FastAPIRequest) -> Response:
     """Login with email and password.
 
-    Returns the session cookie on success.
+    Returns the session cookie on success. An address whose verified domain requires
+    SSO is refused (403 ``sso_required``) before the password is evaluated (DD-013).
     """
+    sso_url = sso_redirect_for(request, deps.auth_store, credentials.email)
+    if sso_url is not None:
+        return sso_required_json(sso_url)
     user = deps.auth_store.authenticate(credentials.email, credentials.password)
 
     if not user:
@@ -336,6 +341,9 @@ async def _forgot_password(
 
     _logger = logging.getLogger(__name__)
 
+    sso_url = sso_redirect_for(request, deps.auth_store, data.email)
+    if sso_url is not None:
+        return sso_required_json(sso_url)  # DD-013 require_sso: no local reset
     user = deps.auth_store.get_user_by_email(data.email)
 
     if user and user.is_active:

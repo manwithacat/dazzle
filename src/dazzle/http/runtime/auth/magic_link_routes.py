@@ -22,6 +22,7 @@ from dazzle.http.runtime.auth.auth_views import (
     leftover_honest_auth_token,
 )
 from dazzle.http.runtime.auth.cookie_name import read_session_id, set_session_cookies
+from dazzle.http.runtime.auth.enterprise_login import sso_redirect_for
 from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
 from dazzle.http.runtime.auth.magic_link import (
     create_magic_link,
@@ -201,6 +202,11 @@ def create_magic_link_routes() -> APIRouter:
         normalized_email = leftover_auth_email_or_400(email)
         if not isinstance(normalized_email, str):
             return normalized_email
+        # DD-013 require_sso: no link is issued; the org's IdP owns this address.
+        safe_next = next if next and next != "/" and _is_safe_redirect_path(next) else ""
+        sso_url = sso_redirect_for(request, auth_store, normalized_email, next_path=safe_next)
+        if sso_url is not None:
+            return RedirectResponse(url=sso_url, status_code=303)
         if normalized_email:
             user = auth_store.get_user_by_email(normalized_email)
             if user is not None:

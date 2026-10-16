@@ -12,6 +12,9 @@ from dazzle.http.runtime.auth.enterprise_guard import (
     require_protocol_extras,
     undeclared_connection_errors,
 )
+from dazzle.http.runtime.auth.enterprise_login import ENTERPRISE_OIDC_STATE_ATTR
+from dazzle.http.runtime.auth.enterprise_routes import create_enterprise_sso_routes
+from dazzle.http.runtime.auth.oidc_provider import register_native_oidc
 from dazzle.http.runtime.jwt_middleware import JWTMiddleware
 from dazzle.http.runtime.lifespan_hooks import register_lifespan_hook
 from dazzle.http.runtime.subsystems import SubsystemContext
@@ -304,7 +307,16 @@ class AuthSubsystem:
         self._register_enterprise_boot_guard(ctx, protocols)
 
     def _mount_oidc(self, ctx: SubsystemContext) -> None:
-        """Extension point: per-org OIDC sign-in routes (plan EA-2). Mounts nothing yet."""
+        """Register the native OIDC provider and mount the per-org sign-in routes (EA-2).
+
+        Registration is idempotent across app boots: the process-wide registry is keyed
+        by (type, provider); per-connection authlib clients live inside the provider
+        instance (keyed by connection id + revision), so no cross-app collision. The
+        state flag arms the ``require_sso`` refusals on the local sign-in routes.
+        """
+        register_native_oidc()
+        ctx.app.include_router(create_enterprise_sso_routes())
+        setattr(ctx.app.state, ENTERPRISE_OIDC_STATE_ATTR, True)
 
     def _mount_scim(self, ctx: SubsystemContext) -> None:
         """Extension point: SCIM 2.0 provisioning routes (plan EA-3). Mounts nothing yet."""

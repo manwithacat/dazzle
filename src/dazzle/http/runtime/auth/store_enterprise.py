@@ -701,6 +701,38 @@ class EnterpriseStoreMixin:
             (json.dumps(verified), datetime.now(UTC).isoformat(), connection_id),
         )
 
+    def set_connection_require_sso(
+        self, connection_id: str, required: bool, *, tenant_id: str | None = None
+    ) -> bool:
+        """Toggle ``config["require_sso"]`` on an OIDC connection (DD-013, plan EA-2).
+
+        When on, local sign-in (password, magic link, password reset) for the
+        connection's verified domains is refused and sent to the IdP
+        (``enterprise_login.sso_required_for``). OIDC-only: raises ``ValueError`` on
+        another type. Pass ``tenant_id`` to fence the write to one org. Stored as a JSON
+        boolean (the reader matches ``is True``); off removes the key. Returns ``True``
+        if a row changed.
+        """
+        with self._transaction() as cur:
+            config, _secrets, _tenant, conn_type = self._load_config_secrets(
+                cur, connection_id, tenant_id
+            )
+            if config is None:
+                return False
+            if conn_type != "oidc":
+                raise ValueError(
+                    f"require_sso is OIDC-only (connection {connection_id!r} is {conn_type!r})"
+                )
+            if required:
+                config["require_sso"] = True
+            else:
+                config.pop("require_sso", None)
+            cur.execute(
+                "UPDATE connections SET config = %s, updated_at = %s WHERE id = %s",
+                (json.dumps(config), datetime.now(UTC).isoformat(), connection_id),
+            )
+        return True
+
     def claim_verified_domain(self, connection_id: str, domain: str) -> bool:
         """Atomically claim ``domain`` as verified for ``connection_id``.
 

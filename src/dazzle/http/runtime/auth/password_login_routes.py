@@ -21,6 +21,7 @@ from fastapi.responses import RedirectResponse, Response
 
 from dazzle.http.runtime.auth.auth_views import leftover_auth_email_or_400
 from dazzle.http.runtime.auth.cookie_name import read_session_id, set_session_cookies
+from dazzle.http.runtime.auth.enterprise_login import sso_redirect_for
 from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
 from dazzle.http.runtime.auth.org_activation import (
     FORBIDDEN_SENTINEL,
@@ -88,6 +89,11 @@ def create_password_login_routes() -> APIRouter:
         normalized_email = leftover_auth_email_or_400(email)
         if not isinstance(normalized_email, str):
             return normalized_email
+        safe_next_param = next if next and next != "/" and _is_safe_redirect_path(next) else ""
+        # DD-013 require_sso: the org's IdP owns this address; the password is never checked.
+        sso_url = sso_redirect_for(request, auth_store, normalized_email, next_path=safe_next_param)
+        if sso_url is not None:
+            return RedirectResponse(url=sso_url, status_code=303)
         user = auth_store.authenticate(normalized_email, password) if password else None
         if user is None:
             target = "/login?error=invalid_credentials"

@@ -6,21 +6,31 @@ re-keyed on the declared protocols instead of the capability registry.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from types import SimpleNamespace
 
 import pytest
+from fastapi import FastAPI
 
 from dazzle.http.runtime.auth import enterprise_guard
+from dazzle.http.runtime.auth.connections import _PROVIDERS
 from dazzle.http.runtime.auth.enterprise_guard import (
     EnterpriseAuthBootError,
     undeclared_connection_errors,
 )
+from dazzle.http.runtime.auth.enterprise_login import ENTERPRISE_OIDC_STATE_ATTR
 from dazzle.http.runtime.lifespan_hooks import _STARTUP_ATTR
 from dazzle.http.runtime.subsystems.auth import AuthSubsystem
 
 
+@pytest.fixture(autouse=True)
+def _unregister_native_oidc() -> Iterator[None]:
+    yield
+    _PROVIDERS.pop(("oidc", "native"), None)  # an oidc mount registers it; don't leak
+
+
 def _ctx(store: object | None = None) -> SimpleNamespace:
-    return SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace()), auth_store=store)
+    return SimpleNamespace(app=FastAPI(), auth_store=store)
 
 
 @pytest.mark.parametrize(
@@ -77,6 +87,21 @@ def test_boot_guard_logs_error_for_undeclared_connection_rows(
         hooks[0]()
     errors = [r.getMessage() for r in caplog.records if r.levelname == "ERROR"]
     assert any("Enterprise auth boot guard" in m and "2 scim connection(s)" in m for m in errors)
+
+
+@pytest.mark.parametrize("protocols", [["oidc"], []], ids=["oidc_declared", "nothing_declared"])
+def test_oidc_routes_mount_only_when_declared(
+    monkeypatch: pytest.MonkeyPatch, protocols: list[str]
+) -> None:
+    monkeypatch.setattr(enterprise_guard, "_module_available", lambda _m: True)
+    ctx = _ctx()
+    AuthSubsystem()._mount_enterprise(ctx, protocols)
+    paths = set(ctx.app.openapi()["paths"])
+    declared = protocols == ["oidc"]
+    assert ("/auth/enterprise/login" in paths) is declared
+    assert ("/auth/enterprise/callback" in paths) is declared
+    assert (("oidc", "native") in _PROVIDERS) is declared
+    assert getattr(ctx.app.state, ENTERPRISE_OIDC_STATE_ATTR, False) is declared
 
 
 def test_boot_guard_not_registered_without_store() -> None:

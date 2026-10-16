@@ -50,6 +50,12 @@ LOGIN_ERROR_TOKENS: frozenset[str] = frozenset(
         "sso_no_email",
         "sso_email_unverified",
         "sso_provider_unknown",
+        # Enterprise OIDC (enterprise_routes, DD-013).
+        "sso_no_connection",
+        "sso_unavailable",
+        "sso_domain_not_verified",
+        "sso_unverified_fallback",
+        "sso_no_membership",
     }
 )
 SIGNUP_ERROR_TOKENS: frozenset[str] = frozenset(
@@ -74,6 +80,16 @@ LOGIN_ERROR_MESSAGES: dict[str, str] = {
         "Your SSO email address isn't verified with the provider yet. Verify it and try again."
     ),
     "sso_provider_unknown": "That SSO provider isn't configured on this deployment.",
+    "sso_no_connection": "No SSO connection is available for that organization.",
+    "sso_unavailable": "SSO isn't available right now. Please try again.",
+    "sso_domain_not_verified": ("That email domain isn't verified for this organization."),
+    "sso_unverified_fallback": (
+        "We couldn't verify your email with that sign-in method. "
+        "Try again or use a different method."
+    ),
+    "sso_no_membership": (
+        "You don't have a membership in that organization. Ask an admin to invite you."
+    ),
 }
 SIGNUP_ERROR_MESSAGES: dict[str, str] = {
     "mismatch": "The two password fields didn't match. Try again.",

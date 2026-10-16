@@ -27,6 +27,7 @@ from dazzle.http.runtime.auth.auth_views import (
     leftover_auth_email_or_400,
     leftover_honest_auth_token,
 )
+from dazzle.http.runtime.auth.enterprise_login import sso_redirect_for
 from dazzle.http.runtime.auth.mailer import get_mailer
 
 _logger = logging.getLogger(__name__)
@@ -62,6 +63,10 @@ def create_password_reset_routes() -> APIRouter:
         normalized_email = leftover_auth_email_or_400(email)
         if not isinstance(normalized_email, str):
             return normalized_email
+        # DD-013 require_sso: the IdP owns the credential; no local reset token.
+        sso_url = sso_redirect_for(request, auth_store, normalized_email)
+        if sso_url is not None:
+            return RedirectResponse(url=sso_url, status_code=303)
         if normalized_email:
             user = auth_store.get_user_by_email(normalized_email)
             if user is not None and getattr(user, "is_active", True):

@@ -116,7 +116,15 @@ _CASES = [
             (),
             id=f"login-{token.replace('_', '-')}-rides",
         )
-        for token in ("sso_provider_unknown",)
+        for token in (
+            "sso_provider_unknown",
+            # Enterprise OIDC (DD-013, EA-2).
+            "sso_no_connection",
+            "sso_unavailable",
+            "sso_domain_not_verified",
+            "sso_unverified_fallback",
+            "sso_no_membership",
+        )
     ],
     pytest.param(
         _site_client,
