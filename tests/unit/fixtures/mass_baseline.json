@@ -1,6 +1,6 @@
 {
   "src_lines": 322324,
-  "test_lines": 313172,
+  "test_lines": 313175,
   "docs_lines": 48525,
   "construct_count": 31,
   "written": "2026-10-16",
@@ -366,6 +366,13 @@
         "src_lines"
       ],
       "reason": "core-wheel import gate + auth_context leaf: the PyPI smoke test reproduced in Tier 0 (v0.120.0 publish failure)"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "test_lines"
+      ],
+      "reason": "core-wheel import gate: the authlib sanity assertion replaced by a comment (CI has no sso extra)"
     }
   ]
 }

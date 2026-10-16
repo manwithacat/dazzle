@@ -105,8 +105,11 @@ except SystemExit as exc:
 @pytest.mark.xdist_group("examples_simple_task")
 def test_cli_boots_with_every_optional_extra_blocked() -> None:
     blocked = optional_only_import_names()
+    # Only installed distributions can be mapped to import names; an extra that the
+    # running venv lacks (CI has no `sso`, so no authlib) cannot be imported either, so
+    # it needs no blocking. click is the one that bit and is always present through the
+    # dev tools, so it is the sanity check that the derivation is live.
     assert "click" in blocked, "click must be optional-only for this gate to mean anything"
-    assert "authlib" in blocked
     proc = subprocess.run(
         [
             sys.executable,
