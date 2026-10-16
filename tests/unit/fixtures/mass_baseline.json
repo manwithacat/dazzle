@@ -1,7 +1,7 @@
 {
-  "src_lines": 318202,
-  "test_lines": 309076,
-  "docs_lines": 47952,
+  "src_lines": 318213,
+  "test_lines": 309098,
+  "docs_lines": 48104,
   "construct_count": 31,
   "written": "2026-10-16",
   "exceptions": [
@@ -241,6 +241,15 @@
         "docs_lines"
       ],
       "reason": "DD-013 agreed plan for enterprise auth (OIDC+SCIM only) and CHANGELOG; docs only"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "DD-013 FORCED (operator 2026-10-16): enterprise auth restore plan doc and DD wording; docs only"
     }
   ]
 }

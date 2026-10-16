@@ -29,7 +29,9 @@ org activation and the session provider are a different plane and stay.
 ## Plan (what we already concluded)
 
 Restore from the commit this DD was parked at
-(`23cf59372dc91d2636dbde0e6aceb549cd40efd3`, the parent of flense ship AD);
+(`23cf59372dc91d2636dbde0e6aceb549cd40efd3`, three commits before flense ship AD
+`229226a88`; none of those commits touched an enterprise file, so it equals the true
+parent `ee5a761be` for every path below);
 `git show 23cf59372:<path>` returns every file below. The operator guide was
 `docs/reference/enterprise-sso.md` at the same commit; its substance is here.
 **Scope agreed 2026-10-16: OIDC and SCIM only.** The SAML paragraphs below
@@ -217,7 +219,7 @@ protocol. The counter-priors above hold.
    is `connection_doctor`'s readiness checklist, exposed read-only on the
    existing org admin page because support will ask for it.
 6. **Tests.** Restore the behaviour tests and the OIDC double verbatim; fold
-   the eleven `test_scim_*_leftover.py` files (improve-loop outputs, one per
+   the ten `test_scim_*_leftover.py` files (improve-loop outputs, one per
    SCIM attribute, about 3.5k of the 11.6k test lines) into one parametrised
    gate (flense ship AX principle: one gate per invariant). The SAML tests
    and `saml_idp_double.py` are not restored.

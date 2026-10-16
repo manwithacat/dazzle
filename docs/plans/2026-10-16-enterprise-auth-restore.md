@@ -1,8 +1,8 @@
 # Enterprise auth restore — work plan (DD-013, FORCED 2026-10-16)
 
 **Decision record:** `docs/decisions/DD-013-enterprise-sso-scim-connections.md`, *Agreed plan*.
-**Source of the retired code:** commit `23cf59372dc91d2636dbde0e6aceb549cd40efd3` (parent of flense
-ship AD `229226a88`); `git show 23cf59372:<path>` returns any file, `git show --stat 229226a88`
+**Source of the retired code:** commit `23cf59372dc91d2636dbde0e6aceb549cd40efd3` (three commits before flense
+ship AD `229226a88`; identical to its true parent `ee5a761be` for every enterprise file); `git show 23cf59372:<path>` returns any file, `git show --stat 229226a88`
 lists them. **Scope:** OIDC sign-in and SCIM provisioning, per-org connections, verified-domain
 routing, `require_sso`. **Not in scope:** SAML in any form (broker route), the capability registry,
 the `/auth/connections` pages, `manage_connections`.
@@ -84,7 +84,7 @@ start before it lands.
   member's groups, bearer rotation with the SCIM-only grace window audited in
   `connection_secret_events`.
 - Tests: `test_scim_provisioning`, `test_scim_discovery`, `tests/integration/test_scim_routes`;
-  the eleven `test_scim_*_leftover.py` files become **one** `test_scim_leftover_honest.py` with a
+  the ten `test_scim_*_leftover.py` files become **one** `test_scim_leftover_honest.py` with a
   parametrised table (attribute, junk value, expected stay-put status).
 
 ### EA-4 — CLI, doctor and probe (Sonnet, worktree, after EA-1 lands; parallel with EA-2/3)
