@@ -35,6 +35,30 @@ def test_default_caps_emit_delete() -> None:
     assert "is-destructive" in html
 
 
+def test_row_action_verbs_are_pinned_against_the_drill() -> None:
+    """htmx 4 resolves `hx-get` (inherited from the drillable row) before the
+    button's own `hx-delete`/`hx-put`; `hx-method` + `hx-action` are read first
+    and from the element itself, and the row's push-url must not leak."""
+    from dazzle.render.context import TransitionContext
+
+    html = render_data_row(
+        ({"key": "title", "type": "str"},),
+        {"id": "t1", "title": "Sample", "status": "todo"},
+        RowCapabilities(drill=True),
+        entity_name="Task",
+        api_endpoint="/tasks",
+        detail_url_template="/app/task/{id}",
+        state_transitions=(TransitionContext(from_state="todo", to_state="done", label="Done"),),
+        status_field="status",
+        transition_endpoint="/tasks",
+    )
+    assert 'hx-get="/app/task/t1"' in html  # the row still drills
+    assert (
+        'hx-delete="/tasks/t1" hx-method="delete" hx-action="/tasks/t1" hx-push-url="false"' in html
+    )
+    assert 'hx-put="/tasks/t1" hx-method="put" hx-action="/tasks/t1" hx-push-url="false"' in html
+
+
 def test_can_delete_false_omits_trash() -> None:
     html = _row(delete=False)
     assert "Task.delete" not in html

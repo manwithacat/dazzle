@@ -823,6 +823,13 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     # Delete action — omitted when DELETE is denied for this principal.
     # #1613: hard-pin hx-trigger="click" so tbody hx-trigger=load cannot
     # inherit onto destructive controls (implicitInheritance=true).
+    # Verb pin: htmx 4's determineMethodAndAction walks get → post → put →
+    # patch → delete, resolving each through ancestor inheritance before
+    # trying the next, so under a drillable row the row's `hx-get` beat this
+    # button's own `hx-delete` — Confirm issued the drill GET into
+    # `closest tr` and nothing was deleted. `hx-method` + `hx-action` are read
+    # first and from the element itself; `hx-push-url="false"` stops the
+    # row's push leaking onto the mutation. (`hx-disinherit` is htmx 2 only.)
     delete_button = ""
     if can_delete:
         delete_button = (
@@ -830,6 +837,8 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             f'data-dazzle-action="{entity_name_attr}.delete" '
             f'aria-label="Delete {row_label_attr}" '
             f'hx-delete="{api_endpoint}/{item_id_attr}" '
+            f'hx-method="delete" hx-action="{api_endpoint}/{item_id_attr}" '
+            f'hx-push-url="false" '
             f'hx-trigger="click" '
             f'hx-confirm="Delete this {_html_mod.escape(entity_confirm_noun, quote=False)}?" '
             f'hx-target="closest tr" '
@@ -854,6 +863,8 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             transition_buttons = "".join(
                 f'<button type="button" class="dz-tr-action dz-tr-transition" '
                 f'hx-put="{endpoint_attr}/{item_id_attr}" '
+                f'hx-method="put" hx-action="{endpoint_attr}/{item_id_attr}" '
+                f'hx-push-url="false" '
                 f'hx-trigger="click" '
                 f'hx-vals=\'{{"{status_field_attr}": '
                 f'"{_html_mod.escape(t.to_state, quote=True)}"}}\' '

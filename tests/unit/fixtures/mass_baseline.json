@@ -1,6 +1,6 @@
 {
   "src_lines": 323476,
-  "test_lines": 314701,
+  "test_lines": 314703,
   "docs_lines": 48403,
   "construct_count": 31,
   "written": "2026-10-16",
@@ -330,6 +330,13 @@
         "docs_lines"
       ],
       "reason": "DD-013 FORCED (operator 2026-10-16): EA-6 acceptance record and plan log"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "test_lines"
+      ],
+      "reason": "htmx 4 row-verb fix: CHANGELOG entry and regenerated 1505 fixtures (docs/test lines)"
     }
   ]
 }
