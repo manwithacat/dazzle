@@ -1,6 +1,6 @@
 {
-  "src_lines": 323429,
-  "test_lines": 314672,
+  "src_lines": 323453,
+  "test_lines": 314694,
   "docs_lines": 48113,
   "construct_count": 31,
   "written": "2026-10-16",
@@ -292,6 +292,14 @@
         "docs_lines"
       ],
       "reason": "DD-013 FORCED (operator 2026-10-16): EA-2b require_sso gaps closed and set-require-sso CLI"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "DD-013 FORCED (operator 2026-10-16): EA-6 require_sso revokes verified-domain sessions"
     }
   ]
 }

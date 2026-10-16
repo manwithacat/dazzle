@@ -175,6 +175,28 @@ def test_require_sso_resolves_only_once_domain_verified(store_url: str) -> None:
     assert found is not None and found.id == conn.id
 
 
+def test_set_connection_require_sso_on_revokes_verified_domain_sessions(store_url: str) -> None:
+    """Sessions minted before the flag are a credential the IdP never saw (plan EA-6)."""
+    store = _store(store_url)
+    org = store.create_organization(slug="acme", name="Acme")
+    conn = _oidc_connection(store, org.id)
+    resolver = _FakeResolver({"acme.test": [txt_record(conn.id, "acme.test")]})
+    assert verify_domain(store, conn, "acme.test", resolver=resolver) is True
+    jane = store.create_user(email="jane@acme.test", password="pw-placeholder-1")
+    bob = store.create_user(email="bob@other.test", password="pw-placeholder-2")
+    store.create_session(jane)
+    store.create_session(jane)
+    store.create_session(bob)
+
+    assert store.set_connection_require_sso(conn.id, True, tenant_id=org.id) is True
+    assert store.count_active_sessions(jane.id) == 0  # the verified domain's sessions are gone
+    assert store.count_active_sessions(bob.id) == 1  # another domain is untouched
+
+    store.create_session(jane)
+    assert store.set_connection_require_sso(conn.id, False, tenant_id=org.id) is True
+    assert store.count_active_sessions(jane.id) == 1  # switching off revokes nothing
+
+
 def test_set_connection_require_sso_is_tenant_fenced(store_url: str) -> None:
     store = _store(store_url)
     org = store.create_organization(slug="acme", name="Acme")

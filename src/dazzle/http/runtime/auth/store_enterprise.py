@@ -712,6 +712,11 @@ class EnterpriseStoreMixin:
         another type. Pass ``tenant_id`` to fence the write to one org. Stored as a JSON
         boolean (the reader matches ``is True``); off removes the key. Returns ``True``
         if a row changed.
+
+        Switching it **on** also revokes every existing session of a user whose email
+        domain is one of the connection's *verified* domains (plan EA-6): a session
+        minted by password or magic link before the flag is a credential the IdP never
+        saw, and the route-side checks only refuse new sign-ins.
         """
         with self._transaction() as cur:
             config, _secrets, _tenant, conn_type = self._load_config_secrets(
@@ -731,7 +736,26 @@ class EnterpriseStoreMixin:
                 "UPDATE connections SET config = %s, updated_at = %s WHERE id = %s",
                 (json.dumps(config), datetime.now(UTC).isoformat(), connection_id),
             )
+            if required:
+                self._revoke_sessions_for_verified_domains(cur, connection_id)
         return True
+
+    @staticmethod
+    def _revoke_sessions_for_verified_domains(cur: Any, connection_id: str) -> int:
+        """Delete sessions of users whose email domain the connection has verified."""
+        cur.execute("SELECT verified_domains FROM connections WHERE id = %s", (connection_id,))
+        row = cur.fetchone()
+        verified = [
+            d.strip().lower() for d in json.loads((row or {}).get("verified_domains") or "[]")
+        ]
+        if not verified:
+            return 0
+        cur.execute(
+            "DELETE FROM sessions WHERE user_id IN "
+            "(SELECT id FROM users WHERE lower(split_part(email, '@', 2)) = ANY(%s))",
+            (verified,),
+        )
+        return int(cur.rowcount or 0)
 
     def claim_verified_domain(self, connection_id: str, domain: str) -> bool:
         """Atomically claim ``domain`` as verified for ``connection_id``.
