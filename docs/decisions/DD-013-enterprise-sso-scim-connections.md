@@ -2,7 +2,10 @@
 
 ```yaml
 id: DD-013
-status: PARKED
+status: FORCED
+forced: 2026-10-16
+consumer: platform (core requirement, operator ruling 2026-10-16)
+plan: docs/plans/2026-10-16-enterprise-auth-restore.md
 issues: [1342, 1344, 1345]
 adrs: [0057, 0044, 0047, 0033, 0003]
 decided: 2026-10-15
@@ -235,6 +238,14 @@ protocol. The counter-priors above hold.
    secret-at-rest mechanism, so a later DD-014 restore encrypts `totp_secret`
    with it rather than adding a second.
 
+## Consumer (force)
+
+`platform (core requirement)` — the operator's ruling of 2026-10-16, not a named
+customer. The work plan is `docs/plans/2026-10-16-enterprise-auth-restore.md`
+(ships EA-0 to EA-6, model placement, the rules every ship obeys). AegisMark is
+the design partner and receives the hand-off; its enablement runbook minus the
+SAML lines is the acceptance script.
+
 ## Already shipped (do not re-litigate)
 
 - The code, tests and operator guide at `23cf59372dc91d2636dbde0e6aceb549cd40efd3`
@@ -260,3 +271,4 @@ protocol. The counter-priors above hold.
 | 2026-10-15 | Parked (this DD); enterprise auth removed in flense ship AD, tables dropped by `0023_flense_park_enterprise_auth` |
 | 2026-10-16 | Operator ruling: enterprise auth is a core requirement without a named consumer; the retired implementation is the discussion starting point; `memberships.external_id` drop withdrawn; **Discussion starter** added |
 | 2026-10-16 | Discussion resolved (operator + session agent): OIDC and SCIM only, SAML out of scope with the broker route, `[auth.enterprise]` gating, `require_sso` per org, CLI-first admin; **Agreed plan** replaces the discussion starter |
+| 2026-10-16 | **FORCED** (`consumer: platform (core requirement)`); work plan `docs/plans/2026-10-16-enterprise-auth-restore.md`; EA-0 inventory (Haiku) and EA-1 substrate (Opus) dispatched |
