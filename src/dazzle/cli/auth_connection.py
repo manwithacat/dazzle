@@ -345,6 +345,38 @@ def verify_domain_cmd(
         raise typer.Exit(code=1)
 
 
+@connection_app.command("set-require-sso")
+def set_require_sso(
+    connection_id: Annotated[str, typer.Argument(help="OIDC connection id")],
+    on: Annotated[
+        bool,
+        typer.Option(
+            "--on/--off",
+            help="Refuse local sign-in for the connection's verified domains (--on) or allow it",
+        ),
+    ],
+    tenant: Annotated[
+        str | None,
+        typer.Option("--tenant", help="Fence the change to this organization (tenant) id"),
+    ] = None,
+) -> None:
+    """Turn `require_sso` on or off for an OIDC connection (DD-013).
+
+    On: password login, signup, magic links and password reset for the connection's
+    VERIFIED domains are refused and sent to the IdP. OIDC connections only.
+    """
+    try:
+        changed = _store().set_connection_require_sso(connection_id, on, tenant_id=tenant)
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if not changed:
+        console.print(f"[red]No connection {connection_id!r}[/red]")
+        raise typer.Exit(code=1)
+    state = "on" if on else "off"
+    console.print(f"[green]require_sso {state}[/green] for connection {connection_id}.")
+
+
 @connection_app.command("delete")
 def delete(
     connection_id: Annotated[str, typer.Argument(help="Connection id")],

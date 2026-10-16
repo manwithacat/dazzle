@@ -51,6 +51,7 @@ class _Store:
         self.claim_calls: list = []
         self.deleted: list = []
         self.secret_updates: list = []
+        self.require_sso_calls: list = []
 
     def create_connection(self, **kw):
         self.created = kw
@@ -92,6 +93,14 @@ class _Store:
         if owner is not None and owner.id != connection_id:
             return False
         self.claim_calls.append((connection_id, norm))
+        return True
+
+    def set_connection_require_sso(self, cid, required, *, tenant_id=None):
+        if self._conn is None or self._conn.id != cid:
+            return False
+        if self._conn.type != "oidc":
+            raise ValueError(f"require_sso is OIDC-only (connection {cid!r})")
+        self.require_sso_calls.append((cid, required, tenant_id))
         return True
 
     def delete_connection(self, cid):
@@ -491,6 +500,36 @@ def test_wrong_connection_type_refused(monkeypatch, conn_type, argv, refusal) ->
     r = runner.invoke(auth_app, argv)
     assert r.exit_code == 1 and refusal in r.output
     assert store.secret_updates == []  # store not written
+
+
+# ---- set-require-sso (DD-013) ----
+
+
+@pytest.mark.parametrize(
+    ("flag", "expected"),
+    [pytest.param("--on", True, id="on"), pytest.param("--off", False, id="off")],
+)
+def test_set_require_sso_toggles(monkeypatch, flag, expected) -> None:
+    store = _Store(conn=_Conn("conn-1", conn_type="oidc"))
+    _patch_store(monkeypatch, store)
+    argv = ["connection", "set-require-sso", "conn-1", flag, "--tenant", "org-1"]
+    r = runner.invoke(auth_app, argv)
+    assert r.exit_code == 0 and f"require_sso {'on' if expected else 'off'}" in r.output
+    assert store.require_sso_calls == [("conn-1", expected, "org-1")]
+
+
+def test_set_require_sso_refuses_non_oidc(monkeypatch) -> None:
+    store = _Store(conn=_Conn("conn-1", conn_type="scim"))
+    _patch_store(monkeypatch, store)
+    r = runner.invoke(auth_app, ["connection", "set-require-sso", "conn-1", "--on"])
+    assert r.exit_code == 1 and "OIDC-only" in r.output
+    assert store.require_sso_calls == []
+
+
+def test_set_require_sso_unknown_connection_exits_1(monkeypatch) -> None:
+    _patch_store(monkeypatch, _Store(conn=None))
+    r = runner.invoke(auth_app, ["connection", "set-require-sso", "nope", "--off"])
+    assert r.exit_code == 1 and "No connection" in r.output
 
 
 # ---- #1342 grace window + audit ----

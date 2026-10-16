@@ -12,6 +12,7 @@ magic-link and password-reset requests) beside them and pins each refusal (DD-01
 from __future__ import annotations
 
 from datetime import datetime
+from types import SimpleNamespace
 from urllib.parse import urlparse
 
 import pytest
@@ -291,6 +292,25 @@ class _LocalStore(_Store):
         self.local_calls.append("issue_magic_link")
         return 1
 
+    # --- already-issued tokens and a signed-in session (token / change-password paths) ---
+    def _execute(self, sql, params=()):  # magic_link.validate_magic_link's SELECT
+        self.local_calls.append("magic_link_lookup")
+        return [{"user_id": "uid-jane", "expires_at": "2999-01-01T00:00:00+00:00", "used_at": None}]
+
+    def get_user_by_id(self, user_id):
+        return self._users["jane@acme.test"]
+
+    def validate_password_reset_token(self, token):
+        return self._users["jane@acme.test"]
+
+    def validate_session(self, session_id):
+        user = self._users["jane@acme.test"]
+        user.password_hash = "not-a-hash"
+        return SimpleNamespace(is_authenticated=True, user=user)
+
+    def update_password(self, user_id, new_password):
+        self.local_calls.append("update_password")
+
 
 def _local_client(store: _LocalStore, *, oidc_mounted: bool = True) -> TestClient:
     app = FastAPI()
@@ -314,9 +334,8 @@ def _post(client: TestClient, path: str, kind: str):
     if kind == "json":
         body = {"email": "jane@acme.test", "password": "pw"}
         return client.post(path, json=body, follow_redirects=False)
-    return client.post(
-        path, data={"email": "jane@acme.test", "password": "pw"}, follow_redirects=False
-    )
+    form = {"email": "jane@acme.test", "password": "pw", "confirm_password": "pw"}
+    return client.post(path, data=form, follow_redirects=False)
 
 
 # (path, kind): every local sign-in path require_sso refuses.
@@ -326,6 +345,9 @@ _REFUSED_PATHS = [
     pytest.param("/auth/login/password", "form", id="form-login"),
     pytest.param("/auth/login/magic-link", "form", id="magic-link-request"),
     pytest.param("/auth/forgot-password/submit", "form", id="form-password-reset"),
+    pytest.param("/auth/register", "json", id="json-register"),
+    pytest.param("/auth/signup/password", "form", id="form-signup"),
+    pytest.param("/auth/signup/magic-link", "form", id="magic-link-signup"),
 ]
 
 
@@ -368,6 +390,53 @@ def test_require_sso_leaves_other_connections_alone(
     assert "sso_required" not in r.text
     assert "/auth/enterprise/login" not in r.headers.get("location", "")
     assert store.local_calls  # the local path ran as it does today
+
+
+_TOKEN = "T" * 43
+
+# (method, path, body, kind): a token minted, or a session opened, before the flag was set.
+_ISSUED_CREDENTIAL_REQUESTS = [
+    pytest.param("get", f"/auth/magic/{_TOKEN}", None, "form", id="issued-magic-link"),
+    pytest.param(
+        "post",
+        "/auth/reset-password/submit",
+        {"token": _TOKEN, "new_password": "n", "confirm_password": "n"},
+        "form",
+        id="issued-form-reset-token",
+    ),
+    pytest.param(
+        "post",
+        "/auth/reset-password",
+        {"token": _TOKEN, "new_password": "n"},
+        "json",
+        id="issued-json-reset-token",
+    ),
+    pytest.param(
+        "post",
+        "/auth/change-password",
+        {"current_password": "pw", "new_password": "n"},
+        "json",
+        id="signed-in-change-password",
+    ),
+]
+
+
+@pytest.mark.parametrize(("method", "path", "body", "kind"), _ISSUED_CREDENTIAL_REQUESTS)
+def test_require_sso_refuses_credentials_issued_before_the_flag(
+    method: str, path: str, body: dict | None, kind: str
+) -> None:
+    store = _LocalStore(connections=[_sso_conn()])
+    client = _local_client(store)
+    client.cookies.set("dazzle_session", "sid-1")
+    if method == "get":
+        r = client.get(path, follow_redirects=False)
+    elif kind == "json":
+        r = client.post(path, json=body, follow_redirects=False)
+    else:
+        r = client.post(path, data=body, follow_redirects=False)
+    _assert_refused(r, kind)
+    assert "update_password" not in store.local_calls
+    assert store.created_sessions == []
 
 
 def test_require_sso_form_login_carries_next() -> None:

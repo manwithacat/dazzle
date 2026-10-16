@@ -163,6 +163,11 @@ def create_password_login_routes() -> APIRouter:
         if not normalized_email:
             return RedirectResponse(url="/signup?error=invalid_email", status_code=303)
 
+        # DD-013 require_sso: the org's IdP owns this address; no local account is created.
+        sso_url = sso_redirect_for(request, auth_store, normalized_email)
+        if sso_url is not None:
+            return RedirectResponse(url=sso_url, status_code=303)
+
         existing = auth_store.get_user_by_email(normalized_email)
         if existing is not None:
             return RedirectResponse(url="/signup?error=already_registered", status_code=303)

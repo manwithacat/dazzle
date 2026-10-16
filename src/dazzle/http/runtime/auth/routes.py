@@ -193,6 +193,9 @@ async def _logout(deps: _AuthDeps, request: FastAPIRequest) -> Response:
 
 async def _register(deps: _AuthDeps, data: RegisterRequest, request: FastAPIRequest) -> Response:
     """Register a new user."""
+    sso_url = sso_redirect_for(request, deps.auth_store, data.email)
+    if sso_url is not None:
+        return sso_required_json(sso_url)  # DD-013 require_sso: no local signup
     if deps.auth_store.get_user_by_email(data.email):
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -297,6 +300,10 @@ async def _change_password(
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
 
+    sso_url = sso_redirect_for(request, deps.auth_store, user.email)
+    if sso_url is not None:
+        return sso_required_json(sso_url)  # DD-013 require_sso: the IdP owns the credential
+
     if not verify_password(data.current_password, user.password_hash):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
 
@@ -377,6 +384,10 @@ async def _reset_password(
 
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    sso_url = sso_redirect_for(request, deps.auth_store, user.email)
+    if sso_url is not None:
+        return sso_required_json(sso_url)  # DD-013 require_sso: a pre-flag token must not bypass
 
     deps.auth_store.update_password(user.id, data.new_password)
     deps.auth_store.consume_password_reset_token(data.token)

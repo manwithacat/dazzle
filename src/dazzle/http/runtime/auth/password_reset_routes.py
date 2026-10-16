@@ -117,6 +117,10 @@ def create_password_reset_routes() -> APIRouter:
                 url="/reset-password?error=invalid",
                 status_code=303,
             )
+        # DD-013 require_sso: a token minted before the flag was set must not bypass it.
+        sso_url = sso_redirect_for(request, auth_store, user.email)
+        if sso_url is not None:
+            return RedirectResponse(url=sso_url, status_code=303)
 
         auth_store.update_password(user.id, new_password)
         auth_store.consume_password_reset_token(token)

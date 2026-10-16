@@ -135,6 +135,11 @@ def create_magic_link_routes() -> APIRouter:
                 status_code=303,
             )
 
+        # DD-013 require_sso: a link issued before the flag was set must not bypass it.
+        sso_url = sso_redirect_for(request, auth_store, user.email)
+        if sso_url is not None:
+            return RedirectResponse(url=sso_url, status_code=303)
+
         # Create session (same code path as password login).
         # Session-fixation defence (#1198): regenerate the session id on
         # magic-link consumption — invalidate any pre-auth session cookie
@@ -273,6 +278,10 @@ def create_magic_link_routes() -> APIRouter:
         if not isinstance(normalized_email, str):
             return normalized_email
         normalized_name = name.strip()
+        # DD-013 require_sso: no account and no link; the org's IdP owns this address.
+        sso_url = sso_redirect_for(request, auth_store, normalized_email)
+        if sso_url is not None:
+            return RedirectResponse(url=sso_url, status_code=303)
 
         if normalized_email:
             user = auth_store.get_user_by_email(normalized_email)

@@ -244,7 +244,8 @@ dazzle auth COMMAND [OPTIONS]
 
 `dazzle auth connection` subcommands: `create` (OIDC), `create-scim`, `list`, `add-domain`,
 `show-verification`, `verify-domain`, `doctor [--probe] [--json]`, `rotate-secret [--grace]`,
-`revoke-previous-secret`, `secret-history`, `scaffold`, `delete`. Connections are runtime data
+`revoke-previous-secret`, `secret-history`, `set-require-sso <id> --on|--off [--tenant]`,
+`scaffold`, `delete`. Connections are runtime data
 (DD-013); the `[auth.enterprise] protocols` manifest key gates which protocol routes mount.
 
 ```bash
