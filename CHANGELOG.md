@@ -1,5 +1,17 @@
 ## [Unreleased]
 
+### Added
+- **One gate bans Alpine attribute syntax from emitted markup.** `tests/unit/test_no_alpine_attributes.py` scans the Python renderers' string literals (docstrings excluded), the JS, HTML and CSS (comments excluded) under `page/`, `render/` and the HaTchi-MaXchi components, controllers and site for `x-*` / `@event=` attributes. AGENTS.md has forbidden them since 2026-07-06 and the vendored Alpine runtime is gone, but the flense retired the per-feature tests that happened to check it, so nothing stood between a stray `x-data` and the DOM.
+
+### Fixed
+- **Packaged installs ship the default favicon and the theme manifests.** `static/assets/dazzle-favicon.svg` (the `AppChrome` default) and `static/css/themes/*.toml` (read next to each theme CSS by `app_theme_registry`) matched neither the `MANIFEST.in` recursive-include (`*.js *.css *.mjs *.woff2 OFL.txt`) nor any package-data key, so every wheel 404'd the favicon and discovered the shipped themes without their manifests. The static recursive-include gains `*.svg *.toml`; the two package-data keys that never matched anything (`"dazzle.page"` with `static/**`, `"dazzle.page.runtime.static"`, which is not a package) are replaced by one truthful `"dazzle.page.runtime"` list; the dead `lsp/grammars` recursive-include is gone with the LSP. Gate: `tests/unit/test_vendor_assets_packaging.py::test_runtime_read_assets_ship_in_the_distributions`.
+
+### Removed
+- **`scripts/perf_profile_workspace.py` and `static/test-workspace-perf.html` removed (ADR-0057).** The profiler imported `dazzle_page.runtime.template_renderer` (a path dead since ADR-0041) to benchmark Jinja (gone since #1042), and its browser harness loaded Alpine, `x-data` and vendor files that no longer exist; nothing outside the CHANGELOG history named either. `test-dashboard.html` and `test-pdf-viewer.html` stay: the quality-gate suites serve them.
+
+### Security
+- **The runtime's introspection routes take the app's auth posture.** `/_dazzle/stats`, `/_dazzle/spec`, `/_dazzle/entity/{name}`, `/_dazzle/tables`, `/_dazzle/services` (and its `POST …/invoke`), `/_dazzle/integrations/{name}/retries`, `/spec` and `/db-info` were mounted with no auth dependency in every environment, the same posture flense ship AR found on the event explorer: anyone reaching an app could read the parsed spec, the table list, the service stub inventory and the integration retry log (payload excerpts included), and invoke a domain service stub. Once the app has an auth store they now require an admin: `create_admin_dependency` in `http/runtime/auth/dependencies.py` wraps the required-auth dependency (anonymous 401, authenticated non-admin 403, superuser or `admin`/`super_admin`/`trust_admin` role 200) and `/_diagnostics` uses the same helper instead of its private role set. The liveness probes `/_dazzle/health`, `/_dazzle/live`, `/_dazzle/ready` and `/health` stay open for orchestrators. Apps without auth (local dev) are unchanged. Gate: `tests/unit/http_runtime/test_introspection_admin_gate.py`.
+
 ## [0.119.0] - 2026-10-16
 
 ### Agent Guidance

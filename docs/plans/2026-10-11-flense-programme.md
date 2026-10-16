@@ -180,12 +180,12 @@ whatever the pack reveals (today: nobody runs `compliance`, so expect gaps).
 - **Loop retirement loses nightly hygiene.** Mitigation: fuzz-nightly and the
   ship gates remain; the issues loop runs on consumer force only.
 
-## 7. Targets (end of Phase 3)
+## 7. Targets (end of Phase 3; src/tests end state revised 2026-10-16, see §10.4)
 
 | Measure | Now | Target |
 |---|---|---|
-| Framework src lines | 477k | ≤ 250k |
-| Test lines | 426k | ≤ 200k, zero harness-only gates |
+| Framework src lines | 477k | ≤ 300k (was ≤ 250k; revised 2026-10-16 — the remaining mass is consumer-used feature mass ADR-0057 keeps) |
+| Test lines | 426k | ≤ 250k, zero harness-only gates (was ≤ 200k; revised 2026-10-16) |
 | Docs lines in tree | 352k | ≤ 60k |
 | Top-level constructs | 57 | ≤ 30, all consumer-used or parked |
 | Consumers producing an assurance pack in CI | 0 | 2 |
@@ -487,6 +487,17 @@ path, the fuzz skill or the card-safety gate imports.
    programme end state to ≤ 300k / ≤ 250k and move the rest to Phase 4's "what the pack
    reveals" and Phase 5's cost-of-change metric.
 
+**Decisions taken (James, 2026-10-16, "go ahead with the recommendations"):** items 1 and 2
+shipped as AR and AS (§10.7). Item 3: the monoliths (`server.py`, `page_routes.py`,
+`auth/store.py`, `cli/db.py`) are out of the flense's scope; a separate "runtime shape" plan
+is written after Phase 4's first consumer assurance pack lands, so the split follows what
+the runtime must prove rather than file size. Item 4: the §7 end state is revised to
+≤ 300k src / ≤ 250k tests (the §7 table keeps the old figures for the record); the ≈ 18k src
+above that line is feature mass ADR-0057 keeps, and any further reduction is a
+feature-retirement decision for the operator, surfaced by Phase 4's "what the pack reveals"
+and Phase 5's cost-of-change metric, not by evidence-only cutting. Phase 7 was released as
+v0.119.0 (commit b74270f11).
+
 ### 10.5 Targets for this phase
 
 | Measure | After v0.118.0 | Phase 7 target | Note |
@@ -552,8 +563,9 @@ explorer was a security hole: `/_dazzle/events/*` was mounted in every environme
 auth dependency, exposing event payloads (emails, usernames, roles) and a DLQ replay POST.
 
 Where the src number stands: evidence-only cutting inside the kept subsystems is exhausted at
-≈ 318k. The §7 end state (≤ 250k / ≤ 200k) and the Phase 7 target (≤ 308k) are not reachable
-without retiring features consumers use; that is §10.4 item 4, still open with item 3.
+≈ 318k. The original §7 end state (≤ 250k / ≤ 200k) and the Phase 7 target (≤ 308k) are not reachable
+without retiring features consumers use; §10.4 records the 2026-10-16 decision (end state revised to
+≤ 300k / ≤ 250k; monoliths deferred to a runtime-shape plan after Phase 4).
 
 Findings for the operator, from the commit bodies: cyfuture's `themespec.yaml` attention-map
 rules are silently dropped by `themespec_loader.py:104-110` (shape mismatch, nothing renders
