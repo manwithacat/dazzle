@@ -17,11 +17,12 @@ from datetime import datetime
 from functools import partial
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from dazzle.core import ir
 from dazzle.db.sql import quote_identifier
+from dazzle.http.runtime.auth.dependencies import create_admin_dependency
 from dazzle.http.runtime.pg_backend import PostgresBackend
 from dazzle.http.runtime.query_builder import validate_sql_identifier
 from dazzle.http.specs.entity import EntitySpec
@@ -319,6 +320,7 @@ def create_debug_routes(
     db_manager: PostgresBackend,
     entities: list[EntitySpec],
     start_time: datetime,
+    auth_dep: Any = None,
 ) -> APIRouter:
     """
     Create debug routes for runtime inspection.
@@ -328,11 +330,18 @@ def create_debug_routes(
         db_manager: Database manager instance
         entities: List of entity specifications
         start_time: Server start time
+        auth_dep: The app's required-auth dependency. When set, the
+            inspection routes (``/stats``, ``/spec``, ``/entity/{name}``,
+            ``/tables``) require an admin; the liveness/readiness probes
+            (``/health``, ``/live``, ``/ready``) stay open for orchestrators.
 
     Returns:
         APIRouter with debug endpoints
     """
     router = APIRouter(prefix="/_dazzle", tags=["Debug"])
+    admin_only: list[Any] = []
+    if auth_dep is not None:
+        admin_only = [Depends(create_admin_dependency(auth_dep))]
 
     deps = _DebugDeps(
         appspec=appspec,
@@ -351,12 +360,27 @@ def create_debug_routes(
         "/ready", partial(_readiness_probe, deps), methods=["GET"], response_model=ReadinessResponse
     )
     router.add_api_route(
-        "/stats", partial(_runtime_stats, deps), methods=["GET"], response_model=RuntimeStats
+        "/stats",
+        partial(_runtime_stats, deps),
+        methods=["GET"],
+        response_model=RuntimeStats,
+        dependencies=admin_only,
     )
     router.add_api_route(
-        "/spec", partial(_spec_info, deps), methods=["GET"], response_model=SpecInfo
+        "/spec",
+        partial(_spec_info, deps),
+        methods=["GET"],
+        response_model=SpecInfo,
+        dependencies=admin_only,
     )
-    router.add_api_route("/entity/{entity_name}", partial(_entity_details, deps), methods=["GET"])
-    router.add_api_route("/tables", partial(_list_tables, deps), methods=["GET"])
+    router.add_api_route(
+        "/entity/{entity_name}",
+        partial(_entity_details, deps),
+        methods=["GET"],
+        dependencies=admin_only,
+    )
+    router.add_api_route(
+        "/tables", partial(_list_tables, deps), methods=["GET"], dependencies=admin_only
+    )
 
     return router

@@ -2,7 +2,7 @@
 
 from collections.abc import Awaitable, Callable
 
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from fastapi import Request as FastAPIRequest
 
 from dazzle.core.strings import normalize_role
@@ -331,3 +331,41 @@ def create_optional_auth_dependency(
         return auth_context
 
     return get_optional_user
+
+
+# Roles that count as "operator" for the runtime's introspection routes
+# (``/_dazzle/*`` debug and services, ``/spec``, ``/db-info``, ``/_diagnostics``,
+# the integrations retries explorer). A superuser passes regardless of role.
+ADMIN_ROLES: frozenset[str] = frozenset({"super_admin", "trust_admin", "admin"})
+
+
+def is_admin_context(auth_context: AuthContext | None) -> bool:
+    """True when the context is an authenticated superuser or holds an admin role."""
+    if auth_context is None or not auth_context.is_authenticated:
+        return False
+    user = auth_context.user
+    if user is not None and getattr(user, "is_superuser", False):
+        return True
+    roles = {normalize_role(r) for r in auth_context.effective_roles}
+    return bool(roles & ADMIN_ROLES)
+
+
+def create_admin_dependency(
+    auth_dep: Callable[..., Awaitable[AuthContext]],
+) -> Callable[..., Awaitable[AuthContext]]:
+    """Wrap a required-auth dependency so the route also requires an admin.
+
+    ``auth_dep`` (from :func:`create_auth_dependency`) already answers 401 to
+    anonymous callers; this adds the 403 for authenticated non-admins. Attach
+    with ``dependencies=[Depends(create_admin_dependency(auth_dep))]`` so a
+    route handler built with :func:`functools.partial` needs no signature change.
+    """
+
+    async def require_admin(auth_context: AuthContext = Depends(auth_dep)) -> AuthContext:
+        if not auth_context.is_authenticated:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        if not is_admin_context(auth_context):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        return auth_context
+
+    return require_admin

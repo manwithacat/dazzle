@@ -25,11 +25,12 @@ The endpoint is registered only when the AppSpec actually declares any
 
 import logging
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from dazzle.http.runtime.auth.dependencies import create_admin_dependency
 from dazzle.http.runtime.retry_accumulator import RetryAccumulator
 
 logger = logging.getLogger(__name__)
@@ -122,6 +123,7 @@ async def _list_integration_retries(
 def create_integrations_retries_routes(
     accumulator: RetryAccumulator,
     integrations: "list[IntegrationSpec]",
+    auth_dep: Any = None,
 ) -> APIRouter:
     """Create the integration-retries explorer routes.
 
@@ -140,12 +142,16 @@ def create_integrations_retries_routes(
     """
     router = APIRouter(prefix="/_dazzle/integrations", tags=["Integrations Retries"])
     declared_names = frozenset(getattr(i, "name", "") for i in integrations)
+    admin_only: list[Any] = []
+    if auth_dep is not None:
+        admin_only = [Depends(create_admin_dependency(auth_dep))]
 
     router.add_api_route(
         "/{name}/retries",
         partial(_list_integration_retries, accumulator, declared_names),
         methods=["GET"],
         response_model=IntegrationRetriesResponse,
+        dependencies=admin_only,
     )
 
     return router

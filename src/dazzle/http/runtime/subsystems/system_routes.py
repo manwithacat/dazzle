@@ -15,6 +15,7 @@ from dazzle.core.ir.integrations import MappingTriggerType
 from dazzle.core.ir.process import StepEffect
 from dazzle.core.manifest import load_manifest
 from dazzle.core.strings import to_api_plural
+from dazzle.http.runtime.auth.dependencies import create_admin_dependency
 from dazzle.http.runtime.subsystems import SubsystemContext
 
 if TYPE_CHECKING:
@@ -151,6 +152,7 @@ class SystemRoutesSubsystem:
                 db_manager=ctx.db_manager,
                 entities=ctx.entities,
                 start_time=self._start_time,
+                auth_dep=ctx.auth_dep,
             )
             ctx.app.include_router(debug_router)
 
@@ -170,6 +172,7 @@ class SystemRoutesSubsystem:
                 integrations_retries_router = create_integrations_retries_routes(
                     app_retry_accumulator(ctx.app),
                     list(ctx.appspec.integrations),
+                    auth_dep=ctx.auth_dep,
                 )
                 ctx.app.include_router(integrations_retries_router)
 
@@ -467,10 +470,18 @@ class SystemRoutesSubsystem:
         except Exception:
             logger.warning("Failed to load domain services", exc_info=True)
 
+        # Introspection posture: once the app has an auth store, the routes that
+        # expose the spec, the schema, the services and the retry log require an
+        # admin (superuser or an admin role). Without auth the app is a local
+        # dev server and they stay open, as every other route does.
+        admin_only: list[Any] = []
+        if ctx.auth_dep:
+            admin_only = [Depends(create_admin_dependency(ctx.auth_dep))]
+
         if self._service_loader and self._service_loader.services:
             service_loader = self._service_loader  # Capture for closure
 
-            @ctx.app.get("/_dazzle/services", tags=["System"])
+            @ctx.app.get("/_dazzle/services", tags=["System"], dependencies=admin_only)
             async def list_domain_services() -> dict[str, Any]:
                 """List loaded domain service stubs."""
                 services = []
@@ -484,7 +495,9 @@ class SystemRoutesSubsystem:
                     )
                 return {"services": services, "count": len(services)}
 
-            @ctx.app.post("/_dazzle/services/{service_id}/invoke", tags=["System"])
+            @ctx.app.post(
+                "/_dazzle/services/{service_id}/invoke", tags=["System"], dependencies=admin_only
+            )
             async def invoke_domain_service(
                 service_id: str, payload: dict[str, Any] | None = None
             ) -> dict[str, Any]:
@@ -538,7 +551,7 @@ class SystemRoutesSubsystem:
                 "uptime_seconds": round(time.monotonic() - _start_time, 1),
             }
 
-        @ctx.app.get("/spec", tags=["System"])
+        @ctx.app.get("/spec", tags=["System"], dependencies=admin_only)
         async def get_spec() -> dict[str, Any]:
             return appspec.model_dump()
 
@@ -556,7 +569,7 @@ class SystemRoutesSubsystem:
         auth_enabled = ctx.enable_auth
         files_enabled = ctx.enable_files
 
-        @ctx.app.get("/db-info", tags=["System"])
+        @ctx.app.get("/db-info", tags=["System"], dependencies=admin_only)
         async def db_info() -> dict[str, Any]:
             migration_info = None
             if last_migration:
@@ -575,21 +588,11 @@ class SystemRoutesSubsystem:
                 "files_path": files_path_str,
             }
 
-        # Authenticated diagnostics endpoint
+        # Authenticated diagnostics endpoint (same admin gate as the rest)
         if ctx.auth_dep:
 
-            @ctx.app.get("/_diagnostics", tags=["System"])
-            async def diagnostics(
-                auth_context: Any = Depends(ctx.auth_dep),
-            ) -> dict[str, Any]:
-                user_roles = {
-                    r if isinstance(r, str) else getattr(r, "name", str(r))
-                    for r in getattr(getattr(auth_context, "user", None), "roles", [])
-                }
-                admin_roles = {"super_admin", "trust_admin", "admin"}
-                if not user_roles.intersection(admin_roles):
-                    raise HTTPException(status_code=403, detail="Admin role required")
-
+            @ctx.app.get("/_diagnostics", tags=["System"], dependencies=admin_only)
+            async def diagnostics() -> dict[str, Any]:
                 surfaces = getattr(appspec, "surfaces", []) or []
                 workspaces = getattr(appspec, "workspaces", []) or []
                 features = {

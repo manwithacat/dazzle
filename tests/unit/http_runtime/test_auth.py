@@ -777,7 +777,7 @@ class TestServerAuthIntegration:
 
     @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
     def test_db_info_shows_auth(self, simple_spec: Any, tmp_path: Any) -> None:
-        """Test db-info endpoint shows auth info."""
+        """db-info is admin-only once auth is enabled."""
         try:
             from fastapi.testclient import TestClient
         except ImportError:
@@ -793,11 +793,9 @@ class TestServerAuthIntegration:
         app = builder.build()
         client = TestClient(app)
 
+        # /db-info takes the app's auth posture: anonymous callers get 401.
         response = client.get("/db-info")
-        data = response.json()
-
-        assert data["auth_enabled"] is True
-        assert data["database_backend"] == "postgresql"
+        assert response.status_code == 401
 
 
 # =============================================================================
