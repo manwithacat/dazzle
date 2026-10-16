@@ -50,14 +50,41 @@ def test_every_vendored_file_is_in_the_sdist(subdir: str) -> None:
     )
 
 
-def test_fonts_and_licence_ship_in_the_wheel() -> None:
-    for name in ("geist-var.woff2", "geist-mono-var.woff2", "OFL.txt"):
-        assert (STATIC / "fonts" / name).is_file(), f"static/fonts/{name} missing (#1572)"
+def _page_runtime_package_data() -> str:
     pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
     entry = re.search(r'^"dazzle\.page\.runtime" = \[([^\]]*)\]', pyproject, re.M)
     assert entry, "pyproject lost the dazzle.page.runtime package-data entry (#1572)"
-    assert "static/**/*.woff2" in entry.group(1)
-    assert "static/fonts/OFL.txt" in entry.group(1)
+    return entry.group(1)
+
+
+def test_fonts_and_licence_ship_in_the_wheel() -> None:
+    for name in ("geist-var.woff2", "geist-mono-var.woff2", "OFL.txt"):
+        assert (STATIC / "fonts" / name).is_file(), f"static/fonts/{name} missing (#1572)"
+    entry = _page_runtime_package_data()
+    assert "static/**/*.woff2" in entry
+    assert "static/fonts/OFL.txt" in entry
+
+
+@pytest.mark.parametrize(
+    ("relative", "package_data_glob"),
+    [
+        ("assets/dazzle-favicon.svg", "static/**/*.svg"),
+        ("css/themes/linear-dark.toml", "static/css/themes/*.toml"),
+    ],
+    ids=["default-favicon", "theme-manifest"],
+)
+def test_runtime_read_assets_ship_in_the_distributions(
+    relative: str, package_data_glob: str
+) -> None:
+    """The favicon `app_chrome` defaults to and the theme manifests
+    `app_theme_registry` reads next to each theme CSS (both missing from every
+    wheel until 2026-10-16)."""
+    path = STATIC / relative
+    assert path.is_file(), f"static/{relative} missing"
+    assert any(fnmatch(path.name, g) for g in _manifest_in_static_patterns()), (
+        f"MANIFEST.in static recursive-include does not match static/{relative}"
+    )
+    assert package_data_glob in _page_runtime_package_data()
 
 
 def test_served_css_references_the_shipped_fonts() -> None:

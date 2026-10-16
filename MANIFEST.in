@@ -10,10 +10,11 @@ recursive-include src/dazzle py.typed *.pyi
 # (v0.67.98) — dazzle_page nested under dazzle.page. woff2 + OFL.txt added by
 # #1572: the vendored Geist fonts were silently dropped from distributions
 # (OFL 1.1 requires the licence to accompany font distribution).
-recursive-include src/dazzle/page/runtime/static *.js *.css *.mjs *.woff2 OFL.txt
-
-# Include LSP grammar files
-recursive-include src/dazzle/lsp/grammars *.json
+# *.svg (the default favicon under static/assets/) and *.toml (the theme
+# manifests under static/css/themes/, read by app_theme_registry at runtime)
+# were missing until 2026-10-16: packaged installs 404'd the favicon and
+# discovered the shipped themes without their manifests.
+recursive-include src/dazzle/page/runtime/static *.js *.css *.mjs *.woff2 *.svg *.toml OFL.txt
 
 # Agent-command definition TOMLs (#1589) — wheel inclusion via package-data;
 # sdist needs the recursive-include so `python -m build` sees them.

@@ -341,20 +341,24 @@ dazzle = ["py.typed"]
 # Fragment renderer emits verbatim (e.g. WorkspaceDrawer markup +
 # IIFE script). Read at module-import time, then cached.
 "dazzle.render.fragment.static" = ["*.html"]
-# Dazzle UI runtime static files (JS, CSS). Post-#1055 (v0.67.98) the
-# `dazzle_page` top-level package was nested as `dazzle.page` so all
-# package-data keys reference the new path.
-"dazzle.page" = ["static/**/*.js", "static/**/*.css", "static/**/*.mjs"]
-# woff2 + OFL.txt (#1572): the vendored Geist fonts are git-tracked but were
-# silently dropped from distributions (third instance of the #1032/#1308 class —
-# asset exists in-repo, packaging manifest omits it). The files live under
-# dazzle/page/runtime/static/fonts/, whose OWNING PACKAGE is dazzle.page.runtime
-# (static/ has no __init__.py, so the long-standing "dazzle.page.runtime.static"
-# key below has never matched anything — assets actually flow via MANIFEST.in +
-# include-package-data; this key + the MANIFEST.in line are kept in agreement).
-# OFL 1.1 requires the licence file to accompany font distribution.
-"dazzle.page.runtime" = ["static/**/*.woff2", "static/fonts/OFL.txt"]
-"dazzle.page.runtime.static" = ["**/*.js", "**/*.css", "**/*.mjs"]
+# Dazzle UI runtime static files. The tree lives under
+# dazzle/page/runtime/static/, whose OWNING PACKAGE is dazzle.page.runtime
+# (static/ has no __init__.py, so neither "dazzle.page" nor
+# "dazzle.page.runtime.static" ever matched anything — both keys were removed
+# 2026-10-16). This one key is kept in agreement with the MANIFEST.in
+# recursive-include: JS/CSS/MJS bundles, the Geist fonts + OFL.txt (#1572; OFL
+# 1.1 requires the licence to accompany font distribution), the default
+# favicon (*.svg) and the theme manifests (css/themes/*.toml) that
+# app_theme_registry reads at runtime.
+"dazzle.page.runtime" = [
+    "static/**/*.js",
+    "static/**/*.css",
+    "static/**/*.mjs",
+    "static/**/*.woff2",
+    "static/**/*.svg",
+    "static/css/themes/*.toml",
+    "static/fonts/OFL.txt",
+]
 # Agent-command TOML definitions (#1589): dazzle agent sync/seed load
 # definitions/*.toml via Path relative to loader.py. definitions/ has no
 # __init__.py so packages.find omits it — same class as #1032/#1308/#1572.
