@@ -50,17 +50,15 @@
       <div style="flex:1;">
         <span style="font-size:15px;font-weight:500;">Dashboard Quality Gate Test (server-rendered)</span>
       </div>
-      <button @click="resetLayout()" class="dz-workspace-reset" style="height:32px;padding:0 12px;border-radius:4px;font-size:13px;border:none;background:none;color:#71717a;cursor:pointer;">Reset</button>
-      <button @click="save()" id="save-btn"
-              :disabled="saveState === 'clean' || saveState === 'saving' || saveState === 'saved'"
-              :data-save-state="saveState"
+      <button data-dz-action="reset" class="dz-workspace-reset" style="height:32px;padding:0 12px;border-radius:4px;font-size:13px;border:none;background:none;color:#71717a;cursor:pointer;">Reset</button>
+      <button data-dz-action="save" data-dz-save-state="clean" disabled id="save-btn"
               class="dz-workspace-save"
               style="height:32px;padding:0 12px;border-radius:4px;font-size:13px;border:1px solid transparent;cursor:pointer;">
-        <span x-show="saveState === 'clean'">Saved</span>
-        <span x-show="saveState === 'dirty'">Save layout</span>
-        <span x-show="saveState === 'saving'">Saving...</span>
-        <span x-show="saveState === 'saved'">Done</span>
-        <span x-show="saveState === 'error'">Retry</span>
+        <span data-dz-when="clean">Saved</span>
+        <span data-dz-when="dirty">Save layout</span>
+        <span data-dz-when="saving">Saving...</span>
+        <span data-dz-when="saved">Done</span>
+        <span data-dz-when="error">Retry</span>
       </button>
     </div>
 
@@ -143,12 +141,12 @@
     </div>
 
     <div class="dz-add-card-row">
-      <button @click="showPicker = !showPicker" id="add-card-btn" class="dz-add-card-button">+ Add Card</button>
-      <div x-show="showPicker"
+      <button data-dz-action="toggle-picker" id="add-card-btn" class="dz-add-card-button">+ Add Card</button>
+      <div
            data-card-catalog='[{"name":"metrics","title":"Revenue Metrics","display":"METRICS","entity":"Invoice"},{"name":"activity","title":"Recent Activity","display":"LIST","entity":"AuditLog"},{"name":"tasks","title":"Open Tasks","display":"LIST","entity":"Task"},{"name":"chart","title":"Revenue Trend","display":"CHART","entity":"Invoice"},{"name":"users","title":"Active Users","display":"METRICS","entity":"User"}]'
            class="dz-card-picker">
         <h4>Add a card</h4>
-        <button @click="addCard('users')" data-test-id="dz-card-picker-entry">Active Users</button>
+        <button data-dz-add-region="users" data-test-id="dz-card-picker-entry">Active Users</button>
       </div>
     </div>
   </div>
