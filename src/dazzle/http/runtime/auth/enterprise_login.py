@@ -29,6 +29,7 @@ from fastapi.responses import JSONResponse
 from psycopg.errors import UniqueViolation as _UniqueViolation
 
 from dazzle.http.runtime.auth.connections import AssertedIdentity, ConnectionRecord
+from dazzle.http.runtime.auth.group_mapping import map_groups_to_roles
 from dazzle.http.runtime.auth.invitations import InvitationError
 
 # Claims sources whose email is cryptographically validated by the provider and may be
@@ -66,21 +67,6 @@ def _email_domain(email: str) -> str:
     if "@" not in email:
         return ""
     return email.rsplit("@", 1)[-1].strip().lower()
-
-
-def map_groups_to_roles(groups: list[str], group_mapping: dict[str, str]) -> list[str]:
-    """Map IdP groups → app roles via the connection's ``group_mapping`` (default-deny).
-
-    Unmapped groups contribute nothing. Returns a de-duplicated, order-preserving role
-    list. An empty result means the member gets in with no app roles — the
-    ``permit:``/``scope:`` layer then default-denies their actions.
-    """
-    roles: list[str] = []
-    for group in groups:
-        role = group_mapping.get(group)
-        if role and role not in roles:
-            roles.append(role)
-    return roles
 
 
 def _trusted_email(connection: ConnectionRecord, asserted: AssertedIdentity) -> str:

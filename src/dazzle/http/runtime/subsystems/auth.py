@@ -15,6 +15,7 @@ from dazzle.http.runtime.auth.enterprise_guard import (
 from dazzle.http.runtime.auth.enterprise_login import ENTERPRISE_OIDC_STATE_ATTR
 from dazzle.http.runtime.auth.enterprise_routes import create_enterprise_sso_routes
 from dazzle.http.runtime.auth.oidc_provider import register_native_oidc
+from dazzle.http.runtime.auth.scim_routes import create_scim_routes
 from dazzle.http.runtime.jwt_middleware import JWTMiddleware
 from dazzle.http.runtime.lifespan_hooks import register_lifespan_hook
 from dazzle.http.runtime.subsystems import SubsystemContext
@@ -319,7 +320,13 @@ class AuthSubsystem:
         setattr(ctx.app.state, ENTERPRISE_OIDC_STATE_ATTR, True)
 
     def _mount_scim(self, ctx: SubsystemContext) -> None:
-        """Extension point: SCIM 2.0 provisioning routes (plan EA-3). Mounts nothing yet."""
+        """Mount the SCIM 2.0 provisioning endpoints (plan EA-3; stateless bearer auth).
+
+        ``/scim/v2/*`` authenticates each request by its per-connection bearer (the
+        current one, or the previous one inside a ``rotate-secret --grace`` window), so
+        it needs no session middleware and is CSRF-exempt as a Bearer request.
+        """
+        ctx.app.include_router(create_scim_routes())
 
     def _register_enterprise_boot_guard(self, ctx: SubsystemContext, protocols: list[str]) -> None:
         """Log at ERROR at startup if connection rows exist for an undeclared protocol (#1344).

@@ -11,6 +11,8 @@ from datetime import timedelta
 import psycopg
 import pytest
 
+from dazzle.http.runtime.auth.scim_provisioning import recompute_membership_roles
+
 pytestmark = [pytest.mark.e2e, pytest.mark.postgres]
 
 _PG_URL = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
@@ -445,3 +447,40 @@ def test_scim_group_keys_include_external_id(store_url: str) -> None:
     keys = store.get_member_group_keys(m.id, conn.id)
     assert "99999999-aaaa" in keys and "Year 7 Teachers" in keys
     assert store.get_scim_group(g.id, conn.id).external_id == "99999999-aaaa"
+
+
+@pytest.mark.parametrize(
+    ("group_mapping", "display_name", "external_id", "role"),
+    [
+        ({"99999999-aaaa": "teacher"}, "Year 7 Teachers", "99999999-aaaa", "teacher"),
+        ({"SLT": "leader"}, "SLT", None, "leader"),
+    ],
+    ids=["guid-keyed-entra", "name-keyed-google"],
+)
+def test_scim_group_role_recompute_matches_name_or_external_id(
+    store_url: str,
+    group_mapping: dict[str, str],
+    display_name: str,
+    external_id: str | None,
+    role: str,
+) -> None:
+    # #1342 gap 2: group_mapping matches a SCIM group by its IdP externalId (an Entra GUID,
+    # which a GUID-keyed mapping needs because the group is known to SCIM by display_name)
+    # or by its display name (Google sends names, no externalId).
+    store = _store(store_url)
+    conn = store.create_connection(
+        tenant_id="orgG",
+        type="scim",
+        config={},
+        secrets={},
+        domains=[],
+        group_mapping=group_mapping,
+    )
+    user = store.create_user(email="t@school.test", password="x")
+    m = store.create_membership(tenant_id="orgG", identity_id=str(user.id), roles=[])
+    g = store.create_scim_group(conn.id, display_name, external_id)
+    store.add_group_member(g.id, m.id)
+
+    recompute_membership_roles(store, conn, m.id)
+
+    assert role in store.get_membership(m.id).roles

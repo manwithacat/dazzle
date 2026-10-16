@@ -1,6 +1,6 @@
 {
-  "src_lines": 321622,
-  "test_lines": 312673,
+  "src_lines": 323369,
+  "test_lines": 314564,
   "docs_lines": 48112,
   "construct_count": 31,
   "written": "2026-10-16",
@@ -275,6 +275,14 @@
         "test_lines"
       ],
       "reason": "DD-013 FORCED (operator 2026-10-16): EA-2 OIDC sign-in and require_sso restored"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "DD-013 FORCED (operator 2026-10-16): EA-3 SCIM provisioning restored; ten leftover files folded into one gate"
     }
   ]
 }
