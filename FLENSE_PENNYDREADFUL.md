@@ -1,4 +1,4 @@
-# FLENSE_PENNYDREADFUL.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/pennydreadful` (refreshed 2026-10-15 for Dazzle v0.118.0)
+# FLENSE_PENNYDREADFUL.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/pennydreadful` (refreshed 2026-10-16 for Dazzle v0.119.0)
 
 This file is the hand-off from the Dazzle framework to the pennydreadful repo. Read it
 before touching anything; it is the only brief you get. Framework context lives in the
@@ -38,14 +38,14 @@ against this checkout with the v0.116.0 tree.
 | `dazzle analytics audit -f json` | 3 PII name hints, 8 subprocessor rows |
 | DSL | `guide` ×2, `llm_intent` ×6, `persona` ×5; no `pii`, `signed`, `retention`, `tenancy`, `subprocessor` |
 
-## 2. Step 1 — move the pin to v0.118.0 and absorb the releases
+## 2. Step 1 — move the pin to v0.119.0 and absorb the releases
 
-v0.116.0 bundles the flense ships, v0.117.0 the surgical loop and v0.118.0 the second flense (CHANGELOG `## [0.116.0]`, `## [0.117.0]`, `## [0.118.0]`, *Removed* and *Agent
+v0.116.0 bundles the flense ships, v0.117.0 the surgical loop, v0.118.0 the second flense and v0.119.0 the third (CHANGELOG `## [0.116.0]`, `## [0.117.0]`, `## [0.118.0]`, `## [0.119.0]`, *Removed* and *Agent
 Guidance*). One removal names pennydreadful as a non-event: the framework GraphQL BFF is
 gone, and pennydreadful's `/graphql` is its own Strawberry schema (`graphql_schema.py`),
 untouched. Prove the rest:
 
-1. `pyproject.toml` `[tool.uv.sources]`: replace `rev = "…"` with `tag = "v0.118.0"`.
+1. `pyproject.toml` `[tool.uv.sources]`: replace `rev = "…"` with `tag = "v0.119.0"`.
    `uv lock && uv sync`. If the app relied on the removed `graphql` extra for strawberry,
    add strawberry as a direct dependency.
 2. `uv run dazzle validate && uv run dazzle lint` — 0 errors, same warnings.
@@ -99,7 +99,7 @@ untouched. Prove the rest:
      DD-014; such a user would sign in with password alone). `dazzle init`, the `saml` extra,
      `dazzle auth connection` and `dazzle capability` no longer exist; `/_ops/sse/events` now requires
      the app's auth posture (`live: on` workspaces keep working for signed-in users).
-   - **Phase 7 (2026-10-16, on `main` after v0.118.0; the next release tag carries it).**
+   - **Phase 7 (2026-10-16, released as v0.119.0; read CHANGELOG `## [0.119.0]` *Agent Guidance*).**
      `dazzle db upgrade head` now reaches `0025_flense_park_event_transport`, which drops the
      never-used `_dazzle_outbox` table (the event inbox and outbox stay). Without `REDIS_URL`
      the event framework now runs a null bus (publishes dropped, handlers never fire) instead
@@ -197,7 +197,7 @@ when real; a `dazzle assure` composite command; anything in §2 step 3 that fail
 
 ## 7. Done when
 
-- [ ] pin at `v0.118.0`, tests green, migrations at the framework head
+- [ ] pin at `v0.119.0`, tests green, migrations at the framework head
 - [ ] `dazzle validate` emits no `W_DECLARED_NOT_READ` / `W_UNKNOWN_BLOCK_KEY` / `W_CLAUSE_VALUE_IGNORED` line
 - [ ] `dazzle db resanitize-rich-text --apply` run per environment; grant clients send `expires_at` and `confirmed`
 - [ ] `assure.yml` exists and is green; `assurance/` committed

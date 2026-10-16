@@ -1,4 +1,4 @@
-# FLENSE_AEGISMARK.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/AegisMark` (refreshed 2026-10-15 for Dazzle v0.118.0)
+# FLENSE_AEGISMARK.md — Phase 4 of the Dazzle flense programme, for an agent working in `/Volumes/SSD/AegisMark` (refreshed 2026-10-16 for Dazzle v0.119.0)
 
 This file is the hand-off from the Dazzle framework to the AegisMark repo. Read it before
 touching anything; it is the only brief you get. Framework context lives in the Dazzle
@@ -38,13 +38,13 @@ v0.117.0 tree, so the pack can be assembled before any DSL changes.
 | `dazzle analytics audit -f json` | 31 PII name hints, 12 subprocessor rows |
 | DSL annotations | 11 `pii`, 10 `retention`, 18 `signed`, 4 `subprocessor`, 1 `tenancy`, 1 `policies` |
 
-## 2. Step 1 — move the pin to v0.118.0 and absorb the releases
+## 2. Step 1 — move the pin to v0.119.0 and absorb the releases
 
-v0.116.0 bundles the flense ships, v0.117.0 the surgical loop and v0.118.0 the second flense (CHANGELOG `## [0.116.0]`, `## [0.117.0]`, `## [0.118.0]`, section *Removed*, plus
+v0.116.0 bundles the flense ships, v0.117.0 the surgical loop, v0.118.0 the second flense and v0.119.0 the third (CHANGELOG `## [0.116.0]`, `## [0.117.0]`, `## [0.118.0]`, `## [0.119.0]`, section *Removed*, plus
 *Agent Guidance*). Nothing AegisMark's DSL or Python uses was removed — every removal was
 gated on the consumer inventory — but prove it here rather than trust it:
 
-1. In `pyproject.toml` change the git ref to the tag: `…dazzle.git@v0.118.0` (keep the
+1. In `pyproject.toml` change the git ref to the tag: `…dazzle.git@v0.119.0` (keep the
    extras; `serve`, `redis`, `mcp` and `signing` all still exist). `uv lock && uv sync`.
 2. `uv run dazzle validate && uv run dazzle lint` — expect 0 errors and the same
    warnings as before.
@@ -101,7 +101,7 @@ gated on the consumer inventory — but prove it here rather than trust it:
      DD-014; such a user would sign in with password alone). `dazzle init`, the `saml` extra,
      `dazzle auth connection` and `dazzle capability` no longer exist; `/_ops/sse/events` now requires
      the app's auth posture (`live: on` workspaces keep working for signed-in users).
-   - **Phase 7 (2026-10-16, on `main` after v0.118.0; the next release tag carries it).**
+   - **Phase 7 (2026-10-16, released as v0.119.0; read CHANGELOG `## [0.119.0]` *Agent Guidance*).**
      `dazzle db upgrade head` now reaches `0025_flense_park_event_transport`, which drops the
      never-used `_dazzle_outbox` table (the event inbox and outbox stay). Without `REDIS_URL`
      the event framework now runs a null bus (publishes dropped, handlers never fire) instead
@@ -244,7 +244,7 @@ place the design already lives.
 
 ## 7. Done when
 
-- [ ] pin at `v0.118.0`, tests green, `db upgrade head` at the framework head
+- [ ] pin at `v0.119.0`, tests green, `db upgrade head` at the framework head
 - [ ] `dazzle validate` emits no `W_DECLARED_NOT_READ` / `W_UNKNOWN_BLOCK_KEY` / `W_CLAUSE_VALUE_IGNORED` line
 - [ ] `dazzle db resanitize-rich-text --apply` run per environment; grant clients send `expires_at` and `confirmed`
 - [ ] `make assure` exists, `assurance/` committed, CI fails on drift and on a rising gap count
