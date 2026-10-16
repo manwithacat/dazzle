@@ -1,6 +1,6 @@
 {
-  "src_lines": 323462,
-  "test_lines": 314694,
+  "src_lines": 323475,
+  "test_lines": 314701,
   "docs_lines": 48113,
   "construct_count": 31,
   "written": "2026-10-16",
@@ -307,6 +307,14 @@
         "src_lines"
       ],
       "reason": "DD-013 FORCED (operator 2026-10-16): runtime-urls baseline now pins auth routes (docs/api-surface)"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "DD-013 FORCED (operator 2026-10-16): EA-6 acceptance fixes (per-org domain ownership, doctor JSON)"
     }
   ]
 }

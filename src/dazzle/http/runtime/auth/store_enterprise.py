@@ -761,8 +761,10 @@ class EnterpriseStoreMixin:
         """Atomically claim ``domain`` as verified for ``connection_id``.
 
         Returns ``True`` when this connection owns the domain after the call (newly
-        claimed OR already its own — idempotent), ``False`` when a *different* active
-        connection already verified it (one verified owner per domain).
+        claimed OR already its own — idempotent), ``False`` when an active connection
+        of a *different org* already verified it (one verified owner per domain, and
+        the owner is the org: an org's OIDC and SCIM connections share its domains,
+        plan EA-6).
 
         Serialized via a single advisory lock (mirrors the ``membership_events``
         pattern) so concurrent verifications can neither both claim the same domain
@@ -773,19 +775,29 @@ class EnterpriseStoreMixin:
         norm = domain.strip().lower().rstrip(".")
         with self._transaction() as cur:
             cur.execute("SELECT pg_advisory_xact_lock(%s)", (CONNECTION_DOMAIN_LOCK_KEY,))
-            # Authoritative owner scan (active connections only).
-            cur.execute("SELECT id, verified_domains FROM connections WHERE status = 'active'")
-            for row in cur.fetchall():
-                verified = [
-                    x.strip().lower() for x in json.loads(row.get("verified_domains") or "[]")
-                ]
-                if norm in verified:
-                    return bool(row["id"] == connection_id)  # ours → True (idempotent); else False
-            # Unowned — append to THIS connection's fresh list (re-read inside the txn).
-            cur.execute("SELECT verified_domains FROM connections WHERE id = %s", (connection_id,))
+            cur.execute(
+                "SELECT tenant_id, verified_domains FROM connections WHERE id = %s",
+                (connection_id,),
+            )
             row = cur.fetchone()
             if row is None:
                 return False  # no such connection
+            tenant_id = row["tenant_id"]
+            current = {x.strip().lower() for x in json.loads(row.get("verified_domains") or "[]")}
+            if norm in current:
+                return True  # already ours (idempotent)
+            # Authoritative owner scan (active connections only): another org owning the
+            # domain blocks; a sibling connection of the same org shares it.
+            cur.execute(
+                "SELECT id, tenant_id, verified_domains FROM connections WHERE status = 'active'"
+            )
+            for other in cur.fetchall():
+                verified = [
+                    x.strip().lower() for x in json.loads(other.get("verified_domains") or "[]")
+                ]
+                if norm in verified and other["tenant_id"] != tenant_id:
+                    return False
+            # Unowned or owned by this org — append to THIS connection's fresh list.
             current = {x.strip().lower() for x in json.loads(row.get("verified_domains") or "[]")}
             cur.execute(
                 "UPDATE connections SET verified_domains = %s, updated_at = %s WHERE id = %s",

@@ -5,6 +5,7 @@ wiring + error paths run without Postgres or real DNS.
 """
 
 import base64
+import json
 from datetime import datetime
 
 import pytest
@@ -351,7 +352,8 @@ def test_doctor_never_leaks_secret(monkeypatch) -> None:
 def test_doctor_json_carries_ready(monkeypatch) -> None:
     _patch_doctor(monkeypatch, _oidc_conn())
     r = runner.invoke(auth_app, ["connection", "doctor", "conn-1", "--json"])
-    assert r.exit_code == 0 and '"ready"' in r.output and "conn-1" in r.output
+    payload = json.loads(r.output)  # plain stdout: parseable, no rich wrapping or markup loss
+    assert r.exit_code == 0 and payload["ready"] is True and payload["connection_id"] == "conn-1"
 
 
 def test_doctor_no_key_blocks_before_load(monkeypatch) -> None:
@@ -411,12 +413,11 @@ def test_doctor_probe_does_not_change_exit_code(monkeypatch) -> None:
 
 
 def test_doctor_probe_json_carries_probe_key(monkeypatch) -> None:
-    # Rich wraps/colorizes console output, so assert on substrings (as test_doctor_json_carries_ready
-    # does) rather than json.loads — the `probe` key + check name must be present.
     _patch_doctor(monkeypatch, _oidc_conn())
     _stub_probe(monkeypatch, [_probe_check()])
     r = runner.invoke(auth_app, ["connection", "doctor", "conn-1", "--probe", "--json"])
-    assert r.exit_code == 0 and '"probe"' in r.output and "discovery_reachable" in r.output
+    payload = json.loads(r.output)
+    assert r.exit_code == 0 and payload["probe"][0]["name"] == "discovery_reachable"
 
 
 def test_doctor_json_without_probe_omits_probe_key(monkeypatch) -> None:

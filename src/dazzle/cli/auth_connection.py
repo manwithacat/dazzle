@@ -517,7 +517,8 @@ def doctor(
     probe_checks = probe_connection(conn) if probe else None
 
     if json_out:
-        console.print(json.dumps(_doctor_payload(diag, probe_checks), indent=2))
+        # Plain stdout, not the rich console: rich wraps long lines and eats `[sso]` as markup.
+        typer.echo(json.dumps(_doctor_payload(diag, probe_checks), indent=2))
     else:
         _render_doctor(diag, probe_checks)
     if not diag.ready:

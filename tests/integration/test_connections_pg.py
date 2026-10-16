@@ -140,6 +140,12 @@ def test_claim_verified_domain_enforces_one_owner(store_url: str) -> None:
     assert routed is not None and routed.id == c1.id
     # The losing connection never got the domain in its verified list.
     assert "acme.test" not in (store.get_connection(c2.id).verified_domains or [])
+    # The owner is the org: a sibling SCIM connection of org-1 shares the domain, so
+    # OIDC sign-in and SCIM provisioning can both serve acme.test (plan EA-6).
+    c3 = store.create_connection(tenant_id="org-1", type="scim", config={}, secrets={}, domains=[])
+    assert store.claim_verified_domain(c3.id, "acme.test") is True
+    assert store.get_connection_by_verified_domain("acme.test", types=("scim",)).id == c3.id
+    assert store.get_connection_by_verified_domain("acme.test", types=("oidc",)).id == c1.id
 
 
 def test_claim_verified_domain_unknown_connection(store_url: str) -> None:
