@@ -17,6 +17,7 @@ from rich.console import Console
 from rich.table import Table
 
 from dazzle.cli.auth_connection import connection_app
+from dazzle.cli.auth_context import database_url_override, set_database_url_override
 from dazzle.core.manifest import load_manifest, resolve_api_url, resolve_database_url
 from dazzle.http.runtime.auth.connection_crypto import (
     _ENV_KEY_OLD,
@@ -31,9 +32,6 @@ auth_app = typer.Typer(
 
 console = Console()
 
-# Module-level database URL set by the callback
-_database_url_override: str | None = None
-
 
 @auth_app.callback()
 def auth_callback(
@@ -47,8 +45,7 @@ def auth_callback(
     ] = None,
 ) -> None:
     """Manage authentication users and sessions."""
-    global _database_url_override  # noqa: PLW0603  # CLI callback storage, per-invocation
-    _database_url_override = database_url
+    set_database_url_override(database_url)
 
 
 def _get_auth_store(database_url: str | None = None) -> Any:
@@ -58,7 +55,7 @@ def _get_auth_store(database_url: str | None = None) -> Any:
     """
     from dazzle.cli.services.auth_service import AuthService
 
-    explicit = database_url or _database_url_override or ""
+    explicit = database_url or database_url_override() or ""
     return AuthService.from_manifest(database_url_override=explicit or None)
 
 
@@ -705,7 +702,7 @@ def migrate(
     manifest = load_manifest(project_root / "dazzle.toml")
     url = (
         database_url
-        or _database_url_override
+        or database_url_override()
         or resolve_database_url(manifest, env_name=get_active_env())
     )
     appspec = load_project_appspec(project_root)

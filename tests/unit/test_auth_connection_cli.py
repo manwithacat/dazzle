@@ -606,3 +606,27 @@ def test_environment_flags_reports_key_presence(monkeypatch) -> None:
     monkeypatch.delenv("DAZZLE_CONNECTION_SECRET", raising=False)
     secret_ok2, _sso2, _dns2 = environment_flags()
     assert secret_ok2 is False
+
+
+def test_parent_database_url_reaches_the_connection_store(monkeypatch) -> None:
+    """``dazzle auth --database-url X connection …`` resolves the store against X.
+
+    The lookup used to walk the click context chain; the core wheel has no click
+    (v0.120.0 publish smoke-test failure), so it now reads the auth callback's override."""
+    seen: list[str | None] = []
+
+    class _Service:
+        _store = _Store(conn=_Conn("conn-1"))
+
+        @staticmethod
+        def from_manifest(*, database_url_override=None):
+            seen.append(database_url_override)
+            return _Service()
+
+    monkeypatch.setattr(auth_connection, "AuthService", _Service)
+    r = runner.invoke(
+        auth_app,
+        ["--database-url", "postgresql://x/y", "connection", "list", "--tenant", "org-1"],
+    )
+    assert r.exit_code == 0, r.output
+    assert seen == ["postgresql://x/y"]

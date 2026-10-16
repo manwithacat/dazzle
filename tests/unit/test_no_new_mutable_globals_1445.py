@@ -36,7 +36,7 @@ _ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
         ("src/dazzle/rbac/audit.py", "_current_sink"),  # thread-safe audit-sink swap (tests)
         ("src/dazzle/mcp/server/state.py", "_state"),  # centralised MCP server state
         ("src/dazzle/cli/env.py", "_active_env"),  # CLI per-invocation
-        ("src/dazzle/cli/auth.py", "_database_url_override"),  # CLI callback storage
+        ("src/dazzle/cli/auth_context.py", "_database_url_override"),  # CLI callback storage
         ("src/dazzle/testing/browser_gate.py", "_gate"),  # process-bounded browser resource
         ("src/dazzle/http/runtime/logging.py", "_log_dir"),  # system-wide logging, init-only
         ("src/dazzle/http/runtime/logging.py", "_file_handler"),  # system-wide logging, init-only

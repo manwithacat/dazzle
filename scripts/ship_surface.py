@@ -62,6 +62,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_dual_lock_coverage_tool.py::test_committed_coverage_matches_generator",
     # #1648 file-upload picker emit (cycle 2110 — Alpine hollow shell)
     "tests/unit/test_file_upload_primitive.py",
+    # v0.120.0 publish smoke-test red: the core wheel booted the CLI into a missing
+    # optional dependency (click). Boots the CLI with every optional-extra import blocked.
+    "tests/unit/test_core_wheel_imports.py",
     # cycle 2140: empty form="" fails HM Nu/W3C (search-select leftover)
     "tests/unit/test_form_widget_search_select_phase3.py::test_no_empty_form_attribute_in_search_select_emit_sources",
     "tests/unit/test_form_widget_search_select_phase3.py::test_endpoint_and_typeahead_wiring",

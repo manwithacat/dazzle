@@ -13,11 +13,11 @@ import json
 import secrets as _secrets
 from typing import Annotated, Any
 
-import click
 import typer
 from rich.console import Console
 from rich.table import Table
 
+from dazzle.cli.auth_context import database_url_override
 from dazzle.cli.services.auth_service import AuthService
 from dazzle.http.runtime.auth.connection_crypto import ConnectionSecretError
 from dazzle.http.runtime.auth.connection_doctor import diagnose_connection, environment_flags
@@ -41,15 +41,10 @@ console = Console()
 def _database_url_from_context() -> str | None:
     """The ``--database-url`` given to the parent ``dazzle auth`` callback, if any.
 
-    Read from the click context chain so this module does not import ``dazzle.cli.auth``
-    (which mounts it — an import cycle)."""
-    ctx = click.get_current_context(silent=True)
-    while ctx is not None:
-        value = ctx.params.get("database_url")
-        if value:
-            return str(value)
-        ctx = ctx.parent
-    return None
+    Read from the ``auth_context`` leaf: this module cannot import ``dazzle.cli.auth``
+    (which mounts it), and the core wheel has no ``click`` to walk a context chain
+    (typer vendors its own; the v0.120.0 wheel smoke test failed on that import)."""
+    return database_url_override()
 
 
 def _store() -> Any:
