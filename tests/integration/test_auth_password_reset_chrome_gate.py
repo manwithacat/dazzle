@@ -55,6 +55,9 @@ class _StubUser:
     def __init__(self, user_id: str = "user-123", is_active: bool = True) -> None:
         self.id = user_id
         self.is_active = is_active
+        # The reset-submit route reads the user's email for the DD-013 require_sso
+        # check before it touches the password; a real UserRecord always carries it.
+        self.email = "user@example.test"
 
 
 class _StubAuthStore:

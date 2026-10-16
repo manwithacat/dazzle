@@ -1,6 +1,6 @@
 {
   "src_lines": 322312,
-  "test_lines": 313019,
+  "test_lines": 313022,
   "docs_lines": 48525,
   "construct_count": 31,
   "written": "2026-10-16",
@@ -344,6 +344,13 @@
         "docs_lines"
       ],
       "reason": "DD-015 parks the task-inbox design (+122 docs lines); src and tests fall with the search_box/task_inbox cut"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "test_lines"
+      ],
+      "reason": "password-reset chrome-gate stub carries email for the require_sso check (+3 test lines)"
     }
   ]
 }
