@@ -1,7 +1,7 @@
 {
   "src_lines": 323476,
   "test_lines": 314701,
-  "docs_lines": 48364,
+  "docs_lines": 48403,
   "construct_count": 31,
   "written": "2026-10-16",
   "exceptions": [
@@ -323,6 +323,13 @@
         "docs_lines"
       ],
       "reason": "DD-013 FORCED (operator 2026-10-16): EA-5 operator guide, KB pattern and doc page restored"
+    },
+    {
+      "date": "2026-10-16",
+      "rose": [
+        "docs_lines"
+      ],
+      "reason": "DD-013 FORCED (operator 2026-10-16): EA-6 acceptance record and plan log"
     }
   ]
 }

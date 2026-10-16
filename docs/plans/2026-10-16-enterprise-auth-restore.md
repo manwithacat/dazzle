@@ -131,8 +131,46 @@ start before it lands.
 - **Introspection posture:** any new route that exposes connection state takes the app's auth
   posture (admin dependency), as the `/_dazzle/*` routes do since v0.119.0.
 
-## 4. Log
+## 4. EA-6 acceptance record (2026-10-16, session)
+
+Scratch copy of `examples/simple_task` with `[auth.enterprise] protocols = ["oidc", "scim"]`,
+fresh Postgres database, `dazzle db upgrade head` (0001 → 0026, the four tables present,
+no `saml_consumed_assertions`), `sso` extra installed (`authlib`, `cryptography`, `dnspython`).
+
+| Step | Result |
+|------|--------|
+| `dazzle auth connection create` (Entra issuer, two `--group-map`), `add-domain acme.test` | TXT record printed; domain claimed |
+| `doctor --json` before verification / without `authlib` | exit 1, `verified_domain` and `sso_extra` fail (JSON was unparseable and the remedy lost `[sso]` → fixed, `db40394b0`) |
+| domain verified (`claim_verified_domain` stands in for DNS; the DNS path is covered by the Postgres tests with a fake resolver), `doctor --json` | exit 0, `ready: true`, 8 checks ok |
+| `create-scim`, then share `acme.test` with the SCIM connection | refused by the archive's one-connection-per-domain rule → owner is now the org (`db40394b0`); SCIM `doctor` exit 0 |
+| `set-require-sso --on` | flag set; existing verified-domain sessions revoked (`c6838ef49`) |
+| app boots with both protocols declared | no boot errors; SCIM and enterprise routes mounted |
+| `GET /scim/v2/ServiceProviderConfig` no bearer / bad bearer / good bearer | 401 / 401 / 200 |
+| `GET /auth/enterprise/login?email=jane@acme.test` | 303 to the Entra `authorize` endpoint (discovery fetched live, state + nonce set) |
+| same for an unverified domain | 303 `/login?error=sso_no_connection` |
+| `require_sso`: JSON login, JSON register | 403 `{"status":"sso_required","login_url":…}` |
+| `require_sso`: form password login | 303 `/auth/enterprise/login?email=…` |
+| another domain's JSON login | 401 (unaffected) |
+| SCIM `POST /Users` in the verified domain / outside it | 201 / 400 |
+| SCIM group → roles: `externalId`-keyed group POST, name-keyed group PATCH add / remove | roles `["senior_leader"]` → `["senior_leader","teacher"]` → `["senior_leader"]` |
+| SCIM `PUT` re-push of the same `externalId` under a changed email | 200, one membership, global email **not** rewritten |
+| SCIM `PATCH active:false`, junk `active`, `DELETE` | 200 → `suspended`; 400 stay-put; 204 → row gone |
+
+Not exercised live: the OIDC callback (no IdP double over HTTP; covered by
+`tests/integration/test_enterprise_routes.py`), DNS TXT verification (Postgres tests
+with a fake resolver), `doctor --probe` against a real issuer.
+
+**Follow-ups recorded, not done:** (1) the IdP group → role map is per connection, so an
+org configures it on both its OIDC and its SCIM connection; a shared org-level map would
+remove that double entry. (2) SCIM `filter` supports `userName eq` (what Entra and Okta
+send) but not `externalId eq`. (3) The readiness checklist on the org admin page
+(plan §2 EA-6 note) remains a follow-up. (4) An OIDC login reuses an existing membership
+without recomputing roles; SCIM owns recompute. Revisit if a consumer runs OIDC without
+SCIM and expects IdP groups to drive roles on every sign-in.
+
+## 5. Log
 
 | Date | Event |
 |------|-------|
 | 2026-10-16 | Plan written; DD-013 moved to FORCED (`consumer: platform (core requirement)`); EA-0 (Haiku) and EA-1 (Opus) dispatched |
+| 2026-10-16 | EA-0 inventory landed; EA-1 harvested `a736301fd`; EA-4 `c1fb6e0a5`; EA-2 `98b144181`; EA-3 `05075459a`; EA-2b (`require_sso` gaps + CLI) `6cc8c1f56`; EA-6 session hardening `c6838ef49`, `87460d497` (runtime-urls lens), `db40394b0` (domain ownership per org, doctor JSON); EA-5 `b864abdb6`. Acceptance record §4. All ships on the tiers §1 planned |
