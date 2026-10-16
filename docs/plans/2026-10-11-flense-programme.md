@@ -403,8 +403,8 @@ into `IfExpr` (AH finding); a permit-denied list request is not audited where up
 delete are (AN finding); `mint_token` accepts a colon email that `verify_token` always rejects
 (AM finding); two sentinel scans saved in the same second order at random (AL finding).
 
-Open for the operator after this phase: drop `memberships.external_id` and its unique index
-(AD); drop the four 2FA columns on `users` (AG); drop `email_outbox` and `OutboxRepository`
+Open for the operator after this phase: ~~drop `memberships.external_id` and its unique index
+(AD)~~ (withdrawn 2026-10-16: enterprise auth ruled a core requirement, DD-013 keeps the column); drop the four 2FA columns on `users` (AG); drop `email_outbox` and `OutboxRepository`
 (AI: never constructed); `devices` (ship O) still unsigned; `process_persistence.save_processes`
 has no writer while `app_factory.py:805` reads the store (AI); the file-size error message and
 python-magic dependence in `file_storage.py` (AK); `sentinel/store.py` same-second scan

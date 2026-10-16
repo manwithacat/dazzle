@@ -131,6 +131,16 @@ were kept.
 
 ## Reopen when (consumer force)
 
+**Operator ruling (James, 2026-10-16):** enterprise auth will be a *core
+requirement* of the platform even though no consumer has declared it yet, and
+the retired implementation is the starting point for the design discussion, not
+a design to restore verbatim. That ruling is a second route to `FORCED`: the
+operator may move this DD to `FORCED` with `consumer: platform (core
+requirement)` once the **Discussion starter** below is resolved, without the
+consumer evidence in items 2 and 3. Until then the status stays `PARKED` and
+the `memberships.external_id` drop that plan §10 listed as "open for the
+operator" is **off the table** (SCIM identity is `externalId`-first).
+
 1. **Named consumer** — AegisMark (school SSO via Entra ID or Google) is the
    candidate; its runbook `docs/enterprise-auth-enablement.md` already treats
    go-live as a reviewed change. Any consumer qualifies.
@@ -150,6 +160,63 @@ When a force lands:
    default), with its capability registration, tables (new revision) and
    tests; re-add the `saml` extra only for SAML.
 4. When shipped, set `status: DONE` and close issues.
+
+## Discussion starter (2026-10-16)
+
+What flense ship AD removed, as a size: 153 files, 20,757 lines deleted
+(about 7.4k `src`, 11.6k `tests`, the 262-line operator guide, the `saml`
+extra). `git show 23cf59372:<path>` for any file; `git show --stat 229226a88`
+for the list. The largest pieces were `scim_routes.py` (951), `store.py`'s
+enterprise mixins (about 1.1k), `cli/auth_connection.py` (841),
+`scim_provisioning.py` (617), `saml_provider.py` (492) and the admin surface
+(about 1.1k across routes, views, form, doctor, probe).
+
+**Worth keeping as designed** (the parts that encode hard-won judgement):
+the `Connection` runtime-data model with org fencing; verified-domain routing
+and provisioning as the anti-hijack gate; AES-GCM secrets with the two-key
+rotation window; default-deny group → role mapping matched on name or IdP
+`externalId`; SAML delegated entirely to python3-saml in strict mode with
+one-time `InResponseTo` and the consumed-assertion cache; SCIM identity
+`externalId`-first with org-scoped session kill on deprovision;
+`finish_login_session` as the single session-minting point. The counter-priors
+listed above hold whatever the new shape is.
+
+**Open questions the discussion has to settle before `FORCED`:**
+
+1. *Gating.* The removed code mounted behind `[capabilities] enabled =
+   ["auth.enterprise.*"]`, and the capability framework itself went in ship
+   AI. If enterprise auth is core, is it gated at all, or does it mount when
+   the `[auth.enterprise]` config (or a connection row) exists and the extra
+   imports? A core requirement argues for a declared `[auth]` setting a
+   consumer writes (DD-014's counter-prior), not a capability registry rebuilt
+   for one tenant.
+2. *Protocol order.* OIDC first (Entra ID and Google Workspace are both OIDC;
+   no native dependency), SCIM second (independent of the sign-in protocol),
+   SAML last and only with a customer that cannot do OIDC (python3-saml needs
+   `libxmlsec1`, an `Aptfile` on Heroku). Restore one protocol at a time.
+3. *Scope boundary with DD-014.* With IdP sign-in, MFA is the IdP's job; local
+   two-factor only matters for password accounts. Decide whether "enterprise
+   auth" means SSO + SCIM (this DD) or also MFA for non-SSO users (DD-014), and
+   whether an org can *require* SSO for its members (the removed code did not).
+4. *Admin surface.* `admin_policy.CAPABILITIES` is now `("manage_members",)`;
+   `manage_connections` and the `/auth/connections` pages went with ship AD.
+   Decide whether connection admin is CLI-only at first (the runbook's
+   onboarding is CLI-driven) and the pages come back with the first
+   self-service customer.
+5. *Tests.* Of the 11.6k test lines, about 3.5k were improve-loop
+   `test_scim_*_leftover.py` files (one per SCIM attribute). Restore the
+   behaviour tests and the integration doubles (`saml_idp_double.py`); fold the
+   leftover files into one parametrised gate (flense ship AX principle: one
+   gate per invariant).
+6. *Consumer shape.* AegisMark's ADR-0012 (Proposed 2026-06-18) chose the full
+   migration onto the framework membership model and its runbook
+   (`docs/enterprise-auth-enablement.md`) still describes the two-layer story
+   (shared app-level OIDC vs per-org connections) and the Heroku enablement
+   steps. It is the design partner for the discussion even without a signed
+   customer; cyfuture and pennydreadful have no enterprise identity need.
+7. *Schema.* Five tables return by a new Alembic revision from the
+   `downgrade` of `0023_flense_park_enterprise_auth`; keep
+   `memberships.external_id` and its unique index now (see the ruling above).
 
 ## Already shipped (do not re-litigate)
 
@@ -171,3 +238,4 @@ When a force lands:
 | Date | Event |
 |------|--------|
 | 2026-10-15 | Parked (this DD); enterprise auth removed in flense ship AD, tables dropped by `0023_flense_park_enterprise_auth` |
+| 2026-10-16 | Operator ruling: enterprise auth is a core requirement without a named consumer; the retired implementation is the discussion starting point; `memberships.external_id` drop withdrawn; **Discussion starter** added |
