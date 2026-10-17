@@ -524,16 +524,13 @@ class SystemRoutesSubsystem:
         appspec = ctx.appspec
         entities = ctx.entities
 
-        # Compute DSL hash and capture startup time for /health
-        import hashlib
+        # Compute DSL hash and capture startup time for /health. Canonical, so every
+        # worker of one build reports the same value (#1786).
         import time
 
-        try:
-            _spec_bytes = appspec.model_dump_json().encode()
-        except Exception:
-            # ParamRef or other non-serializable IR nodes — fall back to repr
-            _spec_bytes = repr(appspec.model_dump(mode="python")).encode()
-        _dsl_hash = hashlib.sha256(_spec_bytes).hexdigest()[:8]
+        from dazzle.core.ir.fingerprint import appspec_fingerprint
+
+        _dsl_hash = appspec_fingerprint(appspec)
         _start_time = time.monotonic()
 
         try:
