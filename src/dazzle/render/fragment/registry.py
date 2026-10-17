@@ -44,10 +44,15 @@ class Renderer(Protocol):
     - For ``mode: custom`` the dispatcher passes a typed
       ``CustomRenderCtx`` (#1129) — frozen dataclass exposing
       ``request`` / ``params`` / ``services`` / ``auth_ctx`` /
-      ``surface_name`` / ``workspace_name``. Custom renderers can
+      ``surface_name`` / ``workspace_name`` / ``principal``. Custom renderers can
       ``isinstance(ctx, CustomRenderCtx)`` to opt into the typed
       shape; the bare ``dict`` form remains accepted for back-compat
       with existing renderers that haven't migrated.
+
+    Both shapes carry the signed-in principal (#1794): ``ctx.principal`` on
+    ``CustomRenderCtx``, ``ctx.get("principal")`` on the dict — a
+    ``dazzle.render.principal.Principal`` (``user_id`` / ``roles`` /
+    ``tenant_id`` / ``email`` / ``display_name``) or ``None`` when anonymous.
     """
 
     def render(self, surface: Any, ctx: Any) -> str: ...

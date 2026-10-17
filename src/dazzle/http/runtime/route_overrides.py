@@ -589,6 +589,7 @@ def _wrap_with_response_contract(
                 theme=assets.theme,
                 font_preconnect=assets.font_preconnect,
                 favicon=assets.favicon,
+                topbar_title=assets.topbar_title,
             )
             return HTMLResponse(content=html, status_code=status)
 

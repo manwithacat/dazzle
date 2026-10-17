@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.core import ir
+from dazzle.core.manifest import TopbarTitleMode
 from dazzle.page.runtime.asset_fingerprint import fingerprint_static_url
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,9 @@ class AppChrome:
             assets via ``[ui] cdn = true`` in dazzle.toml. Currently
             informational — the typed substrate always serves local
             ``dist/dazzle.min.{css,js}``; CDN routing is a follow-up.
+        topbar_title: ``[ui] topbar_title`` (#1794) — ``"app"`` (app name,
+            default), ``"page"`` (the page title, app name as fallback) or
+            ``"none"`` (empty topbar title).
     """
 
     css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",)
@@ -75,6 +79,7 @@ class AppChrome:
     font_preconnect: tuple[str, ...] = ()
     favicon: str = "/static/assets/dazzle-favicon.svg"
     use_cdn: bool = False
+    topbar_title: TopbarTitleMode = "app"
 
 
 _FRAMEWORK_BUNDLE_CSS = "/static/dist/dazzle.min.css"
@@ -149,7 +154,9 @@ def resolve_app_chrome(
     use_cdn = False
     active_development = False
     manifest_theme: str | None = None
+    topbar_title: TopbarTitleMode = "app"
     if manifest is not None:
+        topbar_title = getattr(manifest, "topbar_title", "app")
         if getattr(manifest, "favicon", None):
             favicon = str(manifest.favicon)
         use_cdn = bool(getattr(manifest, "cdn", False))
@@ -256,4 +263,5 @@ def resolve_app_chrome(
         font_preconnect=_dedup_preserving_order(font_preconnect),
         favicon=favicon,
         use_cdn=use_cdn,
+        topbar_title=topbar_title,
     )

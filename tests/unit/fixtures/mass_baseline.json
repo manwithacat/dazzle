@@ -1,7 +1,7 @@
 {
-  "src_lines": 324751,
-  "test_lines": 316001,
-  "docs_lines": 49019,
+  "src_lines": 324923,
+  "test_lines": 316152,
+  "docs_lines": 49042,
   "construct_count": 31,
   "written": "2026-10-17",
   "exceptions": [
@@ -461,6 +461,23 @@
         "test_lines"
       ],
       "reason": "#1795 consumer-forced (AegisMark): lens swap target, single toast controller, confirm variant"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1794 topbar_title setting, identity chip and renderer Principal (consumer-forced by AegisMark)"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "#1794 topbar_title, identity chip, renderer principal (consumer-forced)"
     }
   ]
 }

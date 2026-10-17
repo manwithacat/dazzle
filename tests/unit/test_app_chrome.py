@@ -35,6 +35,7 @@ class TestResolveAppChrome:
         assert chrome.font_preconnect == ()
         assert chrome.favicon == "/static/assets/dazzle-favicon.svg"
         assert chrome.use_cdn is False
+        assert chrome.topbar_title == "app"
 
     def test_manifest_favicon_overrides_default(self) -> None:
         manifest = SimpleNamespace(favicon="/static/custom.svg", cdn=False, app_theme=None)
@@ -45,6 +46,11 @@ class TestResolveAppChrome:
         manifest = SimpleNamespace(favicon=None, cdn=True, app_theme=None)
         chrome = resolve_app_chrome(None, project_root=None, manifest=manifest)
         assert chrome.use_cdn is True
+
+    def test_manifest_topbar_title_carried_1794(self) -> None:
+        manifest = SimpleNamespace(favicon=None, cdn=False, app_theme=None, topbar_title="page")
+        chrome = resolve_app_chrome(None, project_root=None, manifest=manifest)
+        assert chrome.topbar_title == "page"
 
     def test_manifest_app_scripts_appended_after_framework(self) -> None:
         # #1515: downstream [ui] app_scripts thread into the chrome <head>

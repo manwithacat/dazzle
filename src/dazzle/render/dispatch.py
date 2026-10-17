@@ -27,10 +27,12 @@ would duplicate a moving target; passing in is honest.
 
 from __future__ import annotations
 
+from html import escape as html_escape
 from html.parser import HTMLParser
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.condition_eval import evaluate_condition
+from dazzle.core.manifest import TopbarTitleMode
 from dazzle.core.renderer_registry import default_renderer_names
 from dazzle.core.strings import normalize_role
 from dazzle.render.breadcrumb_fragment import build_shell_breadcrumb
@@ -283,14 +285,27 @@ def _build_sidebar_from_ctx(ctx: PageContext) -> Sidebar:
     return _sidebar_from_nav_model(ctx.nav_model, ctx)
 
 
-def _account_identity_label(ctx: PageContext) -> str:
-    """Email · role label for topbar identity (email preferred over name)."""
+def _account_display_name(ctx: PageContext) -> str:
+    """Who is signed in, for the topbar chip (#1794): name before email.
+
+    The auth user carries one human label, ``username`` (``PageContext.user_name``).
+    A username that merely repeats one of the user's role names (demo/seeded
+    accounts such as ``manager``) is a handle, not a name — the email says more.
+    """
     email = (getattr(ctx, "user_email", "") or "").strip()
     name = (getattr(ctx, "user_name", "") or "").strip()
-    display = email or name or "Signed in"
+    roles = {normalize_role(r).lower() for r in (getattr(ctx, "user_roles", None) or []) if r}
+    if name and name.lower() not in roles:
+        return name
+    return email or name or "Signed in"
+
+
+def _account_identity_label(ctx: PageContext) -> str:
+    """``<name or email> · <role>`` label for the topbar identity chip."""
+    display = _account_display_name(ctx)
     roles = list(getattr(ctx, "user_roles", None) or [])
     role_bits = [normalize_role(r) for r in roles[:2] if r]
-    # Avoid "manager · manager" when username == role name.
+    # Avoid "manager · manager" when the shown label == role name.
     if role_bits and not (len(role_bits) == 1 and role_bits[0].lower() == display.lower()):
         return f"{display} · {', '.join(role_bits)}"
     return display
@@ -323,15 +338,32 @@ def _build_account_trailing(ctx: PageContext) -> object | None:
         "Log out</button></form>"
     )
 
+    # #1794 — the chip leads with the display name; the email (the stable
+    # identity) rides in `title=` so it is one hover away.
+    title_attr = f' title="{html_escape(email)}"' if email else ""
+    identity_html = (
+        '<span class="dz-text dz-text--tone-muted dz-account-identity" '
+        f"data-dz-account-identity{title_attr}>{html_escape(identity)}</span>"
+    )
+
     return Row(
         children=(
             Link(label="Home", href=URL(app_prefix), data_action="nav.home"),
-            Text(body=identity, tone="muted"),
+            RawHTML(identity_html),
             RawHTML(logout_html),
         ),
         gap="md",
         align="center",
     )
+
+
+def _topbar_title_text(mode: TopbarTitleMode, *, page_title: str, app_name: str) -> str:
+    """Topbar title for `[ui] topbar_title` (#1794)."""
+    if mode == "none":
+        return ""
+    if mode == "page":
+        return page_title or app_name
+    return app_name
 
 
 def _shell_content_measure(ctx: PageContext) -> str:
@@ -370,6 +402,7 @@ def build_app_chrome_page(
     og_meta: tuple[tuple[str, str], ...] = (),
     font_preconnect: tuple[str, ...] = (),
     sidebar_state: str = "open",
+    topbar_title: TopbarTitleMode = "app",
 ) -> Page:
     """Build a fully-chromed Page — `Page → AppShell → Sidebar/Topbar
     + body` — from PageContext's nav data.
@@ -379,6 +412,10 @@ def build_app_chrome_page(
     on-screen (default "open"); callers thread the persisted
     `theme.get_sidebar_state()` cookie value. The topbar always gets a
     sidebar toggle so the nav is collapsible/reachable at all viewports.
+
+    `topbar_title` (#1794, `[ui] topbar_title`) picks the topbar title text:
+    "app" → the app name (default), "page" → the page title (app name when
+    the page has none), "none" → empty. The sidebar header keeps the app name.
 
     Use this for primary app surfaces (workspace pages, list/view/
     create/edit). For routes without an app shell (errors, auth),
@@ -393,7 +430,7 @@ def build_app_chrome_page(
     # dual-lock `.dz-menubar` in topbar leading (not product site nav).
     menubar = build_shell_menubar(ctx)
     topbar = Topbar(
-        title=app_name,
+        title=_topbar_title_text(topbar_title, page_title=page_title, app_name=app_name),
         show_sidebar_toggle=True,
         leading=menubar,
         trailing=trailing,
@@ -473,6 +510,7 @@ def dispatch_render_page(
     font_preconnect: tuple[str, ...] = (),
     chrome: bool = True,
     sidebar_state: str = "open",
+    topbar_title: TopbarTitleMode = "app",
 ) -> str:
     """Build a Page and render it to HTML — convenience wrapper.
 
@@ -503,6 +541,7 @@ def dispatch_render_page(
             og_meta=og_meta,
             font_preconnect=font_preconnect,
             sidebar_state=sidebar_state,
+            topbar_title=topbar_title,
         )
     else:
         page = build_page(

@@ -290,6 +290,14 @@ class ManuscriptViewer:
         return f'<section>{self._panel(detail.item)}{render_detail_view(detail)}</section>'
 ```
 
+**Who is asking (#1794).** The renderer context carries the signed-in
+principal — a frozen `dazzle.render.principal.Principal` with `user_id`,
+`roles` (effective, `role_` prefix removed), `tenant_id` (the active
+membership's tenant), `email` and `display_name`. A `mode: custom` renderer
+reads `ctx.principal` on its `CustomRenderCtx`; a list / view / create / edit
+renderer reads `ctx.get("principal")`. It is `None` for an anonymous request.
+Use it for "my rows" logic instead of reading the audit or RLS contextvars.
+
 See [`fixtures/custom_renderer/`](https://github.com/manwithacat/dazzle/tree/main/fixtures/custom_renderer)
 for the full two-halves-of-the-contract recipe (link-time `[renderers]
 extra` allowlist + runtime `register(...)`) and the worked per-entity

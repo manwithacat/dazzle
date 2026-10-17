@@ -13,6 +13,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from dazzle.render.principal import Principal
+
 
 class ColumnContext(BaseModel):
     """Column definition for table rendering."""
@@ -440,6 +442,10 @@ class CustomRenderCtx:
         surface_name: ``surface.name`` from the DSL.
         workspace_name: Parent workspace name, or ``None`` for
             surfaces not mounted under a workspace.
+        principal: The signed-in :class:`~dazzle.render.principal.Principal`
+            (user id, roles, tenant id, email, display name), or ``None``
+            for anonymous requests (#1794). Use this instead of reading the
+            audit / RLS contextvars.
     """
 
     request: Any  # starlette Request — typed Any to avoid back→render arrow
@@ -448,6 +454,7 @@ class CustomRenderCtx:
     auth_ctx: Any  # AuthContext | None
     surface_name: str
     workspace_name: str | None
+    principal: Principal | None = None
 
 
 class PageContext(BaseModel):

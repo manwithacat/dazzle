@@ -52,6 +52,7 @@ def test_custom_render_ctx_carries_all_documented_fields() -> None:
         "auth_ctx",
         "surface_name",
         "workspace_name",
+        "principal",
     }
 
 

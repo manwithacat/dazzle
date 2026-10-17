@@ -697,3 +697,18 @@ The scripts are appended to the app-shell `<head>` **after** the framework bundl
 **Related:** [Sitespec](frontend.md#sitespec), [Section Types](frontend.md#section-types)
 
 ---
+
+## Topbar Title
+
+App-shell topbar title (`[ui] topbar_title`, #1794). The sidebar header always shows the app name; by default the topbar title repeats it. Set `topbar_title` in `dazzle.toml` to change what the topbar shows:
+
+```toml
+[ui]
+topbar_title = "page"   # true (default) = app name, false = no title, "page" = page title
+```
+
+`"page"` shows the current surface or workspace title (the app name when the page has none), which frees the narrow-viewport topbar from a duplicated app name. Any other value fails manifest load with `[ui] topbar_title must be true, false, or 'page'`.
+
+**Related:** [App Scripts](frontend.md#app-scripts)
+
+---

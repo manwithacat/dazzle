@@ -31,6 +31,7 @@ from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
 from dazzle.core.condition_eval import evaluate_condition
 from dazzle.core.ir import SurfaceMode, SurfaceSpec
 from dazzle.core.ir.integrations import MappingTriggerType
+from dazzle.core.manifest import TopbarTitleMode
 from dazzle.core.strings import normalize_role, to_api_plural
 
 # Re-export for stable import path (build_service / fidelity / experience_routes).
@@ -44,6 +45,7 @@ from dazzle.http.runtime.action_visibility import (
     surface_visible_predicates,
     transition_offered,
 )
+from dazzle.http.runtime.auth.models import principal_of
 from dazzle.http.runtime.dispatch_ctx import _build_dispatch_ctx as _build_dispatch_ctx
 from dazzle.http.runtime.htmx import HtmxDetails, is_peek_request
 from dazzle.http.runtime.mailbox_shape import is_mailbox_shape
@@ -1419,6 +1421,7 @@ class _ChromeAssets:
     theme: str | None
     font_preconnect: tuple[str, ...]
     favicon: str
+    topbar_title: TopbarTitleMode = "app"  # #1794 — `[ui] topbar_title` ("app" | "page" | "none")
 
 
 def _resolve_chrome_assets(app_state: Any) -> _ChromeAssets:
@@ -1436,6 +1439,7 @@ def _resolve_chrome_assets(app_state: Any) -> _ChromeAssets:
         theme=getattr(app_state, "fragment_chrome_theme", None),
         font_preconnect=tuple(getattr(app_state, "fragment_chrome_font_preconnect", None) or ()),
         favicon=getattr(app_state, "fragment_chrome_favicon", "/static/assets/dazzle-favicon.svg"),
+        topbar_title=getattr(app_state, "fragment_chrome_topbar_title", "app"),
     )
 
 
@@ -2493,6 +2497,7 @@ def _dispatch_custom_mode(
         auth_ctx=prc.auth_ctx,
         surface_name=surface.name,
         workspace_name=getattr(surface, "workspace", None),
+        principal=principal_of(prc.auth_ctx),
     )
     try:
         return compose(dispatch_render(surface, ctx=custom_ctx, services=services))
@@ -2620,6 +2625,8 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     # content-only (no Surface header / Back) — it loads into an inline list-row
     # panel. `_build_view` reads this flag.
     ctx_dict["peek"] = is_peek_request(prc.request)
+    # #1794: the signed-in principal is part of the renderer contract.
+    ctx_dict["principal"] = principal_of(prc.auth_ctx)
     try:
         return _compose(dispatch_render(surface, ctx=ctx_dict, services=services))
     except FragmentError as e:
@@ -2751,6 +2758,7 @@ def _render_response(prc: _PageRequestContext) -> Response:
             theme=_assets.theme,
             font_preconnect=_assets.font_preconnect,
             favicon=_assets.favicon,
+            topbar_title=_assets.topbar_title,
         )
     response_headers: dict[str, str] = {}
     # hx-boost strips <head> from the response, so the browser's
@@ -3328,6 +3336,7 @@ async def _workspace_handler(
         theme=_assets.theme,
         font_preconnect=_assets.font_preconnect,
         favicon=_assets.favicon,
+        topbar_title=_assets.topbar_title,
     )
     return HTMLResponse(content=html)  # nosemgrep
 

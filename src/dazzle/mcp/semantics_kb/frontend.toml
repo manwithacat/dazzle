@@ -798,3 +798,22 @@ order (so they can depend on the framework runtime), and go through the same con
 fingerprinting as framework assets in production. Point at any served path; an empty/absent \
 list leaves the framework-only script set unchanged."""
 related = ["sitespec", "section_types"]
+
+[concepts.topbar_title]
+category = "Frontend"
+since_version = "0.121.0"
+doc_page = "frontend"
+doc_order = 12
+definition = """App-shell topbar title (`[ui] topbar_title`, #1794). The sidebar header always \
+shows the app name; by default the topbar title repeats it. Set `topbar_title` in `dazzle.toml` \
+to change what the topbar shows:
+
+```toml
+[ui]
+topbar_title = "page"   # true (default) = app name, false = no title, "page" = page title
+```
+
+`"page"` shows the current surface or workspace title (the app name when the page has none), \
+which frees the narrow-viewport topbar from a duplicated app name. Any other value fails \
+manifest load with `[ui] topbar_title must be true, false, or 'page'`."""
+related = ["app_scripts"]

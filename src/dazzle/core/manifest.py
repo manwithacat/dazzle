@@ -5,11 +5,16 @@ import tomllib
 from dataclasses import dataclass, field
 from importlib.metadata import version
 from pathlib import Path
+from typing import Literal
 
 from dazzle.core.db_url import normalise_postgres_scheme
 from dazzle.core.errors import DazzleError
 
 _FRAGMENT_CHROME_WARNED = False
+
+# #1794 — `[ui] topbar_title` normalised at load: true → "app", false → "none",
+# "page" → "page" (the current page title, app name as fallback).
+TopbarTitleMode = Literal["app", "page", "none"]
 
 
 def _fragment_chrome_warned() -> bool:
@@ -654,6 +659,12 @@ class ProjectManifest:
     # deliberately light-only (e.g. paper / academic themes) so the toggle
     # is hidden everywhere AND the server forces `data-theme="light"` on
     # first paint regardless of any stale cookie state.
+    topbar_title: TopbarTitleMode = "app"  # #1794 — what the
+    # app-shell topbar title shows. `[ui] topbar_title = true` (default) → the
+    # app name (the sidebar header already carries it too); `false` → no
+    # topbar title ("none"); `"page"` → the current surface/workspace title,
+    # falling back to the app name when the page has none. The sidebar header
+    # is unaffected.
     app_theme: str | None = None  # v0.61.36: app-shell theme preset (overrides
     # the default shadcn-zinc tokens with an alternate :root block). One of
     # the presets shipped in src/dazzle/page/runtime/static/css/themes/<name>.css
@@ -783,6 +794,17 @@ def check_framework_version(manifest: ProjectManifest) -> None:
             f"project requires {constraint}. "
             f"Run: pip install 'dazzle-dsl{constraint}'"
         )
+
+
+def _parse_topbar_title(value: object) -> TopbarTitleMode:
+    """`[ui] topbar_title` (#1794): `true` → app name, `false` → none, `"page"` → page title."""
+    if value is True:
+        return "app"
+    if value is False:
+        return "none"
+    if value == "page":
+        return "page"
+    raise ValueError(f"[ui] topbar_title must be true, false, or 'page'; got {value!r}")
 
 
 def load_manifest(path: Path) -> ProjectManifest:
@@ -974,6 +996,7 @@ def load_manifest(path: Path) -> ProjectManifest:
     app_theme_name = ui_data.get("theme") or ui_data.get("app_theme")
     dark_mode_toggle_enabled = bool(ui_data.get("dark_mode_toggle", True))
     haptic_enabled = bool(ui_data.get("haptic", False))
+    topbar_title_mode = _parse_topbar_title(ui_data.get("topbar_title", True))
     # Phase 4 app-shell migration (v0.67.45): `[ui] fragment_chrome` is
     # retired. The key is still accepted in dazzle.toml without raising
     # so existing project manifests keep loading; a deprecation log
@@ -1099,6 +1122,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         app_theme=app_theme_name,
         app_scripts=app_scripts_value,
         dark_mode_toggle=dark_mode_toggle_enabled,
+        topbar_title=topbar_title_mode,
         haptic=haptic_enabled,
         environments=environments,
         extensions=extensions_config,

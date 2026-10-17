@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
 SEED_SCHEMA_VERSION = (
-    55  # v55: runtime toast concept names the HM dz-toast.js controller (#1795);
+    56  # v56: topbar_title concept teaches `[ui] topbar_title` (#1794);
+    # v55: runtime toast concept names the HM dz-toast.js controller (#1795);
     # v54: surface_modes concept teaches post-mutation landing (#1790);
     # v53: surface_actions concept teaches action visible: + SM guard gating (#1787);
     # v52: integration concept teaches response.headers sources (#1776);

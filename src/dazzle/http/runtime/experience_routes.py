@@ -20,6 +20,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from dazzle.core import ir
 from dazzle.core.ir.experiences import StepKind
 from dazzle.core.strings import normalize_role
+from dazzle.http.runtime.auth.models import principal_of
 from dazzle.http.runtime.htmx import HtmxDetails
 from dazzle.http.runtime.page_routes import _build_dispatch_ctx, _reconcile_nav_model
 from dazzle.page.converters.nav_builder import (
@@ -37,6 +38,7 @@ from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_catalog_id,
     leftover_honest_catalog_option_values,
 )
+from dazzle.render.principal import Principal
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +74,7 @@ def _inject_auth(deps: _ExperienceDeps, request: Any) -> dict[str, Any]:
         "user_email": "",
         "user_name": "",
         "user_roles": [],
+        "principal": None,
     }
     if deps.get_auth_context is not None:
         try:
@@ -82,6 +85,7 @@ def _inject_auth(deps: _ExperienceDeps, request: Any) -> dict[str, Any]:
                     ctx["user_email"] = auth_ctx.user.email or ""
                     ctx["user_name"] = auth_ctx.user.username or ""
                     ctx["user_roles"] = list(getattr(auth_ctx.user, "roles", None) or [])
+                ctx["principal"] = principal_of(auth_ctx)
         except Exception:
             logger.warning("Failed to resolve auth context for experience", exc_info=True)
     return ctx
@@ -283,7 +287,9 @@ async def _experience_entry(deps: _ExperienceDeps, request: Request, name: str) 
     return response
 
 
-def _render_experience_surface_step(exp_ctx: Any, deps: _ExperienceDeps, request: Request) -> str:
+def _render_experience_surface_step(
+    exp_ctx: Any, deps: _ExperienceDeps, request: Request, principal: Principal | None
+) -> str:
     """ADR-0049 Phase 2 Task 6: render an experience list-step (Phase 1) OR
     detail-step through the substrate. The page layer can't import the http
     dispatch seam (page↛http), so the route pre-renders the surface body here
@@ -304,6 +310,7 @@ def _render_experience_surface_step(exp_ctx: Any, deps: _ExperienceDeps, request
     if services is None:
         return ""
     ctx = _build_dispatch_ctx(pc, surface, services=services)
+    ctx["principal"] = principal  # #1794 — renderer contract
     try:
         return dispatch_render(surface, ctx=ctx, services=services)
     except FragmentError:
@@ -412,7 +419,9 @@ async def _experience_step_get(
     current_route = f"{deps.app_prefix}/experiences/{name}/{step}"
 
     # ADR-0049 Task 6: pre-render a list- or detail-step's body via the substrate.
-    surface_step_html = _render_experience_surface_step(exp_ctx, deps, request)
+    surface_step_html = _render_experience_surface_step(
+        exp_ctx, deps, request, auth_ctx["principal"]
+    )
 
     # Fragment targeting: return only the content
     if htmx.wants_fragment:
@@ -476,6 +485,7 @@ async def _experience_step_get(
             theme=theme,
             font_preconnect=font_preconnect,
             favicon=favicon,
+            topbar_title=getattr(app_state, "fragment_chrome_topbar_title", "app"),
         )
         # auth_ctx + theme_css fields previously threaded into the
         # Jinja layout are dropped — the typed AppShell doesn't yet

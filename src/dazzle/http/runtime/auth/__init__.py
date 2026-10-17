@@ -53,6 +53,7 @@ from .models import (
     TokenRevokeRequest,
     UserRecord,
     effective_roles_of,
+    principal_of,
 )
 from .routes import create_auth_routes
 from .routes_jwt import create_jwt_auth_routes
@@ -65,6 +66,7 @@ __all__ = [
     "AUTH_USER_REGISTERED",
     "AuthContext",
     "effective_roles_of",
+    "principal_of",
     "AuthMiddleware",
     "AuthStore",
     "ChangePasswordRequest",

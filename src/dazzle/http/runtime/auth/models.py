@@ -7,6 +7,9 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from dazzle.core.strings import normalize_role
+from dazzle.render.principal import Principal
+
 # =============================================================================
 # Core Models
 # =============================================================================
@@ -185,6 +188,30 @@ def effective_roles_of(auth_context: object) -> list[str]:
     user = getattr(auth_context, "user", None)
     user_roles = getattr(user, "roles", None)
     return list(user_roles) if isinstance(user_roles, (list, tuple)) else []
+
+
+def principal_of(auth_context: object) -> Principal | None:
+    """The renderer-facing :class:`Principal` for an ``AuthContext`` (#1794).
+
+    ``None`` for an anonymous request. ``user_id`` is the same value
+    ``_build_access_context`` binds as the audit actor; ``roles`` are the
+    effective roles (membership-first, :func:`effective_roles_of`) without the
+    ``role_`` prefix; ``tenant_id`` is the active membership's tenant id.
+    """
+    if auth_context is None or not getattr(auth_context, "is_authenticated", False):
+        return None
+    user = getattr(auth_context, "user", None)
+    if user is None:
+        return None
+    membership = getattr(auth_context, "active_membership", None)
+    tenant = getattr(membership, "tenant_id", None) if membership is not None else None
+    return Principal(
+        user_id=str(user.id),
+        roles=tuple(normalize_role(r) for r in effective_roles_of(auth_context) if r),
+        tenant_id=str(tenant) if tenant else None,
+        email=getattr(user, "email", None) or None,
+        display_name=getattr(user, "username", None) or None,
+    )
 
 
 # =============================================================================

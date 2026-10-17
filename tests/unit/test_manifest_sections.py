@@ -2,7 +2,8 @@
 
 One table per outcome: a section is absent (default), parsed, filtered, or
 rejected loudly. Each row names the section and the issue that introduced it:
-[extensions] routers (#786), [renderers] extra (#1116), [ui] app_scripts (#1515), [auth.admin_capabilities] (admin-authz) and
+[extensions] routers (#786), [renderers] extra (#1116), [ui] app_scripts (#1515), [ui] topbar_title (#1794),
+[auth.admin_capabilities] (admin-authz) and
 [serve] app (ADR-0046), [auth.enterprise] protocols (DD-013).
 """
 
@@ -35,6 +36,7 @@ def _attr(obj: Any, dotted: str) -> Any:
         pytest.param("extensions.routers", [], id="extensions_786"),
         pytest.param("renderers.extra", [], id="renderers_1116"),
         pytest.param("app_scripts", [], id="ui_app_scripts_1515"),
+        pytest.param("topbar_title", "app", id="ui_topbar_title_1794"),
         pytest.param("auth.admin_capabilities", {}, id="auth_admin_capabilities"),
         pytest.param("serve.app", None, id="serve_app_adr0046"),
         pytest.param("auth.enterprise.protocols", [], id="auth_enterprise_dd013"),
@@ -70,6 +72,21 @@ def test_absent_section_defaults_empty(tmp_path: Path, attr: str, expected: Any)
             "app_scripts",
             ["/static/js/dz-islands.js", "/static/js/charts.js"],
             id="ui_app_scripts_in_order_1515",
+        ),
+        pytest.param(
+            "\n[ui]\ntopbar_title = false\n",
+            "topbar_title",
+            "none",
+            id="ui_topbar_title_false_1794",
+        ),
+        pytest.param(
+            "\n[ui]\ntopbar_title = true\n", "topbar_title", "app", id="ui_topbar_title_true_1794"
+        ),
+        pytest.param(
+            '\n[ui]\ntopbar_title = "page"\n',
+            "topbar_title",
+            "page",
+            id="ui_topbar_title_page_1794",
         ),
         pytest.param(
             '\n[auth]\nenabled = true\norg_admin_roles = ["org_admin"]\n'
@@ -138,6 +155,11 @@ def test_lenient_section_filters_bad_entries(
             '\n[ui]\napp_scripts = ["/static/js/ok.js", 42]\n',
             "app_scripts must be a list",
             id="ui_app_scripts_non_string_entry_1515",
+        ),
+        pytest.param(
+            '\n[ui]\ntopbar_title = "breadcrumb"\n',
+            "topbar_title must be true, false, or 'page'",
+            id="ui_topbar_title_unknown_1794",
         ),
         pytest.param(
             '\n[auth.enterprise]\nprotocols = ["oidc", "saml"]\n',
