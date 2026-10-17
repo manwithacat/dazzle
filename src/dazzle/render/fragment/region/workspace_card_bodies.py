@@ -28,6 +28,7 @@ from dazzle.core.ir.conditions import (
     ConditionExpr,
     LogicalOperator,
 )
+from dazzle.core.ir.workspaces import EntityCardAction
 from dazzle.i18n.display_locale import get_display_locale
 from dazzle.render.filters import _LEFTOVER_STAGE_TOKENS, clerk_quick_action_label
 
@@ -536,26 +537,29 @@ def _render_mini_bars_body(
     return f'<ul class="dz-entity-card-mini-bars">{"".join(bars)}</ul>'
 
 
-def _render_quick_actions_body(actions: list[str], titles: dict[str, str] | None = None) -> str:
+def _render_quick_actions_body(
+    actions: list[EntityCardAction], titles: dict[str, str] | None = None
+) -> str:
     """Render the body of an `entity_card` `quick_actions` section
     (#1017, v0.67.17).
 
-    Each action id renders as a `<button class="dz-quick-action"
-    data-dz-action="<id>">` carrying the authored surface title when
-    known (oral #158 — ``Create Alert``, not slug ``Alert Create``).
-    Leftover junk stays put. Project JS hooks `[data-dz-action]` to
-    open the matching surface as a modal flow.
+    Each action renders as a `<button class="dz-quick-action"
+    data-dz-action="<id>">`. The label is the authored ``id "Label"``
+    (#1815), else the surface title when the id names a surface (oral
+    #158 — ``Create Alert``, not slug ``Alert Create``), else the id
+    humanised (``Log behaviour``). Leftover junk stays put. Project JS
+    hooks `[data-dz-action]` to open the matching surface as a modal flow.
 
     Empty list returns an empty string — the caller flags the
     section omitted to avoid rendering an empty button row."""
     if not actions:
         return ""
     parts: list[str] = []
-    for action_id in actions:
-        action_str = str(action_id)
+    for action in actions:
+        action_str = str(action.id)
         if not action_str:
             continue
-        label = clerk_quick_action_label(action_str, titles)
+        label = action.label or clerk_quick_action_label(action_str, titles)
         parts.append(
             f'<button type="button" class="dz-quick-action" '
             f'data-dz-action="{_dazzle_html_escape(action_str)}">'

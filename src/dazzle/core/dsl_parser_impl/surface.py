@@ -13,6 +13,7 @@ from ..ir.location import SourceLocation
 from ..lexer import TokenType
 from ._columns import is_column_modifier, kw_page_size, parse_column_modifier
 from ._refresh import kw_refresh
+from ._text_template import parse_text_template_token
 from .dispatch import (
     KeywordParser,
     kw_as,
@@ -795,6 +796,7 @@ class _SurfaceState:
     open_via_targets: list[ir.OpenViaTarget] = field(default_factory=list)
     page_size: int | None = None  # #1792
     row_transitions: ir.RowTransitions | None = None  # #1813
+    title_template: ir.TextTemplate | None = None  # #1815
 
 
 # ---------- Token-keyed keyword parsers ---------- #
@@ -1054,6 +1056,18 @@ def _kw_show_history(parser: Any, state: _SurfaceState) -> None:
     parser.skip_newlines()
 
 
+def _kw_title(parser: Any, state: _SurfaceState) -> None:
+    """``title: "{agreement_type|upper} — {school.name}"`` — view-surface heading (#1815).
+
+    Interpolates the row into the page heading, document ``<title>`` and
+    breadcrumb leaf. Field paths are checked at validate time.
+    """
+    parser.advance()  # consume `title`
+    parser.expect(TokenType.COLON)
+    state.title_template = parse_text_template_token(parser)
+    parser.skip_newlines()
+
+
 # ---------- Dispatch tables + unknown handler ---------- #
 
 
@@ -1084,6 +1098,7 @@ _SURFACE_IDENT_KEYWORDS: dict[str, KeywordParser[_SurfaceState]] = {
     "open": _kw_open,  # #1603 — list row open via FK hop
     "page_size": kw_page_size,  # #1792 — rows per page
     "row_transitions": _kw_row_transitions,  # #1813 — SM transitions on list rows
+    "title": _kw_title,  # #1815 — row-interpolating view heading
 }
 
 
@@ -1112,23 +1127,14 @@ def _build_surface(
         if ux_spec is None:
             ux_spec = ir.UXSpec(persona_variants=state.persona_variants)
         else:
-            ux_spec = ir.UXSpec(
-                purpose=ux_spec.purpose,
-                show=ux_spec.show,
-                sort=ux_spec.sort,
-                filter=ux_spec.filter,
-                search=ux_spec.search,
-                empty_message=ux_spec.empty_message,
-                search_first=ux_spec.search_first,
-                attention_signals=ux_spec.attention_signals,
-                persona_variants=list(ux_spec.persona_variants) + state.persona_variants,
-                bulk_actions=list(ux_spec.bulk_actions),
-                measure=ux_spec.measure,
+            ux_spec = ux_spec.model_copy(
+                update={"persona_variants": list(ux_spec.persona_variants) + state.persona_variants}
             )
 
     return ir.SurfaceSpec(
         name=name,
         title=title,
+        title_template=state.title_template,  # #1815
         entity_ref=state.entity_ref,
         view_ref=state.view_ref,
         mode=state.mode,

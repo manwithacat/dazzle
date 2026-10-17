@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
+from ._text_template import parse_text_template_token
 from .dispatch import (
     KeywordParser,
     kw_as,
@@ -562,6 +563,7 @@ class _UXState:
     persona_variants: list[ir.PersonaVariant] = field(default_factory=list)
     bulk_actions: list[ir.BulkActionSpec] = field(default_factory=list)
     measure: str | None = None
+    breadcrumb: ir.BreadcrumbSpec | None = None  # #1810
 
 
 # ---------- Keyword parsers ---------- #
@@ -673,6 +675,44 @@ def _ux_kw_measure(parser: Any, state: _UXState) -> None:
     parser.skip_newlines()
 
 
+def _ux_kw_breadcrumb(parser: Any, state: _UXState) -> None:
+    """``breadcrumb: off`` or ``breadcrumb: "A" -> target > "B"`` (#1810).
+
+    ``off`` suppresses the shell trail. Otherwise a ``>``-separated list of
+    crumbs replaces it; each crumb is a STRING label (a row-interpolating
+    text template on view surfaces) optionally followed by ``-> <surface or
+    workspace name>``. Targets and placeholders are checked at validate time.
+    """
+    parser.advance()  # consume `breadcrumb`
+    parser.expect(TokenType.COLON)
+    if not parser.match(TokenType.STRING):
+        tok = parser.expect_identifier_or_keyword()
+        if tok.value != "off":
+            raise make_parse_error(
+                f"ux.breadcrumb must be `off` or a `>`-separated list of quoted crumbs, "
+                f"got {tok.value!r}",
+                parser.file,
+                tok.line,
+                tok.column,
+            )
+        state.breadcrumb = ir.BreadcrumbSpec(off=True)
+        parser.skip_newlines()
+        return
+    crumbs: list[ir.BreadcrumbCrumbSpec] = []
+    while True:
+        label = parse_text_template_token(parser)
+        target: str | None = None
+        if parser.match(TokenType.ARROW):
+            parser.advance()
+            target = parser.expect_identifier_or_keyword().value
+        crumbs.append(ir.BreadcrumbCrumbSpec(label=label, target=target))
+        if not parser.match(TokenType.GREATER_THAN):
+            break
+        parser.advance()
+    state.breadcrumb = ir.BreadcrumbSpec(crumbs=crumbs)
+    parser.skip_newlines()
+
+
 # ---------- Dispatch tables ---------- #
 
 
@@ -693,6 +733,7 @@ _UX_IDENT_KEYWORDS: dict[str, KeywordParser[_UXState]] = {
     "bulk_actions": _ux_kw_bulk_actions,
     "measure": _ux_kw_measure,
     "show_purpose": _ux_kw_show_purpose,
+    "breadcrumb": _ux_kw_breadcrumb,  # #1810
 }
 
 
@@ -710,4 +751,5 @@ def _build_ux(state: _UXState) -> ir.UXSpec:
         persona_variants=state.persona_variants,
         bulk_actions=state.bulk_actions,
         measure=state.measure,
+        breadcrumb=state.breadcrumb,
     )

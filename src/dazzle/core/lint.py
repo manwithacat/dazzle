@@ -2,6 +2,7 @@ from . import ir
 from .discovery import RelevanceGroup, suggest_capabilities
 from .validation.entities import validate_second_factor_guards
 from .validation.grants import validate_grant_relation_clauses, validate_permit_grant_checks
+from .validation.surface_titles import validate_surface_titles_and_breadcrumbs
 from .validation.tenancy import validate_tenancy_mode_implemented
 from .validator import (
     extended_lint,
@@ -298,6 +299,11 @@ def lint_appspec(
     from dazzle.core.validation.ux import validate_emits_targets
 
     errors, warnings = validate_emits_targets(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # #1815 / #1810: view `title:` templates and per-surface `ux: breadcrumb:` trails.
+    errors, warnings = validate_surface_titles_and_breadcrumbs(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

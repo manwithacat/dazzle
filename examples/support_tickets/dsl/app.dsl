@@ -372,6 +372,9 @@ surface ticket_detail "Ticket Detail":
   uses entity Ticket
   mode: view
   render: fragment
+  # #1815 probe: the hub heading, <title> and breadcrumb leaf name the record
+  # (one FK hop through the auto-included creator), not "Ticket Detail".
+  title: "{title} — {created_by.name}"
 
   section summary "Summary":
     field ticket_number "Ticket #"

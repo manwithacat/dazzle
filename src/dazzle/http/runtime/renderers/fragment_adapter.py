@@ -469,7 +469,9 @@ class FragmentSurfaceAdapter:
         Region(kind="detail") body keeps them adjacent to the fields
         they act on.
         """
-        title = surface.title or surface.name.replace("_", " ").title()
+        title = (
+            str(ctx.get("heading") or "") or surface.title or surface.name.replace("_", " ").title()
+        )
         fields: list[dict[str, Any]] = ctx.get("fields", [])
         # #1600 Wedge B: multi-section overview (header / strip / …).
         sections: list[dict[str, Any]] = ctx.get("sections", []) or []

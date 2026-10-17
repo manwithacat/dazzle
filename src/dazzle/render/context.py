@@ -14,6 +14,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from dazzle.core.ir.columns import DEFAULT_PAGE_SIZE
+from dazzle.core.ir.text_template import TextTemplate
 from dazzle.render.principal import Principal
 
 
@@ -356,6 +357,9 @@ class DetailContext(BaseModel):
 
     entity_name: str
     title: str
+    # #1815: the surface ``title:`` template rendered against this record
+    # (per request). Empty → the static surface title heads the page.
+    heading: str = ""
     fields: list[FieldContext]
     item: dict[str, Any] = Field(default_factory=dict)
     api_endpoint: str | None = None
@@ -463,6 +467,18 @@ class CustomRenderCtx:
     principal: Principal | None = None
 
 
+class BreadcrumbCrumbContext(BaseModel):
+    """One authored shell crumb (#1810, surface ``ux: breadcrumb:``).
+
+    ``label_template`` is set only when the label interpolates the record
+    (view surfaces); the detail handler renders it into ``label`` per request.
+    """
+
+    label: str = ""
+    url: str | None = None
+    label_template: TextTemplate | None = None
+
+
 class PageContext(BaseModel):
     """Top-level page context passed to templates."""
 
@@ -510,6 +526,9 @@ class PageContext(BaseModel):
     # oral #191: ``entity_slug(name)`` → clerk title so shell breadcrumbs
     # do not dump ``Issuereport`` from ``/app/issuereport``. Empty = title-case.
     entity_path_labels: dict[str, str] = Field(default_factory=dict)
+    # #1810: authored shell trail from ``ux: breadcrumb:``. ``None`` → the
+    # URL-derived trail; ``[]`` → ``breadcrumb: off`` (no trail at all).
+    breadcrumb_trail: list[BreadcrumbCrumbContext] | None = None
     # Parent workspace name when rendering a workspace shell (cycle 1560).
     # Dispatch uses this to infer content_measure=app when measure is unset.
     # Empty on entity list/form/detail pages.

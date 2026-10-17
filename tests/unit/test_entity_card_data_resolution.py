@@ -16,6 +16,7 @@ import pytest
 from pydantic import BaseModel
 
 from dazzle.core.ir.workspaces import (
+    EntityCardAction,
     EntityCardConfig,
     EntityCardSection,
     EntityCardSectionMode,
@@ -39,7 +40,7 @@ def _section(
         name=name,
         mode=mode,
         fields=fields or [],
-        actions=actions or [],
+        actions=[EntityCardAction(id=a) for a in actions or []],
     )
 
 
@@ -367,9 +368,9 @@ def test_quick_actions_mode_renders_button_row() -> None:
     assert 'data-dz-action="log_behaviour"' in body
     assert 'data-dz-action="message_parent"' in body
     assert 'data-dz-action="open_in_fastmark"' in body
-    # Button labels humanise the action id.
-    assert ">Log Behaviour<" in body
-    assert ">Message Parent<" in body
+    # Button labels humanise the action id (#1815: sentence case).
+    assert ">Log behaviour<" in body
+    assert ">Message parent<" in body
 
 
 def test_quick_actions_with_only_empty_action_ids_renders_empty_body() -> None:

@@ -407,6 +407,8 @@ def _dispatch_ctx_from_detail(
         item_id = str(item.get("id", "") or "")
     ctx: dict[str, Any] = {
         "fields": detail_fields_out,
+        # #1815: the record-interpolated `title:`; empty → the surface title.
+        "heading": getattr(detail, "heading", "") or "",
         "sections": _detail_sections_from_context(detail),
         "region_name": f"{entity_name}_detail",
         "related_groups": _related_groups_from_detail(detail, requested_tab),

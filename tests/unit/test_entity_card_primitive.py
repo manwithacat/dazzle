@@ -26,6 +26,7 @@ import pytest
 
 from dazzle.core.ir.workspaces import (
     DisplayMode,
+    EntityCardAction,
     EntityCardConfig,
     EntityCardSectionMode,
     WorkspaceRegion,
@@ -82,9 +83,15 @@ def test_ir_section_quick_actions_carries_action_list() -> None:
     s = IREntityCardSection(
         name="quick_actions",
         mode=EntityCardSectionMode.QUICK_ACTIONS,
-        actions=["log_behaviour", "message_parent", "open_in_fastmark"],
+        actions=[
+            EntityCardAction(id="log_behaviour"),
+            EntityCardAction(id="message_parent", label="Message parent"),
+        ],
     )
-    assert len(s.actions) == 3
+    assert [(a.id, a.label) for a in s.actions] == [
+        ("log_behaviour", None),
+        ("message_parent", "Message parent"),
+    ]
 
 
 def test_config_default_scope_param_is_generic() -> None:

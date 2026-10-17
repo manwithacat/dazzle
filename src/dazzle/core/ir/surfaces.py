@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .columns import MAX_PAGE_SIZE, ColumnSpec
 from .conditions import ConditionExpr
 from .location import SourceLocation
+from .text_template import TextTemplate
 from .ux import UXSpec
 
 if TYPE_CHECKING:
@@ -406,7 +407,10 @@ class SurfaceSpec(BaseModel):
 
     Attributes:
         name: Surface identifier
-        title: Human-readable title
+        title: Human-readable title (static — nav, links, quick-action labels)
+        title_template: ``title:`` body line on a ``mode: view`` surface
+            (#1815) — interpolates the row into the page heading, the
+            document ``<title>`` and the breadcrumb leaf. ``None`` = ``title``.
         entity_ref: Optional reference to an entity
         mode: Surface mode (view, create, edit, list, custom)
         sections: List of sections containing elements
@@ -421,6 +425,7 @@ class SurfaceSpec(BaseModel):
 
     name: str
     title: str | None = None
+    title_template: TextTemplate | None = None  # #1815
     entity_ref: str | None = None
     view_ref: str | None = None  # Optional view for list field projection
     mode: SurfaceMode

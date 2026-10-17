@@ -13,6 +13,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from .conditions import ConditionExpr
+from .text_template import TextTemplate
 
 
 class SignalLevel(StrEnum):
@@ -185,6 +186,36 @@ class EmptyMessages(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class BreadcrumbCrumbSpec(BaseModel):
+    """One authored crumb of a surface's ``ux: breadcrumb:`` trail (#1810).
+
+    Attributes:
+        label: Crumb text; on a ``mode: view`` surface it may interpolate the
+            row (same :class:`TextTemplate` as the surface ``title:``).
+        target: Surface or workspace name the crumb links to (``-> name``);
+            ``None`` = plain text. The last crumb is the current page and
+            never links.
+    """
+
+    label: TextTemplate
+    target: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+class BreadcrumbSpec(BaseModel):
+    """A surface's ``ux: breadcrumb:`` directive (#1810).
+
+    ``off`` suppresses the shell trail; otherwise ``crumbs`` replaces the
+    URL-derived trail outright. An absent directive keeps the default trail.
+    """
+
+    off: bool = False
+    crumbs: list[BreadcrumbCrumbSpec] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+
 class UXSpec(BaseModel):
     """
     Complete UX specification for a surface.
@@ -214,6 +245,8 @@ class UXSpec(BaseModel):
             ``ux.measure`` but the IR field and UX parser never stored it.
             Empty/None → mode defaults (list→app, form/detail→product,
             workspace→app).
+        breadcrumb: Per-surface shell breadcrumb override (#1810); ``None``
+            keeps the URL-derived trail.
     """
 
     purpose: str | None = None
@@ -228,5 +261,6 @@ class UXSpec(BaseModel):
     persona_variants: list[PersonaVariant] = Field(default_factory=list)
     bulk_actions: list[BulkActionSpec] = Field(default_factory=list)
     measure: str | None = None  # app | product | wide | full (shell max-width)
+    breadcrumb: BreadcrumbSpec | None = None  # #1810
 
     model_config = ConfigDict(frozen=True)

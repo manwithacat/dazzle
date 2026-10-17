@@ -627,23 +627,23 @@ def clerk_related_tab_fk_label(field_key: Any) -> str:
 
 
 def clerk_quick_action_label(action_id: Any, titles: dict[str, str] | None = None) -> str:
-    """Clerk-facing entity-card quick-action CTA (oral #158).
+    """Clerk-facing entity-card quick-action CTA (oral #158, #1815).
 
-    ``alert_create`` dumped as ``Alert Create`` while the authored
-    surface is ``Create Alert``. Leftover junk stays put. Unknown ids
-    with a title catalog stay put (do not invent title-case).
+    An id naming a surface takes its authored title (``alert_create`` →
+    ``Create Alert``). Any other id is humanised in sentence case
+    (``log_behaviour`` → ``Log behaviour``) — never raw snake_case. Leftover
+    junk stays put.
     """
     text = str(action_id or "").strip()
     if not text:
         return ""
     if text.lower() in _LEFTOVER_STAGE_TOKENS:
         return text
-    if titles:
-        titled = str(titles.get(text) or "").strip()
-        if titled:
-            return titled
-        return text
-    return clerk_stage_label(text)
+    titled = str((titles or {}).get(text) or "").strip()
+    if titled:
+        return titled
+    words = text.replace("_", " ").strip()
+    return words[:1].upper() + words[1:]
 
 
 def _clerk_entity_card_iso_display(text: str) -> str | None:

@@ -610,6 +610,7 @@ surface_body_line
                 | "row_transitions" ":" ("all" | "none") NEWLINE
                                                    (* #1813: mode: list; none = no state
                                                       transitions on the rows *)
+                | "title" ":" text_template NEWLINE (* #1815: mode: view only *)
                 | section_decl
                 | surface_action_decl ;
 
@@ -634,6 +635,20 @@ surface_element_option
 column_modifier
               ::= "width" ":" NUMBER ("%" | "rem" | "ch")
                 | "truncate" (":" BOOLEAN)? ;
+
+(* #1815: a STRING parsed once into literal text and placeholders. A placeholder
+   names a field of the surface's entity or one FK hop (ref_field.field), then
+   optional filters. "{{" / "}}" are literal braces. Fields resolve at validate
+   time (E_TEMPLATE_*); a null renders empty; output is HTML-escaped. On a
+   view surface `title:` heads the page and names the document <title> and the
+   breadcrumb leaf; the header STRING stays the static name (nav, links). *)
+text_template ::= STRING ;   (* e.g. "{agreement_type|upper} — {school.name}" *)
+
+template_placeholder
+              ::= "{" IDENT ("." IDENT)? ("|" template_filter)* "}" ;
+
+template_filter
+              ::= "upper" | "lower" | "title" | "date" ;
 
 (* #1787: one "on" line (required) and an optional "visible:" line, either order. *)
 surface_action_decl
@@ -670,8 +685,20 @@ ux_directive  ::= "purpose" ":" STRING NEWLINE
                 | "search" ":" field_list NEWLINE
                 | "empty" ":" STRING NEWLINE
                 | "show_purpose" ":" ("true" | "false") NEWLINE
+                | "breadcrumb" ":" breadcrumb_spec NEWLINE   (* #1810: surfaces only *)
                 | attention_block
                 | persona_block ;
+
+(* #1810: `off` hides the shell trail; a crumb list replaces it. Each label is a
+   text_template (placeholders only on mode: view surfaces); `-> name` links a
+   declared surface (not view/edit) or workspace. The last crumb is the current
+   page and takes no target. *)
+breadcrumb_spec
+              ::= "off"
+                | breadcrumb_crumb (">" breadcrumb_crumb)* ;
+
+breadcrumb_crumb
+              ::= text_template ("->" IDENT)? ;
 
 field_list    ::= IDENT ("," IDENT)* ;
 
@@ -744,6 +771,13 @@ region_directive
                 | "aggregate" ":" NEWLINE INDENT metric_line+ DEDENT ;
 
 region_column ::= IDENT ("(" column_modifier ("," column_modifier)* ")")? ;
+
+(* #1815: entity_card `quick_actions` section entries —
+   `actions: [behaviour_create, send_reply "Reply to parent"]`. An unlabelled id
+   naming a surface takes the surface title; any other id is humanised
+   ("log_behaviour" → "Log behaviour"). *)
+quick_action_entry
+              ::= IDENT STRING? ;
 
 metric_line   ::= IDENT ":" (aggregate_call | derived_metric_expr) NEWLINE ;
 

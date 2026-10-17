@@ -1,7 +1,7 @@
 {
-  "src_lines": 329718,
-  "test_lines": 319422,
-  "docs_lines": 49431,
+  "src_lines": 329605,
+  "test_lines": 319691,
+  "docs_lines": 49464,
   "construct_count": 31,
   "written": "2026-10-17",
   "exceptions": [
@@ -586,6 +586,14 @@
         "docs_lines"
       ],
       "reason": "#1813 transition labels/confirms + row_transitions, consumer-forced"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1815 #1810 surface titles, breadcrumb, quick-action labels; consumer-forced"
     }
   ]
 }

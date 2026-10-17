@@ -699,6 +699,20 @@ class EntityCardSectionMode(StrEnum):
     QUICK_ACTIONS = "quick_actions"
 
 
+class EntityCardAction(BaseModel):
+    """One entry of an entity_card ``quick_actions`` section (#1815).
+
+    Authored as ``id`` or ``id "Label"``. An unlabelled id that names a
+    surface takes the surface title; any other id is humanised
+    (``log_behaviour`` → "Log behaviour").
+    """
+
+    id: str
+    label: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
 class EntityCardSection(BaseModel):
     """One section in an `entity_card` composite (#1017).
 
@@ -722,9 +736,9 @@ class EntityCardSection(BaseModel):
         fields: For halo / flags modes, the ordered list of field
             names to surface. Other modes ignore this and resolve
             their own field set per the mode contract.
-        actions: For QUICK_ACTIONS mode, the ordered list of action
-            ids referencing surface entries (each opens a modal
-            flow). Empty for non-actions modes.
+        actions: For QUICK_ACTIONS mode, the ordered action entries
+            (id + optional authored label, #1815); an id typically names
+            a surface (each opens a modal flow). Empty for other modes.
     """
 
     name: str
@@ -733,7 +747,7 @@ class EntityCardSection(BaseModel):
     filter: ConditionExpr | None = None
     limit: int | None = Field(None, ge=1, le=100)
     fields: list[str] = Field(default_factory=list)
-    actions: list[str] = Field(default_factory=list)
+    actions: list[EntityCardAction] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

@@ -30,6 +30,7 @@ from dazzle.page.route_owners import surface_route, surface_wins
 from dazzle.render.breadcrumbs import entity_path_labels_from_spec
 from dazzle.render.channel_cell import email_field_name, phone_field_name
 from dazzle.render.context import (
+    BreadcrumbCrumbContext,
     ColumnContext,
     CompanionContext,
     CompanionEntryContext,
@@ -1642,6 +1643,45 @@ def _compile_custom_surface(
     )
 
 
+def _breadcrumb_target_url(target: str, appspec: ir.AppSpec, app_prefix: str) -> str | None:
+    """URL for a ``-> target`` crumb: a declared surface's page, else a workspace."""
+    for surface in appspec.surfaces:
+        if surface.name == target:
+            entity = (
+                appspec.domain.get_entity(surface.entity_ref)
+                if appspec.domain and surface.entity_ref
+                else None
+            )
+            entity_name = entity.name if entity else (surface.entity_ref or "item")
+            return surface_route(surface, app_prefix, entity_name)
+    if any(ws.name == target for ws in appspec.workspaces):
+        return f"{app_prefix}/workspaces/{target}"
+    return None
+
+
+def _compile_breadcrumb_trail(
+    surface: ir.SurfaceSpec, appspec: ir.AppSpec, app_prefix: str
+) -> list[BreadcrumbCrumbContext] | None:
+    """``ux: breadcrumb:`` → the shell trail (#1810). ``None`` keeps the URL trail.
+
+    Static labels resolve here; a label that interpolates the record keeps
+    its template for the detail handler to render per request.
+    """
+    spec = surface.ux.breadcrumb if surface.ux is not None else None
+    if spec is None:
+        return None
+    if spec.off:
+        return []
+    return [
+        BreadcrumbCrumbContext(
+            label=crumb.label.static_text() if crumb.label.is_static else "",
+            url=_breadcrumb_target_url(crumb.target, appspec, app_prefix) if crumb.target else None,
+            label_template=None if crumb.label.is_static else crumb.label,
+        )
+        for crumb in spec.crumbs
+    ]
+
+
 def compile_surface_to_context(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
@@ -1808,6 +1848,7 @@ def compile_appspec_to_templates(
         ctx.view_name = surface.name
         ctx.entity_ref = surface.entity_ref or ""
         ctx.entity_path_labels = entity_path_labels_from_spec(appspec)
+        ctx.breadcrumb_trail = _compile_breadcrumb_trail(surface, appspec, app_prefix)
 
         # Determine the route for this surface
         entity_name = entity.name if entity else (surface.entity_ref or "item")

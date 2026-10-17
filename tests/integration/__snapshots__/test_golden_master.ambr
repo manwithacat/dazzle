@@ -1219,6 +1219,7 @@
           'line': 12,
         }),
         'title': 'Task List',
+        'title_template': None,
         'ux': None,
         'view_ref': None,
       }),
@@ -1305,6 +1306,7 @@
           'line': 20,
         }),
         'title': 'Task Detail',
+        'title_template': None,
         'ux': None,
         'view_ref': None,
       }),
@@ -1379,6 +1381,7 @@
           'line': 29,
         }),
         'title': 'Create Task',
+        'title_template': None,
         'ux': None,
         'view_ref': None,
       }),
@@ -1465,6 +1468,7 @@
           'line': 37,
         }),
         'title': 'Edit Task',
+        'title_template': None,
         'ux': None,
         'view_ref': None,
       }),
@@ -1568,9 +1572,11 @@
         'show_history': False,
         'source': None,
         'title': 'System Health',
+        'title_template': None,
         'ux': dict({
           'attention_signals': list([
           ]),
+          'breadcrumb': None,
           'bulk_actions': list([
           ]),
           'empty_message': 'No records yet.',
@@ -1699,9 +1705,11 @@
         'show_history': False,
         'source': None,
         'title': 'Deploy History',
+        'title_template': None,
         'ux': dict({
           'attention_signals': list([
           ]),
+          'breadcrumb': None,
           'bulk_actions': list([
           ]),
           'empty_message': 'No records yet.',

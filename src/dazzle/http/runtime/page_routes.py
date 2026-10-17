@@ -93,6 +93,7 @@ from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_iso_date,
 )
 from dazzle.render.fragment.state_affordance import gated_row_transitions
+from dazzle.render.text_template import record_page_chrome
 
 logger = logging.getLogger(__name__)
 
@@ -2132,6 +2133,18 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
     # SM's own role/expression guards), field/section/tab `visible:` against
     # the record and principal, and surface actions by their `visible:`.
     _surface = _surface_spec(prc.deps.appspec, prc.surface_name)
+    # #1815 / #1810: the record names the heading, <title>, URL-trail leaf
+    # and any interpolating authored crumbs — from the row already loaded.
+    _heading, _trail = record_page_chrome(
+        _surface.title_template if _surface is not None else None,
+        prc.ctx.breadcrumb_trail,
+        req_detail.item,
+    )
+    if _heading:
+        req_detail.heading = _heading
+        prc.ctx_overrides["page_title"] = _heading
+    if _trail is not None:
+        prc.ctx_overrides["breadcrumb_trail"] = _trail
     _principal = await _detail_principal(prc, _surface)
     _service = prc.deps.entity_services.get(req_detail.entity_name)
     gate_detail_affordances(

@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 277 BaseModels, 105 Enums, 22 other (functions / typealiases / constants)
+# Counts: 283 BaseModels, 105 Enums, 25 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -275,6 +275,18 @@ ir_class: BrandSpec
     - logo: LogoSpec = <factory:LogoSpec>
     - support_email: str | None = None
     - tagline: str | None = None
+
+ir_class: BreadcrumbCrumbSpec
+  required:
+    - label: TextTemplate
+  optional:
+    - target: str | None = None
+
+ir_class: BreadcrumbSpec
+  required: (none)
+  optional:
+    - crumbs: list[BreadcrumbCrumbSpec] = []
+    - off: bool = False
 
 ir_class: BucketRef
   required:
@@ -591,6 +603,12 @@ ir_class: EntityBlueprint
     - row_count_default: int = 10
     - tenant_scoped: bool = False
 
+ir_class: EntityCardAction
+  required:
+    - id: str
+  optional:
+    - label: str | None = None
+
 ir_class: EntityCardConfig
   required:
     - sections: list[EntityCardSection]
@@ -602,7 +620,7 @@ ir_class: EntityCardSection
     - mode: EntityCardSectionMode
     - name: str
   optional:
-    - actions: list[str] = []
+    - actions: list[EntityCardAction] = []
     - fields: list[str] = []
     - filter: ConditionExpr | None = None
     - limit: int | None = None
@@ -2181,6 +2199,7 @@ ir_class: SurfaceSpec
     - show_history: bool = False
     - source: SourceLocation | None = None
     - title: str | None = None
+    - title_template: TextTemplate | None = None
     - ux: UXSpec | None = None
     - view_ref: str | None = None
 
@@ -2188,6 +2207,18 @@ ir_class: Tautology
   required: (none)
   optional:
     - kind: Literal[tautology] = 'tautology'
+
+ir_class: TemplatePlaceholder
+  required:
+    - path: tuple[str, Ellipsis]
+  optional:
+    - filters: tuple[str, Ellipsis] = ()
+
+ir_class: TemplateSegment
+  required: (none)
+  optional:
+    - placeholder: TemplatePlaceholder | None = None
+    - text: str = ''
 
 ir_class: TemporalSpec
   required:
@@ -2295,6 +2326,12 @@ ir_class: TestimonialItem
     - company: str | None = None
     - role: str | None = None
 
+ir_class: TextTemplate
+  required:
+    - source: str
+  optional:
+    - segments: tuple[TemplateSegment, Ellipsis] = ()
+
 ir_class: ThemeMetaSpec
   required: (none)
   optional:
@@ -2354,6 +2391,7 @@ ir_class: UXSpec
   required: (none)
   optional:
     - attention_signals: list[AttentionSignal] = []
+    - breadcrumb: BreadcrumbSpec | None = None
     - bulk_actions: list[BulkActionSpec] = []
     - empty_message: str | EmptyMessages | None = None
     - filter: list[str] = []
@@ -3437,6 +3475,9 @@ enum: WorkspaceAccessLevel
 # snapshotted; only the export name + category is pinned (so removal/rename
 # fires the drift gate).
 
+category: class_other
+  - TextTemplateError (class, bases=[ValueError])
+
 category: constant
   - AI_JOB_FIELDS: list (len=12)
   - CALENDAR_PERIODS: tuple (len=4)
@@ -3447,6 +3488,7 @@ category: constant
   - FEEDBACK_REPORT_FIELDS: tuple (len=27)
   - MAX_PAGE_SIZE: int = 100
   - MONEY_FIELD_PATTERNS: frozenset (len=24)
+  - TEXT_TEMPLATE_FILTERS: frozenset (len=4)
 
 category: function
   - AggregateFunc (callable, type=_LiteralGenericAlias)
@@ -3459,6 +3501,7 @@ category: function
   - get_currency_scale (callable, type=function)
   - is_money_field_name (callable, type=function)
   - money_from_dict (callable, type=function)
+  - parse_text_template (callable, type=function)
   - to_money (callable, type=function)
 
 category: typealias

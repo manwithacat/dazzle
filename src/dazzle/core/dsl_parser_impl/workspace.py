@@ -1220,7 +1220,7 @@ class WorkspaceParserMixin:
                   limit: 5
                 - name: quick_actions
                   mode: quick_actions
-                  actions: [log_behaviour, message_parent]
+                  actions: [behaviour_create, message_parent "Message parent"]
 
         ``scope_param`` is optional (defaults ``"id"``). ``sections``
         is required and must be non-empty.
@@ -1284,7 +1284,8 @@ class WorkspaceParserMixin:
         with ``- name:``. Required keys after ``name``: ``mode`` (one of
         halo / flags / mini_bars / stamps / thread_summary / quick_actions).
         Optional: source, filter, limit (1..100), fields (bracketed
-        identifier list), actions (bracketed identifier list).
+        identifier list), actions (bracketed list of ``id`` or
+        ``id "Label"`` entries, #1815).
         """
         sections: list[ir.EntityCardSection] = []
         while not self.match(TokenType.DEDENT):
@@ -1336,7 +1337,7 @@ class WorkspaceParserMixin:
         "ir.ConditionExpr | None",
         int | None,
         list[str],
-        list[str],
+        list[ir.EntityCardAction],
     ]:
         """Consume the optional indented mode/source/filter/limit/fields/actions block.
 
@@ -1351,7 +1352,7 @@ class WorkspaceParserMixin:
         filter_expr: ir.ConditionExpr | None = None
         limit_val: int | None = None
         fields_list: list[str] = []
-        actions_list: list[str] = []
+        actions_list: list[ir.EntityCardAction] = []
 
         if not self.match(TokenType.INDENT):
             return mode_val, source_str, filter_expr, limit_val, fields_list, actions_list
@@ -1389,7 +1390,7 @@ class WorkspaceParserMixin:
                 fields_list = self._parse_bracketed_ident_list()
                 self.skip_newlines()
             elif key == "actions":
-                actions_list = self._parse_bracketed_ident_list()
+                actions_list = self._parse_entity_card_actions_list()
                 self.skip_newlines()
             else:
                 raise make_parse_error(
@@ -1400,6 +1401,21 @@ class WorkspaceParserMixin:
                 )
         self.expect(TokenType.DEDENT)
         return mode_val, source_str, filter_expr, limit_val, fields_list, actions_list
+
+    def _parse_entity_card_actions_list(self) -> list[ir.EntityCardAction]:
+        """Consume ``[id, id "Label", ...]`` — quick_actions entries (#1815)."""
+        out: list[ir.EntityCardAction] = []
+        self.expect(TokenType.LBRACKET)
+        while not self.match(TokenType.RBRACKET):
+            action_id = self.expect_identifier_or_keyword().value
+            label: str | None = None
+            if self.match(TokenType.STRING):
+                label = self.expect(TokenType.STRING).value
+            out.append(ir.EntityCardAction(id=action_id, label=label))
+            if self.match(TokenType.COMMA):
+                self.advance()
+        self.expect(TokenType.RBRACKET)
+        return out
 
     def _parse_bracketed_ident_list(self) -> list[str]:
         """Consume ``[ident1, ident2, ...]`` and return the identifier list."""

@@ -560,6 +560,16 @@ from .test_design import (
     TestGapCategory,
 )
 
+# Row-interpolating text templates (#1815)
+from .text_template import (
+    TEXT_TEMPLATE_FILTERS,
+    TemplatePlaceholder,
+    TemplateSegment,
+    TextTemplate,
+    TextTemplateError,
+    parse_text_template,
+)
+
 # ThemeSpec YAML (v0.25.0 Declarative Theme)
 from .themespec import (
     AttentionMapSpec,
@@ -596,6 +606,8 @@ from .triples import (
 # UX Semantic Layer
 from .ux import (
     AttentionSignal,
+    BreadcrumbCrumbSpec,
+    BreadcrumbSpec,
     BulkActionSpec,
     EmptyMessages,
     PersonaVariant,
@@ -623,6 +635,7 @@ from .workspaces import (
     DayTimelineConfig,
     DeltaSpec,
     DisplayMode,
+    EntityCardAction,
     EntityCardConfig,
     EntityCardSection,
     EntityCardSectionMode,
@@ -723,6 +736,14 @@ __all__ = [
     "PersonaVariant",
     "SortSpec",
     "UXSpec",
+    "BreadcrumbCrumbSpec",
+    "BreadcrumbSpec",
+    "TEXT_TEMPLATE_FILTERS",
+    "TemplatePlaceholder",
+    "TemplateSegment",
+    "TextTemplate",
+    "TextTemplateError",
+    "parse_text_template",
     # Surfaces
     "BusinessPriority",
     "RelatedDisplayMode",
@@ -772,6 +793,7 @@ __all__ = [
     "DayTimelineConfig",
     "EntityCardConfig",
     "EntityCardSection",
+    "EntityCardAction",
     "EntityCardSectionMode",
     "NoticeSpec",
     "OverlaySeriesSpec",

@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 
 from dazzle.core.errors import ParseError
+from dazzle.core.ir import EntityCardAction
 from tests.unit.helpers.dsl import region_config
 
 _RECORD = """
@@ -66,14 +67,14 @@ def test_parses_section_with_source_filter_limit() -> None:
             id="fields-list",
         ),
         pytest.param(
-            "mode: quick_actions\n    actions: [reload, archive]",
+            'mode: quick_actions\n    actions: [reload, archive "Archive now"]',
             "actions",
-            ["reload", "archive"],
-            id="actions-list",
+            [EntityCardAction(id="reload"), EntityCardAction(id="archive", label="Archive now")],
+            id="actions-list-with-labels",  # #1815
         ),
     ],
 )
-def test_parses_section_list_key(section_keys: str, attr: str, expected: list[str]) -> None:
+def test_parses_section_list_key(section_keys: str, attr: str, expected: list[Any]) -> None:
     cfg = _parse(f"sections:\n  - name: s\n    {section_keys}\n")
     assert getattr(cfg.sections[0], attr) == expected
 
