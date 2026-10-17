@@ -659,13 +659,18 @@ def validate_nav_curation(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
 
 
 def validate_workspace_region_actions(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
-    """Error when a region `action:` on a cross-entity surface has no valid FK path (#861).
+    """Error when a region `action:` cannot resolve to a working drill.
 
-    When a region sourced from entity A declares `action: some_surface` and
-    `some_surface` is bound to a different entity B, the runtime looks for a
-    single FK field on A that references B to thread the row ID through to
-    the action URL. If zero or multiple FK candidates exist, the action URL
-    silently misfires at runtime. Flag both conditions at validate time.
+    * #1412 — the name matches neither a workspace nor a surface.
+    * #861 — when a region sourced from entity A declares `action: some_surface`
+      and `some_surface` is bound to a different entity B, the runtime looks
+      for a single FK field on A that references B to thread the row ID
+      through to the action URL. Zero or multiple FK candidates misfire.
+    * #1798 — on a `metrics` / `summary` region the whole tile drills, and a
+      tile counts many rows: a VIEW/EDIT (row-id) surface has no id to fill.
+
+    A workspace target (`action: <workspace>`, #916) resolves before surfaces
+    — the runtime order — and needs no FK check.
     """
     errors: list[str] = []
     warnings: list[str] = []
@@ -674,11 +679,16 @@ def validate_workspace_region_actions(appspec: ir.AppSpec) -> tuple[list[str], l
 
     surfaces_by_name: dict[str, ir.SurfaceSpec] = {s.name: s for s in appspec.surfaces}
     entities_by_name: dict[str, ir.EntitySpec] = {e.name: e for e in appspec.domain.entities}
+    workspace_names = {w.name for w in appspec.workspaces}
+    tile_displays = (ir.DisplayMode.METRICS, ir.DisplayMode.SUMMARY)
+    set_surface_modes = (ir.SurfaceMode.LIST, ir.SurfaceMode.CREATE)
 
     for workspace in appspec.workspaces:
         for region in workspace.regions:
             if not region.action:
                 continue
+            if region.action in workspace_names:
+                continue  # workspace drill (#916) — no FK threading
             action_surface = surfaces_by_name.get(region.action)
             if action_surface is None:
                 # #1412: an `action:` referencing a non-existent surface was
@@ -691,11 +701,21 @@ def validate_workspace_region_actions(appspec: ir.AppSpec) -> tuple[list[str], l
                     region_label = getattr(region, "name", None) or region.source or "?"
                     errors.append(
                         f"Workspace '{workspace.name}' region '{region_label}' declares "
-                        f"`action: {region.action}` but no surface named "
+                        f"`action: {region.action}` but no surface or workspace named "
                         f"'{region.action}' exists — the row-click action would "
                         f"navigate to a non-existent surface at runtime."
                     )
                 continue
+            if region.display in tile_displays:
+                if action_surface.mode not in set_surface_modes:
+                    errors.append(
+                        f"Workspace '{workspace.name}' region '{region.name}' "
+                        f"(display: {region.display.value}) declares "
+                        f"`action: {region.action}`, a {action_surface.mode.value} surface "
+                        f"— a metric tile has no row id; point action: at a workspace "
+                        f"or a list/create surface."
+                    )
+                continue  # a tile drills to a set — no FK threading
             if not region.source:
                 continue  # FK-threading check below requires a source entity
             target_entity = action_surface.entity_ref

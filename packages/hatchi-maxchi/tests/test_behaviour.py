@@ -14,7 +14,7 @@ import pytest
 
 _SITE_URI = (Path(__file__).resolve().parents[1] / "site" / "index.html").as_uri()
 
-from conftest import goto_part, part_uri, wait_for_layout  # noqa: E402
+from conftest import goto_part, part_uri, wait_for_attr, wait_for_layout  # noqa: E402
 
 PALETTE = "dialog.command"
 INPUT = ".command__input"
@@ -4361,6 +4361,62 @@ def test_app_shell_sidebar_toggle(page) -> None:  # type: ignore[no-untyped-def]
     assert page.locator("[data-sidebar-toggle]").get_attribute("aria-expanded") == "false"
     page.locator("[data-sidebar-toggle]").click()
     page.wait_for_timeout(80)
+    assert shell.get_attribute("data-sidebar") == "open"
+
+
+def test_app_shell_drawer_narrow(page) -> None:  # type: ignore[no-untyped-def]
+    """#1798 — below 64rem the sidebar is an off-canvas drawer on transient
+    data-drawer; the persisted desktop data-sidebar="open" never paints the
+    nav over a phone page. Backdrop / Escape / nav link close the drawer;
+    widening the viewport drops it and the desktop state is untouched."""
+    goto_part(page, "app-shell")  # coverage meta-gate declaration
+    live = (
+        Path(__file__).resolve().parents[1] / "site" / "hyperparts" / "app-shell-live.html"
+    ).as_uri()
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.goto(live)
+    shell = page.locator(".app-shell")
+    toggle = page.locator("[data-sidebar-toggle]").first
+    backdrop = page.locator("[data-sidebar-backdrop]")
+
+    # Off-canvas is translateX(-100%) of the sidebar's own width (a negative
+    # m41, value depends on the gallery's box); open is the identity.
+    transform = "getComputedStyle(document.querySelector('.sidebar')).transform"
+    parked = f"() => new DOMMatrix({transform}).m41 < 0"
+    on_screen = f"() => {transform} === 'matrix(1, 0, 0, 1, 0, 0)'"
+
+    def open_drawer() -> None:
+        toggle.click()
+        wait_for_attr(page, ".app-shell", "data-drawer", "open")
+        page.wait_for_function(on_screen)
+
+    assert shell.get_attribute("data-sidebar") == "open"
+    page.wait_for_function(parked)
+    assert backdrop.evaluate("el => getComputedStyle(el).display") == "none"
+    assert page.evaluate("document.documentElement.scrollWidth") <= 390
+
+    open_drawer()
+    assert backdrop.evaluate("el => getComputedStyle(el).display") == "block"
+    assert toggle.get_attribute("aria-expanded") == "true"
+    assert shell.get_attribute("data-sidebar") == "open", "drawer must not touch desktop state"
+    assert "sidebar=closed" not in page.evaluate("document.cookie")
+
+    page.keyboard.press("Escape")
+    wait_for_attr(page, ".app-shell", "data-drawer", None)
+    assert toggle.get_attribute("aria-expanded") == "false"
+    page.wait_for_function(parked)
+
+    open_drawer()
+    backdrop.click(position={"x": 370, "y": 400})  # right of the 256px drawer
+    wait_for_attr(page, ".app-shell", "data-drawer", None)
+
+    open_drawer()
+    page.locator(".sidebar a[href]").first.click()
+    wait_for_attr(page, ".app-shell", "data-drawer", None)
+
+    open_drawer()
+    page.set_viewport_size({"width": 1280, "height": 900})
+    wait_for_attr(page, ".app-shell", "data-drawer", None)
     assert shell.get_attribute("data-sidebar") == "open"
 
 

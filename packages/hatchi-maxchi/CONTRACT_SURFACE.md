@@ -20,7 +20,7 @@ blast radius (who embeds / refuses this part).
 | `activity_feed_list` | `activity-feed-list` | `.dz-activity-feed` | .dz-activity-feed[] | — |
 | `add_card_row` | `add-card-row` | `.dz-add-card-row` | .dz-add-card-row[] | — |
 | `alert` | `alert` | `.dz-alert` | .dz-alert[] | — |
-| `app_shell` | `app-shell` | `[data-dz-sidebar]` | [data-dz-sidebar][data-dz-sidebar=one_of:open\|closed]; [data-dz-sidebar-toggle][] | — |
+| `app_shell` | `app-shell` | `[data-dz-sidebar]` | [data-dz-sidebar][data-dz-sidebar=one_of:open\|closed]; [data-dz-sidebar-toggle][]; [data-dz-sidebar-backdrop][] | — |
 | `aspect_ratio` | `aspect-ratio` | `.dz-aspect-ratio` | .dz-aspect-ratio[] | — |
 | `auto_grid` | `auto_grid` | `.dz-auto-grid` | .dz-auto-grid[] | — |
 | `avatar` | `avatar` | `.dz-avatar` | .dz-avatar[] | — |
@@ -98,7 +98,7 @@ blast radius (who embeds / refuses this part).
 | `menubar` | `menubar` | `[data-dz-menubar]` | [data-dz-menubar][data-dz-menubar=present] | — |
 | `message` | `message` | `.dz-message` | .dz-message[] | — |
 | `message_scroller` | `message_scroller` | `.dz-message-scroller` | .dz-message-scroller[] | — |
-| `metrics` | `metrics` | `[data-dz-metric-key]` | [data-dz-metric-key][data-dz-metric-key=present] | MetricTile(delta_direction:Literal:opt; delta_pct:float:opt; delta_period_label:str:opt; delta_sentiment:Literal:opt; delta_value:str:opt; label:str:req; metric_key:str:opt; tone:Literal:opt; value:str:req) |
+| `metrics` | `metrics` | `[data-dz-metric-key]` | [data-dz-metric-key][data-dz-metric-key=present] | MetricTile(delta_direction:Literal:opt; delta_pct:float:opt; delta_period_label:str:opt; delta_sentiment:Literal:opt; delta_value:str:opt; drill_url:str:opt; label:str:req; metric_key:str:opt; tone:Literal:opt; value:str:req) |
 | `metrics_grid` | `metrics-grid` | `.dz-metrics-grid` | .dz-metrics-grid[] | — |
 | `money` | `money` | `[data-dz-money]` | [data-dz-money][data-dz-currency=present, data-dz-scale=present] | MoneyField(currency:str:opt; field_id:str:opt; major_display:str:opt; minor_value:int:opt; name:str:req; scale:int:opt) |
 | `nav_group` | `nav-group` | `.dz-nav-group` | .dz-nav-group[] | — |

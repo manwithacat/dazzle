@@ -324,6 +324,58 @@ _RULE_PINS: list[tuple[str, Path, str, str | None, dict[str, object], dict[str, 
         {"flex-wrap": "wrap"},
         {},
     ),
+    # #1798 (AegisMark): the app shell's narrow viewport is an off-canvas
+    # drawer on transient `data-dz-drawer`; the persisted desktop state only
+    # slides the sidebar in from 64rem, the backdrop is hidden until the drawer
+    # opens, and nothing in the shell or dashboard widens a 390px page.
+    (
+        "app-shell-desktop-state-only-wide-1798",
+        COMPONENTS / "app-shell.css",
+        '[data-dz-sidebar="open"] .dz-sidebar',
+        "min-width: 64rem",
+        {"transform": "translateX(0)"},
+        {},
+    ),
+    (
+        "app-shell-drawer-opens-narrow-1798",
+        COMPONENTS / "app-shell.css",
+        '[data-dz-drawer="open"] .dz-sidebar',
+        "width < 64rem",
+        {"transform": "translateX(0)"},
+        {},
+    ),
+    (
+        "app-shell-backdrop-hidden-by-default-1798",
+        COMPONENTS / "app-shell.css",
+        ".dz-app-backdrop",
+        None,
+        {"display": "none"},
+        {},
+    ),
+    (
+        "app-shell-topbar-shrinks-1798",
+        COMPONENTS / "app-shell.css",
+        ".dz-app-header > .dz-topbar",
+        None,
+        {"min-width": "0"},
+        {},
+    ),
+    (
+        "app-shell-topbar-identity-truncates-1798",
+        COMPONENTS / "app-shell.css",
+        ".dz-topbar-trailing .dz-text",
+        None,
+        {"min-width": "0", "text-overflow": "ellipsis", "white-space": "nowrap"},
+        {},
+    ),
+    (
+        "dashboard-card-one-column-narrow-1798",
+        COMPONENTS / "dashboard-card.css",
+        ".dz-dashboard-grid > .dz-card-wrapper",
+        "width < 48rem",
+        {"grid-column": "1 / -1"},
+        {},
+    ),
 ]
 
 
@@ -394,6 +446,7 @@ _RENDERED_SELECTORS: tuple[str, ...] = (
     ".dz-app-header",
     ".dz-app-main",
     ".dz-app-footer",
+    ".dz-app-backdrop",  # #1798 narrow-drawer scrim
     ".dz-sidebar",
     ".dz-sidebar__header",
     ".dz-sidebar__items",

@@ -503,6 +503,10 @@ class MetricTile:
     `value` is expected to be already-formatted (the runtime applies
     `metric_number` before passing — adapter ctx-translation does this
     in `_build_metrics`). KPI remains for simple cases without deltas.
+
+    `drill_url` (#1798) makes the whole tile a link to the set it counts —
+    resolved from the region's explicit `action:` (a workspace, or a
+    list/create surface; never a row-id template).
     """
 
     label: str
@@ -513,6 +517,7 @@ class MetricTile:
     delta_value: str = ""
     delta_pct: float = 0.0
     delta_period_label: str = ""
+    drill_url: str = ""
 
     def __post_init__(self) -> None:
         if not self.label:

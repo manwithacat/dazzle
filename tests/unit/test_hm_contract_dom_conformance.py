@@ -333,6 +333,8 @@ def test_metric_tile_emission_conforms_to_metrics_contract() -> None:
                     delta_pct=12.0,
                     delta_period_label="last month",
                 ),
+                # #1798 — a drillable tile keeps the dual-lock root on its <a>.
+                TileFrag(label="Overdue", value="3", drill_url="/app/workspaces/overdue_queue"),
             )
         )
     )
@@ -341,6 +343,11 @@ def test_metric_tile_emission_conforms_to_metrics_contract() -> None:
     assert 'data-dz-metric-key="outstanding"' in html
     assert 'data-dz-tone="positive"' in html
     assert "data-dz-delta-direction=" in html
+    assert html.count("<a ") == 1
+    hm_drill = m_mod.render(
+        m_mod.MetricTile(label="Overdue", value="3", drill_url="/app/workspaces/overdue_queue")
+    )
+    assert hm_drill in html, "Dazzle drillable tile must match the HM contract render byte-for-byte"
 
 
 def test_kanban_region_emission_conforms_to_kanban_contract() -> None:
@@ -958,7 +965,10 @@ def _emit_root_only_html(part_id: str) -> str:
     if part_id == "number":
         return r.render(Field(name="qty", label="Qty", kind="number", initial_value="12"))
     if part_id == "app_shell":
-        return r.render(AppShell(body=Surface(header=Text("h"), body=Text("b"))))  # type: ignore[arg-type]
+        # sidebar present so the #1798 [data-dz-sidebar-backdrop] node is emitted.
+        return r.render(
+            AppShell(body=Surface(header=Text("h"), body=Text("b")), sidebar=Text("nav"))
+        )  # type: ignore[arg-type]
     if part_id == "command":
         return r.render(
             AppShell(

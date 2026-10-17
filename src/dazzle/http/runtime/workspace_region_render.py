@@ -655,6 +655,9 @@ async def _build_card_adapter_ctx(
         # `summary` aliases to `metrics` in the adapter (#1058 follow-up).
         adapter_ctx["metrics"] = inputs.metrics
         adapter_ctx["columns"] = inputs.columns
+        # #1798 — tiles drill only on an explicit `action:`; the default
+        # entity-detail action_url is a row template and never reaches tiles.
+        adapter_ctx["metrics_drill_url"] = getattr(ctx_region, "tile_drill_url", "") or ""
     elif display_upper == "STATUS_LIST":
         adapter_ctx["status_entries"] = getattr(ctx_region, "status_entries", [])
     elif display_upper == "ENTITY_CARD":

@@ -4479,12 +4479,18 @@
  *
  * Contract:
  *   - root:    `.app-shell` carries `data-sidebar="open|closed"`
- *              (server-rendered initial state).
+ *              (server-rendered initial state) — the DESKTOP (>= 64rem)
+ *              state.
  *   - toggle:  `[data-sidebar-toggle]` (chrome and/or rail hamburgers)
  *              flips the state and mirrors it to aria-expanded on every
  *              matching control (#1602 dual placement).
  *   - persist: the `dz_sidebar` cookie (1y) — a cookie, not localStorage,
  *              so the SERVER renders the correct state on first paint.
+ *   - drawer:  below 64rem the toggle drives `data-drawer="open"` on the
+ *              root instead (#1798) — transient, never persisted; the
+ *              desktop state and cookie are left alone. The server-emitted
+ *              `[data-sidebar-backdrop]` scrim, Escape and a sidebar
+ *              nav-link click close it; focus returns to the chrome toggle.
  */
 // ── #1294 — App-shell sidebar toggle + persistence ──────────────────
 // SSR emits `data-sidebar` on `.app-shell` (default "open") so the
@@ -4497,6 +4503,9 @@
   "use strict";
   var COOKIE = "dz_sidebar";
   var MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+  // One breakpoint, one number: the CSS narrow blocks are its exact
+  // complement, `@media (width < 64rem)`.
+  var wide = window.matchMedia("(min-width: 64rem)");
   function shell() {
     return document.querySelector(".app-shell");
   }
@@ -4517,9 +4526,36 @@
     el.setAttribute("data-sidebar", state);
     syncToggle(state);
   }
+  // ── #1798 — narrow off-canvas drawer ───────────────────────────────
+  function drawerOpen() {
+    var el = shell();
+    return !!el && el.getAttribute("data-drawer") === "open";
+  }
+  function focusChromeToggle() {
+    var btn = document.querySelector(".sidebar-toggle--chrome");
+    if (btn) btn.focus();
+  }
+  function setDrawer(open) {
+    var el = shell();
+    if (!el) return;
+    if (open) {
+      el.setAttribute("data-drawer", "open");
+      syncToggle("open");
+      var first = el.querySelector(".sidebar a[href], .sidebar summary");
+      if (first) first.focus();
+    } else {
+      el.removeAttribute("data-drawer");
+      syncToggle("closed");
+    }
+  }
   function init() {
     var el = shell();
     if (!el) return;
+    if (!wide.matches) {
+      // Narrow: the drawer state, not the desktop state, drives the toggles.
+      syncToggle(drawerOpen() ? "open" : "closed");
+      return;
+    }
     var persisted = readCookie();
     if (persisted && persisted !== el.getAttribute("data-sidebar")) {
       apply(persisted);
@@ -4533,10 +4569,21 @@
     init();
   }
   document.addEventListener("click", function (e) {
-    var btn =
-      e.target && e.target.closest
-        ? e.target.closest("[data-sidebar-toggle]")
-        : null;
+    var target = e.target && e.target.closest ? e.target : null;
+    var btn = target ? target.closest("[data-sidebar-toggle]") : null;
+    if (!wide.matches) {
+      if (btn) {
+        setDrawer(!drawerOpen());
+      } else if (drawerOpen() && target) {
+        if (target.closest("[data-sidebar-backdrop]")) {
+          setDrawer(false);
+          focusChromeToggle();
+        } else if (target.closest(".sidebar a[href]")) {
+          setDrawer(false);
+        }
+      }
+      return;
+    }
     if (!btn) return;
     var el = shell();
     if (!el) return;
@@ -4546,6 +4593,18 @@
     document.cookie =
       COOKIE + "=" + next + "; path=/; max-age=" + MAX_AGE + "; SameSite=Lax";
   });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !wide.matches && drawerOpen()) {
+      setDrawer(false);
+      focusChromeToggle();
+    }
+  });
+  function onViewportChange() {
+    var el = shell();
+    if (el && wide.matches) el.removeAttribute("data-drawer");
+    init();
+  }
+  if (wide.addEventListener) wide.addEventListener("change", onViewportChange);
 })();
 
 /* ── controllers/confirm-gate.js ── */

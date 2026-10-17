@@ -37,6 +37,7 @@ The SaaS/admin application frame: persistent left navigation, an optional sticky
       <p class="hm-demo-muted">The routed workspace. The hamburger collapses the sidebar; the state persists via a cookie so the server renders it correctly on the next request.</p>
     </div>
   </div>
+  <div class="app-backdrop" data-sidebar-backdrop aria-hidden="true"></div>
 </div>
 ```
 
@@ -75,6 +76,7 @@ Do **not** re-own the slot:
 
 - root data-dz-sidebar=open|closed is SERVER-rendered from the dz_sidebar cookie
 - [data-dz-sidebar-toggle] flips state and rewrites the cookie (1y, SameSite=Lax)
+- below 64rem the toggle drives transient data-dz-drawer=open instead; the [data-dz-sidebar-backdrop] scrim is server-emitted as the shell's last child
 
 ### Do / Don't
 
@@ -86,11 +88,12 @@ Do **not** re-own the slot:
 
 - cookie not localStorage — the server must paint the correct first state
 - the component owns the ≥64rem media query (viewport policy); layout primitives stay MQ-free
+- do not drive the narrow drawer from data-dz-sidebar — the default open cookie paints the nav over the page on phones (#1798)
 
 ### Keyboard / AT
 
 - toggle mirrors aria-expanded to the open/closed state
-- narrow viewports: sidebar overlays; desktop: persistent rail
+- narrow viewports: sidebar is a drawer — Escape / backdrop close it and focus returns to the toggle; desktop: persistent rail
 
 ### Related parts
 
@@ -109,6 +112,7 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 |---|---|---|
 | `[data-dz-sidebar]` | `data-dz-sidebar` | one of ['open', 'closed'] |
 | `[data-dz-sidebar-toggle]` | `—` | — |
+| `[data-dz-sidebar-backdrop]` | `—` | — |
 
 #### Module source
 
@@ -125,6 +129,9 @@ DOM_CONTRACT = DomContract(
     nodes=(
         Node("[data-dz-sidebar]", attrs={"data-dz-sidebar": OneOf("open", "closed")}),
         Node("[data-dz-sidebar-toggle]", attrs={}),
+        # #1798 — server-emitted narrow-drawer scrim; `data-dz-drawer` (the
+        # drawer state the controller sets on the root) is transient, prose only.
+        Node("[data-dz-sidebar-backdrop]", attrs={}),
     ),
 )
 
@@ -133,7 +140,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-The shell root carries data-dz-sidebar="open|closed" — SERVER-rendered from the dz_sidebar cookie, so first paint is correct with no flash; dz-app-shell.js flips the attribute and re-writes the cookie when [data-dz-sidebar-toggle] is clicked (and mirrors aria-expanded). Desktop (≥64rem): the sidebar is persistent and the content pane pads around it; narrow: it slides off-canvas and overlays (this component owns that media query deliberately — viewport policy, not intrinsic wrapping — the layout primitives inside stay media-query-free). The demo above is a standalone page embedded via iframe (its own browsing context, so the fixed sidebar behaves exactly as shipped) — the snippet below is the pure, copyable shell markup, with one embedding concession: the workspace slot is a <div> here because this demo lives inside the gallery's own <main>; in your app it is <main id="main-content"> (one visible main per document — the Blueprint shows the true form). The full motif — routed navigation swapping the main slot — is the saas-shell Blueprint.
+The shell root carries data-dz-sidebar="open|closed" — SERVER-rendered from the dz_sidebar cookie, so first paint is correct with no flash; dz-app-shell.js flips the attribute and re-writes the cookie when [data-dz-sidebar-toggle] is clicked (and mirrors aria-expanded). Desktop (≥64rem): the sidebar is persistent and the content pane pads around it; narrow: it is an off-canvas drawer driven by a separate, transient data-dz-drawer="open" (never the cookie), over the server-emitted [data-dz-sidebar-backdrop] scrim — the backdrop, Escape and a nav-link click close it (this component owns that media query deliberately — viewport policy, not intrinsic wrapping — the layout primitives inside stay media-query-free). The demo above is a standalone page embedded via iframe (its own browsing context, so the fixed sidebar behaves exactly as shipped) — the snippet below is the pure, copyable shell markup, with one embedding concession: the workspace slot is a <div> here because this demo lives inside the gallery's own <main>; in your app it is <main id="main-content"> (one visible main per document — the Blueprint shows the true form). The full motif — routed navigation swapping the main slot — is the saas-shell Blueprint.
 
 ## Source files
 

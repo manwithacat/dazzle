@@ -39,6 +39,8 @@ Before you write DSL, pick the cardinality × visualisation:
 
 Each consumes a different IR shape. `bar_chart` reads `group_by: <field>`. `pivot_table` reads `group_by: [<field>, <field>]`. `line_chart` reads `group_by: bucket(<ts>, <unit>)`. `metrics` reads only `aggregate:`.
 
+A KPI tile can open the set it counts: `action: <workspace|list surface>` on a `metrics` / `summary` region makes the **whole tile** a link (`<a data-dz-metric-drill hx-get hx-push-url>` swapping `#main-content`, #1798). A tile counts many rows, so there is no row id — `dazzle lint` rejects a VIEW/EDIT surface target. Without `action:` tiles are not links.
+
 ## Single-dimension (most common)
 
 ```dsl

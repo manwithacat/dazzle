@@ -21,10 +21,10 @@ The KPI strip: label + value tiles in a packing grid, optionally toned. The serv
     <div class="metric-label">Paid this month</div>
     <div class="metric-value">£48,900</div>
   </div>
-  <div class="metric-tile" data-metric-key="overdue" data-tone="warning">
+  <a class="metric-tile" data-metric-key="overdue" data-tone="warning" data-metric-drill href="#metrics">
     <div class="metric-label">Overdue</div>
     <div class="metric-value">3</div>
-  </div>
+  </a>
 </div>
 ```
 
@@ -92,6 +92,7 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 | `delta_value` | `string` | no |
 | `delta_pct` | `number` | no |
 | `delta_period_label` | `string` | no |
+| `drill_url` | `string` | no |
 
 #### Exemplar `render()`
 
@@ -140,18 +141,24 @@ def render(tile: MetricTile) -> str:
             f"</div>"
         )
 
-    return (
-        f'<div class="dz-metric-tile" data-dz-metric-key="{key}"{tone_attr}>'
+    inner = (
         f'<div class="dz-metric-label">{label}</div>'
         f'<div class="dz-metric-value">{value}</div>'
         f"{delta_html}"
-        f"</div>"
     )
+    if tile.drill_url:
+        href = html.escape(tile.drill_url, quote=True)
+        return (
+            f'<a class="dz-metric-tile" data-dz-metric-key="{key}"{tone_attr} '
+            f'data-dz-metric-drill href="{href}" hx-get="{href}" hx-push-url="true" '
+            f'hx-target="#main-content" hx-swap="innerHTML">{inner}</a>'
+        )
+    return f'<div class="dz-metric-tile" data-dz-metric-key="{key}"{tone_attr}>{inner}</div>'
 ```
 
 ## Notes
 
-Each tile carries data-dz-metric-key (dual-lock root; contracts/metrics.py) and an optional data-dz-tone. In Dazzle one scope-aware GROUP BY query fills the whole strip — the tiles can never disagree with each other.
+Each tile carries data-dz-metric-key (dual-lock root; contracts/metrics.py) and an optional data-dz-tone. In Dazzle one scope-aware GROUP BY query fills the whole strip — the tiles can never disagree with each other. A tile that opens the set it counts (the third one here) is an <a data-dz-metric-drill> root — the whole tile is the link, never a row drill (a tile has no row id). Dazzle emits it from a region action: <workspace|list surface> and adds hx-get + hx-push-url targeting #main-content; standalone, a plain href works.
 
 ## Source files
 

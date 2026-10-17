@@ -933,6 +933,7 @@ class _RenderTablesMixin:
                 delta_value=m.delta_value,
                 delta_pct=m.delta_pct,
                 delta_period_label=m.delta_period_label,
+                drill_url=m.drill_url,
             )
         )
 

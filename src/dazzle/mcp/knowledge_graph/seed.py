@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
 SEED_SCHEMA_VERSION = (
-    57  # v57: pivot measures + start_of calendar anchors in the workspace/expressions KB (#1800);
+    58  # v58: metrics drill action + primary_actions replaces inferred CTA + drawer (#1798);
+    # v57: pivot measures + start_of calendar anchors in the workspace/expressions KB (#1800);
     # v56: topbar_title concept teaches `[ui] topbar_title` (#1794);
     # v55: runtime toast concept names the HM dz-toast.js controller (#1795);
     # v54: surface_modes concept teaches post-mutation landing (#1790);

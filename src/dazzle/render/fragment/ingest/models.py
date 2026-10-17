@@ -223,6 +223,7 @@ class MetricTile(BaseModel):
     delta_value: str = ""
     delta_pct: float = 0.0
     delta_period_label: str = ""
+    drill_url: str = ""  # #1798 whole-tile drill (region `action:`)
 
     @field_validator("label")
     @classmethod

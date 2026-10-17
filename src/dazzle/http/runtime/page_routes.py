@@ -2986,7 +2986,15 @@ def _build_workspace_primary_action_candidates(
     single commercial primary (#1626). A source with a required reference to
     another source in the same workspace is also contextual, not a competing
     heading action (for example InvoiceDocument alongside Invoice).
+
+    #1798 — a workspace that declares ``primary_actions:`` owns its heading:
+    the block REPLACES inference, so no candidates are returned (the header
+    showed two creates). Create stays reachable from the list page's
+    "+ New"; to keep it in the heading, author
+    ``action "New X" -> surface <create_surface>``.
     """
+    if workspace.primary_actions:
+        return []
     _ = list_surfaces_by_entity  # reserved; labels must not use list surface title
     titles = entity_titles or {}
     entity_specs = entities_by_name or {}
@@ -3026,6 +3034,9 @@ def _resolve_workspace_authored_actions(
     surfaces_by_name: dict[str, Any],
 ) -> list[dict[str, str]]:
     """Resolve a workspace's authored `primary_actions:` (#1324 FR-5).
+
+    Declaring the block replaces the inferred "New <Entity>" CTAs (#1798) —
+    these are the workspace heading's whole primary set.
 
     Each authored action references a declared surface or workspace by name
     (already validated at lint time). The route is a plain GET nav target:
@@ -3227,7 +3238,8 @@ async def _workspace_handler(
                 }
             )
 
-    # #1324 FR-5: APPEND authored heading CTAs AFTER the inferred create-CTAs.
+    # #1324 FR-5: authored heading CTAs. At most one of the two lists is
+    # non-empty — declaring `primary_actions:` replaces inference (#1798).
     # CREATE/EDIT surface targets share the inferred create-CTA mutate gate
     # (cycle 1399); LIST/VIEW/workspace targets pass through as navigation.
     primary_actions.extend(

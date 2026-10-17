@@ -758,6 +758,8 @@ workspace task_board "Task Board":
   board_pulse:
     source: Task
     display: metrics
+    # #1798 — each tile opens the task list it counts (whole-tile drill).
+    action: task_list
     aggregate:
       open: count(Task where status != done)
       in_progress: count(Task where status = in_progress)

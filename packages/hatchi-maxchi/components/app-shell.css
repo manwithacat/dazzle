@@ -11,9 +11,15 @@
  * on narrow" is viewport policy, not intrinsic wrapping. The layout
  * primitives inside the shell stay media-query-free.
  *
- * State contract: `data-dz-sidebar="open|closed"` on `.dz-app-shell`
- * (server-rendered from the `dz_sidebar` cookie; the dz-app-shell.js
- * controller flips it and re-writes the cookie). */
+ * State contract (two attributes on `.dz-app-shell`, one per viewport):
+ *   - `data-dz-sidebar="open|closed"` — the DESKTOP (>= 64rem) state,
+ *     server-rendered from the `dz_sidebar` cookie; the dz-app-shell.js
+ *     controller flips it and re-writes the cookie.
+ *   - `data-dz-drawer="open"` — the NARROW (< 64rem) off-canvas drawer,
+ *     transient (absent = closed) and never persisted. The default "open"
+ *     desktop cookie must not paint the nav over the page on a phone
+ *     (#1798). The `[data-dz-sidebar-backdrop]` scrim is server-emitted
+ *     beside the sidebar and shown only while the drawer is open. */
 
 /* ─────────────────────────── layouts/app_shell ──────────────────
  * Main application shell with collapsible left sidebar, sticky top
@@ -62,12 +68,39 @@
   }
 }
 
+/* The topbar is a flex item of .dz-app-header: let it fill and shrink, or
+ * a long identity chip widens the page past a phone viewport (#1798). */
+.dz-app-header > .dz-topbar {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .dz-topbar-leading,
 .dz-topbar-trailing {
   flex: none;
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+}
+
+/* #1798 — the trailing slot (identity chip, account links) shrinks rather
+ * than widening a phone page: it stays on one line and its text truncates.
+ * Wide viewports have room, so nothing truncates there. */
+.dz-topbar-trailing {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.dz-topbar-trailing > .dz-cluster {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.dz-topbar-trailing .dz-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* #1294 / #1602 — sidebar toggle (hamburger).
@@ -257,17 +290,20 @@
   margin-block: 0.25rem var(--space-md);
 }
 
-/* Mobile backdrop overlay */
+/* Narrow-drawer backdrop (#1798) — server-emitted as the shell's last
+ * child, shown only while the narrow drawer is open, never on desktop.
+ * The dz-app-shell.js controller closes the drawer on a click here. */
 .dz-app-backdrop {
+  display: none;
   position: fixed;
   inset: 0;
   background: oklch(0% 0 0 / 0.4);
   z-index: 30;
 }
 
-@media (min-width: 64rem) {
-  .dz-app-backdrop {
-    display: none !important;
+@media (width < 64rem) {
+  [data-dz-drawer="open"] .dz-app-backdrop {
+    display: block;
   }
 }
 
@@ -278,6 +314,11 @@
  * so long sidebars scroll. ``.dz-sidebar-nav`` keeps overflow for legacy
  * brand+nav+footer layouts. Sticky brand/header keeps identity visible while
  * scrolling (#1596).
+ *
+ * Desktop (>= 64rem) slides in on `data-dz-sidebar="open"` (persisted);
+ * narrow (< 64rem) is an off-canvas DRAWER on `data-dz-drawer="open"`
+ * (transient). The two never cross: the default-open desktop cookie used
+ * to paint the nav over the page on every phone (#1798).
  */
 .dz-sidebar {
   position: fixed;
@@ -296,8 +337,21 @@
   overscroll-behavior: contain;
 }
 
-[data-dz-sidebar="open"] .dz-sidebar {
-  transform: translateX(0);
+@media (min-width: 64rem) {
+  [data-dz-sidebar="open"] .dz-sidebar {
+    transform: translateX(0);
+  }
+}
+
+@media (width < 64rem) {
+  [data-dz-drawer="open"] .dz-sidebar {
+    transform: translateX(0);
+    box-shadow: var(--shadow-lg);
+  }
+  /* The open drawer covers the topbar hamburger: show the rail one to close. */
+  [data-dz-drawer="open"] .dz-sidebar-toggle--rail {
+    display: inline-flex;
+  }
 }
 
 .dz-sidebar-brand,

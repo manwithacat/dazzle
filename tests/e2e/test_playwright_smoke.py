@@ -363,3 +363,34 @@ class TestPlaywrightSmokeSimpleTask:
             assert inputs.count() > 0, "Form should have input fields"
 
             take_screenshot(page, "simple_task", "form_opened")
+
+    @pytest.mark.e2e
+    def test_workspace_fits_a_phone_viewport(self, browser, server: DazzleLocalServer) -> None:
+        """#1798 (AegisMark U14) — at 390px the app shell must not widen the
+        page (dashboard cards kept their inline `span N` and opened implicit
+        columns: 623px) and the default-open desktop sidebar must not paint
+        over the content: below 64rem it is a drawer, parked off-screen."""
+        context = browser.new_context(viewport={"width": 390, "height": 844})
+        page = context.new_page()
+        try:
+            resp = page.request.post(
+                f"{server.api_url}/__test__/authenticate",
+                data={"username": "admin", "role": "admin"},
+                # The server inherits this env; when set it gates /__test__ (#458).
+                headers={"X-Test-Secret": os.environ.get("DAZZLE_TEST_SECRET", "")},
+            )
+            if not resp.ok:
+                pytest.skip(f"test-mode authenticate unavailable ({resp.status})")
+            page.goto(f"{server.ui_url}/app/workspaces/task_board")
+            page.wait_for_load_state("networkidle", timeout=10000)
+            assert page.locator(".dz-app-shell").count() == 1, "workspace must render the app shell"
+            assert page.evaluate("document.documentElement.scrollWidth") <= 390
+            sidebar_x = page.evaluate(
+                "() => new DOMMatrix(getComputedStyle(document.querySelector('.dz-sidebar'))"
+                ".transform).m41"
+            )
+            assert sidebar_x < 0, "sidebar must be parked off-screen until the drawer opens"
+            take_screenshot(page, "simple_task", "workspace_390")
+        finally:
+            page.close()
+            context.close()

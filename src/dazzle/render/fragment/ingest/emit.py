@@ -354,12 +354,23 @@ def render_queue_row(row: QueueRow) -> str:
 
 
 def metric_tile_root_attrs(tile: MetricTile) -> str:
-    """Assemble metric-tile dual-lock root (+ optional tone) — sole emitter site."""
+    """Assemble metric-tile dual-lock root (+ optional tone, drill) — sole emitter site.
+
+    #1798 — a drillable tile (region ``action:``) adds ``data-dz-metric-drill``
+    plus ``href`` / ``hx-get`` / ``hx-push-url`` onto its ``<a>`` root, swapping
+    ``#main-content`` like every other in-shell drill.
+    """
     key = _html.escape(tile.metric_key, quote=True)
-    base = f'data-dz-metric-key="{key}"'
+    bits = [f'data-dz-metric-key="{key}"']
     if tile.tone:
-        return f'{base} data-dz-tone="{_html.escape(tile.tone, quote=True)}"'
-    return base
+        bits.append(f'data-dz-tone="{_html.escape(tile.tone, quote=True)}"')
+    if tile.drill_url:
+        href = _html.escape(tile.drill_url, quote=True)
+        bits.append(
+            f'data-dz-metric-drill href="{href}" hx-get="{href}" hx-push-url="true" '
+            'hx-target="#main-content" hx-swap="innerHTML"'
+        )
+    return " ".join(bits)
 
 
 def kanban_card_root_attrs(card: KanbanCard) -> str:
@@ -462,12 +473,14 @@ def render_metric_tile(tile: MetricTile) -> str:
     value = _html.escape(tile.value)
     root_attrs = metric_tile_root_attrs(tile)
     delta_html = _render_metric_delta_html(tile)
+    # #1798 — the whole tile is the link when it drills; a <div> otherwise.
+    tag = "a" if tile.drill_url else "div"
     return (
-        f'<div class="dz-metric-tile" {root_attrs}>'
+        f'<{tag} class="dz-metric-tile" {root_attrs}>'
         f'<div class="dz-metric-label">{label}</div>'
         f'<div class="dz-metric-value">{value}</div>'
         f"{delta_html}"
-        f"</div>"
+        f"</{tag}>"
     )
 
 

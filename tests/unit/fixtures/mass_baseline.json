@@ -1,7 +1,7 @@
 {
-  "src_lines": 326083,
-  "test_lines": 317293,
-  "docs_lines": 49202,
+  "src_lines": 325422,
+  "test_lines": 317595,
+  "docs_lines": 49212,
   "construct_count": 31,
   "written": "2026-10-17",
   "exceptions": [
@@ -466,16 +466,10 @@
       "date": "2026-10-17",
       "rose": [
         "src_lines",
-        "test_lines"
+        "test_lines",
+        "docs_lines"
       ],
-      "reason": "#1799 Fragment renderer emits HM classes; conformance gate + HM rules for previously unstyled primitives"
-    },
-    {
-      "date": "2026-10-17",
-      "rose": [
-        "test_lines"
-      ],
-      "reason": "#1799 Fragment renderer emits HM classes; conformance gate + HM rules for previously unstyled primitives"
+      "reason": "#1798 app-shell drawer + metric tile drill + primary_actions replace (consumer-forced, AegisMark)"
     },
     {
       "date": "2026-10-17",
@@ -484,16 +478,7 @@
         "test_lines",
         "docs_lines"
       ],
-      "reason": "#1799 Fragment primitives emit HM class names + bundle conformance gate (consumer-forced)"
-    },
-    {
-      "date": "2026-10-17",
-      "rose": [
-        "src_lines",
-        "test_lines",
-        "docs_lines"
-      ],
-      "reason": "#1800 pivot measures + start_of calendar anchors + DD-017 (consumer-forced)"
+      "reason": "#1798 app-shell drawer, metric tile drill, primary_actions replaces inferred CTA (consumer-forced)"
     }
   ]
 }

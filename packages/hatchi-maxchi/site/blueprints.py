@@ -281,7 +281,9 @@ BLUEPRINTS: list[Blueprint] = [
         '<div class="dz-card-value">£12,450</div></div>'
         '<div class="dz-card dz-card-body"><div class="dz-card-label">Paid</div>'
         '<div class="dz-card-value">£48,900</div></div></div></div>'
-        "</main></div></div>",
+        "</main></div>"
+        '<div class="dz-app-backdrop" data-dz-sidebar-backdrop aria-hidden="true"></div>'
+        "</div>",
         composes=("app-shell", "stack", "auto-grid", "card", "button"),
         notes="Routing is one attribute per link: <code>hx-get</code> the page "
         "fragment, <code>hx-target=&quot;#main-content&quot;</code> — the "

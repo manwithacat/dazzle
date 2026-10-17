@@ -16,9 +16,11 @@ the action-assembly seam (`page_routes`), and the overflow set renders as a nati
 **Default budget (James 2026-06-30, via the #1491 3a decision gate): top 3.**
 The first three actions stay prominent buttons; the rest overflow. Most
 workspaces declare ≤3 actions, so nothing changes for them — only an action-heavy
-heading declutters. Order is preserved: inferred `+ New <Entity>` create-CTAs are
-assembled first (the canonical primary action), so they are protected by position;
-authored heading CTAs appended beyond the budget are the demotion tail.
+heading declutters. Order is preserved: the heading's actions are EITHER the
+inferred `+ New <Entity>` create-CTAs OR, when the workspace declares
+`primary_actions:`, the authored ones in declared order (the block replaces
+inference, #1798) — either way the first-declared stay prominent and the tail
+beyond the budget demotes.
 
 L4 follow-on: derive the budget / which actions stay from observed usage
 frequency, and extend the inference to row-action / bulk-toolbar / action-grid
@@ -50,8 +52,8 @@ def resolve_action_prominence[T](
     Keeps the first ``budget`` actions prominent and routes the tail to overflow.
     A no-op (empty overflow) when the action count is within budget — so the
     common ``≤3``-action heading is byte-identical to before. The split is purely
-    positional: the canonical inferred create-CTAs (assembled first) stay primary;
-    the lowest-priority declared tail demotes.
+    positional: the first-assembled actions (inferred create-CTAs, or the authored
+    `primary_actions:` that replace them — #1798) stay primary; the tail demotes.
     """
     if budget < 0:
         budget = 0

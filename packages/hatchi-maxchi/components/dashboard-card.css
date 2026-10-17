@@ -16,6 +16,22 @@
   align-items: start;
 }
 
+/* One column below 48rem (#1798): cards keep their inline
+ * `grid-column: span N` (drag-resize contract, restored by
+ * dashboard-builder.js), which on a 1-column grid opens N-1 implicit
+ * columns and widens the page past the viewport. Pin every card to the one
+ * column; `grid-auto-columns: 0` keeps a stray implicit column at zero. */
+@media (width < 48rem) {
+  .dz-dashboard-grid {
+    grid-auto-columns: 0;
+    column-gap: 0;
+  }
+  .dz-dashboard-grid > .dz-card-wrapper {
+    grid-column: 1 / -1 !important; /* beats the inline span contract */
+    min-width: 0;
+  }
+}
+
 @media (min-width: 48rem) {
   .dz-dashboard-grid {
     grid-template-columns: repeat(12, minmax(0, 1fr));

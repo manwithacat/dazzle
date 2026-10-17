@@ -1,9 +1,9 @@
 """#1324 FR-5: declarative workspace `primary_actions:` heading CTAs.
 
 Covers the build-site resolution of authored actions to ``{label, route}``
-and the merge contract: authored actions APPEND AFTER the auto-inferred
-create-surface CTAs (#827), with surface targets resolved via the SAME
-route map the template compiler uses.
+and the merge contract: declaring ``primary_actions:`` REPLACES the
+auto-inferred create-surface CTAs (#827 → #1798), with surface targets
+resolved via the SAME route map the template compiler uses.
 """
 
 from __future__ import annotations
@@ -109,8 +109,8 @@ class TestResolveAuthoredActions:
 
 class TestInferredCreateCta:
     """A workspace region over an entity with a create surface infers one
-    "New <Entity>" CTA (#827). Authored actions are resolved separately
-    (TestResolveAuthoredActions) and appended after these by the handler."""
+    "New <Entity>" CTA (#827) — unless the workspace authors its own
+    ``primary_actions:``, which replace inference (#1798)."""
 
     def test_region_source_infers_one_create_cta(self) -> None:
         ws = ir.WorkspaceSpec(
@@ -130,6 +130,29 @@ class TestInferredCreateCta:
         assert [(c["label"], c["route"]) for c in inferred] == [
             ("New Invoice", "/app/invoice/create")
         ]
+
+    def test_authored_block_suppresses_inferred_create_cta(self) -> None:
+        """#1798 (AegisMark U16): an authored heading got the inferred
+        "New Invoice" too, so the header showed two creates."""
+        ws = ir.WorkspaceSpec(
+            name="reports",
+            regions=[ir.WorkspaceRegion(name="metrics", source="Invoice")],
+            primary_actions=[
+                ir.WorkspacePrimaryActionSpec(
+                    label="Raise invoice", target_kind="surface", target="create_invoice"
+                )
+            ],
+        )
+        create = _surface("create_invoice", ir.SurfaceMode.CREATE, "Invoice")
+
+        inferred = _build_workspace_primary_action_candidates(
+            ws,
+            app_prefix="/app",
+            create_surfaces_by_entity={"Invoice": create},
+            list_surfaces_by_entity={},
+        )
+
+        assert inferred == []
 
 
 class TestGateAuthoredPrimaryActions:

@@ -859,7 +859,7 @@ class WorkspaceRegion(BaseModel):
     # time against the RendererRegistry. Resolution order
     # (region → surface → framework default) is deferred to Plan 3.
     render: str | None = None
-    action: str | None = None  # Surface reference
+    action: str | None = None  # Surface or workspace reference (#916; tile drill #1798)
     empty_message: str | None = None
     # #1494 (UX-maturity 3d): how an empty region self-demotes. `None` = unset
     # (the parser leaves it None when no `when_empty:` keyword appears); the
@@ -1172,9 +1172,9 @@ class WorkspaceSpec(BaseModel):
     access: WorkspaceAccessSpec | None = None  # v0.22.0: Access control
     context_selector: ContextSelectorSpec | None = None  # v0.38.0
     # #1324 FR-5: authored heading CTA buttons. Each references a declared
-    # surface or workspace by name (validated at lint time). At the build
-    # site these APPEND AFTER the auto-inferred create-surface CTAs (#827);
-    # inference is unchanged. Empty list = legacy behaviour (inferred only).
+    # surface or workspace by name (validated at lint time). Declaring the
+    # block REPLACES the auto-inferred "New <Entity>" create CTAs (#827) —
+    # the author owns the heading (#1798). Empty list = inferred CTAs only.
     # NOTE: this PLURAL list is the workspace-heading CTA set — distinct
     # from the SINGULAR `WorkspaceRegion.primary_action` (the commit surface
     # of a confirm_action_panel).

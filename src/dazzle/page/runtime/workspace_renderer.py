@@ -23,6 +23,7 @@ from dazzle.page import app_paths
 from dazzle.page.runtime.action_urls import (
     confirm_action_to_url as _confirm_action_to_url,
 )
+from dazzle.page.runtime.action_urls import region_tile_drill_url
 from dazzle.page.runtime.action_urls import (
     surface_entity_path_for_row as _surface_entity_path_for_row,
 )
@@ -92,6 +93,9 @@ class RegionContext(BaseModel):
     action: str = ""  # Surface name for row-click navigation
     action_url: str = ""  # Resolved URL pattern for the action surface
     action_id_field: str = "id"  # Field on the item to use as the URL ID (#614)
+    # #1798 — whole-tile drill for METRICS / SUMMARY; set only from an explicit
+    # region `action:` (workspace or list/create surface), never the default.
+    tile_drill_url: str = ""
     # Multi-source (v0.33.0)
     sources: list[str] = Field(default_factory=list)
     source_tabs: list[SourceTabContext] = Field(default_factory=list)
@@ -502,6 +506,7 @@ def build_workspace_context(
                 action=action_name,
                 action_url=action_url,
                 action_id_field=action_id_field,
+                tile_drill_url=region_tile_drill_url(action_name, app_spec),
                 sources=region_sources,
                 source_tabs=source_tabs,
                 date_field=getattr(region, "date_field", None) or "",

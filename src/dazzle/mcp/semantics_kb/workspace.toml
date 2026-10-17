@@ -93,7 +93,7 @@ syntax = '''
   [sort: <field> [asc|desc], ...]            # Sort order
   [limit: <1-1000>]                          # Max records
   [display: <list|grid|timeline|summary|metrics|kanban|bar_chart|queue|tabbed_list>]
-  [action: <surface_name>]                   # Click-through surface
+  [action: <surface_name|workspace_name>]    # Click-through (metrics: whole tile)
   [empty: "<message>"]                       # Empty state message
   [group_by: <field>]                        # Group data by field
   [date_field: <field>]                      # Date-range filter field

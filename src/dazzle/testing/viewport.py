@@ -171,6 +171,16 @@ DRAWER_PATTERN = ComponentPattern(
             viewport="mobile",
             description="Sidebar chrome toggle visible on mobile (nav reachable)",
         ),
+        # #1798 — the default-open desktop state must not paint the nav over
+        # the page on a phone: below 64rem the sidebar is a drawer, parked
+        # off-screen until `data-dz-drawer="open"`.
+        ViewportAssertion(
+            selector=".dz-sidebar",
+            property="transform",
+            expected=["matrix(1, 0, 0, 1, -256, 0)"],
+            viewport="mobile",
+            description="Sidebar parked off-screen on mobile until the drawer opens (#1798)",
+        ),
     ],
 )
 

@@ -49,6 +49,25 @@
   background: color-mix(in oklab, var(--colour-brand) 10%, transparent);
 }
 
+/* Drillable tile (#1798): the whole tile is the link to the set it
+ * counts (`<a data-dz-metric-drill>`). Reads as a tile, not a hyperlink;
+ * hover lifts the surface, focus-visible rings it. */
+a.dz-metric-tile {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+a.dz-metric-tile:hover {
+  background: color-mix(in oklch, var(--colour-bg) 85%, transparent);
+}
+
+a.dz-metric-tile:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+}
+
 .dz-metric-label {
   font-size: var(--text-xs);
   color: var(--colour-text-muted);

@@ -6,6 +6,12 @@ is layout furniture; validate tiles with ``require_root`` on the tile root.
 ``data-dz-metric-key`` is the stable anchor (tests/telemetry). Optional
 ``data-dz-tone`` tints the surface. Delta block carries direction/sentiment
 attrs when present.
+
+Drill (#1798): a tile with ``drill_url`` renders its root as
+``<a class="dz-metric-tile" data-dz-metric-drill href hx-get hx-push-url>`` —
+the WHOLE tile opens the set it counts (a queue workspace or a list surface).
+There is no row id: a tile counts many rows. Without ``drill_url`` the root
+stays a ``<div>``.
 """
 
 from __future__ import annotations
@@ -46,6 +52,7 @@ class MetricTile(BaseModel):
     - ``metric_key`` → stable ``data-dz-metric-key`` (defaults from label)
     - ``tone`` → optional surface tint
     - delta fields → optional delta block (direction drives presence)
+    - ``drill_url`` → optional whole-tile link (``<a>`` root, hx-get + push-url)
     """
 
     label: str
@@ -57,6 +64,7 @@ class MetricTile(BaseModel):
     delta_value: str = ""
     delta_pct: float = 0.0
     delta_period_label: str = ""
+    drill_url: str = ""
 
     @field_validator("label")
     @classmethod
@@ -90,6 +98,7 @@ EXEMPLARS: list[MetricTile] = [
         value="3",
         metric_key="overdue",
         tone="warning",
+        drill_url="/app/workspaces/overdue_queue",
     ),
 ]
 
@@ -138,13 +147,19 @@ def render(tile: MetricTile) -> str:
             f"</div>"
         )
 
-    return (
-        f'<div class="dz-metric-tile" data-dz-metric-key="{key}"{tone_attr}>'
+    inner = (
         f'<div class="dz-metric-label">{label}</div>'
         f'<div class="dz-metric-value">{value}</div>'
         f"{delta_html}"
-        f"</div>"
     )
+    if tile.drill_url:
+        href = html.escape(tile.drill_url, quote=True)
+        return (
+            f'<a class="dz-metric-tile" data-dz-metric-key="{key}"{tone_attr} '
+            f'data-dz-metric-drill href="{href}" hx-get="{href}" hx-push-url="true" '
+            f'hx-target="#main-content" hx-swap="innerHTML">{inner}</a>'
+        )
+    return f'<div class="dz-metric-tile" data-dz-metric-key="{key}"{tone_attr}>{inner}</div>'
 
 
 __all__ = [

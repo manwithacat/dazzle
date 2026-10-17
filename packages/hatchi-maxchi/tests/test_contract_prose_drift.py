@@ -46,6 +46,7 @@ _CONTROLLER_SPECIAL: dict[str, str] = {
 TRANSIENT_STATE_ATTRS: frozenset[str] = frozenset(
     {
         "data-dz-open",
+        "data-dz-drawer",  # app-shell narrow drawer state (#1798), never server-emitted
         "data-dz-enhanced",
         "data-dz-resizing",
         "data-dz-pdf-state",

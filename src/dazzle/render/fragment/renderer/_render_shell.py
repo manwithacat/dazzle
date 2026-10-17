@@ -231,6 +231,11 @@ class _RenderShellMixin:
         `<main id="main-content">` so keyboard users have a stable
         bypass for the navigation. Set `skip_link_text=""` to disable
         (rare — almost always wrong).
+
+        With a sidebar, the shell also emits the narrow-drawer backdrop
+        (`.dz-app-backdrop[data-dz-sidebar-backdrop]`) after the content
+        pane (#1798); the drawer state itself (`data-dz-drawer`) is
+        transient and set only by the dz-app-shell controller.
         """
         # #1294 — emit the sidebar open/closed state on the shell root so
         # CSS slides the sidebar on-screen + offsets the content. Without
@@ -283,6 +288,14 @@ class _RenderShellMixin:
                 f'<footer class="dz-app-footer">{self._emit(a.footer, ctx)}</footer>'  # type: ignore[arg-type]
             )
         parts.append("</div>")
+        if a.sidebar is not None:
+            # #1798 — the narrow-drawer scrim (HM app-shell
+            # `[data-dz-sidebar-backdrop]`). Hidden by CSS until the
+            # controller sets `data-dz-drawer="open"` below 64rem; a click on
+            # it closes the drawer. Server-emitted, not created client-side.
+            parts.append(
+                '<div class="dz-app-backdrop" data-dz-sidebar-backdrop aria-hidden="true"></div>'
+            )
         # Command palette (tranche 2B adoption): one empty dz-command dialog
         # per shell, wired to the app's hx-get endpoint. dz-command.js opens
         # it on ⌘K; the input fetches persona-scoped results on focus. The

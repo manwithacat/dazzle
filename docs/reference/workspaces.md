@@ -20,9 +20,15 @@ Key features:
   - filter: applies a ConditionExpr so regions only show matching rows (e.g. status = open)
   - sort: orders results (e.g. due_date desc for most urgent first)
   - limit: caps result count (useful for "top 5" style regions)
-  - action: links rows to a surface for click-through navigation (e.g. action: task_edit)
+  - action: links rows to a surface or workspace for click-through navigation (e.g. action: task_edit);
+    on a metrics/summary region the WHOLE tile is the link — point it at a workspace or a
+    list/create surface (a tile counts many rows, so it has no row id)
   - aggregate: computes metrics like count(Entity where condition) displayed as KPI cards
   - stage: controls CSS grid layout (focus_metric, dual_pane_flow, scanner_table, monitor_wall, command_center)
+  - primary_actions: the heading's CTA buttons, each `action "<label>" -> surface|workspace <name>`.
+    Without the block the heading infers one "New <Entity>" per region source with a create
+    surface; declaring it REPLACES that inference (author `action "New X" -> surface <create>`
+    to keep a create button)
 
 ### Syntax
 
@@ -30,6 +36,8 @@ Key features:
 workspace <workspace_name> "<Display Name>":
   purpose: "<semantic intent>"
   [stage: "<stage_name>"]
+  [primary_actions:]                     # replaces the inferred "New <Entity>" CTAs
+    [action "<label>" -> surface|workspace <name>]
 
   <region_name>:
     source: <Entity|surface_name>
@@ -37,7 +45,7 @@ workspace <workspace_name> "<Display Name>":
     [sort: <field> [asc|desc], ...]
     [limit: <number>]
     [display: <list|grid|summary|metrics>]
-    [action: <surface_name>]
+    [action: <surface_name|workspace_name>]
     [empty: "<message>"]
     [group_by: <field>]
     [aggregate:]
@@ -119,7 +127,7 @@ Regions support date-range filtering (v0.34.0) with date_field + date_range flag
   [sort: <field> [asc|desc], ...]            # Sort order
   [limit: <1-1000>]                          # Max records
   [display: <list|grid|timeline|summary|metrics|kanban|bar_chart|queue|tabbed_list>]
-  [action: <surface_name>]                   # Click-through surface
+  [action: <surface_name|workspace_name>]    # Click-through (metrics: whole tile)
   [empty: "<message>"]                       # Empty state message
   [group_by: <field>]                        # Group data by field
   [date_field: <field>]                      # Date-range filter field

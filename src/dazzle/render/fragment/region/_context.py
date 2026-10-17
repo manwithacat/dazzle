@@ -69,6 +69,7 @@ class RegionContext(TypedDict, total=False):
 
     # --- metrics / KPIs ---
     metrics: Any
+    metrics_drill_url: str  # #1798 whole-tile drill from region `action:`
     total: Any
     aggregates: Any
     audit_enabled: bool

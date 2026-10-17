@@ -493,6 +493,17 @@ _ROLE_GATED = (
     'persona member "Member":\n  uses nav membernav\n'
 )
 
+_TILE_DSL = (
+    'entity Doc "Doc":\n  id: uuid pk\n  title: str(100)\n\n'
+    'surface doc_list "Docs":\n  uses entity Doc\n  mode: list\n'
+    '  section main:\n    field title "Title"\n\n'
+    'surface doc_detail "Doc":\n  uses entity Doc\n  mode: view\n'
+    '  section main:\n    field title "Title"\n\n'
+    'workspace review_queue "Queue":\n  docs:\n    source: Doc\n    display: list\n\n'
+    'workspace board "Board":\n  pulse:\n    source: Doc\n    display: metrics\n'
+    "    action: {target}\n    aggregate:\n      awaiting: count(Doc)\n"
+)
+
 PIPELINE_CASES = [
     pytest.param(
         NAV,
@@ -538,6 +549,33 @@ PIPELINE_CASES = [
         True,
         # Used to be silently ignored, shipping a row-click to a dead URL (fuzz sweep).
         id="region-action-undefined-surface-#1412",
+    ),
+    # #1798 — `action: <workspace>` (a runtime feature since #916) used to fail
+    # lint with the #1412 "no surface named" error; on a metrics tile the target
+    # must be a set (workspace / list / create), never a row-id surface.
+    pytest.param(
+        validate_workspace_region_actions,
+        _TILE_DSL.format(target="review_queue"),
+        "errors",
+        ("review_queue",),
+        False,
+        id="region-action-workspace-target-passes-#1798",
+    ),
+    pytest.param(
+        validate_workspace_region_actions,
+        _TILE_DSL.format(target="doc_list"),
+        "errors",
+        ("doc_list",),
+        False,
+        id="metrics-action-list-surface-passes-#1798",
+    ),
+    pytest.param(
+        validate_workspace_region_actions,
+        _TILE_DSL.format(target="doc_detail"),
+        "errors",
+        ("doc_detail", "a metric tile has no row id"),
+        True,
+        id="metrics-action-view-surface-fails-#1798",
     ),
 ]
 

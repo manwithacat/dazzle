@@ -67,8 +67,12 @@ def _metrics_tile_display_value(metric: dict[str, Any]) -> str | None:
     return _metric_number_filter(value)
 
 
-def _metric_tile_from_dict(metric: dict[str, Any]) -> MetricTile | None:
-    """One MetricTile, or None when label/value is refused."""
+def _metric_tile_from_dict(metric: dict[str, Any], drill_url: str = "") -> MetricTile | None:
+    """One MetricTile, or None when label/value is refused.
+
+    ``drill_url`` (#1798) is the region-level tile drill — every tile of the
+    strip opens the same target.
+    """
     label = str(metric.get("label") or metric.get("name") or "")
     if not label:
         return None
@@ -106,6 +110,7 @@ def _metric_tile_from_dict(metric: dict[str, Any]) -> MetricTile | None:
         delta_value=str(metric.get("delta") or ""),
         delta_pct=delta_pct,
         delta_period_label=str(metric.get("delta_period_label") or ""),
+        drill_url=drill_url,
     )
 
 
@@ -235,6 +240,8 @@ class _BuildersMetricsMixin:
               - delta: stringified delta value
               - delta_pct: float (rendered as `(N%)` when non-zero)
               - delta_period_label: rendered as `vs <label>`
+            metrics_drill_url: whole-tile drill from the region's explicit
+                `action:` (#1798); empty → tiles are not links
             (legacy) aggregates: dict[name → resolved value], used as
                 fallback when metrics list isn't supplied
         """
@@ -266,11 +273,12 @@ class _BuildersMetricsMixin:
             )
             return _wrap_surface(title, "dashboard", body)
 
+        drill_url = str(ctx.get("metrics_drill_url") or "")
         tiles: list[object] = []
         for m in metrics_list:
             if not isinstance(m, dict):
                 continue
-            tile = _metric_tile_from_dict(m)
+            tile = _metric_tile_from_dict(m, drill_url)
             if tile is not None:
                 tiles.append(tile)
 

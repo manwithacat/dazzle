@@ -5918,12 +5918,30 @@ box-shadow: 0 1px 3px oklch(0% 0 0 / 0.04);
 padding-inline: var(--space-lg);
 }
 }
+.dz-app-header > .dz-topbar {
+flex: 1 1 auto;
+min-width: 0;
+}
 .dz-topbar-leading,
 .dz-topbar-trailing {
 flex: none;
 display: flex;
 align-items: center;
 gap: var(--space-sm);
+}
+.dz-topbar-trailing {
+flex: 0 1 auto;
+min-width: 0;
+}
+.dz-topbar-trailing > .dz-cluster {
+flex-wrap: nowrap;
+min-width: 0;
+}
+.dz-topbar-trailing .dz-text {
+min-width: 0;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
 }
 .dz-sidebar-toggle {
 display: inline-flex;
@@ -6075,14 +6093,15 @@ color: var(--colour-text-muted);
 margin-block: 0.25rem var(--space-md);
 }
 .dz-app-backdrop {
+display: none;
 position: fixed;
 inset: 0;
 background: oklch(0% 0 0 / 0.4);
 z-index: 30;
 }
-@media (min-width: 64rem) {
-.dz-app-backdrop {
-display: none !important;
+@media (width < 64rem) {
+[data-dz-drawer="open"] .dz-app-backdrop {
+display: block;
 }
 }
 .dz-sidebar {
@@ -6101,8 +6120,19 @@ overflow-x: hidden;
 overflow-y: auto;
 overscroll-behavior: contain;
 }
+@media (min-width: 64rem) {
 [data-dz-sidebar="open"] .dz-sidebar {
 transform: translateX(0);
+}
+}
+@media (width < 64rem) {
+[data-dz-drawer="open"] .dz-sidebar {
+transform: translateX(0);
+box-shadow: var(--shadow-lg);
+}
+[data-dz-drawer="open"] .dz-sidebar-toggle--rail {
+display: inline-flex;
+}
 }
 .dz-sidebar-brand,
 .dz-sidebar__header {
@@ -7475,6 +7505,19 @@ background: color-mix(in oklab, var(--colour-danger) 10%, transparent);
 }
 .dz-metric-tile[data-dz-tone="accent"] {
 background: color-mix(in oklab, var(--colour-brand) 10%, transparent);
+}
+a.dz-metric-tile {
+display: block;
+color: inherit;
+text-decoration: none;
+transition: background var(--duration-fast) var(--ease-out);
+}
+a.dz-metric-tile:hover {
+background: color-mix(in oklch, var(--colour-bg) 85%, transparent);
+}
+a.dz-metric-tile:focus-visible {
+outline: 2px solid var(--colour-brand);
+outline-offset: 2px;
 }
 .dz-metric-label {
 font-size: var(--text-xs);
@@ -11524,6 +11567,16 @@ display: grid;
 grid-template-columns: 1fr;
 gap: var(--space-md);
 align-items: start;
+}
+@media (width < 48rem) {
+.dz-dashboard-grid {
+grid-auto-columns: 0;
+column-gap: 0;
+}
+.dz-dashboard-grid > .dz-card-wrapper {
+grid-column: 1 / -1 !important;
+min-width: 0;
+}
 }
 @media (min-width: 48rem) {
 .dz-dashboard-grid {

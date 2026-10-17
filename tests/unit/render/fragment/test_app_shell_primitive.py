@@ -64,6 +64,22 @@ def _render(node: object) -> str:
             ("<script>",),
             id="1294-invalid-sidebar-state-sanitised-to-open",
         ),
+        # #1798 — the narrow-drawer backdrop is server-emitted beside a sidebar
+        # (the controller only toggles data-dz-drawer); no sidebar, no scrim.
+        pytest.param(
+            AppShell(body=Text("hi"), sidebar=Text("nav")),
+            (
+                '<div class="dz-app-backdrop" data-dz-sidebar-backdrop aria-hidden="true"></div></div>',
+            ),
+            ("data-dz-drawer",),
+            id="1798-sidebar-emits-drawer-backdrop-as-last-child",
+        ),
+        pytest.param(
+            AppShell(body=Text("hi")),
+            (),
+            ("data-dz-sidebar-backdrop",),
+            id="1798-no-sidebar-no-backdrop",
+        ),
         # content measure (cycle 1546): empty / full-bleed means no max-width.
         *(
             pytest.param(

@@ -147,6 +147,33 @@ def region_row_drill_url(
     return ""
 
 
+def region_tile_drill_url(action: str, app_spec: Any | None = None) -> str:
+    """Resolve a metrics/summary region ``action:`` to a whole-tile drill URL (#1798).
+
+    A metric tile counts a set of rows, not one row, so there is no ``{id}``
+    to fill:
+
+      1. Workspace name → ``/app/workspaces/{name}`` (no ``context_id``)
+      2. Surface name → its path via :func:`surface_entity_path_for_row`, only
+         when that path carries no ``{id}`` (LIST → list, CREATE → create);
+         a VIEW/EDIT surface target resolves to ``""`` (lint rejects it)
+      3. Empty when unresolved — the tile renders as a plain ``<div>``
+    """
+    if not action or not app_spec:
+        return ""
+    for ws in getattr(app_spec, "workspaces", None) or []:
+        if getattr(ws, "name", None) == action:
+            return f"/app/workspaces/{action}"
+    for s in getattr(app_spec, "surfaces", None) or []:
+        if getattr(s, "name", None) == action:
+            entity_ref = getattr(s, "entity_ref", None) or ""
+            if not entity_ref:
+                return ""
+            path = surface_entity_path_for_row(entity_ref, getattr(s, "mode", None))
+            return "" if "{id}" in path else path
+    return ""
+
+
 # Private aliases kept for call-sites / tests that used the old names.
 _confirm_action_to_url = confirm_action_to_url
 _region_row_drill_url = region_row_drill_url

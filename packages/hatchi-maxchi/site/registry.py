@@ -3965,15 +3965,21 @@ def select(source: str, id: str) -> str:
             '<p class="hm-demo-muted">The routed workspace. The hamburger collapses '
             "the sidebar; the state persists via a cookie so the server renders it "
             "correctly on the next request.</p>"
-            "</div></div></div>",
+            "</div></div>"
+            '<div class="dz-app-backdrop" data-dz-sidebar-backdrop aria-hidden="true"></div>'
+            "</div>",
             notes="The shell root carries <code>data-dz-sidebar=&quot;open|closed&quot;</code> "
             "— SERVER-rendered from the <code>dz_sidebar</code> cookie, so first "
             "paint is correct with no flash; <code>dz-app-shell.js</code> flips the "
             "attribute and re-writes the cookie when "
             "<code>[data-dz-sidebar-toggle]</code> is clicked (and mirrors "
             "<code>aria-expanded</code>). Desktop (≥64rem): the sidebar is "
-            "persistent and the content pane pads around it; narrow: it slides "
-            "off-canvas and overlays (this component owns that media query "
+            "persistent and the content pane pads around it; narrow: it is an "
+            "off-canvas drawer driven by a separate, transient "
+            "<code>data-dz-drawer=&quot;open&quot;</code> (never the cookie), "
+            "over the server-emitted <code>[data-dz-sidebar-backdrop]</code> "
+            "scrim — the backdrop, Escape and a nav-link click close it "
+            "(this component owns that media query "
             "deliberately — viewport policy, not intrinsic wrapping — the layout "
             "primitives inside stay media-query-free). The demo above is a "
             "standalone page embedded via iframe (its own browsing context, so "
@@ -3994,10 +4000,14 @@ def select(source: str, id: str) -> str:
                 seams=(
                     "root data-dz-sidebar=open|closed is SERVER-rendered from the dz_sidebar cookie",
                     "[data-dz-sidebar-toggle] flips state and rewrites the cookie (1y, SameSite=Lax)",
+                    "below 64rem the toggle drives transient data-dz-drawer=open instead; "
+                    "the [data-dz-sidebar-backdrop] scrim is server-emitted as the shell's last child",
                 ),
                 pitfalls=(
                     "cookie not localStorage — the server must paint the correct first state",
                     "the component owns the ≥64rem media query (viewport policy); layout primitives stay MQ-free",
+                    "do not drive the narrow drawer from data-dz-sidebar — the default open cookie "
+                    "paints the nav over the page on phones (#1798)",
                 ),
                 do_dont=(
                     (
@@ -4007,7 +4017,8 @@ def select(source: str, id: str) -> str:
                 ),
                 a11y_keys=(
                     "toggle mirrors aria-expanded to the open/closed state",
-                    "narrow viewports: sidebar overlays; desktop: persistent rail",
+                    "narrow viewports: sidebar is a drawer — Escape / backdrop close it and "
+                    "focus returns to the toggle; desktop: persistent rail",
                 ),
                 composes_with=("button", "sidebar-layout"),
             ),
@@ -4466,14 +4477,21 @@ def select(source: str, id: str) -> str:
             '<div class="dz-metric-tile" data-dz-metric-key="paid" data-dz-tone="positive">'
             '<div class="dz-metric-label">Paid this month</div>'
             '<div class="dz-metric-value">£48,900</div></div>'
-            '<div class="dz-metric-tile" data-dz-metric-key="overdue" data-dz-tone="warning">'
+            '<a class="dz-metric-tile" data-dz-metric-key="overdue" data-dz-tone="warning" '
+            'data-dz-metric-drill href="#metrics">'
             '<div class="dz-metric-label">Overdue</div>'
-            '<div class="dz-metric-value">3</div></div>'
+            '<div class="dz-metric-value">3</div></a>'
             "</div>",
             notes="Each tile carries <code>data-dz-metric-key</code> (dual-lock "
             "root; <code>contracts/metrics.py</code>) and an optional "
             "<code>data-dz-tone</code>. In Dazzle one scope-aware GROUP BY query "
-            "fills the whole strip — the tiles can never disagree with each other.",
+            "fills the whole strip — the tiles can never disagree with each other. "
+            "A tile that opens the set it counts (the third one here) is an "
+            "<code>&lt;a data-dz-metric-drill&gt;</code> root — the whole tile is "
+            "the link, never a row drill (a tile has no row id). Dazzle emits it "
+            "from a region <code>action: &lt;workspace|list surface&gt;</code> and "
+            "adds <code>hx-get</code> + <code>hx-push-url</code> targeting "
+            "<code>#main-content</code>; standalone, a plain <code>href</code> works.",
             tags=("data", "chart"),
             contracts=("contracts/metrics.py",),
         ),
