@@ -630,16 +630,49 @@ class SurfaceParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        # on submit|click|auto -> outcome
-        self.expect(TokenType.ON)
-        trigger_token = self.expect_identifier_or_keyword()
-        trigger = self.enum_from_token(ir.SurfaceTrigger, trigger_token)
+        # Block lines, either order (#1787):
+        #   on submit|click|auto -> outcome     (exactly one, required)
+        #   visible: <condition>                (optional)
+        trigger: ir.SurfaceTrigger | None = None
+        outcome: ir.Outcome | None = None
+        visible: ir.ConditionExpr | None = None
+        while not self.match(TokenType.DEDENT):
+            if self.match(TokenType.VISIBLE):
+                if visible is not None:
+                    token = self.current_token()
+                    raise make_parse_error(
+                        f"Duplicate 'visible:' in action '{name}'",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+                self.advance()
+                self.expect(TokenType.COLON)
+                visible = self.parse_condition_expr()
+            else:
+                if outcome is not None:
+                    token = self.current_token()
+                    raise make_parse_error(
+                        f"Action '{name}' declares more than one 'on <trigger> -> outcome' line",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+                self.expect(TokenType.ON)
+                trigger_token = self.expect_identifier_or_keyword()
+                trigger = self.enum_from_token(ir.SurfaceTrigger, trigger_token)
+                self.expect(TokenType.ARROW)
+                outcome = self.parse_outcome()
+            self.skip_newlines()
 
-        self.expect(TokenType.ARROW)
-
-        outcome = self.parse_outcome()
-
-        self.skip_newlines()
+        if trigger is None or outcome is None:
+            token = self.current_token()
+            raise make_parse_error(
+                f"Action '{name}' needs an 'on <trigger> -> outcome' line",
+                self.file,
+                token.line,
+                token.column,
+            )
         self.expect(TokenType.DEDENT)
 
         return ir.SurfaceAction(
@@ -647,6 +680,7 @@ class SurfaceParserMixin:
             label=label,
             trigger=trigger,
             outcome=outcome,
+            visible=visible,
         )
 
     def parse_outcome(self) -> ir.Outcome:

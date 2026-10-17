@@ -577,6 +577,7 @@ surface_body_line
 
 section_decl  ::= "section" IDENT STRING? ":" NEWLINE
                   INDENT
+                    ("visible" ":" condition_expr NEWLINE)?
                     surface_element_line+
                   DEDENT ;
 
@@ -584,18 +585,28 @@ surface_element_line
               ::= "field" IDENT STRING? surface_element_option* NEWLINE ;
 
 surface_element_option
-              ::= IDENT "=" literal ;
+              ::= IDENT "=" literal
+                | "visible" ":" condition_expr
+                | "when" ":" invariant_expr   (* typed expression, as in invariants *)
+                | "help" ":" STRING
+                | "format" ":" IDENT (":" IDENT)? ;
 
+(* #1787: one "on" line (required) and an optional "visible:" line, either order. *)
 surface_action_decl
               ::= "action" IDENT STRING? ":" NEWLINE
                   INDENT
-                    "on" surface_trigger "->" outcome NEWLINE
+                    surface_action_line+
                   DEDENT ;
+
+surface_action_line
+              ::= "on" surface_trigger "->" outcome NEWLINE
+                | "visible" ":" condition_expr NEWLINE ;
 
 surface_trigger
               ::= "submit" | "click" | "auto" ;
 
-outcome       ::= "surface" IDENT
+outcome       ::= STRING "external"
+                | "surface" IDENT
                 | "experience" IDENT ("step" IDENT)?
                 | "integration" IDENT "action" IDENT ;
 """

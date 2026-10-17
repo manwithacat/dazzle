@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
 SEED_SCHEMA_VERSION = (
-    52  # v52: integration concept teaches response.headers sources (#1776);
+    53  # v53: surface_actions concept teaches action visible: + SM guard gating (#1787);
+    # v52: integration concept teaches response.headers sources (#1776);
     # v51: enterprise_sso pattern restored for OIDC+SCIM (DD-013, EA-5);
     # v50: dead-code-residue page drops OutboxRepository (ship AR); v49: rhythm doc page
     # drops evaluate/lifecycle (ship AS); v48: pattern `capability` gate removed (ship AI);

@@ -14,6 +14,7 @@ byte-for-byte by `tests/unit/test_data_row_characterization_1505.py`.
 
 import html as _html_mod
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
@@ -856,7 +857,12 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     transition_endpoint = str(table.get("transition_endpoint") or "")
     if state_transitions and status_field and transition_endpoint and item_id:
         current_state = str(item.get(status_field, "") or "")
-        valid = gated_row_transitions(list(state_transitions), current_state)
+        refused = (table.get("refused_transitions") or {}).get(str(item.get("id")), ())
+        valid = [
+            t
+            for t in gated_row_transitions(list(state_transitions), current_state)
+            if t.to_state not in refused
+        ]
         if valid:
             endpoint_attr = _html_mod.escape(transition_endpoint, quote=True)
             status_field_attr = _html_mod.escape(status_field, quote=True)
@@ -935,6 +941,7 @@ def render_data_row(
     state_transitions: tuple[Any, ...] = (),
     status_field: str = "",
     transition_endpoint: str = "",
+    refused_transitions: Mapping[str, frozenset[str]] | None = None,
 ) -> str:
     """Render one rich data-table `<tr>` from typed inputs (#1505).
 
@@ -968,6 +975,8 @@ def render_data_row(
         "state_transitions": state_transitions if caps.update else (),
         "status_field": status_field,
         "transition_endpoint": transition_endpoint,
+        # #1787 C: per-row guard-refused target states (computed upstream).
+        "refused_transitions": refused_transitions or {},
         # Mutation chrome: trash / pencil / SM chips honor permit (not just API 403).
         "can_delete": caps.delete,
         "can_update": caps.update,
@@ -998,6 +1007,7 @@ def render_data_table_rows(dt: DataTable) -> str:
             state_transitions=dt.state_transitions,
             status_field=dt.status_field,
             transition_endpoint=dt.transition_endpoint,
+            refused_transitions=dt.refused_transitions,
         )
         for item in dt.rows
     )

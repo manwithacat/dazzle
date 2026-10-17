@@ -455,6 +455,25 @@ PARSE_ERROR_CASES = [
         # not "unknown keyword" (ADR-0003).
         id="engine-hint-removed-names-stage-#1720",
     ),
+    pytest.param(
+        'entity Task "Task":\n  id: uuid pk\n\nsurface d "D":\n  uses entity Task\n  mode: view\n  action a "A":\n'
+        "    visible: role(agent)\n",
+        r"Action 'a' needs an 'on <trigger> -> outcome' line",
+        id="action-visible-without-on-#1787",
+    ),
+    pytest.param(
+        'entity Task "Task":\n  id: uuid pk\n\nsurface d "D":\n  uses entity Task\n  mode: view\n  action a "A":\n'
+        "    visible: role(agent)\n    visible: role(manager)\n"
+        "    on click -> surface d\n",
+        r"Duplicate 'visible:' in action 'a'",
+        id="action-duplicate-visible-#1787",
+    ),
+    pytest.param(
+        'entity Task "Task":\n  id: uuid pk\n\nsurface d "D":\n  uses entity Task\n  mode: view\n  action a "A":\n'
+        "    on click -> surface d\n    on submit -> surface d\n",
+        r"more than one 'on <trigger> -> outcome'",
+        id="action-two-on-lines-#1787",
+    ),
 ]
 
 
@@ -604,6 +623,32 @@ SURFACE_CASES = [
             "actions[0].outcome.target": "",  # no symbol to resolve
         },
         id="external-action-link-#542",
+    ),
+    *(
+        pytest.param(
+            _TASK + '\nsurface task_detail "Detail":\n  uses entity Task\n  mode: view\n'
+            '  section main:\n    field title "Title"\n  action send "Send":\n' + lines,
+            {
+                "actions[0].trigger.value": "click",
+                "actions[0].outcome.url": "/t/{id}/send",
+                "actions[0].visible.operator.value": "and",
+                "actions[0].visible.left.comparison.field": "title",
+                "actions[0].visible.right.role_check.role_name": "agent",
+            },
+            id=f"action-visible-{order}-#1787",
+        )
+        for order, lines in (
+            (
+                "before-on",
+                "    visible: title = draft and role(agent)\n"
+                '    on click -> "/t/{id}/send" external\n',
+            ),
+            (
+                "after-on",
+                '    on click -> "/t/{id}/send" external\n'
+                "    visible: title = draft and role(agent)\n",
+            ),
+        )
     ),
 ]
 

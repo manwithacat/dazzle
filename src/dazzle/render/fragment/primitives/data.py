@@ -142,6 +142,10 @@ class DataTable:
     state_transitions: tuple[Any, ...] = ()
     status_field: str = ""
     transition_endpoint: str = ""
+    # #1787 C: per-row target states the SM's role/expression guards refuse this
+    # principal, keyed by ``str(row["id"])`` — computed upstream by http/ (the
+    # same TransitionValidator the PUT runs); the row omits those buttons.
+    refused_transitions: typing.Mapping[str, frozenset[str]] = field(default_factory=dict)
     # No empty-columns guard: the rich row-core renders an actions-only row for a
     # column-less table exactly as the retired `_render_table_row` did, so the
     # #1505-P2 switch stays byte-identical even for a misconfigured (column-less)

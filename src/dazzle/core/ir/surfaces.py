@@ -239,12 +239,19 @@ class SurfaceAction(BaseModel):
         label: Human-readable label
         trigger: When the action is triggered
         outcome: What happens when action fires
+        visible: Visibility predicate (#1787). Same ``ConditionExpr``
+            grammar as field/section ``visible:`` — role checks, record
+            comparisons, ``current_user.<path>``. Evaluated per record at
+            render time (a false predicate means the action is not
+            rendered); INTEGRATION outcomes are also refused on POST.
+            None = always visible (subject to surface RBAC).
     """
 
     name: str
     label: str | None = None
     trigger: SurfaceTrigger
     outcome: Outcome
+    visible: ConditionExpr | None = None
 
     model_config = ConfigDict(frozen=True)
 

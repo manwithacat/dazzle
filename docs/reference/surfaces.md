@@ -190,37 +190,68 @@ surface contact_edit "Edit Contact":
 
 ## Surface Actions
 
-Buttons on surfaces that trigger navigation or side effects. Actions define what happens on user interaction (submit, click) and where to go next.
+Buttons on surfaces that trigger navigation or side effects. Actions define what happens on user interaction (submit, click) and where to go next. An action block holds exactly one `on <trigger> -> <outcome>` line and, optionally, a `visible:` line (either order).
+
+#### `visible:` — show an action by record state and role (#1787)
+
+`visible:` takes the same condition grammar as field and section `visible:`: `role(x)`, `has_grant("rel", field)`, comparisons (`=`, `!=`, `<`, `>`, `in [...]`, `is null`), `current_user.<path>` on the value side, FK paths (`client.status`), and `and` / `or` / `not (...)`. It is evaluated per record on the detail page; a false predicate means the action is not rendered. `dazzle validate` checks every `visible:` (actions, sections, fields): fields must exist on the surface's entity, `role(x)` must name a declared persona, and the error names the surface, the action and the predicate.
+
+What a false predicate does depends on the outcome kind:
+
+| Outcome | Hidden on render | Refused on POST |
+|---------|------------------|-----------------|
+| `integration X action Y` | yes | yes — the manual-trigger route re-evaluates the predicate and answers 403 naming the surface, action and predicate. `Y` must be a mapping with a manual trigger on the surface's entity (validated). |
+| `"url" external`, `surface X`, `experience X` | yes | no — the target is a host route (or another surface with its own permit/scope), and that route is the authorization boundary (#1310). `visible:` hides the control; it is not the permission. |
+
+`"url" external` URLs may carry `{id}`, substituted with the record id on the detail page. Surface actions render on detail (`mode: view`) pages; per-row surface actions in `mode: list` and a `transition` outcome kind are parked in [DD-016](../decisions/DD-016-transition-outcome-and-row-surface-actions.md).
+
+#### State-machine transitions are gated by their own guards
+
+Transition buttons on detail pages and list rows come from the entity's `transitions:` block, not from surface actions. Since #1787 they are offered only when the transition's `role(...)` and expression guards pass for the viewer — evaluated by the same validator the PUT runs. `requires <field>` guards and `has_grant()` guards stay PUT-only (the 422 names the field to fill in; grants need a store connection). The state machine stays the permission: put role gating for a transition there, not in a surface action.
+
+#### Model-driven failure modes
+
+`visible:` risks MDF-02 (the rendered control and the enforced permission drift apart) and MDF-13 (dead-end controls). Detectors: `dazzle validate` (fields, personas, integration bindings), the POST-refusal and render-gate tests in `tests/unit/test_action_visibility_1787.py`, and `dazzle inspect page <URL>` to see what a principal is offered. Host-route outcomes are documented as hide-only rather than presented as enforcement.
 
 ### Syntax
 
 ```dsl
 action <action_name> "<Button Label>":
+  visible: <condition>                      # optional; either line order
   on submit -> surface <target_surface>
+  on click -> "<url, may contain {id}>" external
   on submit -> experience <experience_name>
   on submit -> experience <experience_name> step <step_name>
-  on submit -> integration <integration_name> action <action_name>
+  on click -> integration <integration_name> action <mapping_name>
 ```
 
 ### Example
 
 ```dsl
-surface task_create "New Task":
-  uses entity Task
-  mode: create
+surface information_request_detail "Information Request":
+  uses entity InformationRequest
+  mode: view
 
   section main:
-    field title
-    field description
+    field title "Title"
+    field status "Status"
 
-  action save "Create Task":
-    on submit -> surface task_list
+  action send_letter "Send the request letter":
+    visible: status = draft and (role(agent) or role(manager))
+    on click -> "/information-requests/{id}/letter" external
 
-  action cancel "Cancel":
-    on submit -> surface task_list
+  action reconcile "Reconcile with HMRC":
+    visible: nino_source = client and role(agent)
+    on click -> integration hmrc action verify_nino
 ```
 
-**Related:** [Surface](surfaces.md#surface), [Experience](experiences.md#experience)
+### Best Practices
+
+- Gate state-machine transitions with role(...) on the transition, not with an action visible: — the SM is the permission source
+- For external/surface/experience outcomes the host route must still check permission; visible: only hides the control
+- Combine a record-state comparison with role(...) so the action appears only when it can succeed
+
+**Related:** [Surface](surfaces.md#surface), [Experience](experiences.md#experience), [State Machine](entities.md#state-machine)
 
 ---
 

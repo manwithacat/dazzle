@@ -140,6 +140,17 @@ class TransitionValidationResult:
 # =============================================================================
 
 
+def _expr_calls(node: Any, func_name: str) -> bool:
+    """True when the serialized Expr AST contains a call to ``func_name``."""
+    if isinstance(node, dict):
+        if node.get("name") == func_name and "args" in node:
+            return True
+        return any(_expr_calls(v, func_name) for v in node.values())
+    if isinstance(node, list):
+        return any(_expr_calls(v, func_name) for v in node)
+    return False
+
+
 def evaluate_guard_expr(expr: dict[str, Any], entity_data: dict[str, Any]) -> bool:
     """Evaluate a serialized Expr AST against entity data.
 
@@ -408,6 +419,7 @@ class TransitionValidator:
         current_user: str | None = None,
         is_superuser: bool = False,
         grant_store: Any | None = None,
+        for_render: bool = False,
     ) -> TransitionValidationResult:
         """
         Validate a state transition.
@@ -419,6 +431,11 @@ class TransitionValidator:
             user_roles: List of roles the current user has (for role guards)
             current_user: Current user identifier (for field != current_user guards)
             is_superuser: Whether the user is a superuser (bypasses role guards)
+            for_render: #1787 render-time affordance check. Skips
+                ``requires <field>`` guards (the PUT's 422 names the field to
+                fill in) and expression guards calling ``has_grant()`` (no
+                grant store at render); role and other expression guards are
+                evaluated exactly as on the PUT. Never set on the PUT path.
 
         Returns:
             TransitionValidationResult with validation outcome
@@ -439,7 +456,7 @@ class TransitionValidator:
         # Check guards
         for guard in transition.guards:
             # Check field requirement guard
-            if guard.requires_field:
+            if guard.requires_field and not for_render:
                 field_value = entity_data.get(guard.requires_field)
                 if field_value is None or field_value == "":
                     return TransitionValidationResult.failure(
@@ -474,7 +491,7 @@ class TransitionValidator:
                         )
 
             # Check expression guard
-            if guard.guard_expr:
+            if guard.guard_expr and not (for_render and _expr_calls(guard.guard_expr, "has_grant")):
                 # Inject current_user and grant_store into data for guard evaluation
                 eval_data = entity_data
                 if current_user is not None or grant_store is not None:

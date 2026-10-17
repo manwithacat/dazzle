@@ -266,3 +266,102 @@ class TestRelatedTabVisibility:
                 tab.visible = False
 
         assert tab.visible is True
+
+
+# ---------------------------------------------------------------------------
+# Action visible: (#1787) — parsed predicate evaluated against record + principal
+# ---------------------------------------------------------------------------
+
+
+def _action_predicate(text: str) -> ir.ConditionExpr:
+    surfaces = _parse_surfaces(
+        'module test\napp t "T"\n\n'
+        'entity Req "Req":\n    id: uuid pk\n    status: str(20)\n\n'
+        'surface req_detail "Req":\n    uses entity Req\n    mode: view\n'
+        '    section main:\n        field status "Status"\n'
+        '    action act "Act":\n'
+        f"        visible: {text}\n"
+        '        on click -> "/r/{id}" external\n'
+    )
+    predicate = surfaces[0].actions[0].visible
+    assert predicate is not None
+    return predicate
+
+
+class TestActionVisibleEvaluation:
+    """The same ConditionExpr grammar as field visible:, evaluated per record."""
+
+    @pytest.mark.parametrize(
+        ("text", "record", "ctx", "expected"),
+        [
+            pytest.param(
+                "status = draft and (role(agent) or role(manager))",
+                {"status": "draft"},
+                {"user_roles": ["manager"]},
+                True,
+                id="state-and-role-hold",
+            ),
+            pytest.param(
+                "status = draft and (role(agent) or role(manager))",
+                {"status": "sent"},
+                {"user_roles": ["agent"]},
+                False,
+                id="state-fails",
+            ),
+            pytest.param(
+                "status in [sent, partially_received] and role(agent)",
+                {"status": "partially_received"},
+                {"user_roles": ["client"]},
+                False,
+                id="role-fails",
+            ),
+            pytest.param(
+                "not (status = closed)",
+                {"status": "open"},
+                {"user_roles": []},
+                True,
+                id="not-group-#1180",
+            ),
+            pytest.param(
+                "assigned_agent = current_user.contact",
+                {"assigned_agent": {"id": "c-1", "name": "Ann"}},
+                {"current_user_entity": {"contact": "c-1"}},
+                True,
+                id="expanded-ref-compares-on-id",
+            ),
+            pytest.param(
+                "client.status = active",
+                {"client": {"id": "k-1", "status": "active"}},
+                {},
+                True,
+                id="fk-path-through-expanded-ref",
+            ),
+            pytest.param(
+                "nino_verified_at is null",
+                {"nino_verified_at": None},
+                {},
+                True,
+                id="is-null",
+            ),
+        ],
+    )
+    def test_action_predicate(self, text: str, record: dict, ctx: dict, expected: bool) -> None:
+        from dazzle.core.condition_eval import evaluate_condition
+
+        predicate = _action_predicate(text)
+        assert evaluate_condition(predicate.model_dump(), record, ctx) is expected
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "status = draft and (role(agent) or role(manager))",
+            "status in [sent, partially_received] and role(agent)",
+            "not (status = closed) or role(admin)",
+            'has_grant("acting_hod", department)',
+        ],
+    )
+    def test_predicate_text_round_trips(self, text: str) -> None:
+        """Refusals and validator errors quote the predicate as written."""
+        from dazzle.core.condition_eval import condition_to_dsl
+
+        assert condition_to_dsl(_action_predicate(text)) == text

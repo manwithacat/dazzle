@@ -392,6 +392,13 @@ surface ticket_detail "Ticket Detail":
     field updated_at "Updated"
     field resolved_at "Resolved"
 
+  # #1787 probe: an action offered by record state AND role. A breached,
+  # still-open ticket offers staff the waiver draft; customers and closed
+  # tickets never see it. The create route stays the authz boundary.
+  action draft_waiver "Draft SLA waiver":
+    visible: sla_state = breached and status in [open, in_progress] and (role(agent) or role(manager))
+    on click -> "/app/slawaiver/create" external
+
   # Goal B conversation (cycle 1893): ticket hub discussion uses
   # RelatedDisplayMode.conversation → Message/Bubble chrome (workspace
   # live_conversation parity). is_internal maps orientation only — not

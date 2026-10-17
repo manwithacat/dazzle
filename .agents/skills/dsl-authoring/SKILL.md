@@ -33,6 +33,19 @@ drift-gated home is *pointed to*, not duplicated.
    **State names** — call `state_name(s)` / `StateMachineSpec.state_names()`;
    never re-inline `s if isinstance(s, str) else s.name`. Both re-inlines are
    CI-gated (`test_dedup_footgun_gates.py`).
+9. **Action visibility vs. permission (#1787)** — a surface `action` takes an
+   optional `visible:` line (same grammar as field `visible:`, either order with
+   the `on` line):
+   ```dsl
+   action send_letter "Send the request letter":
+     visible: status = draft and (role(agent) or role(manager))
+     on click -> "/information-requests/{id}/letter" external
+   ```
+   It hides the action per record. Only `integration X action Y` outcomes are
+   also refused on POST; external/surface/experience targets must check
+   permission themselves. Do not write `on click -> transition …` (no such
+   outcome, DD-016): gate state changes with `role(...)` on the entity's
+   `transitions:` — those guards now also decide which transition buttons render.
 
 ## Where the authoritative lists live (drift-gated — do not copy them here)
 

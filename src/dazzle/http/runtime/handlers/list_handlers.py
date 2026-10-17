@@ -33,6 +33,7 @@ from fastapi.responses import HTMLResponse
 
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
 from dazzle.core.strings import entity_slug, normalize_role, to_api_plural
+from dazzle.http.runtime.action_visibility import refused_row_transitions
 from dazzle.http.runtime.audit_wrap import _log_audit_decision
 from dazzle.http.runtime.auth import AuthContext
 from dazzle.http.runtime.htmx_render import (
@@ -256,6 +257,7 @@ def build_data_table(table_dict: dict[str, Any], items: list[dict[str, Any]]) ->
         state_transitions=tuple(table_dict.get("state_transitions") or ()),
         status_field=str(table_dict.get("status_field") or ""),
         transition_endpoint=str(table_dict.get("transition_endpoint") or ""),
+        refused_transitions=dict(table_dict.get("refused_transitions") or {}),
     )
 
 
@@ -881,6 +883,15 @@ async def _list_handler_body(
             # after HTMX hydrate while the shell had suppressed the bar.
             if not _can_update:
                 _st_transitions = ()
+            # #1787 C: per row, the transitions the SM's role/expression guards
+            # would refuse this principal — never offered (the PUT still decides).
+            _refused_transitions = refused_row_transitions(
+                getattr(_entity_spec, "state_machine", None) if _entity_spec else None,
+                items,
+                _st_transitions,
+                _st_field,
+                auth_context,
+            )
             _bulk_actions = bulk_actions_for_principal(
                 bool(getattr(request.state, "htmx_bulk_actions", False)),
                 can_delete=_can_delete,
@@ -903,6 +914,7 @@ async def _list_handler_body(
                 "state_transitions": _st_transitions,
                 "status_field": _st_field,
                 "transition_endpoint": _st_endpoint,
+                "refused_transitions": _refused_transitions,
                 "bulk_actions": _bulk_actions,
                 "inline_editable": (
                     getattr(request.state, "htmx_inline_editable", []) if _can_update else []

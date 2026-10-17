@@ -177,6 +177,14 @@ back a `current_tenant` display gate with a matching `scope:` rule for the
 actual access control. The display gate is bound to the same host-tenant
 source as scope, so it hides exactly when the scope predicate would deny.
 
+Surface `action` blocks take the same kind of display gate — `visible:` with
+the `ConditionExpr` grammar (#1787). It is cosmetic for external, surface and
+experience outcomes (the host route stays the authorization boundary) and a
+permission only for `integration X action Y` outcomes, whose manual-trigger
+POST re-evaluates it. State-machine transition buttons are gated by the
+transition's own `role(...)` / expression guards, the same check the PUT runs.
+See [Surface Actions](surfaces.md#surface-actions).
+
 ## Canonical patterns
 
 ### Pattern A — Public read, admin-only writes

@@ -16,6 +16,7 @@ from dazzle.core.ir.integrations import MappingTriggerType
 from dazzle.core.ir.process import StepEffect
 from dazzle.core.manifest import load_manifest
 from dazzle.core.strings import to_api_plural
+from dazzle.http.runtime.action_visibility import enforce_integration_action
 from dazzle.http.runtime.auth.dependencies import create_admin_dependency
 from dazzle.http.runtime.subsystems import SubsystemContext
 
@@ -334,6 +335,9 @@ class SystemRoutesSubsystem:
             _entity_name: str,
             _repositories: Any,
             _slug: str,
+            _appspec: Any,
+            _auth_middleware: Any,
+            _user_entity_name: str,
         ) -> Any:
             async def _handler(entity_id: str, request: Request) -> Any:
                 from uuid import UUID
@@ -353,6 +357,25 @@ class SystemRoutesSubsystem:
                     dict(entity_data)
                     if isinstance(entity_data, dict)
                     else (entity_data.__dict__ if hasattr(entity_data, "__dict__") else {})
+                )
+                # #1787: a surface action `on click -> integration X action Y`
+                # with `visible:` is a permission — re-evaluate it here (403
+                # names the predicate), the same check that hid the button.
+                auth_context = None
+                if _auth_middleware is not None:
+                    try:
+                        auth_context = _auth_middleware.get_auth_context(request)
+                    except Exception:
+                        logger.debug("manual trigger: no auth context", exc_info=True)
+                await enforce_integration_action(
+                    _appspec,
+                    _entity_name,
+                    _int_name,
+                    _map_name,
+                    data,
+                    auth_context,
+                    user_repository=_repositories.get(_user_entity_name),
+                    request=request,
                 )
                 force_refresh = request.query_params.get("force") == "1"
                 result = await _executor.execute_manual(
@@ -381,6 +404,7 @@ class SystemRoutesSubsystem:
 
             return _handler
 
+        user_entity_name = getattr(ctx.auth_config, "user_entity_name", None) or "User"
         for integration in getattr(ctx.appspec, "integrations", []):
             for mapping in integration.mappings:
                 has_manual = any(
@@ -401,6 +425,9 @@ class SystemRoutesSubsystem:
                     entity_name,
                     ctx.repositories,
                     slug,
+                    ctx.appspec,
+                    ctx.auth_middleware,
+                    user_entity_name,
                 )
 
                 ctx.app.post(

@@ -2083,6 +2083,7 @@ ir_class: SurfaceAction
     - trigger: SurfaceTrigger
   optional:
     - label: str | None = None
+    - visible: ConditionExpr | None = None
 
 ir_class: SurfaceActionTriple
   required:

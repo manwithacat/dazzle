@@ -70,15 +70,9 @@ def evaluate_condition(
     Returns:
         True if condition is satisfied
     """
-    # Handle compound conditions (AND/OR)
-    if "operator" in condition and condition["operator"]:
-        left_result = evaluate_condition(condition.get("left", {}), record, context)
-        right_result = evaluate_condition(condition.get("right", {}), record, context)
-
-        if condition["operator"] == "and":
-            return left_result and right_result
-        elif condition["operator"] == "or":
-            return left_result or right_result
+    operator = condition.get("operator")
+    if operator:
+        return _evaluate_logical(operator, condition, record, context)
 
     # Handle role check
     if "role_check" in condition and condition["role_check"] is not None:
@@ -93,6 +87,25 @@ def evaluate_condition(
         return _evaluate_comparison(condition["comparison"], record, context)
 
     # Empty condition = always true
+    return True
+
+
+def _evaluate_logical(
+    operator: Any,
+    condition: dict[str, Any],
+    record: dict[str, Any],
+    context: dict[str, Any],
+) -> bool:
+    """``and`` / ``or`` / ``not (...)`` — the last is ``{"operator": "not",
+    "left": inner, "right": None}`` (#1180 grammar, evaluated since #1787)."""
+    left = evaluate_condition(condition.get("left") or {}, record, context)
+    if operator == "not":
+        return not left
+    right = evaluate_condition(condition.get("right") or {}, record, context)
+    if operator == "and":
+        return left and right
+    if operator == "or":
+        return left or right
     return True
 
 
@@ -193,18 +206,7 @@ def _evaluate_comparison(
     # ``context["tenant_config"]`` (per-tenant config exposed at render time),
     # NOT from the entity record. Everything else resolves from the record as
     # before, so roles/grants/plain-field comparisons are unchanged.
-    if field.startswith(_TENANT_CONFIG_PREFIX):
-        key = field[len(_TENANT_CONFIG_PREFIX) :]
-        tenant_config = context.get("tenant_config") or {}
-        record_value = tenant_config.get(key) if isinstance(tenant_config, dict) else None
-    elif field == "current_tenant" or field.startswith(_CURRENT_TENANT_PREFIX):
-        # #1394: `current_tenant` / `current_tenant.<attr>` is a context namespace
-        # (the host-resolved tenant), not a record field. Drives display gates like
-        # `visible_when: current_tenant.kind == trust`.
-        record_value = _resolve_current_tenant(field, context)
-    else:
-        # Get the actual value from the record
-        record_value = record.get(field)
+    record_value = _resolve_left_reference(field, record, context)
 
     # Resolve the comparison value (handle "current_user" etc.)
     resolved_value = _resolve_value(value, context)
@@ -215,6 +217,29 @@ def _evaluate_comparison(
 
     # Perform comparison
     return _eval_comparison_op(operator, record_value, resolved_value)
+
+
+def _resolve_left_reference(field: str, record: dict[str, Any], context: dict[str, Any]) -> Any:
+    """Resolve a comparison's left-hand reference.
+
+    ``tenant_config.<key>`` (#1324 FR-4) and ``current_tenant[.attr]`` (#1394)
+    are context namespaces, not record fields. A dotted path (#1787) walks the
+    record's expanded FK dicts — an unexpanded FK (a bare id) resolves to None
+    and fails the comparison (fail closed). A plain ref field read from a detail
+    record is an expanded ``{"id": ...}`` dict and compares on its id.
+    """
+    if field.startswith(_TENANT_CONFIG_PREFIX):
+        key = field[len(_TENANT_CONFIG_PREFIX) :]
+        tenant_config = context.get("tenant_config") or {}
+        return tenant_config.get(key) if isinstance(tenant_config, dict) else None
+    if field == "current_tenant" or field.startswith(_CURRENT_TENANT_PREFIX):
+        return _resolve_current_tenant(field, context)
+    if "." in field:
+        return _resolve_dotted_field(record, field)
+    value = record.get(field)
+    if isinstance(value, dict) and "id" in value:
+        return value["id"]
+    return value
 
 
 def _as_compare_date(value: Any) -> date | None:
@@ -300,3 +325,64 @@ def _resolve_value(value: Any, context: dict[str, Any]) -> Any:
 
     # Simple literal value
     return value
+
+
+# =============================================================================
+# DSL text of a ConditionExpr (#1787)
+# =============================================================================
+
+
+def _enum_text(value: Any) -> str:
+    return str(value.value if hasattr(value, "value") else value or "")
+
+
+def _value_text(value: Any) -> str:
+    if value is None:
+        return "null"
+    if getattr(value, "values", None) is not None:
+        return "[" + ", ".join(str(v) for v in value.values) + "]"
+    if getattr(value, "date_expr", None) is not None:
+        return str(value.date_expr)
+    literal = getattr(value, "literal", None)
+    if literal is None:
+        return "null"
+    if isinstance(literal, bool):
+        return "true" if literal else "false"
+    return str(literal)
+
+
+def condition_to_dsl(condition: Any) -> str:
+    """Render a ``ConditionExpr`` back to its DSL text (#1787).
+
+    Used where a refusal or a validation error must name the predicate the
+    author wrote (``status = draft and role(agent)``) so it traces back to the
+    surface line. Covers the shapes ``parse_condition_expr`` produces; a
+    compound child is parenthesised when its operator differs from its parent's.
+    """
+    if condition is None:
+        return ""
+    op = _enum_text(getattr(condition, "operator", None))
+    if op == "not":
+        return f"not ({condition_to_dsl(condition.left)})"
+    if op in ("and", "or"):
+        parts = []
+        for child in (condition.left, condition.right):
+            text = condition_to_dsl(child)
+            child_op = _enum_text(getattr(child, "operator", None))
+            if child_op in ("and", "or") and child_op != op:
+                text = f"({text})"
+            parts.append(text)
+        return f" {op} ".join(parts)
+    if getattr(condition, "role_check", None) is not None:
+        return f"role({condition.role_check.role_name})"
+    if getattr(condition, "grant_check", None) is not None:
+        grant = condition.grant_check
+        return f'has_grant("{grant.relation}", {grant.scope_field})'
+    comparison = getattr(condition, "comparison", None)
+    if comparison is not None:
+        if comparison.function is not None:
+            lhs = f"{comparison.function.name}({comparison.function.argument})"
+        else:
+            lhs = str(comparison.field or "")
+        return f"{lhs} {_enum_text(comparison.operator)} {_value_text(comparison.value)}"
+    return ""

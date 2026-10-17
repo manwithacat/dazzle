@@ -48,8 +48,8 @@ def eval_comparison_op(
     - Operator dispatch: eq, ne, gt, lt, ge, le, in, not_in
 
     Operator aliases accepted:
-    - eq: "eq", "=", "=="
-    - ne: "ne", "!=", "<>"
+    - eq: "eq", "=", "==", "is" (DSL `x is null`)
+    - ne: "ne", "!=", "<>", "is not"
     - gt: "gt", ">"
     - ge: "ge", ">="
     - lt: "lt", "<"
@@ -76,26 +76,26 @@ def eval_comparison_op(
 
     # Handle null comparisons — return early before any coercion
     if resolved_val is None:
-        if op in ("eq", "=", "=="):
+        if op in ("eq", "=", "==", "is"):
             return record_val is None
-        if op in ("ne", "!=", "<>"):
+        if op in ("ne", "!=", "<>", "is not"):
             return record_val is not None
         return False
 
     if record_val is None:
-        if op in ("eq", "=", "=="):
+        if op in ("eq", "=", "==", "is"):
             return resolved_val is None
-        if op in ("ne", "!=", "<>"):
+        if op in ("ne", "!=", "<>", "is not"):
             return resolved_val is not None
         return False
 
     # Operator dispatch
-    if op in ("eq", "=", "=="):
+    if op in ("eq", "=", "==", "is"):
         if isinstance(record_val, bool) and isinstance(resolved_val, bool):
             return record_val == resolved_val
         return str(record_val) == str(resolved_val)
 
-    if op in ("ne", "!=", "<>"):
+    if op in ("ne", "!=", "<>", "is not"):
         if isinstance(record_val, bool) and isinstance(resolved_val, bool):
             return record_val != resolved_val
         return str(record_val) != str(resolved_val)

@@ -1,7 +1,7 @@
 {
-  "src_lines": 323810,
-  "test_lines": 314789,
-  "docs_lines": 48861,
+  "src_lines": 324575,
+  "test_lines": 315272,
+  "docs_lines": 49009,
   "construct_count": 31,
   "written": "2026-10-17",
   "exceptions": [
@@ -417,6 +417,15 @@
         "docs_lines"
       ],
       "reason": "#1788 consumer-forced (cyfuture): tenant-aware dump/restore-check"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1787 consumer-forced (cyfuture): action visible: + render-time SM guards"
     }
   ]
 }

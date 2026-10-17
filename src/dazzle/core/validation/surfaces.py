@@ -6,6 +6,9 @@ Split verbatim from dazzle.core.validator per #1361.
 from collections.abc import Callable
 
 from .. import ir
+from ..condition_eval import condition_to_dsl
+from .conditions import _validate_condition_fields, _walk_role_names
+from .rbac import _ALLOWED_SCOPE_WILDCARDS, _declared_persona_ids
 
 # #1438: API-pack→operations provider registry. `core` is the bottom layer and
 # must not import the `api_kb` tooling layer (the `core ↛ api_kb/mcp` contract), so
@@ -135,6 +138,100 @@ def _inline_step_target_surfaces(appspec: ir.AppSpec) -> set[str]:
     for process in getattr(appspec, "processes", None) or []:
         _walk(process.steps)
     return names
+
+
+def _visible_predicate_errors(
+    appspec: ir.AppSpec,
+    entity: ir.EntitySpec | None,
+    predicate: ir.ConditionExpr,
+    where: str,
+    declared_roles: set[str],
+) -> list[str]:
+    """Errors for one ``visible:`` predicate (#1787).
+
+    Record comparisons must name fields of the surface's entity (FK paths
+    resolved through the ref graph); ``role(x)`` must name a declared persona
+    (skipped when the app declares none). ``where`` names the surface and the
+    action/section/field so the message traces back to the DSL line.
+    """
+    context = f"{where} visible: `{condition_to_dsl(predicate)}`"
+    errors = _validate_condition_fields(predicate, entity, context, appspec)
+    if declared_roles:
+        for role_name in sorted(_walk_role_names(predicate)):
+            if role_name in declared_roles or role_name in _ALLOWED_SCOPE_WILDCARDS:
+                continue
+            errors.append(
+                f"{context} references role({role_name}) but no persona '{role_name}' "
+                f"is declared (declared: {sorted(declared_roles)})"
+            )
+    return errors
+
+
+def _is_manual_mapping(
+    appspec: ir.AppSpec, integration_name: str, mapping_name: str | None, entity_name: str | None
+) -> bool:
+    for integration in appspec.integrations:
+        if integration.name != integration_name:
+            continue
+        for mapping in integration.mappings:
+            if (
+                mapping.name == mapping_name
+                and mapping.entity_ref == entity_name
+                and any(t.trigger_type == ir.MappingTriggerType.MANUAL for t in mapping.triggers)
+            ):
+                return True
+    return False
+
+
+def _surface_visible_predicates(surface: ir.SurfaceSpec) -> list[tuple[str, ir.ConditionExpr]]:
+    """``(where, predicate)`` for every ``visible:`` on a surface's actions,
+    sections and fields; ``where`` names the DSL line (#1787)."""
+    out: list[tuple[str, ir.ConditionExpr]] = []
+    for action in getattr(surface, "actions", None) or []:
+        if action.visible is not None:
+            out.append((f"Surface '{surface.name}' action '{action.name}'", action.visible))
+    for section in getattr(surface, "sections", None) or []:
+        if getattr(section, "visible", None) is not None:
+            out.append((f"Surface '{surface.name}' section '{section.name}'", section.visible))
+        for element in section.elements:
+            if getattr(element, "visible", None) is not None:
+                out.append(
+                    (f"Surface '{surface.name}' field '{element.field_name}'", element.visible)
+                )
+    return out
+
+
+def _unenforceable_integration_visible(appspec: ir.AppSpec, surface: ir.SurfaceSpec) -> list[str]:
+    """An ``integration X action Y`` outcome with ``visible:`` must name a manual
+    mapping on the surface's entity — the POST refusal lives on that route."""
+    errors: list[str] = []
+    for action in getattr(surface, "actions", None) or []:
+        outcome = action.outcome
+        if action.visible is None or outcome.kind != ir.OutcomeKind.INTEGRATION:
+            continue
+        if _is_manual_mapping(appspec, outcome.target, outcome.action, surface.entity_ref):
+            continue
+        errors.append(
+            f"Surface '{surface.name}' action '{action.name}' has visible: but "
+            f"'integration {outcome.target} action {outcome.action}' is not a "
+            f"mapping with a manual trigger on entity '{surface.entity_ref}', "
+            f"so the predicate could not be enforced on POST (#1787)"
+        )
+    return errors
+
+
+def _surface_visible_predicate_errors(appspec: ir.AppSpec, surface: ir.SurfaceSpec) -> list[str]:
+    """Validate every ``visible:`` on a surface's actions, sections and fields (#1787)."""
+    predicates = _surface_visible_predicates(surface)
+    if not predicates:
+        return []
+    entity = appspec.get_entity(surface.entity_ref) if surface.entity_ref else None
+    declared_roles = _declared_persona_ids(appspec)
+    errors: list[str] = []
+    for where, predicate in predicates:
+        errors.extend(_visible_predicate_errors(appspec, entity, predicate, where, declared_roles))
+    errors.extend(_unenforceable_integration_visible(appspec, surface))
+    return errors
 
 
 def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
@@ -404,6 +501,9 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
         elif surface.mode == ir.SurfaceMode.VIEW:
             if not surface.entity_ref:
                 warnings.append(f"Surface '{surface.name}' has mode 'view' but no entity reference")
+
+        # #1787: `visible:` predicates on actions, sections and fields.
+        errors.extend(_surface_visible_predicate_errors(appspec, surface))
 
     # #1489: route-collision check. An auto-routed surface's path is
     # deterministic in (mode, entity_ref) — list → GET /<plural>, view/edit →

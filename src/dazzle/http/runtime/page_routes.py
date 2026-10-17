@@ -21,6 +21,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, NamedTuple
 from urllib.parse import quote
+from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -34,11 +35,21 @@ from dazzle.core.strings import normalize_role, to_api_plural
 
 # Re-export for stable import path (build_service / fidelity / experience_routes).
 # `as` form keeps mypy explicit re-export after the dispatch_ctx extract.
+from dazzle.http.runtime.action_visibility import (
+    condition_context,
+    hidden_action_names,
+    integration_action_refusal,
+    needs_user_entity,
+    principal_facts,
+    surface_visible_predicates,
+    transition_offered,
+)
 from dazzle.http.runtime.dispatch_ctx import _build_dispatch_ctx as _build_dispatch_ctx
 from dazzle.http.runtime.htmx import HtmxDetails, is_peek_request
 from dazzle.http.runtime.mailbox_shape import is_mailbox_shape
 from dazzle.http.runtime.rls_bind import bind_rls_context
 from dazzle.http.runtime.slug_validator import validate_slug
+from dazzle.http.runtime.tenant_render_context import inject_current_tenant
 from dazzle.http.runtime.usage_signal import (
     USAGE_KIND_ACTION,
     USAGE_KIND_FIELD,
@@ -1946,6 +1957,135 @@ def gate_detail_transitions(
     return gated_row_transitions(transitions, current)
 
 
+@dataclass
+class DetailPrincipal:
+    """Who is looking at a detail page, in the shapes the gates read (#1787).
+
+    ``roles`` / ``current_user`` / ``is_superuser`` mirror what the PUT hands
+    ``TransitionValidator``; ``condition_ctx`` is the ``evaluate_condition``
+    context for ``visible:`` predicates.
+    """
+
+    roles: list[str] = field(default_factory=list)
+    current_user: str | None = None
+    is_superuser: bool = False
+    condition_ctx: dict[str, Any] = field(default_factory=dict)
+
+
+def _surface_spec(appspec: ir.AppSpec | None, surface_name: str | None) -> SurfaceSpec | None:
+    if appspec is None or not surface_name:
+        return None
+    return appspec.get_surface(surface_name)
+
+
+def _user_entity_name(appspec: ir.AppSpec) -> str:
+    for entity in appspec.domain.entities:
+        if getattr(entity, "auth_identity", None):
+            return entity.name
+    return "User"
+
+
+async def _detail_principal(
+    prc: _PageRequestContext, surface: SurfaceSpec | None
+) -> DetailPrincipal:
+    """Resolve the principal for detail gating (#1787).
+
+    Roles are the membership-first effective roles the write path checks. The
+    User row is read only when a ``visible:`` on this surface reads
+    ``current_user.<path>``.
+    """
+    roles, current_user, is_superuser = principal_facts(prc.auth_ctx)
+    if not roles and not current_user:
+        # Unauthenticated / auth-less page path: the page context's roles.
+        roles = list(prc.ctx.user_roles or [])
+
+    user_entity: dict[str, Any] | None = None
+    if current_user and needs_user_entity(surface_visible_predicates(surface)):
+        service = prc.deps.entity_services.get(_user_entity_name(prc.deps.appspec))
+        if service is not None:
+            try:
+                row = await service.read(UUID(current_user))
+                if row is not None:
+                    user_entity = row if isinstance(row, dict) else row.model_dump()
+            except Exception:
+                logger.debug("current_user entity unresolved for visible:", exc_info=True)
+
+    ctx = condition_context(
+        user_roles=roles, current_user_id=current_user, current_user_entity=user_entity
+    )
+    ctx["tenant_config"] = getattr(prc.ctx, "tenant_config", None) or {}
+    inject_current_tenant(ctx, prc.request)
+    return DetailPrincipal(
+        roles=roles, current_user=current_user, is_superuser=is_superuser, condition_ctx=ctx
+    )
+
+
+def _gate_detail_visibility(req_detail: Any, record: dict[str, Any], ctx: dict[str, Any]) -> None:
+    """Field (flat and sectioned) and related-tab ``visible:`` against the record (#1787)."""
+    all_fields = list(req_detail.fields)
+    for section in getattr(req_detail, "sections", None) or []:
+        all_fields.extend(section.fields)
+    for fld in all_fields:
+        if fld.visible_condition and not evaluate_condition(fld.visible_condition, record, ctx):
+            fld.visible = False
+    for group in req_detail.related_groups:
+        for tab in group.tabs:
+            if tab.visible_condition and not evaluate_condition(tab.visible_condition, record, ctx):
+                tab.visible = False
+
+
+def gate_detail_affordances(
+    req_detail: Any,
+    *,
+    appspec: ir.AppSpec,
+    surface: SurfaceSpec | None,
+    principal: DetailPrincipal,
+    state_machine: Any = None,
+) -> None:
+    """Drop every detail affordance the runtime would refuse (#1558, #1787).
+
+    - transitions: valid from the record's current state (#1558 3c), then the
+      SM's ``requires_role`` / expression guards for this principal (#1787 C);
+    - fields (flat and sectioned) and related tabs: ``visible:`` evaluated
+      against the record and principal (was role-only with an empty record);
+    - external link actions: the surface action's ``visible:``;
+    - integration actions: :func:`integration_action_refusal`, the same check
+      the manual-trigger POST applies.
+    """
+    record: dict[str, Any] = req_detail.item or {}
+    ctx = principal.condition_ctx
+
+    current_state = str(record.get(req_detail.status_field, "") or "")
+    req_detail.transitions = [
+        t
+        for t in gate_detail_transitions(req_detail.transitions, record, req_detail.status_field)
+        if transition_offered(
+            state_machine,
+            record,
+            current_state,
+            t.to_state,
+            user_roles=principal.roles,
+            current_user=principal.current_user,
+            is_superuser=principal.is_superuser,
+        )
+    ]
+
+    _gate_detail_visibility(req_detail, record, ctx)
+
+    hidden = hidden_action_names(surface, record, ctx)
+    req_detail.external_link_actions = [
+        a for a in req_detail.external_link_actions if a.name not in hidden
+    ]
+    req_detail.integration_actions = [
+        a
+        for a in req_detail.integration_actions
+        if integration_action_refusal(
+            appspec, req_detail.entity_name, a.integration_name, a.mapping_name, record, ctx
+        )
+        is None
+    ]
+
+
 async def _handle_detail(prc: _PageRequestContext) -> None:
     """Fetch and prepare detail page data for the per-request context."""
     req_detail = prc.ctx.detail.model_copy(deep=True)
@@ -1982,29 +2122,19 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
             if _field.when_expr:
                 _field.visible = evaluate_when_expr(_field.when_expr, req_detail.item)
 
-    # #1558 3c: gate transition affordances to those valid from the record's
-    # current state — a resolved record must not offer an in_progress button.
-    if req_detail.item and "error" not in req_detail.item:
-        req_detail.transitions = gate_detail_transitions(
-            req_detail.transitions, req_detail.item, req_detail.status_field
-        )
-
-    # Evaluate role-based visible conditions (#487)
-    if prc.ctx.user_roles is not None:
-        _role_ctx = {
-            "user_roles": [normalize_role(r) for r in prc.ctx.user_roles],
-        }
-        for _field in req_detail.fields:
-            if _field.visible_condition:
-                if not evaluate_condition(_field.visible_condition, {}, _role_ctx):
-                    _field.visible = False
-
-        # Hide related tabs whose visible_condition doesn't match (#501)
-        for _group in req_detail.related_groups:
-            for _tab in _group.tabs:
-                if _tab.visible_condition:
-                    if not evaluate_condition(_tab.visible_condition, {}, _role_ctx):
-                        _tab.visible = False
+    # #1558 3c + #1787: gate transition affordances (current state, then the
+    # SM's own role/expression guards), field/section/tab `visible:` against
+    # the record and principal, and surface actions by their `visible:`.
+    _surface = _surface_spec(prc.deps.appspec, prc.surface_name)
+    _principal = await _detail_principal(prc, _surface)
+    _service = prc.deps.entity_services.get(req_detail.entity_name)
+    gate_detail_affordances(
+        req_detail,
+        appspec=prc.deps.appspec,
+        surface=_surface,
+        principal=_principal,
+        state_machine=getattr(_service, "state_machine", None),
+    )
 
     # Suppress Edit/Delete buttons when permit rules deny the operation
     # or when the workspace declares read_only for the user's persona (#550, #552).
@@ -2060,6 +2190,10 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
     for _a in req_detail.integration_actions:
         if _a.api_url and "{id}" in _a.api_url:
             _a.api_url = _a.api_url.replace("{id}", str(prc.path_id))
+    # #1787: `on click -> "/x/{id}/y" external` names the record too.
+    for _link in req_detail.external_link_actions:
+        if "{id}" in _link.url:
+            _link.url = _link.url.replace("{id}", quote(str(prc.path_id), safe=""))
 
     # Fetch related entity data for tabs (hub-and-spoke, #301)
     if req_detail.related_groups and prc.path_id:

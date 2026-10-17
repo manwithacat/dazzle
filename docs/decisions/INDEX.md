@@ -82,6 +82,7 @@ below, link from the issue body (not only a comment).
 | [DD-013](DD-013-enterprise-sso-scim-connections.md) | Enterprise SSO / SCIM connections (OIDC, SCIM, domain verification, `dazzle auth connection`; SAML out, broker route) | FORCED | #1342 | Removed in flense ship AD (revision 0023); operator ruled it a core requirement 2026-10-16; restoring OIDC + SCIM from `23cf59372` per `docs/plans/2026-10-16-enterprise-auth-restore.md` |
 | [DD-014](DD-014-two-factor-authentication.md) | Two-factor authentication (TOTP, email code, recovery codes, `/2fa/*` pages) | PARKED | #829, #838 | Removed in flense ship AG with its two tables (revision 0024); restore from `229226a88` when a consumer declares 2FA or its assurance pack names MFA |
 | [DD-015](DD-015-task-inbox-region.md) | Multi-source task inbox region (`display: task_inbox`, `task_inbox_config:`) | PARKED | #1015, #1145, #1232, #1303 | Removed 2026-10-16 after AegisMark fb673bc8 dropped its last use; HM `task-inbox` Hyperpart kept; restore from `a112b3d34` when a consumer needs one landing list across entities |
+| [DD-016](DD-016-transition-outcome-and-row-surface-actions.md) | `transition` outcome on surface actions + per-row surface actions in `mode: list` | PARKED | #1787 | Action `visible:` + render-time SM guards shipped; reopen when cyfuture needs transition buttons with custom labels/placement or per-row surface actions |
 
 ## Related
 

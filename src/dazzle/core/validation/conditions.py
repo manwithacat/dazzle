@@ -7,6 +7,14 @@ from typing import Any
 
 from .. import ir
 
+_CONTEXT_REFERENCE_ROOTS = ("current_user", "current_tenant", "tenant_config")
+
+
+def _is_context_reference(field_path: str) -> bool:
+    """True for a left-hand reference resolved from render context, not the
+    record: ``current_user[.x]``, ``current_tenant[.x]``, ``tenant_config.x``."""
+    return field_path.split(".", 1)[0] in _CONTEXT_REFERENCE_ROOTS
+
 
 def _validate_condition_fields(
     condition: ir.ConditionExpr,
@@ -76,7 +84,10 @@ def _validate_condition_fields(
 
     def check_comparison(comparison: ir.Comparison) -> None:
         """Validate field references in a comparison expression."""
-        if comparison.field:
+        if comparison.field and _is_context_reference(comparison.field):
+            # Resolved from render context, not the record (condition_eval).
+            pass
+        elif comparison.field:
             if "." in comparison.field:
                 err = _resolve_fk_path(comparison.field)
                 if err:
