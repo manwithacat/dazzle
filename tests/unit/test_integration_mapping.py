@@ -429,6 +429,36 @@ integration my_api:
         assert mapping.response_mapping[0].target_field == "synced"
         assert mapping.response_mapping[0].source.literal is True
 
+    @pytest.mark.parametrize(
+        ("source", "path"),
+        [
+            ("response.company_name", "response.company_name"),
+            ("response.data.id", "response.data.id"),
+            ("response.headers.Location", "response.headers.Location"),
+            ('response.headers."X-CorrelationId"', "response.headers.X-CorrelationId"),
+            ('response."odd-key".value', "response.odd-key.value"),
+        ],
+    )
+    def test_response_source_path(self, source: str, path: str) -> None:
+        """#1776: a quoted segment after a dot joins the path verbatim."""
+        dsl = f"""
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  ref: str(200)
+
+integration my_api:
+  mapping fetch on Record:
+    request: POST "/records"
+    map_response:
+      ref <- {source}
+"""
+        rule = _parse(dsl).integrations[0].mappings[0].response_mapping[0]
+        assert rule.source.path == path
+        assert rule.source.literal is None
+
 
 class TestRequestMapping:
     """Tests for request mapping parsing."""

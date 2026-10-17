@@ -23,9 +23,17 @@ stores it as one entity field name.
 `transport: app` renders the request and calls
 `pipeline.serve.app_init.integration_transport` instead of opening a socket.
 The hook receives the method, interpolated path, declared base_url, static
-mapping headers, and JSON body, and returns the status and body. The
+mapping headers, and JSON body, and returns `(status, body)` or
+`(status, body, headers)`, where headers is a `Mapping[str, str]`. The
 application adds per-request headers and chooses the host. `on_error: retry`
 calls the hook again. A missing hook is an error.
+
+`map_response` reads a response header through `response.headers.<Name>`,
+for the hook's third element and for an HTTP response alike. The lookup is
+case-insensitive. Quote a name an identifier cannot carry:
+`response.headers."X-CorrelationId"`. `headers` is reserved under
+`response`, so a body key named `headers` is not reachable. Headers are not
+cached: on a GET cache hit a header source resolves to null.
 
 ### Syntax
 
@@ -47,6 +55,7 @@ integration <name> ["<Title>"]:
       <field[.index][.path]> <- <source.path>
     [map_response:]
       <field[.path]> <- <source.path>
+      <field> <- response.headers."<Header-Name>"
     [on_error: <ignore|log_warning|revert_transition|retry>]
     [on_error: set <field> = "<value>", <action>]
 ```

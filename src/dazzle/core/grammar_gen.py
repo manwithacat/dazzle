@@ -807,7 +807,11 @@ integration_action_decl
                     INDENT mapping_rule+ DEDENT)?
                   DEDENT ;
 
-mapping_rule  ::= IDENT "<-" (field_path | literal) NEWLINE ;
+mapping_rule  ::= IDENT "<-" (mapping_path | literal) NEWLINE ;
+
+(* A quoted segment carries a name an identifier cannot, e.g. a response
+   header: response.headers."X-CorrelationId" (#1776) *)
+mapping_path  ::= IDENT ("." (IDENT | STRING))* ;
 
 sync_decl     ::= "sync" IDENT ":" NEWLINE
                   INDENT

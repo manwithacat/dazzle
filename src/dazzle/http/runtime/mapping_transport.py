@@ -4,6 +4,10 @@ The executor renders the request and calls this hook instead of ``httpx``.
 The application adds per-request headers, picks the host, and attaches the
 caller token. The executor still owns the cache, the response mapping, and
 ``on_error``.
+
+The hook returns ``(status, body)`` or ``(status, body, headers)`` (#1776).
+``headers`` is a ``Mapping[str, str]``; ``map_response`` reads it through
+``response.headers.<Name>``, case-insensitively.
 """
 
 from __future__ import annotations
@@ -12,9 +16,11 @@ import asyncio
 import inspect
 import json
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, cast
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +51,18 @@ class AppTransportRequest:
 
 
 class HookResponse:
-    """The slice of an HTTP response the executor reads after a hook call."""
+    """The slice of an HTTP response the executor reads after a hook call.
 
-    def __init__(self, status_code: int, body: Any) -> None:
+    ``headers`` is an ``httpx.Headers``, so a hook response and an
+    ``httpx.Response`` answer header lookups the same, case-insensitive way.
+    """
+
+    def __init__(
+        self, status_code: int, body: Any, headers: Mapping[str, str] | None = None
+    ) -> None:
         self.status_code = status_code
         self._body = body
+        self.headers = httpx.Headers(dict(headers or {}))
         if isinstance(body, str):
             self.text = body
         else:
@@ -104,7 +117,7 @@ async def invoke_app_transport(
             outcome = hook(request)
             if inspect.isawaitable(outcome):
                 outcome = await outcome
-            status, payload = _unpack(outcome)
+            status, payload, headers = _unpack(outcome)
         except TypeError:
             raise
         except Exception as exc:
@@ -118,7 +131,7 @@ async def invoke_app_transport(
 
         if status not in _TRANSIENT_STATUS_CODES or attempt == max_attempts - 1:
             await _notify(on_attempt, attempt + 1, max_attempts, status, None, None)
-            return HookResponse(status, payload)
+            return HookResponse(status, payload, headers)
 
         delay = _delay(backoff, attempt)
         await _notify(on_attempt, attempt + 1, max_attempts, status, None, delay)
@@ -127,17 +140,36 @@ async def invoke_app_transport(
     raise RuntimeError("app transport exhausted attempts without returning")
 
 
-def _unpack(outcome: Any) -> tuple[int, Any]:
+_SHAPE = "(status: int, body) or (status: int, body, headers: Mapping[str, str])"
+
+
+def _unpack(outcome: Any) -> tuple[int, Any, Mapping[str, str] | None]:
     if (
         not isinstance(outcome, tuple)
-        or len(outcome) != 2
+        or len(outcome) not in (2, 3)
         or isinstance(outcome[0], bool)
         or not isinstance(outcome[0], int)
     ):
+        raise TypeError(f"integration_transport must return {_SHAPE}, got {_describe(outcome)}")
+    headers = _check_headers(outcome[2]) if len(outcome) == 3 else None
+    return outcome[0], outcome[1], headers
+
+
+def _check_headers(headers: Any) -> Mapping[str, str]:
+    if not isinstance(headers, Mapping) or not all(
+        isinstance(k, str) and isinstance(v, str) for k, v in headers.items()
+    ):
         raise TypeError(
-            f"integration_transport must return (status: int, body), got {type(outcome).__name__}"
+            f"integration_transport must return {_SHAPE}; the third element is "
+            f"{type(headers).__name__}, not a Mapping[str, str]"
         )
-    return outcome
+    return headers
+
+
+def _describe(outcome: Any) -> str:
+    if isinstance(outcome, tuple):
+        return f"a {len(outcome)}-tuple"
+    return type(outcome).__name__
 
 
 def _delay(backoff: tuple[float, ...], attempt: int) -> float:

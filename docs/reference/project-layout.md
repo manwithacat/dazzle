@@ -172,15 +172,25 @@ An integration marked `transport: app` does not open a socket. The same module
 may expose `integration_transport(request)`. The executor calls it with the
 rendered method, interpolated path, declared `base_url`, static mapping
 headers, and JSON body (`request.integration` and `request.mapping` name the
-source). Return `(status: int, body)`. The application adds per-request
-headers, chooses the host, and attaches the caller token. `on_error: retry`
-calls the hook again. A missing callable is an error at send time.
+source). Return `(status: int, body)` or `(status: int, body, headers)`, where
+`headers` is a `Mapping[str, str]`; any other third element is a `TypeError`
+and is not retried. The application adds per-request headers, chooses the
+host, and attaches the caller token. `on_error: retry` calls the hook again.
+A missing callable is an error at send time.
+
+`map_response` reads the returned headers through `response.headers.<Name>`,
+case-insensitively (#1776); quote a name with a hyphen:
+`hmrc_submission_id <- response.headers."X-CorrelationId"`. `headers` is
+reserved under `response`, so a body key of that name is not reachable.
+Headers are not cached: on a GET cache hit a header source maps to `None`.
+Derive values such as the id at the end of `Location` in the hook and return
+them in the body.
 
 ```python
 # pipeline/serve/app_init.py
 async def integration_transport(request):
     response = await my_client.send(request)
-    return response.status_code, response.json()
+    return response.status_code, response.json(), dict(response.headers)
 ```
 
 ## See Also

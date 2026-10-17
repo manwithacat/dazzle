@@ -5,6 +5,7 @@ import base64
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 
 from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, Literal
@@ -91,12 +92,15 @@ def _make_event(
     )
 
 
-def _resp(status_code: int, json_body: Any, text: str) -> MagicMock:
+def _resp(
+    status_code: int, json_body: Any, text: str, headers: dict[str, str] | None = None
+) -> MagicMock:
     """A canned httpx response."""
     resp = MagicMock()
     resp.status_code = status_code
     resp.json.return_value = json_body
     resp.text = text
+    resp.headers = httpx.Headers(headers or {})
     return resp
 
 
@@ -317,13 +321,32 @@ class TestRequestMapping:
             {"status": None},
             id="missing-field-is-none",
         ),
+        pytest.param(
+            [MappingRule(target_field="loc", source=Expression(path="response.headers.location"))],
+            {"headers": {"location": "body"}},
+            {"loc": "/agents/1/invitations/inv-1"},
+            id="header-case-insensitive-and-reserved",
+        ),
+        pytest.param(
+            [MappingRule(target_field="d", source=Expression(path="response.headers.X.Dotted"))],
+            {},
+            {"d": "dot"},
+            id="header-name-with-a-dot",
+        ),
+        pytest.param(
+            [MappingRule(target_field="h", source=Expression(path="response.headers.Missing"))],
+            {},
+            {"h": None},
+            id="missing-header-is-none",
+        ),
     ],
 )
 def test_response_mapping(
     rules: list[MappingRule], response: dict[str, Any], expected: dict[str, Any]
 ) -> None:
     executor = MappingExecutor(_make_appspec(), EntityEventBus())
-    assert executor._apply_response_mapping(rules, response) == expected
+    headers = httpx.Headers({"Location": "/agents/1/invitations/inv-1", "X.Dotted": "dot"})
+    assert executor._apply_response_mapping(rules, response, headers) == expected
 
 
 # ---------------------------------------------------------------------------
@@ -956,6 +979,12 @@ def _app_mapping() -> IntegrationMapping:
     )
 
 
+_HEADER_RULE = MappingRule(
+    target_field="hmrc_submission_id",
+    source=Expression(path="response.headers.X-CorrelationId"),
+)
+
+
 class _MemCache:
     def __init__(self) -> None:
         self.store: dict[tuple[str, str], dict[str, Any]] = {}
@@ -1116,6 +1145,122 @@ class TestAppTransport:
         assert second.cache_hit is True
         assert second.mapped_fields == {"hmrc_receipt_id": "cached"}
         assert len(seen) == 1
+
+    @pytest.mark.parametrize(
+        ("outcome", "expected"),
+        [
+            # A 2-tuple stays valid; there are no headers to read.
+            ((200, {"formBundleNumber": "b"}), None),
+            ((200, {"formBundleNumber": "b"}, {"X-CorrelationId": "c-1"}), "c-1"),
+            # Lookup is case-insensitive.
+            ((200, {"formBundleNumber": "b"}, {"x-correlationid": "c-2"}), "c-2"),
+            # A body key named ``headers`` does not shadow the reserved namespace.
+            (
+                (
+                    200,
+                    {"formBundleNumber": "b", "headers": {"X-CorrelationId": "body"}},
+                    {"X-CorrelationId": "c-3"},
+                ),
+                "c-3",
+            ),
+            ((200, {"formBundleNumber": "b", "headers": {"X-CorrelationId": "body"}}), None),
+        ],
+    )
+    def test_hook_headers_map_to_fields(self, outcome: tuple[Any, ...], expected: Any) -> None:
+        """#1776: ``response.headers.<Name>`` reads the hook's third element."""
+
+        async def hook(request: Any) -> tuple[Any, ...]:
+            return outcome
+
+        mapping = _app_mapping()
+        mapping = mapping.model_copy(
+            update={"response_mapping": [*mapping.response_mapping, _HEADER_RULE]}
+        )
+        integration = _make_integration(name="hmrc_mtd", mappings=[mapping], transport="app")
+        executor = MappingExecutor(_make_appspec(integration), EntityEventBus(), app_transport=hook)
+        result = _run(executor.execute_manual("hmrc_mtd", "submit", {"vrn": "1"}))
+
+        assert result.success is True
+        assert result.mapped_fields == {"hmrc_receipt_id": "b", "hmrc_submission_id": expected}
+
+    @pytest.mark.parametrize(
+        "outcome",
+        [
+            (200, {}, "X-CorrelationId: c"),
+            (200, {}, {"X-Count": 1}),
+            (200, {}, [("X-CorrelationId", "c")]),
+            (200, {}, {}, {}),
+            (200,),
+        ],
+    )
+    def test_bad_return_shape_is_a_type_error(self, outcome: tuple[Any, ...]) -> None:
+        seen: list[int] = []
+
+        async def hook(request: Any) -> tuple[Any, ...]:
+            seen.append(1)
+            return outcome
+
+        mapping = _app_mapping().model_copy(
+            update={"on_error": ErrorStrategy(actions=[ErrorAction.RETRY])}
+        )
+        integration = _make_integration(name="hmrc_mtd", mappings=[mapping], transport="app")
+        executor = MappingExecutor(_make_appspec(integration), EntityEventBus(), app_transport=hook)
+        result = _run(executor.execute_manual("hmrc_mtd", "submit", {"vrn": "1"}))
+
+        assert result.success is False
+        assert result.error is not None
+        assert "(status: int, body, headers: Mapping[str, str])" in result.error
+        assert seen == [1]  # a shape error is not retried
+
+    @patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient")
+    def test_httpx_response_headers_map_the_same_way(self, mock_client_cls: MagicMock) -> None:
+        _install_http(
+            mock_client_cls,
+            _resp(201, {"formBundleNumber": "b"}, "{}", {"x-correlationid": "c-4"}),
+        )
+        mapping = _app_mapping()
+        mapping = mapping.model_copy(
+            update={"response_mapping": [*mapping.response_mapping, _HEADER_RULE]}
+        )
+        integration = _make_integration(
+            name="hmrc_mtd", base_url="https://api.example", mappings=[mapping]
+        )
+        executor = MappingExecutor(_make_appspec(integration), EntityEventBus())
+        result = _run(executor.execute_manual("hmrc_mtd", "submit", {"vrn": "1"}))
+
+        assert result.mapped_fields == {"hmrc_receipt_id": "b", "hmrc_submission_id": "c-4"}
+        assert result.response_headers["X-CorrelationId"] == "c-4"
+
+    def test_headers_are_not_cached(self) -> None:
+        async def hook(request: Any) -> tuple[int, dict[str, str], dict[str, str]]:
+            return 200, {"formBundleNumber": "cached"}, {"X-CorrelationId": "c-5"}
+
+        mapping = _make_mapping(
+            name="lookup",
+            method=HttpMethod.GET,
+            url_template="/vat/{self.vrn}",
+            response_mapping=[
+                MappingRule(
+                    target_field="hmrc_receipt_id",
+                    source=Expression(path="response.formBundleNumber"),
+                ),
+                _HEADER_RULE,
+            ],
+        )
+        integration = _make_integration(name="hmrc_mtd", mappings=[mapping], transport="app")
+        executor = MappingExecutor(
+            _make_appspec(integration),
+            EntityEventBus(),
+            cache=_MemCache(),  # type: ignore[arg-type]
+            app_transport=hook,
+        )
+        first = _run(executor.execute_manual("hmrc_mtd", "lookup", {"vrn": "9"}))
+        second = _run(executor.execute_manual("hmrc_mtd", "lookup", {"vrn": "9"}))
+
+        assert first.mapped_fields["hmrc_submission_id"] == "c-5"
+        assert second.cache_hit is True
+        assert second.mapped_fields == {"hmrc_receipt_id": "cached", "hmrc_submission_id": None}
+        assert len(second.response_headers) == 0
 
     def test_project_module_hook_is_used_when_none_is_injected(self) -> None:
         import sys

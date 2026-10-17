@@ -100,9 +100,21 @@ class MappingResult:
     success: bool
     status_code: int = 0
     response_data: dict[str, Any] = field(default_factory=dict)
+    # #1776: the response headers, case-insensitive. Empty on a cache hit:
+    # the cache stores the body only, so headers are not cached.
+    response_headers: httpx.Headers = field(default_factory=httpx.Headers)
     mapped_fields: dict[str, Any] = field(default_factory=dict)
     error: str | None = None
     cache_hit: bool = False
+
+
+def _resolve_header(path: str, headers: httpx.Headers) -> str | None:
+    """Resolve ``response.headers.<Name>``; the name may itself contain dots."""
+    parts = path.split(".", 2)
+    if len(parts) < 3:
+        return None
+    value: str | None = headers.get(parts[2])
+    return value
 
 
 # =============================================================================
@@ -360,8 +372,9 @@ class MappingExecutor:
                 result.cache_hit = True
                 result.response_data = cached
                 if mapping.response_mapping:
+                    # Headers are not cached: response.headers.* resolves to None.
                     result.mapped_fields = self._apply_response_mapping(
-                        mapping.response_mapping, cached
+                        mapping.response_mapping, cached, httpx.Headers()
                     )
                 self._results.append(result)
                 return result
@@ -453,6 +466,8 @@ class MappingExecutor:
                         )
 
                 result.status_code = resp.status_code
+                # HookResponse and httpx.Response both carry httpx.Headers.
+                result.response_headers = resp.headers
 
                 try:
                     result.response_data = resp.json()
@@ -473,7 +488,9 @@ class MappingExecutor:
                     # Apply response mapping
                     if mapping.response_mapping:
                         mapped = self._apply_response_mapping(
-                            mapping.response_mapping, result.response_data
+                            mapping.response_mapping,
+                            result.response_data,
+                            result.response_headers,
                         )
                         result.mapped_fields = mapped
                         if mapped and self._update_entity and event:
@@ -680,13 +697,24 @@ class MappingExecutor:
         self,
         rules: list[MappingRule],
         response_data: dict[str, Any],
+        response_headers: httpx.Headers,
     ) -> dict[str, Any]:
-        """Apply response mapping rules: response → entity fields."""
+        """Apply response mapping rules: response → entity fields.
+
+        ``response.<path>`` walks the JSON body. ``response.headers.<Name>``
+        (#1776) reads a response header, case-insensitively. ``headers`` is a
+        reserved namespace under ``response``: a body key named ``headers`` is
+        not reachable from a mapping. Headers are not cached, so on a cache hit
+        every ``response.headers.*`` source resolves to None.
+        """
         context = {"response": response_data}
         result: dict[str, Any] = {}
         for rule in rules:
-            value = resolve_expression(rule.source, context)
-            result[rule.target_field] = value
+            path = rule.source.path
+            if path is not None and path.split(".", 2)[:2] == ["response", "headers"]:
+                result[rule.target_field] = _resolve_header(path, response_headers)
+            else:
+                result[rule.target_field] = resolve_expression(rule.source, context)
         return result
 
     @staticmethod

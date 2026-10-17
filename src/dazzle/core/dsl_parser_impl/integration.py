@@ -704,7 +704,12 @@ class IntegrationParserMixin:
         return rules
 
     def _parse_expression(self) -> ir.Expression:
-        """Parse a mapping expression: a literal or a dotted path."""
+        """Parse a mapping expression: a literal or a dotted path.
+
+        A path segment after a dot may be a quoted string, so
+        ``response.headers."X-CorrelationId"`` parses to the path
+        ``response.headers.X-CorrelationId``.
+        """
         token = self.current_token()
 
         # Literals first — check before identifiers since true/false are
@@ -741,11 +746,15 @@ class IntegrationParserMixin:
         if token.type not in _structural:
             first = self.advance().value
 
-            # Dotted path
+            # Dotted path. A quoted segment carries characters an identifier
+            # cannot, e.g. response.headers."X-CorrelationId" (#1776).
             parts = [first]
             while self.match(TokenType.DOT):
                 self.advance()
-                parts.append(self.expect_identifier_or_keyword().value)
+                if self.match(TokenType.STRING):
+                    parts.append(self.advance().value)
+                else:
+                    parts.append(self.expect_identifier_or_keyword().value)
 
             return ir.Expression(path=".".join(parts))
 
