@@ -967,8 +967,11 @@ def _extract_surface_purpose(ux: ir.UXSpec | None) -> tuple[str, dict[str, str]]
     Closes the UX-048 "purpose unwired" gap. 14+ DSL declarations across
     contact_manager + fieldtest_hub are invisible at render time before
     this wiring lands.
+
+    ``ux: show_purpose: false`` (#1811) returns nothing: the text stays on the
+    IR (inspection, compliance docs) but is not rendered.
     """
-    if ux is None:
+    if ux is None or not ux.show_purpose:
         return "", {}
     purpose = ux.purpose or ""
     persona_purposes: dict[str, str] = {}

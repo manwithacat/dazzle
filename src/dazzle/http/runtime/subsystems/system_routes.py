@@ -481,7 +481,8 @@ class SystemRoutesSubsystem:
         from dazzle.http.runtime.side_effect_executor import SideEffectExecutor
         from dazzle.http.runtime.transition_effects import TransitionEffectRunner
 
-        executor = SideEffectExecutor(services=ctx.services)
+        by_entity = entity_service_map(ctx.services)
+        executor = SideEffectExecutor(services=by_entity)
         runner = TransitionEffectRunner(
             executor=executor,
             entity_transitions=entity_transitions,
@@ -491,7 +492,6 @@ class SystemRoutesSubsystem:
         # #1797: ``ctx.services`` is keyed by service name, not entity name — the
         # old ``ctx.services.get(entity_name)`` missed for every entity, so no
         # ``on_transition`` block had ever run on this path, silently.
-        by_entity = entity_service_map(ctx.services)
         wired = 0
         unwired: list[str] = []
         for entity_name in entity_transitions:
@@ -732,6 +732,7 @@ class SystemRoutesSubsystem:
             ctx.app.state.fragment_chrome_font_preconnect = chrome.font_preconnect
             ctx.app.state.fragment_chrome_favicon = chrome.favicon
             ctx.app.state.fragment_chrome_topbar_title = chrome.topbar_title
+            ctx.app.state.fragment_chrome_page_purpose = chrome.page_purpose
         except ImportError:
             pass  # dazzle_page not installed (CLI-only context)
 

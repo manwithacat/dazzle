@@ -50,6 +50,7 @@ class UXParserMixin:
 
             ux:
               purpose: "..."
+              show_purpose: true|false   # false hides the rendered purpose line (#1811)
               measure: app|product|wide|full   # shell content measure (c1560)
               show: field1, field2
               sort: field1 desc, field2 asc
@@ -550,6 +551,7 @@ class _UXState:
     """Accumulator for :meth:`UXParserMixin.parse_ux_block`."""
 
     purpose: str | None = None
+    show_purpose: bool = True
     show: list[str] = field(default_factory=list)
     sort: list[ir.SortSpec] = field(default_factory=list)
     filter_fields: list[str] = field(default_factory=list)
@@ -626,6 +628,27 @@ def _ux_kw_bulk_actions(parser: Any, state: _UXState) -> None:
     state.bulk_actions = parser.parse_bulk_actions_block()
 
 
+def _ux_kw_show_purpose(parser: Any, state: _UXState) -> None:
+    """``show_purpose: true|false`` — render ``purpose`` as the page subtitle (#1811)."""
+    parser.advance()  # consume 'show_purpose' identifier
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.TRUE):
+        parser.advance()
+        state.show_purpose = True
+    elif parser.match(TokenType.FALSE):
+        parser.advance()
+        state.show_purpose = False
+    else:
+        token = parser.current_token()
+        raise make_parse_error(
+            f"Expected true or false, got {token.type.value}",
+            parser.file,
+            token.line,
+            token.column,
+        )
+    parser.skip_newlines()
+
+
 _VALID_CONTENT_MEASURES = frozenset({"app", "product", "wide", "full"})
 
 
@@ -669,12 +692,14 @@ _UX_KEYWORDS: dict[TokenType, KeywordParser[_UXState]] = {
 _UX_IDENT_KEYWORDS: dict[str, KeywordParser[_UXState]] = {
     "bulk_actions": _ux_kw_bulk_actions,
     "measure": _ux_kw_measure,
+    "show_purpose": _ux_kw_show_purpose,
 }
 
 
 def _build_ux(state: _UXState) -> ir.UXSpec:
     return ir.UXSpec(
         purpose=state.purpose,
+        show_purpose=state.show_purpose,
         show=state.show,
         sort=state.sort,
         filter=state.filter_fields,

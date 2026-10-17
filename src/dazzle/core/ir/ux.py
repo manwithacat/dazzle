@@ -205,6 +205,9 @@ class UXSpec(BaseModel):
         persona_variants: Role-specific adaptations
         bulk_actions: Named field transitions exposed as
             ``POST /api/{plural}/bulk`` endpoints (#785).
+        show_purpose: ``ux: show_purpose: false`` (#1811) suppresses the
+            ``.dz-page-purpose`` line for this surface only; ``purpose`` stays in
+            the IR, inspection and compliance docs. Default true.
         measure: App-shell content measure token (``app`` | ``product`` |
             ``wide`` | ``full``). Cycle 1560 — closes the gap where
             ``pick-a-measure.md`` / ``_resolve_content_measure`` documented
@@ -214,6 +217,7 @@ class UXSpec(BaseModel):
     """
 
     purpose: str | None = None
+    show_purpose: bool = True
     show: list[str] = Field(default_factory=list)
     sort: list[SortSpec] = Field(default_factory=list)
     filter: list[str] = Field(default_factory=list)

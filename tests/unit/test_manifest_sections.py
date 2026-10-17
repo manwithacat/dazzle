@@ -2,7 +2,7 @@
 
 One table per outcome: a section is absent (default), parsed, filtered, or
 rejected loudly. Each row names the section and the issue that introduced it:
-[extensions] routers (#786), [renderers] extra (#1116), [ui] app_scripts (#1515), [ui] topbar_title (#1794),
+[extensions] routers (#786), [renderers] extra (#1116), [ui] app_scripts (#1515), [ui] topbar_title (#1794), [ui] page_purpose (#1811),
 [auth.admin_capabilities] (admin-authz) and
 [serve] app (ADR-0046), [auth.enterprise] protocols (DD-013),
 [auth.two_factor] (DD-014).
@@ -39,6 +39,7 @@ def _attr(obj: Any, dotted: str) -> Any:
         pytest.param("renderers.extra", [], id="renderers_1116"),
         pytest.param("app_scripts", [], id="ui_app_scripts_1515"),
         pytest.param("topbar_title", "app", id="ui_topbar_title_1794"),
+        pytest.param("page_purpose", True, id="ui_page_purpose_1811"),
         pytest.param("auth.admin_capabilities", {}, id="auth_admin_capabilities"),
         pytest.param("serve.app", None, id="serve_app_adr0046"),
         pytest.param("auth.enterprise.protocols", [], id="auth_enterprise_dd013"),
@@ -90,6 +91,9 @@ def test_absent_section_defaults_empty(tmp_path: Path, attr: str, expected: Any)
             "topbar_title",
             "page",
             id="ui_topbar_title_page_1794",
+        ),
+        pytest.param(
+            "\n[ui]\npage_purpose = false\n", "page_purpose", False, id="ui_page_purpose_off_1811"
         ),
         pytest.param(
             '\n[auth]\nenabled = true\norg_admin_roles = ["org_admin"]\n'

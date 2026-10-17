@@ -824,3 +824,28 @@ topbar_title = "page"   # true (default) = app name, false = no title, "page" = 
 which frees the narrow-viewport topbar from a duplicated app name. Any other value fails \
 manifest load with `[ui] topbar_title must be true, false, or 'page'`."""
 related = ["app_scripts"]
+
+[concepts.page_purpose]
+category = "Frontend"
+since_version = "0.121.0"
+doc_page = "frontend"
+doc_order = 13
+definition = """Switches for the `ux: purpose:` line the app shell renders above the breadcrumb \
+(`.dz-page-purpose`, #1811). The purpose text always stays in the IR, `dazzle inspect` and the \
+compliance docs; only the rendering is suppressed.
+
+```dsl
+surface task_list "Tasks":
+  ux:
+    purpose: "Triage the open tasks"
+    show_purpose: false      # this surface only (default true)
+```
+
+```toml
+[ui]
+page_purpose = false         # every surface; default true
+```
+
+App-wide off means off: `show_purpose: true` on a surface does not override `[ui] page_purpose = \
+false`."""
+related = ["topbar_title"]

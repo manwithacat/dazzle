@@ -52,6 +52,11 @@ class TestResolveAppChrome:
         chrome = resolve_app_chrome(None, project_root=None, manifest=manifest)
         assert chrome.topbar_title == "page"
 
+    def test_manifest_page_purpose_carried_1811(self) -> None:
+        manifest = SimpleNamespace(favicon=None, cdn=False, app_theme=None, page_purpose=False)
+        chrome = resolve_app_chrome(None, project_root=None, manifest=manifest)
+        assert chrome.page_purpose is False
+
     def test_manifest_app_scripts_appended_after_framework(self) -> None:
         # #1515: downstream [ui] app_scripts thread into the chrome <head>
         # after the framework bundle, in declared order.

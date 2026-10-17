@@ -714,3 +714,25 @@ topbar_title = "page"   # true (default) = app name, false = no title, "page" = 
 **Related:** [App Scripts](frontend.md#app-scripts)
 
 ---
+
+## Page Purpose
+
+Switches for the `ux: purpose:` line the app shell renders above the breadcrumb (`.dz-page-purpose`, #1811). The purpose text always stays in the IR, `dazzle inspect` and the compliance docs; only the rendering is suppressed.
+
+```dsl
+surface task_list "Tasks":
+  ux:
+    purpose: "Triage the open tasks"
+    show_purpose: false      # this surface only (default true)
+```
+
+```toml
+[ui]
+page_purpose = false         # every surface; default true
+```
+
+App-wide off means off: `show_purpose: true` on a surface does not override `[ui] page_purpose = false`.
+
+**Related:** [Topbar Title](frontend.md#topbar-title)
+
+---

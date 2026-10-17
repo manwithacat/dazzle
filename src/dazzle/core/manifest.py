@@ -670,6 +670,10 @@ class ProjectManifest:
     # topbar title ("none"); `"page"` → the current surface/workspace title,
     # falling back to the app name when the page has none. The sidebar header
     # is unaffected.
+    page_purpose: bool = True  # #1811 — `[ui] page_purpose = false` stops the
+    # app shell rendering `ux: purpose:` as `.dz-page-purpose` on every surface.
+    # App-wide off wins over a surface's `ux: show_purpose: true`. The text stays
+    # in the IR / inspection / compliance docs.
     app_theme: str | None = None  # v0.61.36: app-shell theme preset (overrides
     # the default shadcn-zinc tokens with an alternate :root block). One of
     # the presets shipped in src/dazzle/page/runtime/static/css/themes/<name>.css
@@ -1064,6 +1068,7 @@ def load_manifest(path: Path) -> ProjectManifest:
     dark_mode_toggle_enabled = bool(ui_data.get("dark_mode_toggle", True))
     haptic_enabled = bool(ui_data.get("haptic", False))
     topbar_title_mode = _parse_topbar_title(ui_data.get("topbar_title", True))
+    page_purpose_enabled = bool(ui_data.get("page_purpose", True))
     # Phase 4 app-shell migration (v0.67.45): `[ui] fragment_chrome` is
     # retired. The key is still accepted in dazzle.toml without raising
     # so existing project manifests keep loading; a deprecation log
@@ -1190,6 +1195,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         app_scripts=app_scripts_value,
         dark_mode_toggle=dark_mode_toggle_enabled,
         topbar_title=topbar_title_mode,
+        page_purpose=page_purpose_enabled,
         haptic=haptic_enabled,
         environments=environments,
         extensions=extensions_config,

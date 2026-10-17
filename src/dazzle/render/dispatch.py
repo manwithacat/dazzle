@@ -403,6 +403,7 @@ def build_app_chrome_page(
     font_preconnect: tuple[str, ...] = (),
     sidebar_state: str = "open",
     topbar_title: TopbarTitleMode = "app",
+    show_page_purpose: bool = True,
 ) -> Page:
     """Build a fully-chromed Page — `Page → AppShell → Sidebar/Topbar
     + body` — from PageContext's nav data.
@@ -416,6 +417,9 @@ def build_app_chrome_page(
     `topbar_title` (#1794, `[ui] topbar_title`) picks the topbar title text:
     "app" → the app name (default), "page" → the page title (app name when
     the page has none), "none" → empty. The sidebar header keeps the app name.
+
+    `show_page_purpose` (#1811, `[ui] page_purpose`) False drops the
+    `.dz-page-purpose` line; the purpose text stays on the IR.
 
     Use this for primary app surfaces (workspace pages, list/view/
     create/edit). For routes without an app shell (errors, auth),
@@ -459,7 +463,7 @@ def build_app_chrome_page(
         view_name=getattr(ctx, "view_name", "") or "",
         surface_name=getattr(ctx, "surface_name", "") or "",
         workspace_name=getattr(ctx, "workspace_name", "") or "",
-        page_purpose=getattr(ctx, "page_purpose", "") or "",
+        page_purpose=(getattr(ctx, "page_purpose", "") or "") if show_page_purpose else "",
         sidebar_state=sidebar_state,
         command_endpoint=command_endpoint,
         content_measure=content_measure,
@@ -511,6 +515,7 @@ def dispatch_render_page(
     chrome: bool = True,
     sidebar_state: str = "open",
     topbar_title: TopbarTitleMode = "app",
+    show_page_purpose: bool = True,
 ) -> str:
     """Build a Page and render it to HTML — convenience wrapper.
 
@@ -542,6 +547,7 @@ def dispatch_render_page(
             font_preconnect=font_preconnect,
             sidebar_state=sidebar_state,
             topbar_title=topbar_title,
+            show_page_purpose=show_page_purpose,
         )
     else:
         page = build_page(

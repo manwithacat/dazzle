@@ -2360,6 +2360,7 @@ ir_class: UXSpec
     - search: list[str] = []
     - search_first: bool = False
     - show: list[str] = []
+    - show_purpose: bool = True
     - sort: list[SortSpec] = []
 
 ir_class: UsabilityRule

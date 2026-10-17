@@ -486,6 +486,7 @@ async def _experience_step_get(
             font_preconnect=font_preconnect,
             favicon=favicon,
             topbar_title=getattr(app_state, "fragment_chrome_topbar_title", "app"),
+            show_page_purpose=getattr(app_state, "fragment_chrome_page_purpose", True),
         )
         # auth_ctx + theme_css fields previously threaded into the
         # Jinja layout are dropped — the typed AppShell doesn't yet

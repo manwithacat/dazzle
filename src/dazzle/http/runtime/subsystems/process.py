@@ -9,6 +9,7 @@ schedule-based triggers.
 import logging
 from typing import Any
 
+from dazzle.http.runtime.service_map import entity_service_map
 from dazzle.http.runtime.subsystems import SubsystemContext
 
 logger = logging.getLogger(__name__)
@@ -70,7 +71,7 @@ class ProcessSubsystem:
                 from dazzle.http.runtime.side_effect_executor import SideEffectExecutor
 
                 side_effect_executor = SideEffectExecutor(
-                    services=ctx.services,
+                    services=entity_service_map(ctx.services),
                     repositories=ctx.repositories,
                 )
                 self._adapter.set_side_effect_executor(side_effect_executor)

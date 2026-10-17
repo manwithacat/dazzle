@@ -1584,6 +1584,7 @@
           'search_first': False,
           'show': list([
           ]),
+          'show_purpose': True,
           'sort': list([
             dict({
               'direction': 'desc',
@@ -1712,6 +1713,7 @@
           'search_first': False,
           'show': list([
           ]),
+          'show_purpose': True,
           'sort': list([
             dict({
               'direction': 'desc',

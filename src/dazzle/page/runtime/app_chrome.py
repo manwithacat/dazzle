@@ -57,6 +57,8 @@ class AppChrome:
         topbar_title: ``[ui] topbar_title`` (#1794) — ``"app"`` (app name,
             default), ``"page"`` (the page title, app name as fallback) or
             ``"none"`` (empty topbar title).
+        page_purpose: ``[ui] page_purpose`` (#1811) — ``False`` stops the shell
+            rendering ``ux: purpose:`` as ``.dz-page-purpose`` (default ``True``).
     """
 
     css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",)
@@ -80,6 +82,7 @@ class AppChrome:
     favicon: str = "/static/assets/dazzle-favicon.svg"
     use_cdn: bool = False
     topbar_title: TopbarTitleMode = "app"
+    page_purpose: bool = True
 
 
 _FRAMEWORK_BUNDLE_CSS = "/static/dist/dazzle.min.css"
@@ -171,8 +174,10 @@ def resolve_app_chrome(
     active_development = False
     manifest_theme: str | None = None
     topbar_title: TopbarTitleMode = "app"
+    page_purpose = True
     if manifest is not None:
         topbar_title = getattr(manifest, "topbar_title", "app")
+        page_purpose = bool(getattr(manifest, "page_purpose", True))
         if getattr(manifest, "favicon", None):
             favicon = str(manifest.favicon)
         use_cdn = bool(getattr(manifest, "cdn", False))
@@ -282,4 +287,5 @@ def resolve_app_chrome(
         favicon=favicon,
         use_cdn=use_cdn,
         topbar_title=topbar_title,
+        page_purpose=page_purpose,
     )

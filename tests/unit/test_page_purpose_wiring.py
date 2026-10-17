@@ -20,6 +20,10 @@ Run standalone:
     pytest tests/unit/test_page_purpose_wiring.py -v
 """
 
+from pathlib import Path
+
+import pytest
+
 from dazzle.core import ir
 from dazzle.core.ir.surfaces import SurfaceSection
 from dazzle.page.converters.template_compiler import (
@@ -193,3 +197,52 @@ def test_render_persona_override_via_context_copy() -> None:
     html_admin = render_page(ctx_admin, inner_html="")
     assert "Create a task for any user" in html_admin
     assert "Add a new task to the backlog" not in html_admin
+
+
+# =============================================================================
+# #1811 — switches: per-surface `ux: show_purpose: false`, app-wide `[ui] page_purpose`
+# =============================================================================
+
+
+def _parsed_list_surface(ux_extra: str) -> tuple[ir.SurfaceSpec, ir.EntitySpec]:
+    from dazzle.core.dsl_parser_impl import parse_dsl
+
+    src = f"""module t
+app t "T"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field title "Title"
+  ux:
+    purpose: "Triage the open tasks"
+{ux_extra}"""
+    *_, fragment = parse_dsl(src, Path("t.dsl"))
+    return fragment.surfaces[0], fragment.entities[0]
+
+
+@pytest.mark.parametrize(
+    ("ux_extra", "app_wide", "rendered"),
+    [
+        pytest.param("", True, True, id="default"),
+        pytest.param("    show_purpose: true\n", True, True, id="surface-explicit-on"),
+        pytest.param("    show_purpose: false\n", True, False, id="surface-off"),
+        pytest.param("", False, False, id="app-wide-off"),
+        pytest.param("    show_purpose: true\n", False, False, id="app-wide-off-beats-surface-on"),
+    ],
+)
+def test_purpose_switches_1811(ux_extra: str, app_wide: bool, rendered: bool) -> None:
+    from dazzle.render.dispatch import dispatch_render_page
+
+    surface, entity = _parsed_list_surface(ux_extra)
+    # The text stays on the IR whatever the switches say (inspection / compliance).
+    assert surface.ux is not None and surface.ux.purpose == "Triage the open tasks"
+    ctx = compile_surface_to_context(surface, entity, "/app")
+    html = dispatch_render_page(ctx, "", show_page_purpose=app_wide)
+    assert ("dz-page-purpose" in html) is rendered
+    assert ("Triage the open tasks" in html) is rendered

@@ -1422,6 +1422,7 @@ class _ChromeAssets:
     font_preconnect: tuple[str, ...]
     favicon: str
     topbar_title: TopbarTitleMode = "app"  # #1794 — `[ui] topbar_title` ("app" | "page" | "none")
+    page_purpose: bool = True  # #1811 — `[ui] page_purpose`
 
 
 def _resolve_chrome_assets(app_state: Any) -> _ChromeAssets:
@@ -1440,6 +1441,7 @@ def _resolve_chrome_assets(app_state: Any) -> _ChromeAssets:
         font_preconnect=tuple(getattr(app_state, "fragment_chrome_font_preconnect", None) or ()),
         favicon=getattr(app_state, "fragment_chrome_favicon", "/static/assets/dazzle-favicon.svg"),
         topbar_title=getattr(app_state, "fragment_chrome_topbar_title", "app"),
+        page_purpose=getattr(app_state, "fragment_chrome_page_purpose", True),
     )
 
 
@@ -2762,6 +2764,7 @@ def _render_response(prc: _PageRequestContext) -> Response:
             font_preconnect=_assets.font_preconnect,
             favicon=_assets.favicon,
             topbar_title=_assets.topbar_title,
+            show_page_purpose=_assets.page_purpose,
         )
     response_headers: dict[str, str] = {}
     # hx-boost strips <head> from the response, so the browser's
@@ -3352,6 +3355,7 @@ async def _workspace_handler(
         font_preconnect=_assets.font_preconnect,
         favicon=_assets.favicon,
         topbar_title=_assets.topbar_title,
+        show_page_purpose=_assets.page_purpose,
     )
     return HTMLResponse(content=html)  # nosemgrep
 

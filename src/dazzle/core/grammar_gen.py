@@ -658,6 +658,7 @@ ux_directive  ::= "purpose" ":" STRING NEWLINE
                 | "filter" ":" field_list NEWLINE
                 | "search" ":" field_list NEWLINE
                 | "empty" ":" STRING NEWLINE
+                | "show_purpose" ":" ("true" | "false") NEWLINE
                 | attention_block
                 | persona_block ;
 
