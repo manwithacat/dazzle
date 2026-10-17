@@ -7,6 +7,7 @@ appspec/connection-runner). The real-PG apply proof is in
 
 from unittest.mock import DEFAULT, MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from dazzle.cli.db import db_app
@@ -197,8 +198,7 @@ class TestDbUpgradeRlsHook:
     ) -> None:
         mock_cfg.return_value.get_main_option.return_value = "postgresql://localhost/db"
         mock_rev.side_effect = ["base", "head"]
-        # Even on a shared_schema app, --no-rls must skip the apply entirely
-        # (so load_project_appspec isn't even reached for the hook).
+        # Even on a shared_schema app, --no-rls must skip the apply entirely.
         mock_load.return_value = _shared_schema_appspec()
 
         result = runner.invoke(db_app, ["upgrade", "--no-rls"])
@@ -276,3 +276,59 @@ class TestDbUpgradeRlsHook:
         assert mock_run.called
         assert "Applied 5 RLS policy statements" in result.output
         assert "owner role" in result.output
+
+
+class TestDbUpgradeRlsTripwire:
+    """#1778: `dazzle db upgrade` arms the row_security=off tripwire for shared_schema.
+
+    The flag travels to env.py on ``cfg.attributes`` (the documented Alembic
+    side-channel); env.py's half is pinned in ``tests/unit/test_tenant_dml.py``.
+    """
+
+    @pytest.mark.parametrize(
+        ("appspec_factory", "args", "armed"),
+        [
+            (_shared_schema_appspec, ["upgrade"], True),
+            (_shared_schema_appspec, ["upgrade", "--no-rls-tripwire"], False),
+            (_non_tenant_appspec, ["upgrade"], False),
+            (None, ["upgrade"], False),  # no loadable project
+        ],
+        ids=["shared_schema", "opt_out_flag", "non_tenant", "no_project"],
+    )
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
+    @patch("dazzle.cli.db.load_project_appspec")
+    @patch("dazzle.cli.db._safe_current_revision")
+    @patch("dazzle.cli.db._validate_revision_widths")
+    @patch("dazzle.cli.db._guard_single_head")
+    @patch("dazzle.cli.db._get_alembic_cfg")
+    @patch("alembic.command.upgrade")
+    def test_tripwire_attribute(
+        self,
+        mock_upgrade: MagicMock,
+        mock_cfg: MagicMock,
+        _guard: MagicMock,
+        _widths: MagicMock,
+        mock_rev: MagicMock,
+        mock_load: MagicMock,
+        _run: MagicMock,
+        appspec_factory,
+        args: list[str],
+        armed: bool,
+    ) -> None:
+        from dazzle.http.alembic.tenant_dml import RLS_TRIPWIRE_ATTR
+
+        cfg = mock_cfg.return_value
+        cfg.get_main_option.return_value = "postgresql://localhost/db"
+        cfg.attributes = {}
+        mock_rev.side_effect = ["base", "head"]
+        if appspec_factory is None:
+            mock_load.side_effect = FileNotFoundError("no dazzle.toml")
+        else:
+            mock_load.return_value = appspec_factory()
+
+        result = runner.invoke(db_app, args)
+
+        assert result.exit_code == 0, result.output
+        # The attribute must be in place by the time alembic runs env.py.
+        assert mock_upgrade.call_args.args[0] is cfg
+        assert bool(cfg.attributes.get(RLS_TRIPWIRE_ATTR)) is armed

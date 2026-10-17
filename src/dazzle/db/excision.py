@@ -17,6 +17,7 @@ from typing import Any
 from psycopg import sql
 
 from dazzle.core.ir.fk_graph import FKGraph
+from dazzle.db.tenant_ids import tenant_exists
 from dazzle.http.runtime.sa_schema import scoped_entity_names
 
 
@@ -82,8 +83,7 @@ def excise_tenant(
         )
 
     if not allow_missing:
-        org_exists = _count(conn, "SELECT count(*) FROM organizations WHERE id = %s", (tenant_id,))
-        if org_exists == 0:
+        if not tenant_exists(conn, tenant_id):
             raise ExcisionError(
                 f"no organization with id {tenant_id!r} — refusing a no-op excision "
                 "that would falsely report success (pass allow_missing to override "

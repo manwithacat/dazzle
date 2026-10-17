@@ -17,6 +17,7 @@ import sqlalchemy
 from alembic import context
 
 from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
+from dazzle.http.alembic.tenant_dml import RLS_TRIPWIRE_ATTR, arm_rls_tripwire
 
 logger = logging.getLogger(__name__)
 
@@ -213,6 +214,18 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+def _arm_rls_tripwire_if_requested(connection: Any) -> None:
+    """#1778: make unbound fenced DML raise instead of silently matching 0 rows.
+
+    ``dazzle db upgrade`` sets ``RLS_TRIPWIRE_ATTR`` for ``shared_schema`` apps
+    (unless ``--no-rls-tripwire``). The whole upgrade runs in this one
+    transaction, so the ``SET LOCAL`` covers every pending revision and is
+    discarded on commit/rollback. Seam DML goes through ``for_each_tenant``.
+    """
+    if config.attributes.get(RLS_TRIPWIRE_ATTR):
+        arm_rls_tripwire(connection.connection)
+
+
 def run_migrations_online() -> None:
     """Run migrations against a live database connection."""
     from sqlalchemy import create_engine
@@ -261,6 +274,7 @@ def run_migrations_online() -> None:
                     cur.execute(stmt)  # nosemgrep
                 finally:
                     cur.close()
+            _arm_rls_tripwire_if_requested(connection)
             context.run_migrations()
 
     connectable.dispose()

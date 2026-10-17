@@ -311,6 +311,8 @@ def test_unsafe_not_null_add_renders_data_seam(
         f"expected DATA MIGRATION seam in unsafe revision; got:\n{text}"
     )
     assert "# === END DATA MIGRATION ===" in text
+    # #1778: the seam steers fenced-table DML to the per-tenant helper.
+    assert "from dazzle.http.alembic.tenant_dml import for_each_tenant" in text
     # Expand/contract scaffold: add the column NULLABLE, then finalize NOT NULL.
     assert "add_column('Task'" in text
     assert "nullable=True" in text, "expand step adds the column NULLABLE"

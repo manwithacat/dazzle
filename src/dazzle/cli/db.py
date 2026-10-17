@@ -25,6 +25,7 @@ from dazzle.core.environment import DAZZLE_ENV_VAR
 from dazzle.core.ir import TenancyMode
 from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.ir.fk_graph import FKGraph
+from dazzle.http.alembic.tenant_dml import RLS_TRIPWIRE_ATTR
 
 if TYPE_CHECKING:
     from dazzle.db.connection import DbTarget
@@ -37,6 +38,18 @@ db_app = typer.Typer(
 )
 
 console = Console()
+
+#: ``dazzle db upgrade --no-rls-tripwire`` (#1778). Annotated so a direct
+#: Python call of ``upgrade_command`` defaults to False, not an OptionInfo.
+NoRlsTripwireOption = Annotated[
+    bool,
+    typer.Option(
+        "--no-rls-tripwire",
+        help="shared_schema only: do not run the upgrade with row_security = off. "
+        "By default unbound DML on an RLS-fenced table errors instead of silently "
+        "matching zero rows (#1778).",
+    ),
+]
 
 #: Shared ``--database-url`` option for every ``dazzle db`` subcommand that
 #: targets a database. Precedence (#1775): this flag > ``DATABASE_URL`` env >
@@ -324,6 +337,26 @@ def _inject_schema_snapshot(rev: Any, snapshot_literal: str | None) -> None:
     path.write_text(text + block, encoding="utf-8")
 
 
+#: The hand-author block ``_inject_data_seams`` writes in place of each seam
+#: marker (one entry per line, indentation added by the caller). #1778: DML here
+#: runs under RLS with no tenant bound — on a fenced table it silently matches
+#: zero rows, and under ``dazzle db upgrade``'s tripwire it raises.
+_DATA_SEAM_LINES: tuple[str, ...] = (
+    "# === DATA MIGRATION (hand-author) ===",
+    "# Backfill / transform existing rows here BEFORE the column is",
+    "# finalized NOT NULL or the type cast runs. Replace the example.",
+    "#",
+    "# shared_schema tenancy: this DML runs with RLS enforced and NO tenant",
+    "# bound. On a fenced table a bare op.execute() matches zero rows (no",
+    "# error), and `dazzle db upgrade` makes it raise. Run it per tenant:",
+    "#   from dazzle.http.alembic.tenant_dml import for_each_tenant",
+    '#   for_each_tenant("INSERT INTO my_table (tenant_id, ...) SELECT tenant_id, ... FROM src")',
+    "# Other tenancy modes / unfenced tables:",
+    '# op.execute("UPDATE my_table SET my_col = ... WHERE my_col IS NULL")',
+    "# === END DATA MIGRATION ===",
+)
+
+
 def _inject_data_seams(rev: Any) -> None:
     """Expand the renderer's seam markers into hand-author comment blocks (Task 5.1).
 
@@ -332,13 +365,10 @@ def _inject_data_seams(rev: Any) -> None:
     with a placeholder ``ExecuteSQLOp`` carrying ``schema_render.SEAM_MARKER``.
     Alembic renders that as a single ``op.execute('<SEAM_MARKER>')`` line in the
     generated ``upgrade()`` body. This post-write step replaces each such line with
-    a readable, clearly-marked block the author fills in::
-
-        # === DATA MIGRATION (hand-author) ===
-        # Backfill / transform rows before the column is finalized NOT NULL or
-        # the type cast runs. Replace the example below with the real statement.
-        # op.execute("UPDATE ... SET ... WHERE ...")
-        # === END DATA MIGRATION ===
+    a readable, clearly-marked block the author fills in (``_DATA_SEAM_LINES``).
+    Under ``shared_schema`` tenancy the block steers the author to
+    ``for_each_tenant`` (#1778): seam DML runs with RLS enforced and no tenant
+    bound, so a bare ``op.execute`` on a fenced table matches zero rows.
 
     Post-write injection (mirroring ``_inject_schema_snapshot``) is the chosen seam
     mechanism: it keeps ``schema_render`` a pure op-tree transform (unit-testable on
@@ -365,15 +395,7 @@ def _inject_data_seams(rev: Any) -> None:
     for line in text.splitlines(keepends=False):
         if SEAM_MARKER in line:
             indent = line[: len(line) - len(line.lstrip())]
-            out_lines.extend(
-                [
-                    f"{indent}# === DATA MIGRATION (hand-author) ===",
-                    f"{indent}# Backfill / transform existing rows here BEFORE the column is",
-                    f"{indent}# finalized NOT NULL or the type cast runs. Replace the example.",
-                    f'{indent}# op.execute("UPDATE my_table SET my_col = ... WHERE my_col IS NULL")',
-                    f"{indent}# === END DATA MIGRATION ===",
-                ]
-            )
+            out_lines.extend(f"{indent}{seam_line}" for seam_line in _DATA_SEAM_LINES)
         else:
             out_lines.append(line)
     path.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
@@ -661,6 +683,7 @@ def upgrade_command(
         "with `dazzle db apply-rls`).",
     ),
     database_url: DatabaseUrlOption = "",
+    no_rls_tripwire: NoRlsTripwireOption = False,
 ) -> None:
     """Apply pending migrations (upgrade to target revision).
 
@@ -669,10 +692,21 @@ def upgrade_command(
     the DDL migrations (so it has the table ownership ``CREATE POLICY`` /
     ``FORCE ROW LEVEL SECURITY`` require). Pass ``--no-rls`` to skip and apply
     them separately with ``dazzle db apply-rls``.
+
+    In ``shared_schema`` mode the upgrade transaction also runs with
+    ``row_security = off`` (#1778): DML on a fenced table with no tenant bound
+    raises instead of silently matching zero rows. Seam DML goes through
+    ``dazzle.http.alembic.tenant_dml.for_each_tenant``. ``--no-rls-tripwire``
+    turns this off.
     """
     from alembic import command
 
     cfg = _get_alembic_cfg(database_url)
+    project_root = Path.cwd().resolve()
+    appspec = _load_upgrade_appspec(project_root)
+    shared_schema = appspec is not None and _is_shared_schema(appspec)
+    if shared_schema and not no_rls_tripwire:
+        cfg.attributes[RLS_TRIPWIRE_ATTR] = True
     # #1308/#1775: surface the target DB *and which source won* so a misresolved
     # connection (the bug that made `upgrade` silently hit the wrong database)
     # is immediately visible.
@@ -705,30 +739,32 @@ def upgrade_command(
     # (CREATE POLICY / FORCE ROW LEVEL SECURITY need table ownership; the runtime
     # dazzle_app role cannot). If this raises, the schema is already migrated, so
     # do NOT silently leave RLS unapplied — log ERROR + re-raise.
-    if no_rls:
+    if no_rls or not shared_schema:
         return
-    _apply_rls_after_upgrade(target)
+    _apply_rls_after_upgrade(target, appspec, project_root)
 
 
-def _apply_rls_after_upgrade(resolved_url: str) -> None:
+def _load_upgrade_appspec(project_root: Path) -> Any | None:
+    """The project's appspec for ``dazzle db upgrade``, or None outside a project.
+
+    Migrations may be a valid standalone operation (no loadable appspec), in
+    which case neither the RLS tripwire nor the post-upgrade apply runs.
+    """
+    try:
+        return load_project_appspec(project_root)
+    except Exception:
+        logger.debug("Could not load appspec for dazzle db upgrade", exc_info=True)
+        return None
+
+
+def _apply_rls_after_upgrade(resolved_url: str, appspec: Any, project_root: Path) -> None:
     """Apply RLS policies after a successful ``dazzle db upgrade`` (Phase D).
 
-    No-op for non-``shared_schema`` apps. Runs on a fresh connection resolved
+    Called only for ``shared_schema`` apps. Runs on a fresh connection resolved
     from the SAME URL the migrations used — the owner-capable deploy role — so it
     has the table ownership the RLS DDL requires. Re-raises on failure (ERROR
     logged) so a successful migration is never silently left without RLS.
     """
-    project_root = Path.cwd().resolve()
-    try:
-        appspec = load_project_appspec(project_root)
-    except Exception:
-        # No loadable appspec (e.g. running upgrade outside a project) — nothing
-        # to apply. Migrations may still be a valid standalone operation.
-        logger.debug("Could not load appspec for post-upgrade RLS apply", exc_info=True)
-        return
-
-    if not _is_shared_schema(appspec):
-        return
 
     from dazzle.db.rls_apply import apply_rls_policies
     from dazzle.http.converters.entity_converter import convert_entities

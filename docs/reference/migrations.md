@@ -154,6 +154,13 @@ def upgrade() -> None:
     # === DATA MIGRATION (hand-author) ===
     # Backfill / transform existing rows here BEFORE the column is
     # finalized NOT NULL or the type cast runs. Replace the example.
+    #
+    # shared_schema tenancy: this DML runs with RLS enforced and NO tenant
+    # bound. On a fenced table a bare op.execute() matches zero rows (no
+    # error), and `dazzle db upgrade` makes it raise. Run it per tenant:
+    #   from dazzle.http.alembic.tenant_dml import for_each_tenant
+    #   for_each_tenant("INSERT INTO my_table (tenant_id, ...) SELECT tenant_id, ... FROM src")
+    # Other tenancy modes / unfenced tables:
     # op.execute("UPDATE my_table SET my_col = ... WHERE my_col IS NULL")
     # === END DATA MIGRATION ===
 
@@ -164,6 +171,55 @@ def upgrade() -> None:
 
 Fill in the `op.execute(...)` stub between the seam markers with a real backfill statement before applying the migration. Do not remove the seam markers until the backfill is complete and tested.
 
+### Seam DML under `shared_schema` tenancy (#1778)
+
+Under `shared_schema` tenancy every tenant-scoped table carries `FORCE ROW LEVEL
+SECURITY` and the restrictive `tenant_fence`, which compares `tenant_id` with the
+`dazzle.tenant_id` GUC. A migration session binds no tenant. So once RLS has been
+applied (every deploy after the first), a seam statement run by a non-superuser,
+non-`BYPASSRLS` owner role sees **every fenced table as empty**:
+`SELECT`, `UPDATE` and `INSERT … SELECT` affect 0 rows and raise no error. A fresh
+local replay hides this, because there RLS is applied *after* the upgrade.
+
+Two pieces close this:
+
+- **`for_each_tenant`** runs one statement per tenant with `dazzle.tenant_id`
+  bound and returns `{tenant_id: rowcount}`:
+
+  ```python
+  from dazzle.http.alembic.tenant_dml import for_each_tenant
+
+  def upgrade() -> None:
+      ...
+      for_each_tenant(
+          'INSERT INTO "Taxpayer" (tenant_id, id, contact) '
+          'SELECT c.tenant_id, gen_random_uuid(), c.id FROM "Contact" c '
+          'WHERE NOT EXISTS (SELECT 1 FROM "Taxpayer" t WHERE t.contact = c.id)'
+      )
+  ```
+
+  Tenant ids come from the framework `organizations` table, which is not fenced
+  (ADR-0037: the root organization's id *is* the tenant id). The statement is
+  run through SQLAlchemy `text()`, so placeholders are `:name` and values go in
+  `params={...}`. The helper turns `row_security` on for its own duration
+  and resets the tenant GUC to `''` afterwards. It logs a warning when every
+  tenant reported 0 rows.
+- **The upgrade tripwire.** For `shared_schema` apps, `dazzle db upgrade`
+  runs the whole upgrade transaction with `SET LOCAL row_security = off`.
+  This is not a bypass: any role may set it, and RLS still applies. What
+  changes is that a statement RLS *would* filter now fails with
+  `ERROR: query would be affected by row-level security policy` instead of
+  quietly matching nothing, so an unbound backfill fails the release instead of
+  passing it. DDL is not fenced and is unaffected. Superuser and `BYPASSRLS`
+  connections are never filtered, so the tripwire does nothing for them (and
+  their unbound DML sees every tenant). `dazzle db upgrade --no-rls-tripwire`
+  turns it off.
+
+What the contract step catches: `ALTER … SET NOT NULL` is unfenced DDL that scans
+every row, so a missed backfill on a **contracted** column still fails the
+upgrade. The silent class is DML with no contract behind it: inserts into a new
+table, and updates to columns that stay nullable.
+
 ### Case 2: type change requiring an explicit cast
 
 When you change a column's DSL type (e.g. from `str` to `int`) and the engine does not have a known-safe automatic cast for that pair, it emits a seam before the `ALTER COLUMN TYPE` so you can prepare the data:
@@ -173,6 +229,13 @@ def upgrade() -> None:
     # === DATA MIGRATION (hand-author) ===
     # Backfill / transform existing rows here BEFORE the column is
     # finalized NOT NULL or the type cast runs. Replace the example.
+    #
+    # shared_schema tenancy: this DML runs with RLS enforced and NO tenant
+    # bound. On a fenced table a bare op.execute() matches zero rows (no
+    # error), and `dazzle db upgrade` makes it raise. Run it per tenant:
+    #   from dazzle.http.alembic.tenant_dml import for_each_tenant
+    #   for_each_tenant("INSERT INTO my_table (tenant_id, ...) SELECT tenant_id, ... FROM src")
+    # Other tenancy modes / unfenced tables:
     # op.execute("UPDATE my_table SET my_col = ... WHERE my_col IS NULL")
     # === END DATA MIGRATION ===
 
@@ -596,6 +659,9 @@ Before applying any migration that drops or renames columns or tables:
 1. **Back up or snapshot first** — especially in production.
 2. **Use the engine path with `was:`** for renames (avoids drop+add entirely).
 3. **Fill in the data-migration seam** for any NOT NULL add — never apply it with an empty stub.
+   Under `shared_schema` tenancy, run seam DML on tenant tables through
+   `for_each_tenant` (see [Seam DML under `shared_schema` tenancy](#seam-dml-under-shared_schema-tenancy-1778)).
+   Test it against a copy with RLS already applied, not just a fresh replay.
 4. **Test the downgrade path** — run `dazzle db downgrade` and `dazzle db upgrade` on a copy of the database before touching production.
 5. **Commit the migration file** — before deploying, confirm the migration is committed and pushed.
 

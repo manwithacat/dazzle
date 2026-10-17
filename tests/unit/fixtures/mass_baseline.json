@@ -1,7 +1,7 @@
 {
-  "src_lines": 322549,
-  "test_lines": 313631,
-  "docs_lines": 48615,
+  "src_lines": 322779,
+  "test_lines": 314120,
+  "docs_lines": 48721,
   "construct_count": 31,
   "written": "2026-10-17",
   "exceptions": [
@@ -399,6 +399,15 @@
         "docs_lines"
       ],
       "reason": "#1772 consumer-forced (AegisMark): public bind_rls leaf"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1778 consumer-forced (cyfuture): seam DML tripwire + for_each_tenant"
     }
   ]
 }

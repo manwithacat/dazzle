@@ -162,6 +162,25 @@ owner bypasses unless `FORCE ROW LEVEL SECURITY` (which Dazzle sets). So:
   to skip (e.g. if you apply RLS in a separate step); a failed apply after a
   successful migration exits non-zero with a "schema migrated but RLS NOT enforced
   — re-run `dazzle db apply-rls`" message.
+- **Data migrations run under the fence (#1778).** A migration session binds no
+  tenant, and the owner role is fenced too (FORCE). Once RLS is applied, seam DML
+  in a revision (`UPDATE`, `INSERT … SELECT`) sees every tenant table as empty
+  unless it runs through `for_each_tenant` (see
+  [migrations](migrations.md#seam-dml-under-shared_schema-tenancy-1778)). For
+  `shared_schema` apps, `dazzle db upgrade` runs the upgrade transaction with
+  `row_security = off`, so unbound fenced DML **errors** instead of matching zero
+  rows. `--no-rls-tripwire` turns this off. Superuser and `BYPASSRLS` connections
+  are never filtered and are unaffected by either.
+- **Single-role hosts.** On a managed Postgres that gives you one owner role that
+  is neither superuser nor `BYPASSRLS` (for example Heroku Postgres, whose
+  release phase runs `dazzle db upgrade` as that role), every session without a
+  bound tenant sees no rows in any fenced table. That covers release-phase
+  migrations (handled by the tripwire and `for_each_tenant` above) and
+  logical dumps taken as that role. `pg:backups` / plain `pg_dump` set
+  `row_security = off` and fail with `query would be affected by row-level
+  security policy`; `pg_dump --enable-row-security` with no tenant bound
+  succeeds but writes every fenced table empty. #1788 tracks a tenant-aware
+  dump; until it ships, neither is a backup of tenant data.
 - **Verifying RLS in CI/ops:** `dazzle db verify` now gates **RLS policy drift** (a
   tenant-scoped table with RLS disabled, or a missing/extra policy) and exits
   non-zero on drift. `dazzle inspect rls` shows the generated policy set per table

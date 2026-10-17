@@ -290,6 +290,27 @@ dazzle db COMMAND [OPTIONS]
 | `history` | Show migration history |
 | `resanitize-rich-text` | Re-run the rich-text sanitiser over stored `widget=rich_text` values |
 
+#### dazzle db upgrade
+
+```bash
+dazzle db upgrade [REVISION]            # default: head
+```
+
+| Option | Description |
+|--------|-------------|
+| `--no-rls` | `shared_schema` only: skip applying the RLS policies after the migrations (run `dazzle db apply-rls` separately) |
+| `--no-rls-tripwire` | `shared_schema` only: do not run the upgrade with `row_security = off` (#1778) |
+| `--database-url URL` | Target database |
+
+For `shared_schema` apps the whole upgrade transaction runs with
+`SET LOCAL row_security = off`. A migration binds no tenant, so DML on a fenced
+table would otherwise match zero rows without an error. With the tripwire it
+fails with `query would be affected by row-level security policy`. Data-migration
+seams run tenant DML through `for_each_tenant`
+([migrations](migrations.md#seam-dml-under-shared_schema-tenancy-1778)).
+Superuser and `BYPASSRLS` connections are never filtered, so the tripwire does
+not affect them.
+
 #### dazzle db resanitize-rich-text
 
 Rows written before rich-text sanitising reached the write path (flense ship T)
