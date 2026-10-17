@@ -65,6 +65,10 @@ dependencies = [
     # required dep so qualitative trials and demo boots produce
     # realistic strings instead of "UX first_name 2f828c".
     "faker>=20.0",
+    # segno renders the TOTP enrolment QR code server-side (DD-014). Pure-Python,
+    # zero transitive deps. The pre-#829 flow loaded QR codes from api.qrserver.com,
+    # leaking the TOTP secret to a third party; the QR never leaves the server.
+    "segno>=1.5",
     # bleach sanitises rich-text widget input on the server side
     # (#977 cycle 4). The client-side schema enforcement in
     # dz-richtext.js is a UX layer; bleach is the security boundary.

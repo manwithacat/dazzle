@@ -21,21 +21,14 @@ from dazzle.http.runtime.auth.auth_views import (
     leftover_auth_email_or_400,
     leftover_honest_auth_token,
 )
-from dazzle.http.runtime.auth.cookie_name import read_session_id, set_session_cookies
 from dazzle.http.runtime.auth.enterprise_login import sso_redirect_for
-from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
 from dazzle.http.runtime.auth.magic_link import (
     create_magic_link,
     validate_magic_link,
 )
 from dazzle.http.runtime.auth.mailer import get_mailer
-from dazzle.http.runtime.auth.org_activation import (
-    FORBIDDEN_SENTINEL,
-    _login_redirect_for_outcome,
-    activate_session_for_login,
-    memberships_required,
-)
 from dazzle.http.runtime.auth.redirect_safety import is_safe_redirect_path as _is_safe_redirect_path
+from dazzle.http.runtime.auth.sign_in import complete_sign_in
 
 _logger = logging.getLogger(__name__)
 
@@ -140,34 +133,12 @@ def create_magic_link_routes() -> APIRouter:
         if sso_url is not None:
             return RedirectResponse(url=sso_url, status_code=303)
 
-        # Create session (same code path as password login).
-        # Session-fixation defence (#1198): regenerate the session id on
-        # magic-link consumption — invalidate any pre-auth session cookie
-        # the client presented so an attacker-planted id can't survive into
-        # the authenticated state.
-        pre_auth_sid = read_session_id(request)
-        # Phase 2 (auth Plan 1b): activate an org context for the proven identity.
-        # Honour ?next= only when it is a same-origin path.
+        # The single sign-in completion point (#1804): a magic link is a primary
+        # factor, so a user with 2FA is challenged exactly as a password sign-in is.
         safe_next = next if _is_safe_redirect_path(next) else "/"
-        outcome = activate_session_for_login(auth_store, user, request)
-        membership_id, redirect_to = _login_redirect_for_outcome(
-            outcome, safe_next, memberships_required=memberships_required(request)
+        return await complete_sign_in(
+            request, auth_store, user, method="magic_link", mode="redirect", next_url=safe_next
         )
-        if redirect_to == FORBIDDEN_SENTINEL:
-            return forbidden_org_response(request)  # #1393: branded host-pin 403
-        session = auth_store.create_session(user, active_membership_id=membership_id)
-        if pre_auth_sid and pre_auth_sid != session.id:
-            auth_store.delete_session(pre_auth_sid)
-
-        response = RedirectResponse(url=redirect_to, status_code=303)
-        set_session_cookies(
-            response,
-            request,
-            session_id=session.id,
-            csrf_secret=session.csrf_secret,
-            user_roles=list(getattr(user, "roles", []) or []),
-        )
-        return response
 
     @router.post("/auth/login/magic-link")
     async def issue_magic_link(

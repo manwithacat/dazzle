@@ -68,6 +68,10 @@ _AUTH_TABLES = (
     "connection_secret_events",
     "scim_groups",
     "scim_group_members",
+    # DD-014 two-factor (revision 0027): store_two_factor.TWO_FACTOR_DDL via the auth DDL.
+    "_dazzle_otp_codes",
+    "_dazzle_recovery_codes",
+    "_dazzle_2fa_challenges",
     "password_reset_tokens",
     "magic_links",
     "email_verification_tokens",

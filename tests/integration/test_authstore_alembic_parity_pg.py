@@ -43,7 +43,7 @@ def scratch_url() -> Iterator[str]:
             a.execute(f'DROP DATABASE IF EXISTS "{name}"')  # nosemgrep
 
 
-def _alembic_head(url: str) -> None:
+def _alembic_head(url: str, target: str = "head") -> None:
     from alembic import command
     from alembic.config import Config
 
@@ -55,7 +55,7 @@ def _alembic_head(url: str) -> None:
     cfg.set_main_option("path_separator", "os")
     cfg.set_main_option("version_locations", str(fw / "versions"))  # framework only
     cfg.set_main_option("sqlalchemy.url", url.replace("postgresql://", "postgresql+psycopg://", 1))
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, target)
 
 
 def test_alembic_head_coexists_with_init_db(scratch_url: str) -> None:
@@ -73,7 +73,7 @@ def test_alembic_head_coexists_with_init_db(scratch_url: str) -> None:
         # alembic head recorded, and the new tables/columns are present (from _init_db, and
         # 0013/0014/0015 no-op over them) — schema intact after both ran.
         version = eng.connect().execute(sa.text("SELECT version_num FROM alembic_version")).scalar()
-        assert version == "0026_enterprise_auth_oidc_scim"
+        assert version == "0027_two_factor_restore"
         # 0019 (PG coordination Phase 1): the framework process-runtime tables.
         assert insp.has_table("process_runs")
         assert insp.has_table("process_tasks")
@@ -91,9 +91,12 @@ def test_alembic_head_coexists_with_init_db(scratch_url: str) -> None:
         ):
             assert insp.has_table(restored)
         assert "external_id" in {c["name"] for c in insp.get_columns("scim_groups")}
-        # the two-factor tables were dropped by 0024 (DD-014); the users columns stay.
-        for parked in ("_dazzle_otp_codes", "_dazzle_recovery_codes"):
-            assert not insp.has_table(parked)
+        # 0024 dropped the two-factor tables; 0027 brings them back, adds the challenge
+        # table and the session's second factor (DD-014).
+        for table in ("_dazzle_otp_codes", "_dazzle_recovery_codes", "_dazzle_2fa_challenges"):
+            assert insp.has_table(table)
+        session_columns = {c["name"] for c in insp.get_columns("sessions")}
+        assert {"mfa_method", "mfa_verified_at", "mfa_reference"} <= session_columns
         # the channel delivery outbox was dropped by 0025 (DD-006); the event inbox stays.
         assert not insp.has_table("_dazzle_outbox")
         # the partial unique index 0014 mirrors must exist (from _init_db; 0014 no-ops over it)
@@ -113,3 +116,35 @@ def test_alembic_head_on_empty_after_init_db_is_idempotent(scratch_url: str) -> 
     AuthStore(database_url=scratch_url)
     _alembic_head(scratch_url)
     _alembic_head(scratch_url)  # second run — no error
+
+
+def test_0027_encrypts_pre_dd014_plaintext_totp_secrets(
+    scratch_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A 0.115 database kept TOTP secrets in plaintext and lost its recovery codes to 0024;
+    revision 0027 encrypts the secrets and clears the stale recovery flag (DD-014)."""
+    import base64
+
+    from dazzle.http.runtime.auth.store import AuthStore
+
+    monkeypatch.setenv("DAZZLE_CONNECTION_SECRET", base64.b64encode(os.urandom(32)).decode())
+    store = AuthStore(database_url=scratch_url)
+    user = store.create_user(email="old@practice.test", password="pw-123456")
+    _alembic_head(scratch_url, target="0026_enterprise_auth_oidc_scim")
+    plaintext = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"
+    with psycopg.connect(scratch_url, autocommit=True) as conn:
+        conn.execute(
+            "UPDATE users SET totp_secret = %s, totp_enabled = TRUE, "
+            "recovery_codes_generated = TRUE WHERE id = %s",
+            (plaintext, str(user.id)),
+        )
+    _alembic_head(scratch_url)
+
+    with psycopg.connect(scratch_url) as conn:
+        stored = conn.execute(
+            "SELECT totp_secret FROM users WHERE id = %s", (str(user.id),)
+        ).fetchone()
+    assert stored is not None and stored[0] != plaintext
+    assert store.get_totp_secret(user.id) == plaintext
+    refreshed = store.get_user_by_id(user.id)
+    assert refreshed is not None and refreshed.recovery_codes_generated is False

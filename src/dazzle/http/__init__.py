@@ -75,6 +75,12 @@ def _get_convert_entities() -> object:
     return convert_entities
 
 
+def _get_require_second_factor() -> object:
+    from dazzle.http.runtime.auth.second_factor import require_second_factor
+
+    return require_second_factor
+
+
 _LOADERS: dict[str, object] = {
     "AuthStore": _get_AuthStore,
     "create_bus": _get_create_bus,
@@ -83,6 +89,7 @@ _LOADERS: dict[str, object] = {
     "build_metadata": _get_build_metadata,
     "convert_appspec_to_backend": _get_convert_appspec_to_backend,
     "convert_entities": _get_convert_entities,
+    "require_second_factor": _get_require_second_factor,
 }
 
 

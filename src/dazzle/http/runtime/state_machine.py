@@ -14,6 +14,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.strings import normalize_role
+from dazzle.http.runtime.step_up import second_factor_fresh, step_up_url
 from dazzle.i18n.display_locale import calendar_today
 from dazzle.render.filters import clerk_form_error_field_label, clerk_stage_label
 
@@ -109,6 +110,32 @@ class GuardNotSatisfiedError(TransitionError):
                 f"'{clerk_transition_state(to_state)}': "
                 f"{guard_type} {_clerk_guard_value(guard_type, guard_value)}"
             )
+
+
+class SecondFactorGuardError(GuardNotSatisfiedError):
+    """``guard: session.second_factor`` refused: the acting session has no (fresh enough)
+    second factor (DD-014). Answered 403 with ``step_up_url``, not 422."""
+
+    def __init__(self, from_state: str, to_state: str, message: str, step_up: str):
+        super().__init__(from_state, to_state, "second_factor", "session.second_factor", message)
+        self.step_up_url = step_up
+
+
+def second_factor_refusal(
+    guard: Any, from_state: str, to_state: str, second_factor_at: datetime | None
+) -> SecondFactorGuardError | None:
+    """The refusal for an unmet ``guard: session.second_factor``, else None (DD-014)."""
+    if not getattr(guard, "requires_second_factor", False):
+        return None
+    max_age = getattr(guard, "second_factor_max_age_seconds", None)
+    if second_factor_fresh(second_factor_at, max_age):
+        return None
+    message = guard.guard_message or (
+        "This change needs two-step verification on this sign-in"
+        + (" in the last few minutes" if max_age else "")
+        + f". Verify at {step_up_url()}, then try again."
+    )
+    return SecondFactorGuardError(from_state, to_state, message, step_up_url())
 
 
 # =============================================================================
@@ -420,6 +447,7 @@ class TransitionValidator:
         is_superuser: bool = False,
         grant_store: Any | None = None,
         for_render: bool = False,
+        second_factor_at: datetime | None = None,
     ) -> TransitionValidationResult:
         """
         Validate a state transition.
@@ -436,6 +464,10 @@ class TransitionValidator:
                 fill in) and expression guards calling ``has_grant()`` (no
                 grant store at render); role and other expression guards are
                 evaluated exactly as on the PUT. Never set on the PUT path.
+                ``session.second_factor`` guards are skipped too: the PUT's 403
+                names the step-up page, which a hidden button cannot.
+            second_factor_at: When the acting session completed a second factor
+                (``AuthContext.mfa_verified_at``), for ``session.second_factor``.
 
         Returns:
             TransitionValidationResult with validation outcome
@@ -492,6 +524,12 @@ class TransitionValidator:
                                 f"-> '{clerk_transition_state(to_state)}'",
                             )
                         )
+
+            # DD-014: the acting session's second factor
+            if not for_render:
+                refusal = second_factor_refusal(guard, from_state, to_state, second_factor_at)
+                if refusal is not None:
+                    return TransitionValidationResult.failure(refusal)
 
             # Check expression guard
             if guard.guard_expr and not (for_render and _expr_calls(guard.guard_expr, "has_grant")):
@@ -588,6 +626,7 @@ def validate_status_update(
     current_user: str | None = None,
     is_superuser: bool = False,
     grant_store: Any | None = None,
+    second_factor_at: datetime | None = None,
 ) -> TransitionValidationResult | None:
     """
     Validate a status field update against a state machine.
@@ -643,4 +682,5 @@ def validate_status_update(
         current_user,
         is_superuser=is_superuser,
         grant_store=grant_store,
+        second_factor_at=second_factor_at,
     )

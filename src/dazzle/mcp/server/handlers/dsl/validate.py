@@ -26,7 +26,7 @@ def validate_dsl(project_root: Path, args: dict[str, Any] | None = None) -> str:
     manifest = load_manifest(project_root / "dazzle.toml")
     dsl_files = discover_dsl_files(project_root, manifest)
     modules = parse_modules(dsl_files)
-    app_spec = build_appspec(modules, manifest.project_root)
+    app_spec = build_appspec(modules, manifest.project_root, two_factor=manifest.auth.two_factor)
 
     n_entities = len(app_spec.domain.entities)
     n_surfaces = len(app_spec.surfaces)

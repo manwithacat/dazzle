@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime
 from functools import partial
 from typing import Any
 
@@ -12,52 +12,22 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from dazzle.core.strings import normalize_role
 
-from .cookie_name import clear_session_cookies, read_session_id, set_session_cookies
+from .cookie_name import clear_session_cookies, read_session_id
 from .crypto import verify_password
 from .enterprise_login import sso_redirect_for, sso_required_json
-from .events import emit_user_logged_in, emit_user_password_changed, emit_user_registered
+from .events import emit_user_password_changed
 from .models import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
     RegisterRequest,
     ResetPasswordRequest,
+    SecondFactorProof,
 )
-from .org_activation import (
-    Activated,
-    HostForbidden,
-    activate_session_for_login,
-    memberships_required,
-)
+from .sign_in import complete_sign_in
 from .store import AuthStore
 
 logger = logging.getLogger(__name__)
-
-
-def _json_active_membership_id(auth_store: AuthStore, user: Any, request: Any) -> str | None:
-    """Phase-2 activation for the JSON API login paths (auth Plan 1b).
-
-    Returns the membership id to pin when exactly one org resolves (single
-    membership or host-pin match); raises 403 when host-pinned to an org the
-    identity isn't in. For the picker/no-orgs cases there is no HTML redirect to
-    serve, so the session is created membership-less — the RLS fence then denies
-    (1a: no active membership → unbound GUC) until the client picks via
-    ``POST /auth/switch-org``. Fail-safe: an un-activated session sees nothing.
-
-    #1418: the host-pin 403 applies only when the app gates login on membership.
-    An app that declared ``tenant_host: membership_gated: false`` (so
-    ``memberships_required`` is off) uses the host for resolution + the
-    ``current_tenant`` lens and self-authorizes — proceed membership-less (legacy
-    fence) on the JSON API path too, mirroring the HTML login redirect mapper.
-    """
-    outcome = activate_session_for_login(auth_store, user, request)
-    if isinstance(outcome, HostForbidden):
-        if memberships_required(request):
-            raise HTTPException(status_code=403, detail="no membership for this organization")
-        return None  # membership_gated: false — membership-less session, RLS fence applies
-    if isinstance(outcome, Activated):
-        return outcome.membership_id
-    return None
 
 
 # =============================================================================
@@ -119,50 +89,18 @@ async def _login(deps: _AuthDeps, credentials: LoginRequest, request: FastAPIReq
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Create the session.
-    # Session-fixation defence (#1198): regenerate the session id on login
-    # success — invalidate any pre-auth session cookie the client presented
-    # so an attacker-planted id can't survive into the authenticated state.
-    pre_auth_sid = read_session_id(request, default=deps.cookie_name)
-    membership_id = _json_active_membership_id(deps.auth_store, user, request)  # Plan 1b
-    session = deps.auth_store.create_session(
-        user,
-        expires_in=timedelta(days=deps.session_expires_days),
-        ip_address=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-        active_membership_id=membership_id,
-    )
-    if pre_auth_sid and pre_auth_sid != session.id:
-        deps.auth_store.delete_session(pre_auth_sid)
-
-    redirect_url = _resolve_redirect(deps.persona_routes, user.roles)
-
-    response = JSONResponse(
-        content={
-            "user": {
-                "id": str(user.id),
-                "email": user.email,
-                "username": user.username,
-                "roles": user.roles,
-            },
-            "redirect_url": redirect_url,
-            "message": "Login successful",
-        }
-    )
-
-    set_session_cookies(
-        response,
+    # The single sign-in completion point (#1804): membership, the 2FA challenge
+    # when one is owed, session-fixation defence, cookies and the logged-in event.
+    return await complete_sign_in(
         request,
-        session_id=session.id,
-        csrf_secret=session.csrf_secret,
-        user_roles=list(user.roles or []),
-        default_cookie_name=deps.cookie_name,
-        max_age=deps.session_expires_days * 24 * 60 * 60,
+        deps.auth_store,
+        user,
+        method="password",
+        mode="json",
+        next_url=_resolve_redirect(deps.persona_routes, user.roles),
+        session_days=deps.session_expires_days,
+        cookie_name=deps.cookie_name,
     )
-
-    await emit_user_logged_in(user, session_id=session.id)
-
-    return response
 
 
 async def _logout(deps: _AuthDeps, request: FastAPIRequest) -> Response:
@@ -210,26 +148,15 @@ async def _register(deps: _AuthDeps, data: RegisterRequest, request: FastAPIRequ
         logger.error("User registration failed: %s", e)
         raise HTTPException(status_code=400, detail="Registration failed")
 
-    # Session-fixation defence (#1198): regenerate the session id on
-    # registration success — invalidate any pre-auth session cookie the
-    # client presented so an attacker-planted id can't survive into the
-    # newly-authenticated state.
-    pre_auth_sid = read_session_id(request, default=deps.cookie_name)
-    membership_id = _json_active_membership_id(deps.auth_store, user, request)  # Plan 1b
-    session = deps.auth_store.create_session(
-        user,
-        expires_in=timedelta(days=deps.session_expires_days),
-        ip_address=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-        active_membership_id=membership_id,
-    )
-    if pre_auth_sid and pre_auth_sid != session.id:
-        deps.auth_store.delete_session(pre_auth_sid)
-
     redirect_url = _resolve_redirect(deps.persona_routes, user.roles)
-
-    response = JSONResponse(
-        content={
+    return await complete_sign_in(
+        request,
+        deps.auth_store,
+        user,
+        method="register",
+        mode="json",
+        next_url=redirect_url,
+        json_body={
             "user": {
                 "id": str(user.id),
                 "email": user.email,
@@ -240,21 +167,10 @@ async def _register(deps: _AuthDeps, data: RegisterRequest, request: FastAPIRequ
             "message": "Registration successful",
         },
         status_code=201,
+        session_days=deps.session_expires_days,
+        cookie_name=deps.cookie_name,
+        event="registered",
     )
-
-    set_session_cookies(
-        response,
-        request,
-        session_id=session.id,
-        csrf_secret=session.csrf_secret,
-        user_roles=list(user.roles or []),
-        default_cookie_name=deps.cookie_name,
-        max_age=deps.session_expires_days * 24 * 60 * 60,
-    )
-
-    await emit_user_registered(user, session_id=session.id)
-
-    return response
 
 
 async def _get_me(deps: _AuthDeps, request: FastAPIRequest) -> dict[str, Any]:
@@ -310,30 +226,38 @@ async def _change_password(
     deps.auth_store.update_password(user.id, data.new_password)
     deps.auth_store.delete_user_sessions(user.id)
 
-    membership_id = _json_active_membership_id(deps.auth_store, user, request)  # Plan 1b
-    session = deps.auth_store.create_session(
-        user,
-        expires_in=timedelta(days=deps.session_expires_days),
-        ip_address=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-        active_membership_id=membership_id,
-    )
-
     await emit_user_password_changed(user)
 
-    response = JSONResponse(content={"message": "Password changed successfully"})
-
-    set_session_cookies(
-        response,
+    # The signed-in person proved the current password on a session that may already
+    # carry a second factor (DD-014): the replacement session keeps it.
+    return await complete_sign_in(
         request,
-        session_id=session.id,
-        csrf_secret=session.csrf_secret,
-        user_roles=list(user.roles or []),
-        default_cookie_name=deps.cookie_name,
-        max_age=deps.session_expires_days * 24 * 60 * 60,
+        deps.auth_store,
+        user,
+        method="password_change",
+        mode="json",
+        next_url=_resolve_redirect(deps.persona_routes, user.roles),
+        second_factor=_carried_second_factor(auth_context),
+        json_body={"message": "Password changed successfully"},
+        session_days=deps.session_expires_days,
+        cookie_name=deps.cookie_name,
+        event="none",
     )
 
-    return response
+
+def _carried_second_factor(auth_context: Any) -> SecondFactorProof | None:
+    """The second factor an existing session completed, to carry onto its replacement."""
+    session = getattr(auth_context, "session", None)
+    method = getattr(session, "mfa_method", None)
+    verified_at = getattr(session, "mfa_verified_at", None)
+    if not isinstance(method, str) or not isinstance(verified_at, datetime):
+        return None
+    reference = getattr(session, "mfa_reference", None)
+    return SecondFactorProof(
+        method=method,
+        verified_at=verified_at,
+        reference=reference if isinstance(reference, str) else "",
+    )
 
 
 async def _forgot_password(
@@ -393,28 +317,19 @@ async def _reset_password(
     deps.auth_store.consume_password_reset_token(data.token)
     deps.auth_store.delete_user_sessions(user.id)
 
-    membership_id = _json_active_membership_id(deps.auth_store, user, request)  # Plan 1b
-    session = deps.auth_store.create_session(
-        user,
-        expires_in=timedelta(days=deps.session_expires_days),
-        ip_address=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-        active_membership_id=membership_id,
-    )
-
-    response = JSONResponse(content={"message": "Password reset successful"})
-
-    set_session_cookies(
-        response,
+    # An emailed reset token is a primary factor only: a user with 2FA is challenged.
+    return await complete_sign_in(
         request,
-        session_id=session.id,
-        csrf_secret=session.csrf_secret,
-        user_roles=list(user.roles or []),
-        default_cookie_name=deps.cookie_name,
-        max_age=deps.session_expires_days * 24 * 60 * 60,
+        deps.auth_store,
+        user,
+        method="password_reset",
+        mode="json",
+        next_url=_resolve_redirect(deps.persona_routes, user.roles),
+        json_body={"message": "Password reset successful"},
+        session_days=deps.session_expires_days,
+        cookie_name=deps.cookie_name,
+        event="none",
     )
-
-    return response
 
 
 async def _get_preferences(deps: _AuthDeps, request: FastAPIRequest) -> dict[str, Any]:

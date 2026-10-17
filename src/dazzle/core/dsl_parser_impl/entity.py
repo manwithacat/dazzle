@@ -2201,6 +2201,48 @@ class EntityParserMixin:
             auto_spec=auto_spec,
         )
 
+    def _at_session_second_factor(self) -> bool:
+        """True at ``session . second_factor`` (the DD-014 transition guard)."""
+        return bool(
+            self.match(TokenType.IDENTIFIER)
+            and self.current_token().value == "session"
+            and self.peek_token(1).type == TokenType.DOT
+            and self.peek_token(2).value == "second_factor"
+        )
+
+    def _parse_session_second_factor(self) -> int | None:
+        """Parse ``session.second_factor [within N minutes|hours|days]``.
+
+        Returns the maximum age in seconds, or ``None`` for the bare form (any second
+        factor completed on this sign-in).
+        """
+        for _ in range(3):  # session . second_factor
+            self.advance()
+        if self.match(TokenType.NEWLINE, TokenType.INDENT, TokenType.DEDENT, TokenType.EOF):
+            return None
+        tok = self.current_token()
+        if tok.type != TokenType.IDENTIFIER or tok.value != "within":
+            raise make_parse_error(
+                "expected 'within N minutes|hours|days' or end of line after "
+                f"'session.second_factor', got {tok.value!r}",
+                self.file,
+                tok.line,
+                tok.column,
+            )
+        self.advance()
+        amount = int(self.expect(TokenType.NUMBER).value)
+        units = {TokenType.MINUTES: 60, TokenType.HOURS: 3600, TokenType.DAYS: 86400}
+        unit_tok = self.current_token()
+        if unit_tok.type not in units or amount <= 0:
+            raise make_parse_error(
+                "'session.second_factor within' takes a positive N minutes|hours|days",
+                self.file,
+                unit_tok.line,
+                unit_tok.column,
+            )
+        self.advance()
+        return amount * units[unit_tok.type]
+
     def _parse_transition_block(
         self,
     ) -> tuple[
@@ -2231,7 +2273,15 @@ class EntityParserMixin:
             if self.match(TokenType.GUARD):
                 self.advance()
                 self.expect(TokenType.COLON)
-                guard_expr = self.collect_line_as_expr()
+                # DD-014: `guard: session.second_factor [within N minutes|hours|days]`
+                # reads the acting session, not the record — its own guard kind.
+                second_factor = self._at_session_second_factor()
+                max_age: int | None = None
+                guard_expr = None
+                if second_factor:
+                    max_age = self._parse_session_second_factor()
+                else:
+                    guard_expr = self.collect_line_as_expr()
                 guard_message: str | None = None
 
                 # Check for optional indented message:
@@ -2250,6 +2300,8 @@ class EntityParserMixin:
                     ir.TransitionGuard(
                         guard_expr=guard_expr,
                         guard_message=guard_message,
+                        requires_second_factor=second_factor,
+                        second_factor_max_age_seconds=max_age,
                     )
                 )
 

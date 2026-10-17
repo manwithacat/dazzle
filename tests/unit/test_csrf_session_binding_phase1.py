@@ -279,7 +279,7 @@ class TestCsrfCookieAtSiblingSites:
             def get_memberships_for_identity(self, identity_id: str) -> list:
                 return []  # auth Plan 1b
 
-            def create_session(self, u: Any, *, active_membership_id: Any = None) -> Any:
+            def create_session(self, u: Any, **_kwargs: Any) -> Any:
                 return session
 
             def delete_session(self, sid: str) -> None:  # pragma: no cover - unused here

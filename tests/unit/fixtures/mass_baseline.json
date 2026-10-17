@@ -1,7 +1,7 @@
 {
-  "src_lines": 326628,
-  "test_lines": 318593,
-  "docs_lines": 49353,
+  "src_lines": 329054,
+  "test_lines": 319092,
+  "docs_lines": 49407,
   "construct_count": 31,
   "written": "2026-10-17",
   "exceptions": [
@@ -544,6 +544,23 @@
         "test_lines"
       ],
       "reason": "CI repair: context selector seam data-dz-region-src after #1802"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1805 #1804 DD-014 FORCED by cyfuture: two-factor sign-in restore, single sign-in completion point, session second factor, step-up and transition guard"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "#1805 #1804 DD-014 FORCED by cyfuture: two-factor sign-in restore, single sign-in completion point, session second factor, step-up and transition guard"
     }
   ]
 }

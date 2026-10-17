@@ -35,6 +35,32 @@ class SecurityProfile(StrEnum):
     STRICT = "strict"
 
 
+class TwoFactorMethod(StrEnum):
+    """A second factor a user can enrol (DD-014). Recovery codes are always issued."""
+
+    TOTP = "totp"
+    EMAIL_OTP = "email_otp"
+
+
+class TwoFactorConfig(BaseModel):
+    """Two-factor sign-in policy, declared in ``dazzle.toml`` ``[auth.two_factor]`` (DD-014).
+
+    Attributes:
+        enabled: Whether users can enrol a second factor and sign-in challenges for it.
+        methods: The factors a user may enrol.
+        recovery_code_count: Single-use recovery codes minted at first enrolment.
+        enforce_for_roles: A user holding any of these roles must complete a second
+            factor at every sign-in; one with no factor enrolled can only reach enrolment.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    enabled: bool = False
+    methods: tuple[TwoFactorMethod, ...] = (TwoFactorMethod.TOTP,)
+    recovery_code_count: int = 8
+    enforce_for_roles: tuple[str, ...] = ()
+
+
 class SecurityConfig(BaseModel):
     """
     Security configuration for the application.
@@ -47,6 +73,7 @@ class SecurityConfig(BaseModel):
         enable_hsts: Enable HTTP Strict Transport Security header
         enable_csp: Enable Content Security Policy header
         require_auth_by_default: Whether surfaces require auth unless opt-out
+        two_factor: Two-factor sign-in policy (DD-014)
     """
 
     profile: SecurityProfile = SecurityProfile.BASIC
@@ -54,6 +81,8 @@ class SecurityConfig(BaseModel):
     enable_hsts: bool = False
     enable_csp: bool = False
     require_auth_by_default: bool = False
+    # DD-014: set from dazzle.toml ``[auth.two_factor]`` by ``build_appspec``.
+    two_factor: TwoFactorConfig = TwoFactorConfig()
 
     model_config = ConfigDict(frozen=True)
 

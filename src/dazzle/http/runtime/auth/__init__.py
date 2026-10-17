@@ -1,8 +1,8 @@
 """
 Authentication runtime for Dazzle Backend (PostgreSQL-only).
 
-Provides session-based authentication with cookie management
-and JWT token endpoints.
+Provides session-based authentication with cookie management, two-factor
+sign-in with a step-up API (DD-014), and JWT token endpoints.
 """
 
 # #1772: the public RLS binder for app-owned DB connections (custom routes /
@@ -48,6 +48,7 @@ from .models import (
     RefreshTokenRequest,
     RegisterRequest,
     ResetPasswordRequest,
+    SecondFactorProof,
     SessionRecord,
     TokenRequest,
     TokenRevokeRequest,
@@ -57,6 +58,7 @@ from .models import (
 )
 from .routes import create_auth_routes
 from .routes_jwt import create_jwt_auth_routes
+from .second_factor import require_second_factor
 from .store import AuthStore
 
 __all__ = [
@@ -75,6 +77,7 @@ __all__ = [
     "RefreshTokenRequest",
     "RegisterRequest",
     "ResetPasswordRequest",
+    "SecondFactorProof",
     "SessionRecord",
     "TokenRequest",
     "TokenRevokeRequest",
@@ -90,6 +93,7 @@ __all__ = [
     "current_user_id",
     "register_auth_store",
     "require_auth",
+    "require_second_factor",
     "RBAC_DENY",
     "RlsBinding",
     "bind_rls",

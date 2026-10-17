@@ -4,7 +4,8 @@ One table per outcome: a section is absent (default), parsed, filtered, or
 rejected loudly. Each row names the section and the issue that introduced it:
 [extensions] routers (#786), [renderers] extra (#1116), [ui] app_scripts (#1515), [ui] topbar_title (#1794),
 [auth.admin_capabilities] (admin-authz) and
-[serve] app (ADR-0046), [auth.enterprise] protocols (DD-013).
+[serve] app (ADR-0046), [auth.enterprise] protocols (DD-013),
+[auth.two_factor] (DD-014).
 """
 
 from pathlib import Path
@@ -13,6 +14,7 @@ from typing import Any
 import pytest
 
 from dazzle.core.errors import DazzleError
+from dazzle.core.ir.security import TwoFactorConfig, TwoFactorMethod
 from dazzle.core.manifest import load_manifest
 
 _MINIMAL_TOML = '[project]\nname = "t"\nversion = "0.0.1"\n\n[modules]\npaths = ["./dsl"]\n'
@@ -40,6 +42,7 @@ def _attr(obj: Any, dotted: str) -> Any:
         pytest.param("auth.admin_capabilities", {}, id="auth_admin_capabilities"),
         pytest.param("serve.app", None, id="serve_app_adr0046"),
         pytest.param("auth.enterprise.protocols", [], id="auth_enterprise_dd013"),
+        pytest.param("auth.two_factor", TwoFactorConfig(), id="auth_two_factor_off_dd014"),
     ],
 )
 def test_absent_section_defaults_empty(tmp_path: Path, attr: str, expected: Any) -> None:
@@ -106,6 +109,24 @@ def test_absent_section_defaults_empty(tmp_path: Path, attr: str, expected: Any)
             "auth.enterprise.protocols",
             ["oidc", "scim"],
             id="auth_enterprise_protocols_dd013",
+        ),
+        pytest.param(
+            '\n[auth.two_factor]\nenabled = true\nmethods = ["totp", "email_otp"]\n'
+            'recovery_code_count = 10\nenforce_for_roles = ["accountant"]\n',
+            "auth.two_factor",
+            TwoFactorConfig(
+                enabled=True,
+                methods=(TwoFactorMethod.TOTP, TwoFactorMethod.EMAIL_OTP),
+                recovery_code_count=10,
+                enforce_for_roles=("accountant",),
+            ),
+            id="auth_two_factor_dd014",
+        ),
+        pytest.param(
+            "\n[auth.two_factor]\nenabled = true\n",
+            "auth.two_factor.methods",
+            (TwoFactorMethod.TOTP,),
+            id="auth_two_factor_default_totp_dd014",
         ),
     ],
 )
@@ -175,6 +196,26 @@ def test_lenient_section_filters_bad_entries(
             '\n[auth.enterprise]\nprotocols = "oidc"\n',
             "protocols must be a list",
             id="auth_enterprise_scalar_protocols_dd013",
+        ),
+        pytest.param(
+            '\n[auth.two_factor]\nenabled = true\nmethods = ["webauthn"]\n',
+            "DD-014",
+            id="auth_two_factor_out_of_scope_method_dd014",
+        ),
+        pytest.param(
+            '\n[auth.two_factor]\nenforce_for_roles = ["accountant"]\n',
+            "requires enabled = true",
+            id="auth_two_factor_enforce_without_enabled_dd014",
+        ),
+        pytest.param(
+            "\n[auth.two_factor]\nenabled = true\nremember_device = true\n",
+            "unknown keys",
+            id="auth_two_factor_unknown_key_dd014",
+        ),
+        pytest.param(
+            "\n[auth.two_factor]\nenabled = true\nrecovery_code_count = 0\n",
+            "recovery_code_count",
+            id="auth_two_factor_recovery_count_dd014",
         ),
     ],
 )

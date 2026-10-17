@@ -371,6 +371,8 @@ def _build_state_machines(
                     label_parts.append(f"role({', '.join(g.role_alternatives)})")
                 elif g.condition:
                     label_parts.append(g.condition)
+                elif g.requires_second_factor:
+                    label_parts.append("session.second_factor")
 
             from_state = t.from_state if t.from_state != "*" else "[*]"
             label = " / ".join(label_parts) if label_parts else ""

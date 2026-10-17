@@ -1301,6 +1301,7 @@ def create_app_factory(
             modules,
             manifest.project_root,
             known_renderers=known_renderer_names(manifest),
+            two_factor=manifest.auth.two_factor,
         )
     except (ParseError, DazzleError) as e:
         raise RuntimeError(f"Failed to parse DSL: {e}")

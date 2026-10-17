@@ -67,7 +67,12 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(TransitionError)
     async def transition_error_handler(request: Request, exc: TransitionError) -> Response:
-        """Convert state machine errors to 422 Unprocessable Entity."""
+        """Convert state machine errors to 422 Unprocessable Entity.
+
+        A ``session.second_factor`` guard refusal (DD-014) is 403 carrying the
+        step-up URL: the record is fine, the sign-in needs a second factor.
+        """
+        step_up = getattr(exc, "step_up_url", None)
         if HtmxDetails.from_request(request).is_htmx:
             return json_or_htmx_error(
                 request,
@@ -81,6 +86,10 @@ def register_exception_handlers(app: FastAPI) -> None:
             content["from_state"] = from_state
         if to_state is not None:
             content["to_state"] = to_state
+        if step_up:
+            content["type"] = "second_factor_required"
+            content["step_up_url"] = step_up
+            return _JSONResponse(status_code=403, content=content)
         return _JSONResponse(status_code=422, content=content)
 
     @app.exception_handler(InvariantViolationError)

@@ -10,7 +10,7 @@
 # lens. Adding/removing a route, changing its path template, HTTP
 # method, handler name, or signature all fire the drift gate.
 
-# Counts: 95 routes across 28 modules
+# Counts: 107 routes across 29 modules
 
 module: audit_history_routes
   GET | /{entity_type}/{entity_id}
@@ -141,6 +141,32 @@ module: auth_scim_routes
 module: auth_sso_routes
   GET | /auth/sso/{provider}
     handler: sso_initiate(provider: str, request: Request, next: Annotated[str, Query()] = '/') -> Response
+
+module: auth_two_factor_routes
+  GET | /2fa/challenge
+    handler: challenge_page(request: Request, method: Annotated[str, Query()] = '', sent: Annotated[str, Query()] = '', error: Annotated[str, Query()] = '') -> Response
+  GET | /2fa/settings
+    handler: settings_page(request: Request) -> Response
+  GET | /2fa/setup
+    handler: setup_page(request: Request, sent: Annotated[str, Query()] = '', error: Annotated[str, Query()] = '') -> Response
+  GET | /2fa/step-up
+    handler: step_up_page(request: Request, method: Annotated[str, Query()] = '', next: Annotated[str, Query()] = '', sent: Annotated[str, Query()] = '', error: Annotated[str, Query()] = '') -> Response
+  DELETE | /auth/2fa/email-otp
+    handler: disable_email(request: Request) -> dict[str, str]
+  POST | /auth/2fa/recovery/regenerate
+    handler: regenerate(request: Request) -> dict[str, Any]
+  POST | /auth/2fa/settings/submit
+    handler: settings_form(request: Request, action: Annotated[str, Query()] = '') -> Response
+  POST | /auth/2fa/setup/email-otp
+    handler: setup_email_json(request: Request) -> dict[str, str]
+  POST | /auth/2fa/setup/email-otp/submit
+    handler: setup_email_form(request: Request) -> Response
+  POST | /auth/2fa/setup/totp
+    handler: setup_totp_json(request: Request) -> dict[str, str]
+  GET | /auth/2fa/status
+    handler: status(request: Request) -> dict[str, Any]
+  DELETE | /auth/2fa/totp
+    handler: disable_totp(request: Request) -> dict[str, str]
 
 module: consent_routes
   POST | (root)

@@ -303,7 +303,7 @@ class TestLazyProvisioning:
 
 
 class TestJsonApiHostForbiddenGate:
-    """#1418: the JSON API login path (_json_active_membership_id) honours the
+    """#1418: the JSON API login path (json_active_membership_id) honours the
     membership gate exactly like the HTML redirect mapper — host-pin 403 only when
     the app gates login on membership; a `membership_gated: false` app proceeds."""
 
@@ -324,20 +324,20 @@ class TestJsonApiHostForbiddenGate:
     def test_gated_app_raises_403(self) -> None:
         from fastapi import HTTPException
 
-        from dazzle.http.runtime.auth.routes import _json_active_membership_id
+        from dazzle.http.runtime.auth.sign_in import json_active_membership_id
 
         user = SimpleNamespace(id="u-1")
         with pytest.raises(HTTPException) as ei:
-            _json_active_membership_id(
+            json_active_membership_id(
                 self._store_no_membership(), user, self._request(memberships_required=True)
             )
         assert ei.value.status_code == 403
 
     def test_ungated_app_proceeds_membership_less(self) -> None:
-        from dazzle.http.runtime.auth.routes import _json_active_membership_id
+        from dazzle.http.runtime.auth.sign_in import json_active_membership_id
 
         user = SimpleNamespace(id="u-1")
-        result = _json_active_membership_id(
+        result = json_active_membership_id(
             self._store_no_membership(), user, self._request(memberships_required=False)
         )
         assert result is None  # proceed membership-less; RLS fence still applies

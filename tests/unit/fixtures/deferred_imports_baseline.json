@@ -134,7 +134,7 @@
   "src/dazzle/http/runtime/workspace_scope.py": 3,
   "src/dazzle/render/fragment/renderer/_emit.py": 1,
   "src/dazzle/cli/tenant.py": 8,
-  "src/dazzle/http/__init__.py": 7,
+  "src/dazzle/http/__init__.py": 8,
   "src/dazzle/mcp/server/handlers/dsl_test.py": 6,
   "src/dazzle/sentinel/agents/python_audit.py": 13,
   "src/dazzle/http/runtime/qa_routes.py": 2,

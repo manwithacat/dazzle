@@ -323,6 +323,8 @@ def _convert_guard(ir_guard: ir.TransitionGuard) -> TransitionGuardSpec:
         requires_any_role=list(ir_guard.requires_any_role),
         guard_expr=guard_expr_dict,
         guard_message=ir_guard.guard_message,
+        requires_second_factor=ir_guard.requires_second_factor,
+        second_factor_max_age_seconds=ir_guard.second_factor_max_age_seconds,
     )
 
 

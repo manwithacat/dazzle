@@ -7,7 +7,7 @@ error page in the browser. This module is the single shared helper the
 browser login routes (password ×2, magic-link, SSO) now return instead:
 a branded "this isn't your organisation" page.
 
-The JSON API login path (`routes._json_active_membership_id`) deliberately
+The JSON API login path (`sign_in.json_active_membership_id`) deliberately
 keeps the JSON 403 — an API client wants the machine-readable error, not HTML.
 """
 

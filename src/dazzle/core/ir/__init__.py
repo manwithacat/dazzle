@@ -425,6 +425,8 @@ from .search import (
 from .security import (
     SecurityConfig,
     SecurityProfile,
+    TwoFactorConfig,
+    TwoFactorMethod,
 )
 
 # Seed Templates (v0.38.0)
@@ -930,6 +932,8 @@ __all__ = [
     # Security (v0.11.0)
     "SecurityConfig",
     "SecurityProfile",
+    "TwoFactorConfig",
+    "TwoFactorMethod",
     # Grants (v0.42.0 Runtime RBAC)
     "GrantApprovalMode",
     "GrantExpiryMode",

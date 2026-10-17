@@ -305,6 +305,32 @@ _SURFACE_MODE_OP = {
 }
 
 
+def validate_second_factor_guards(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """``guard: session.second_factor`` needs ``[auth.two_factor] enabled = true`` (DD-014).
+
+    Without it no session ever carries a second factor, so the transition can never be
+    taken by anyone. A warning, not an error: callers that build the AppSpec without the
+    manifest (fixtures, tools) see two-factor off.
+    """
+    security = getattr(appspec, "security", None)
+    two_factor = getattr(security, "two_factor", None)
+    if two_factor is not None and two_factor.enabled:
+        return [], []
+    warnings: list[str] = []
+    for entity in appspec.domain.entities:
+        sm = entity.state_machine
+        if sm is None:
+            continue
+        for t in sm.transitions:
+            if any(g.requires_second_factor for g in t.guards):
+                warnings.append(
+                    f"Entity '{entity.name}' transition '{t.from_state} -> {t.to_state}' "
+                    "uses 'guard: session.second_factor' but [auth.two_factor] is not "
+                    "enabled in dazzle.toml: no session can satisfy it."
+                )
+    return [], warnings
+
+
 def validate_expose_surface_consistency(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """#1420 Slice 2: a surface whose CRUD op is excluded by its entity's
     ``expose:`` allowlist is a contradiction — the surface renders but its

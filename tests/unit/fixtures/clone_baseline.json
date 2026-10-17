@@ -390,14 +390,6 @@
     ]
   },
   {
-    "signature": "fa16e8a6dea19aed1145becdb27c7221",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/auth/mailer.py::get_invitation_mailer",
-      "dazzle/http/runtime/auth/mailer.py::get_verification_mailer"
-    ]
-  },
-  {
     "signature": "exact:c85db8de1eaf08308b25b7ef7459e337",
     "count": 2,
     "names": [

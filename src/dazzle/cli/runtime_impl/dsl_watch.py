@@ -36,7 +36,10 @@ def validate_project(project_root: Path) -> list[str]:
         # known_renderers= mirrors the boot path, so `render: <unknown>` and
         # `[renderers] extra` resolve the same way (#1116).
         appspec = build_appspec(
-            modules, manifest.project_root, known_renderers=known_renderer_names(manifest)
+            modules,
+            manifest.project_root,
+            known_renderers=known_renderer_names(manifest),
+            two_factor=manifest.auth.two_factor,
         )
         errors, _warnings, _relevance = lint_appspec(appspec)
     except Exception as exc:  # parse/link errors carry the file:line in the message

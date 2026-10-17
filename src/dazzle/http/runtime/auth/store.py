@@ -1,4 +1,4 @@
-"""Authentication store (PostgreSQL) — user CRUD and sessions."""
+"""Authentication store (PostgreSQL) — user CRUD, sessions and second factors."""
 
 import logging
 import secrets
@@ -31,12 +31,14 @@ except ImportError:
 
 from dazzle.http.runtime.auth.partition_root import resolve_partition_root
 from dazzle.http.runtime.auth.store_enterprise import ENTERPRISE_AUTH_DDL, EnterpriseStoreMixin
+from dazzle.http.runtime.auth.store_two_factor import TWO_FACTOR_DDL, TwoFactorStoreMixin
 
 from .crypto import hash_password, verify_password
 from .models import (
     AuthContext,
     MembershipRecord,
     OrganizationRecord,
+    SecondFactorProof,
     SessionRecord,
     UserRecord,
 )
@@ -172,6 +174,9 @@ class UserStoreMixin:
             is_superuser=bool(row["is_superuser"]),
             roles=json.loads(row["roles"]),
             email_verified=bool(row.get("email_verified", False)),
+            totp_enabled=bool(row.get("totp_enabled") or False),
+            email_otp_enabled=bool(row.get("email_otp_enabled") or False),
+            recovery_codes_generated=bool(row.get("recovery_codes_generated") or False),
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
         )
@@ -458,15 +463,21 @@ class SessionStoreMixin:
         ip_address: str | None = None,
         user_agent: str | None = None,
         active_membership_id: str | None = None,  # auth Plan 1a
+        second_factor: SecondFactorProof | None = None,  # DD-014
     ) -> SessionRecord:
         """
         Create a new session for a user.
+
+        Sign-in paths do not call this directly: they finish through
+        ``auth.sign_in.complete_sign_in`` (the single completion point, #1804).
 
         Args:
             user: User record
             expires_in: Session expiration time
             ip_address: Client IP address
             user_agent: Client user agent
+            active_membership_id: The org membership the session is pinned to
+            second_factor: The second factor completed during this sign-in
 
         Returns:
             Created session record
@@ -477,14 +488,18 @@ class SessionStoreMixin:
             ip_address=ip_address,
             user_agent=user_agent,
             active_membership_id=active_membership_id,
+            mfa_method=second_factor.method if second_factor else None,
+            mfa_verified_at=second_factor.verified_at if second_factor else None,
+            mfa_reference=second_factor.reference if second_factor else None,
         )
 
         self._execute(
             """
             INSERT INTO sessions
                 (id, user_id, created_at, expires_at, ip_address, user_agent,
-                 csrf_secret, active_membership_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                 csrf_secret, active_membership_id, mfa_method, mfa_verified_at,
+                 mfa_reference)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 session.id,
@@ -495,6 +510,9 @@ class SessionStoreMixin:
                 session.user_agent,
                 session.csrf_secret,
                 session.active_membership_id,
+                session.mfa_method,
+                session.mfa_verified_at.isoformat() if session.mfa_verified_at else None,
+                session.mfa_reference,
             ),
         )
 
@@ -531,6 +549,13 @@ class SessionStoreMixin:
                 user_agent=row["user_agent"],
                 csrf_secret=stored_csrf,
                 active_membership_id=row.get("active_membership_id"),  # auth Plan 1a
+                mfa_method=row.get("mfa_method"),  # DD-014
+                mfa_verified_at=(
+                    datetime.fromisoformat(row["mfa_verified_at"])
+                    if row.get("mfa_verified_at")
+                    else None
+                ),
+                mfa_reference=row.get("mfa_reference"),
             )
 
         return None
@@ -1246,6 +1271,9 @@ class SessionStoreMixin:
             return again
 
 
+SESSION_MFA_COLUMNS: tuple[str, ...] = ("mfa_method", "mfa_verified_at", "mfa_reference")
+
+
 def ensure_auth_core_tables(cur: Any) -> None:
     """Create all auth tables and indexes (idempotent).
 
@@ -1275,14 +1303,15 @@ def ensure_auth_core_tables(cur: Any) -> None:
             updated_at TEXT NOT NULL
         )
     """)
-    # Add the email-verification column (and the four 2FA columns, kept on
-    # `users` after 2FA was parked as DD-014 pending an operator decision on
-    # the column drop) if they don't exist (idempotent migration).
+    # Add the email-verification and two-factor columns if they don't exist
+    # (idempotent migration). DD-014: totp_secret holds AES-GCM ciphertext;
+    # totp_last_step is the last accepted TOTP time step (no code replay).
     for _col, _col_type, _default in [
         ("totp_secret", "TEXT", None),
         ("totp_enabled", "BOOLEAN", "FALSE"),
         ("email_otp_enabled", "BOOLEAN", "FALSE"),
         ("recovery_codes_generated", "BOOLEAN", "FALSE"),
+        ("totp_last_step", "BIGINT", None),
         ("email_verified", "BOOLEAN", "FALSE"),
     ]:
         _default_clause = f" DEFAULT {_default}" if _default else ""
@@ -1303,6 +1332,9 @@ def ensure_auth_core_tables(cur: Any) -> None:
     """)
     cur.execute("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS csrf_secret TEXT")
     cur.execute("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS active_membership_id TEXT")
+    # DD-014: the second factor the session completed (totp|email_otp|recovery|idp).
+    for _col in SESSION_MFA_COLUMNS:
+        cur.execute(f"ALTER TABLE sessions ADD COLUMN IF NOT EXISTS {_col} TEXT")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS memberships (
@@ -1364,6 +1396,8 @@ def ensure_auth_core_tables(cur: Any) -> None:
     # Enterprise auth (DD-013): connections, secret-rotation audit, SCIM groups.
     for _stmt in ENTERPRISE_AUTH_DDL:
         cur.execute(_stmt)
+    for _stmt in TWO_FACTOR_DDL:
+        cur.execute(_stmt)
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -1405,14 +1439,17 @@ def ensure_auth_core_tables(cur: Any) -> None:
     cur.execute("CREATE INDEX IF NOT EXISTS idx_user_prefs_user ON user_preferences(user_id)")
 
 
-class AuthStore(UserStoreMixin, SessionStoreMixin, EnterpriseStoreMixin, LazyPgStore):
+class AuthStore(
+    UserStoreMixin, SessionStoreMixin, EnterpriseStoreMixin, TwoFactorStoreMixin, LazyPgStore
+):
     """
     Authentication store using PostgreSQL.
 
     Manages users and sessions in a separate auth database.
     Combines UserStoreMixin (user CRUD, passwords),
-    SessionStoreMixin (session lifecycle, validation) and
-    EnterpriseStoreMixin (connections, SCIM groups — DD-013).
+    SessionStoreMixin (session lifecycle, validation),
+    EnterpriseStoreMixin (connections, SCIM groups — DD-013) and
+    TwoFactorStoreMixin (second factors, codes, challenges — DD-014).
     """
 
     def __init__(

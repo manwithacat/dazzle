@@ -56,7 +56,10 @@ def load_project(
     dsl_files = discover_dsl_files(project_dir, manifest)
     modules = parse_modules(dsl_files)
     return build_appspec(
-        modules, manifest.project_root, known_renderers=known_renderer_names(manifest)
+        modules,
+        manifest.project_root,
+        known_renderers=known_renderer_names(manifest),
+        two_factor=manifest.auth.two_factor,
     )
 
 
@@ -93,6 +96,9 @@ def load_project_with_manifest(
     dsl_files = discover_dsl_files(project_dir, manifest)
     modules = parse_modules(dsl_files)
     appspec = build_appspec(
-        modules, manifest.project_root, known_renderers=known_renderer_names(manifest)
+        modules,
+        manifest.project_root,
+        known_renderers=known_renderer_names(manifest),
+        two_factor=manifest.auth.two_factor,
     )
     return appspec, manifest

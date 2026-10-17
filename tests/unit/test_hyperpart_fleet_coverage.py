@@ -67,7 +67,7 @@ SIGNALS: dict[str, object] = {
     "combobox": r"widget\s*[:=]\s*combobox",
     "tags": r"widget\s*[:=]\s*tags",
     "pdf": r"display:\s*pdf_viewer",
-    "two-factor": "exempt:2FA parked (DD-014, ADR-0057 ship AG); HM gallery only",
+    "two-factor": "exempt:emitted only under [auth.two_factor] (DD-014); no example app enables it",
     # field-level DOTTED source refs only (source=pack.operation; the
     # workspace-region `source: Entity` keyword is a different feature).
     # Anchor: fieldtest_hub manufacturer ← companies_house_lookup.

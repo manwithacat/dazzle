@@ -417,7 +417,23 @@ transitions_block ::= "transitions" ":" NEWLINE
                         transition_rule+
                       DEDENT ;
 
-transition_rule ::= from_state "->" to_state transition_spec? NEWLINE ;
+transition_rule ::= from_state "->" to_state transition_spec? NEWLINE
+                | from_state "->" to_state ":" NEWLINE
+                  INDENT transition_item+ DEDENT ;
+
+transition_item ::= "guard" ":" guard_body NEWLINE guard_message?
+                | transition_constraint NEWLINE ;
+
+guard_body    ::= second_factor_guard | expression ;
+
+second_factor_guard
+              ::= "session" "." "second_factor" ("within" NUMBER time_unit)? ;
+                  (* DD-014: the acting session completed a second factor (sign-in
+                     or step-up), within N minutes|hours|days when given; needs
+                     [auth.two_factor] enabled in dazzle.toml; refused as 403 with
+                     the step-up URL *)
+
+guard_message ::= INDENT "message" ":" STRING NEWLINE DEDENT ;
 
 from_state    ::= IDENT | "*" ;
 

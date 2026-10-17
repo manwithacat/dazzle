@@ -21,6 +21,8 @@ from __future__ import annotations
 import logging
 from typing import Protocol, runtime_checkable
 
+from dazzle.core.environment import is_production
+
 _logger = logging.getLogger(__name__)
 
 
@@ -79,6 +81,18 @@ class InvitationMailer(Protocol):
     def send_invitation(self, *, to_email: str, accept_url: str, org_name: str) -> None: ...
 
 
+@runtime_checkable
+class OneTimeCodeMailer(Protocol):
+    """Contract for delivering a two-factor email code (DD-014).
+
+    The code is a sign-in credential for ``ttl_minutes``: implementations must send
+    it only to ``to_email`` and never log it. Kept separate from the link mailers so
+    a magic-link-only mailer need not implement it.
+    """
+
+    def send_one_time_code(self, *, to_email: str, code: str, ttl_minutes: int) -> None: ...
+
+
 class LogMailer:
     """Default `MagicLinkMailer` impl: writes the link URL to the
     application log at INFO level.
@@ -101,13 +115,35 @@ class LogMailer:
     def send_invitation(self, *, to_email: str, accept_url: str, org_name: str) -> None:
         _logger.info("Org-invitation issued for %s to %s: %s", to_email, org_name, accept_url)
 
+    def send_one_time_code(self, *, to_email: str, code: str, ttl_minutes: int) -> None:
+        # A one-time code is a live credential: logged for local development only.
+        if is_production():
+            _logger.error(
+                "Two-factor email code for %s NOT delivered: no mailer implementing "
+                "send_one_time_code is registered on app.state.magic_link_mailer",
+                to_email,
+            )
+            return
+        _logger.info(  # nosemgrep
+            "Two-factor email code for %s (dev log, %d min): %s", to_email, ttl_minutes, code
+        )
+
+
+def _capable_mailer(app_state: object, capability: type) -> object:
+    """The registered mailer when it implements ``capability``; else LogMailer (dev-safe)."""
+    mailer = getattr(app_state, "magic_link_mailer", None)
+    return mailer if mailer is not None and isinstance(mailer, capability) else LogMailer()
+
 
 def get_invitation_mailer(app_state: object) -> InvitationMailer:
     """Look up an invitation-capable mailer; fall back to LogMailer (dev-safe)."""
-    mailer = getattr(app_state, "magic_link_mailer", None)
-    if mailer is None or not isinstance(mailer, InvitationMailer):
-        return LogMailer()
-    typed: InvitationMailer = mailer
+    typed: InvitationMailer = _capable_mailer(app_state, InvitationMailer)  # type: ignore[assignment]
+    return typed
+
+
+def get_one_time_code_mailer(app_state: object) -> OneTimeCodeMailer:
+    """A mailer that can deliver two-factor email codes; LogMailer when none can (DD-014)."""
+    typed: OneTimeCodeMailer = _capable_mailer(app_state, OneTimeCodeMailer)  # type: ignore[assignment]
     return typed
 
 
@@ -133,10 +169,5 @@ def get_verification_mailer(app_state: object) -> VerificationMailer:
     registered or (b) the registered mailer only implements
     :class:`MagicLinkMailer` — verification email is an additive
     capability, not a hard requirement (#1109)."""
-    mailer = getattr(app_state, "magic_link_mailer", None)
-    if mailer is None or not isinstance(mailer, VerificationMailer):
-        return LogMailer()
-    # isinstance() narrowed mailer to VerificationMailer above; the
-    # explicit annotation keeps mypy happy with the typed return.
-    typed: VerificationMailer = mailer
+    typed: VerificationMailer = _capable_mailer(app_state, VerificationMailer)  # type: ignore[assignment]
     return typed

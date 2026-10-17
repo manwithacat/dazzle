@@ -46,7 +46,7 @@ def mock_auth_store_with_real_token_flow():
         # One-time use: pop the token
         return tokens.pop(token, None)
 
-    def create_session(user, *, active_membership_id=None):
+    def create_session(user, **_kwargs):
         session = MagicMock()
         session.id = f"session-{user.id}"
         return session

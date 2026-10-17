@@ -19,6 +19,8 @@ Coverage:
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -58,6 +60,9 @@ class _StubUser:
         user_id: str = "user-123",
     ) -> None:
         self.id = user_id
+        self.email = f"{user_id}@example.test"  # the sign-in events name the user
+        self.username = None
+        self.roles: list[str] = []
 
 
 class _StubAuthStore:
@@ -98,7 +103,7 @@ class _StubAuthStore:
         return []  # auth Plan 1b — no memberships in this stub
 
     def create_session(
-        self, user: _StubUser, *, active_membership_id: str | None = None
+        self, user: _StubUser, *, active_membership_id: str | None = None, **_kwargs: Any
     ) -> _StubSession:
         sid = f"sess-for-{user.id}"
         self.created_sessions.append(sid)

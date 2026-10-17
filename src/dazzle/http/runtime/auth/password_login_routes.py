@@ -20,18 +20,11 @@ from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse, Response
 
 from dazzle.http.runtime.auth.auth_views import leftover_auth_email_or_400
-from dazzle.http.runtime.auth.cookie_name import read_session_id, set_session_cookies
 from dazzle.http.runtime.auth.enterprise_login import sso_redirect_for
-from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
-from dazzle.http.runtime.auth.org_activation import (
-    FORBIDDEN_SENTINEL,
-    _login_redirect_for_outcome,
-    activate_session_for_login,
-    memberships_required,
-)
 from dazzle.http.runtime.auth.redirect_safety import (
     is_safe_redirect_path as _is_safe_redirect_path,
 )
+from dazzle.http.runtime.auth.sign_in import complete_sign_in
 
 _logger = logging.getLogger(__name__)
 
@@ -47,24 +40,6 @@ def _encode_next(value: str) -> str:
     as a single query-string value rather than a separator-bearing tail.
     """
     return quote(value, safe="/")
-
-
-def _set_session_cookie(
-    response: RedirectResponse,
-    request: Request,
-    session_id: str,
-    csrf_secret: str,
-    *,
-    user_roles: list[str] | None = None,
-) -> None:
-    """Attach session + CSRF cookies via the topology-aware helper."""
-    set_session_cookies(
-        response,
-        request,
-        session_id=session_id,
-        csrf_secret=csrf_secret,
-        user_roles=user_roles,
-    )
 
 
 def create_password_login_routes() -> APIRouter:
@@ -101,31 +76,12 @@ def create_password_login_routes() -> APIRouter:
                 target = f"/login?error=invalid_credentials&next={_encode_next(next)}"
             return RedirectResponse(url=target, status_code=303)
 
-        # Session-fixation defence (#1198): regenerate the session id on
-        # login success — invalidate any pre-auth session cookie the client
-        # presented so an attacker-planted id can't survive into the
-        # authenticated state.
-        pre_auth_sid = read_session_id(request)
-        # Phase 2 (auth Plan 1b): activate an org context for the proven identity.
-        outcome = activate_session_for_login(auth_store, user, request)
+        # The single sign-in completion point (#1804): org activation, the 2FA
+        # challenge when one is owed, session-fixation defence, cookies, event.
         safe_next = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
-        membership_id, redirect_to = _login_redirect_for_outcome(
-            outcome, safe_next, memberships_required=memberships_required(request)
+        return await complete_sign_in(
+            request, auth_store, user, method="password", mode="redirect", next_url=safe_next
         )
-        if redirect_to == FORBIDDEN_SENTINEL:
-            return forbidden_org_response(request)  # #1393: branded host-pin 403
-        session = auth_store.create_session(user, active_membership_id=membership_id)
-        if pre_auth_sid and pre_auth_sid != session.id:
-            auth_store.delete_session(pre_auth_sid)
-        response = RedirectResponse(url=redirect_to, status_code=303)
-        _set_session_cookie(
-            response,
-            request,
-            session.id,
-            session.csrf_secret,
-            user_roles=list(getattr(user, "roles", []) or []),
-        )
-        return response
 
     @router.post("/auth/signup/password")
     async def submit_signup_password(
@@ -186,33 +142,17 @@ def create_password_login_routes() -> APIRouter:
             )
             return RedirectResponse(url="/signup?error=create_failed", status_code=303)
 
-        # Session-fixation defence (#1198): regenerate the session id on
-        # signup success — invalidate any pre-auth session cookie the client
-        # presented so an attacker-planted id can't survive into the
-        # newly-authenticated state.
-        pre_auth_sid = read_session_id(request)
-        # Phase 2 (auth Plan 1b): a brand-new user has no memberships yet, so this
-        # resolves to NoOrgs → /auth/no-orgs (honest until Plan 1c auto-provisions
-        # a single-org membership at signup). Host-pinned signup with no membership
-        # there → 403.
-        outcome = activate_session_for_login(auth_store, user, request)
+        # A brand-new user has no memberships yet: NoOrgs → /auth/no-orgs when the app
+        # gates on membership; an enforce_for_roles role lands on 2FA enrolment.
         safe_next = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
-        membership_id, redirect_to = _login_redirect_for_outcome(
-            outcome, safe_next, memberships_required=memberships_required(request)
-        )
-        if redirect_to == FORBIDDEN_SENTINEL:
-            return forbidden_org_response(request)  # #1393: branded host-pin 403
-        session = auth_store.create_session(user, active_membership_id=membership_id)
-        if pre_auth_sid and pre_auth_sid != session.id:
-            auth_store.delete_session(pre_auth_sid)
-        response = RedirectResponse(url=redirect_to, status_code=303)
-        _set_session_cookie(
-            response,
+        return await complete_sign_in(
             request,
-            session.id,
-            session.csrf_secret,
-            user_roles=list(getattr(user, "roles", []) or []),
+            auth_store,
+            user,
+            method="signup",
+            mode="redirect",
+            next_url=safe_next,
+            event="registered",
         )
-        return response
 
     return router

@@ -28,8 +28,37 @@ class UserRecord(BaseModel):
     is_superuser: bool = False
     roles: list[str] = Field(default_factory=list)
     email_verified: bool = False
+    # DD-014: which second factors the user has enrolled. The TOTP secret is never on
+    # the record (AES-GCM ciphertext in ``users.totp_secret``; ``get_totp_secret``).
+    totp_enabled: bool = False
+    email_otp_enabled: bool = False
+    recovery_codes_generated: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @property
+    def two_factor_enabled(self) -> bool:
+        """Whether the user has enrolled any second factor."""
+        return self.totp_enabled or self.email_otp_enabled
+
+
+# DD-014: the second factors a session can record. ``idp`` = the enterprise IdP
+# asserted multi-factor sign-in (OIDC ``amr``); the others were verified locally.
+SECOND_FACTOR_METHODS: tuple[str, ...] = ("totp", "email_otp", "recovery", "idp")
+
+
+class SecondFactorProof(BaseModel):
+    """A second factor completed during this sign-in (DD-014), recorded on the session.
+
+    ``reference`` is a stable, hashed identifier of the factor (never derived from a
+    secret) — what HMRC's ``Gov-Client-Multi-Factor`` calls the unique reference.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    method: str
+    verified_at: datetime
+    reference: str
 
 
 class SessionRecord(BaseModel):
@@ -50,6 +79,10 @@ class SessionRecord(BaseModel):
     # auth Plan 1a: pins the session's active organization (membership). Nullable
     # during the transition — legacy sessions predate memberships.
     active_membership_id: str | None = None
+    # DD-014: the second factor this session completed (None: password/link/SSO only).
+    mfa_method: str | None = None
+    mfa_verified_at: datetime | None = None
+    mfa_reference: str | None = None
 
 
 class MembershipRecord(BaseModel):
@@ -140,6 +173,21 @@ class AuthContext(BaseModel):
     def user_id(self) -> UUID | None:
         """Get the authenticated user's ID, or None if not authenticated."""
         return self.user.id if self.user else None
+
+    @property
+    def mfa_method(self) -> str | None:
+        """The second factor this session completed (``totp|email_otp|recovery|idp``)."""
+        return self.session.mfa_method if self.session is not None else None
+
+    @property
+    def mfa_verified_at(self) -> datetime | None:
+        """When this session completed its second factor; ``None`` if it never did."""
+        return self.session.mfa_verified_at if self.session is not None else None
+
+    @property
+    def mfa_reference(self) -> str | None:
+        """Hashed, stable reference of the factor this session completed."""
+        return self.session.mfa_reference if self.session is not None else None
 
     @property
     def effective_roles(self) -> list[str]:
@@ -252,6 +300,16 @@ class ResetPasswordRequest(BaseModel):
 
     token: str
     new_password: str
+
+
+class TwoFactorCodeRequest(BaseModel):
+    """A second-factor code: ``totp``, ``email_otp`` or ``recovery`` (DD-014)."""
+
+    code: str
+    method: str = "totp"
+    # The pending sign-in's challenge token, for clients that cannot carry the
+    # ``dazzle_2fa`` cookie. Not a session: it opens nothing but this verification.
+    challenge_token: str = ""
 
 
 class TokenRequest(BaseModel):

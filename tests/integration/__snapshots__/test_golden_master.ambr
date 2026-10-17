@@ -1131,6 +1131,15 @@
       'enable_hsts': False,
       'profile': <SecurityProfile.BASIC: 'basic'>,
       'require_auth_by_default': False,
+      'two_factor': dict({
+        'enabled': False,
+        'enforce_for_roles': tuple(
+        ),
+        'methods': tuple(
+          <TwoFactorMethod.TOTP: 'totp'>,
+        ),
+        'recovery_code_count': 8,
+      }),
     }),
     'slas': list([
     ]),

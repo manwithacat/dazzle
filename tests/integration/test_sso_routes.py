@@ -38,6 +38,7 @@ def _google() -> SsoProviderConfig:
 class _StubUser:
     def __init__(self, user_id: str = "user-1") -> None:
         self.id = user_id
+        self.email = f"{user_id}@example.test"  # the sign-in event names the user
 
 
 class _StubSession:
@@ -68,7 +69,7 @@ class _StubAuthStore:
         return []  # auth Plan 1b — no memberships in this stub
 
     def create_session(
-        self, user: _StubUser, *, active_membership_id: str | None = None
+        self, user: _StubUser, *, active_membership_id: str | None = None, **_kwargs: Any
     ) -> _StubSession:
         sid = f"sess-for-{user.id}"
         self.created_sessions.append(sid)

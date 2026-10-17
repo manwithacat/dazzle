@@ -56,6 +56,8 @@ LOGIN_ERROR_TOKENS: frozenset[str] = frozenset(
         "sso_domain_not_verified",
         "sso_unverified_fallback",
         "sso_no_membership",
+        # Two-factor sign-in (DD-014): the pending challenge expired or was spent.
+        "2fa_expired",
     }
 )
 SIGNUP_ERROR_TOKENS: frozenset[str] = frozenset(
@@ -90,6 +92,7 @@ LOGIN_ERROR_MESSAGES: dict[str, str] = {
     "sso_no_membership": (
         "You don't have a membership in that organization. Ask an admin to invite you."
     ),
+    "2fa_expired": "That sign-in timed out before it was verified. Please sign in again.",
 }
 SIGNUP_ERROR_MESSAGES: dict[str, str] = {
     "mismatch": "The two password fields didn't match. Try again.",

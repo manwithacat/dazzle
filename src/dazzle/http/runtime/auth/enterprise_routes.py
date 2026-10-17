@@ -19,6 +19,7 @@ ADR-0014: no ``from __future__ import annotations`` in FastAPI route files.
 """
 
 import logging
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request
@@ -28,17 +29,23 @@ from dazzle.http.runtime.auth.auth_views import (
     leftover_auth_email_or_400,
     leftover_honest_auth_token,
 )
-from dazzle.http.runtime.auth.connections import ConnectionError, resolve_provider
+from dazzle.http.runtime.auth.connections import (
+    AssertedIdentity,
+    ConnectionError,
+    resolve_provider,
+)
 from dazzle.http.runtime.auth.enterprise_login import (
     EnterpriseLoginError,
     provision_enterprise_login,
 )
 from dazzle.http.runtime.auth.leftover_oauth_code import leftover_honest_oauth_code
+from dazzle.http.runtime.auth.models import SecondFactorProof
 from dazzle.http.runtime.auth.org_activation import host_tenant_id_from_request
 from dazzle.http.runtime.auth.redirect_safety import (
     is_safe_redirect_path as _is_safe_redirect_path,
 )
-from dazzle.http.runtime.auth.sso_session import finish_login_session
+from dazzle.http.runtime.auth.sign_in import complete_sign_in
+from dazzle.http.runtime.auth.store_two_factor import factor_reference
 
 _logger = logging.getLogger(__name__)
 
@@ -61,6 +68,37 @@ def _honest_login_query(email: Any, connection: Any) -> tuple[str, str] | HTMLRe
     if honest_conn is None:
         return HTMLResponse("Unknown connection", status_code=400)
     return honest_email, honest_conn
+
+
+# OIDC ``amr`` values (RFC 8176) that assert a second factor at the IdP.
+_MFA_AMR = frozenset({"mfa", "otp", "hwk", "swk"})
+
+
+def idp_second_factor(asserted: AssertedIdentity, user: Any, conn: Any) -> SecondFactorProof | None:
+    """The second factor the IdP asserted for this sign-in (DD-014), or None.
+
+    Read from the signature-checked id_token only: ``amr`` containing ``mfa``, ``otp``,
+    ``hwk`` or ``swk`` records ``mfa_method="idp"`` at ``auth_time`` (now when absent),
+    and the sign-in is not challenged again locally. UserInfo-endpoint claims are not
+    signed, so they never count.
+    """
+    if asserted.claims_source != "id_token":
+        return None
+    amr = asserted.attributes.get("amr")
+    values = {str(v).lower() for v in amr} if isinstance(amr, list) else set()
+    if not values & _MFA_AMR:
+        return None
+    auth_time = asserted.attributes.get("auth_time")
+    verified_at = (
+        datetime.fromtimestamp(auth_time, UTC)
+        if isinstance(auth_time, int | float) and not isinstance(auth_time, bool)
+        else datetime.now(UTC)
+    )
+    return SecondFactorProof(
+        method="idp",
+        verified_at=verified_at,
+        reference=factor_reference(str(user.id), "idp", str(conn.id)),
+    )
 
 
 def _resolve_connection(store: Any, request: Request, *, connection_id: str, email: str) -> Any:
@@ -170,9 +208,20 @@ def create_enterprise_sso_routes(*, cookie_name: str = "dazzle_session") -> APIR
 
         next_url = request.session.pop(_SESSION_NEXT_KEY, "") if hasattr(request, "session") else ""
         safe_next = next_url if next_url and _is_safe_redirect_path(next_url) else "/app"
-        # Session-fixation defence + cookie minting: the single session-minting point.
-        return finish_login_session(
-            request, store, user, membership_id, cookie_name=cookie_name, safe_next=safe_next
+        # The single sign-in completion point (#1804): the IdP join already proved the
+        # membership; an IdP-asserted second factor is recorded, else a user with local
+        # 2FA is challenged as on any other primary sign-in (DD-014).
+        return await complete_sign_in(
+            request,
+            store,
+            user,
+            method="enterprise_oidc",
+            mode="redirect",
+            next_url=safe_next,
+            pinned_membership_id=membership_id,
+            membership_pinned=True,
+            second_factor=idp_second_factor(asserted, user, conn),
+            cookie_name=cookie_name,
         )
 
     return router

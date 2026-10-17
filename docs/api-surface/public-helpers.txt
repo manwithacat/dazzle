@@ -33,15 +33,16 @@ package: dazzle
 
 package: dazzle.http
   source: _LOADERS
-  count: 7
+  count: 8
   exports:
-  - AuthStore: class (bases=[UserStoreMixin, SessionStoreMixin, EnterpriseStoreMixin, LazyPgStore]) (database_url: str, user_entity_table: str = '')
+  - AuthStore: class (bases=[UserStoreMixin, SessionStoreMixin, EnterpriseStoreMixin, TwoFactorStoreMixin, LazyPgStore]) (database_url: str, user_entity_table: str = '')
   - MigrationAction: class (bases=[StrEnum]) (*values)
   - PostgresBackend: class (database_url: str, search_path: str | None = None, *, isolation: str = 'none')
   - build_metadata: function (entities: 'list[EntitySpec]', surfaces: 'list[SurfaceSpec] | None' = None, *, partition_key: 'str | None' = None, tenant_scoped: 'set[str] | None' = None) -> 'sqlalchemy.MetaData'
   - convert_appspec_to_backend: function (appspec: 'ir.AppSpec') -> 'BackendSpec'
   - convert_entities: function (dazzle_entities: list[dazzle.core.ir.domain.EntitySpec]) -> list[dazzle.http.specs.entity.EntitySpec]
   - create_bus: function (config: 'TierConfig | None' = None) -> 'EventBus'
+  - require_second_factor: function (request: Any, *, max_age: int | None = None) -> dazzle.http.runtime.auth.models.AuthContext
 
 package: dazzle.page
   source: __all__

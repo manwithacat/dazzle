@@ -1,9 +1,11 @@
-# DD-014: Two-factor authentication — parked until a consumer requires MFA
+# DD-014: Two-factor authentication — forced by cyfuture (HMRC MFA), restored
 
 ```yaml
 id: DD-014
-status: PARKED
-issues: [829, 838]
+status: DONE
+forced: 2026-10-17
+consumer: cyfuture (HMRC Gov-Client-Multi-Factor; evidence services/hmrc_mfa.py)
+issues: [829, 838, 1804, 1805]
 adrs: [0057, 0044, 0047, 0017, 0003]
 decided: 2026-10-15
 decided_at_sha: 229226a8875324aba49a3b8b927fcc513e830968
@@ -143,8 +145,42 @@ When a force lands:
   plan, not this restore.
 - Making 2FA mandatory for every app by default.
 
+## As restored (2026-10-17)
+
+What changed from the plan above, and why:
+
+- **Declared opt-in:** `[auth.two_factor]` in `dazzle.toml` (`enabled`, `methods`
+  `totp|email_otp`, `recovery_code_count`, `enforce_for_roles`), parsed in
+  `core/manifest.py` and threaded onto `AppSpec.security.two_factor` by `build_appspec`.
+  Routes and pages mount only when enabled; unknown methods name this DD.
+- **One sign-in completion point** (`auth/sign_in.py`, #1804): password (JSON and form),
+  signup, magic link, social OAuth, enterprise OIDC and password reset/change all finish
+  through `complete_sign_in`, which pins the membership exactly as password login always
+  did and opens a challenge when a factor is owed; 2FA verify finishes through
+  `finish_sign_in` with the membership the challenge recorded. `sso_session.py`
+  (`finish_login_session`) is folded into it.
+- **Challenge token:** `_dazzle_2fa_challenges` — SHA-256 of a random token, 10 minutes,
+  5 wrong codes, single use, in the `dazzle_2fa` cookie (or the JSON body); not a
+  `sessions` row, so it fails as a session cookie.
+- **The session records the factor:** `sessions.mfa_method` (`totp|email_otp|recovery|idp`),
+  `mfa_verified_at`, `mfa_reference` (SHA-256 of user + method, never a secret). An OIDC
+  id_token whose `amr` holds `mfa|otp|hwk|swk` records `idp` at `auth_time` and is not
+  challenged again.
+- **Secrets and codes:** `totp_secret` is AES-GCM ciphertext under
+  `DAZZLE_CONNECTION_SECRET` (the enterprise-connection key; boot fails without it when
+  TOTP is enabled); revision `0027` encrypts pre-DD-014 plaintext rows. A TOTP code is
+  accepted once (`users.totp_last_step`). Email codes go through a mailer implementing
+  `send_one_time_code` (logged only outside production).
+- **Step-up:** `require_second_factor(request, max_age=...)` (403 with `step_up_url`),
+  `POST /auth/2fa/step-up`, the `/2fa/step-up` page, and the transition guard
+  `guard: session.second_factor [within N minutes|hours|days]`.
+- **UI:** server-rendered, no client script (the two `dz-2fa-*.js` controllers are not
+  restored). The QR, secret and recovery grid use the HM `two-factor` Hyperpart classes.
+
 ## Trail
 
 | Date | Event |
 |------|--------|
 | 2026-10-15 | Parked (this DD); two-factor auth removed in flense ship AG, tables dropped by `0024_flense_park_two_factor` |
+| 2026-10-17 | **FORCED** by cyfuture: HMRC's fraud-prevention spec needs a second factor for staff who file and the `Gov-Client-Multi-Factor` header needs this session's factor (#1805; host shim `services/hmrc_mfa.py`); #1804 (2FA verify minted a membership-less session) folded in |
+| 2026-10-17 | Restored per "As restored": revision `0027_two_factor_restore`; acceptance §3 covered by `tests/integration/test_two_factor_pg.py` (enrol, sign out, password + TOTP with the org bound and RLS rows visible, recovery code, wrong and replayed codes refused, challenge token rejected as a session); **DONE**. cyfuture's staging run remains its own hand-off |

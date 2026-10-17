@@ -1,5 +1,6 @@
 from . import ir
 from .discovery import RelevanceGroup, suggest_capabilities
+from .validation.entities import validate_second_factor_guards
 from .validation.grants import validate_grant_relation_clauses, validate_permit_grant_checks
 from .validation.tenancy import validate_tenancy_mode_implemented
 from .validator import (
@@ -120,6 +121,11 @@ def lint_appspec(
     from dazzle.core.validation.entities import validate_auth_identity_binding
 
     errors, warnings = validate_auth_identity_binding(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # DD-014: `guard: session.second_factor` needs [auth.two_factor] enabled
+    errors, warnings = validate_second_factor_guards(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

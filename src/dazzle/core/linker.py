@@ -45,6 +45,7 @@ def build_appspec(
     root_module_name: str,
     *,
     known_renderers: set[str] | None = None,
+    two_factor: ir.TwoFactorConfig | None = None,
 ) -> ir.AppSpec:
     """
     Build a complete AppSpec by merging and linking all modules.
@@ -60,6 +61,8 @@ def build_appspec(
     Args:
         modules: List of parsed modules
         root_module_name: Name of the root module (from dazzle.toml)
+        two_factor: ``[auth.two_factor]`` from dazzle.toml (DD-014), set on
+            ``AppSpec.security.two_factor``; ``None`` keeps it off.
 
     Returns:
         Complete, linked AppSpec
@@ -92,6 +95,8 @@ def build_appspec(
 
     # Build security config from app config (v0.11.0)
     security_config = _build_security_config(root_module.app_config)
+    if two_factor is not None:
+        security_config = security_config.model_copy(update={"two_factor": two_factor})
 
     # Stage 3: Full linking implementation
 

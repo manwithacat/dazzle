@@ -127,7 +127,7 @@ class _Store:
         return m
 
     # --- sessions ---
-    def create_session(self, user, *, active_membership_id=None):
+    def create_session(self, user, *, active_membership_id=None, **_kwargs):
         self._n += 1
         sid = f"sess-{self._n}"
         self.created_sessions.append(sid)

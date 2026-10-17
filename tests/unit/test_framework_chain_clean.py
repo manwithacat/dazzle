@@ -57,6 +57,9 @@ _ALLOWED_VERSIONS: dict[str, str] = {
     "0026_enterprise_auth_oidc_scim": (
         "restores the OIDC/SCIM enterprise-auth tables (DD-013 FORCED, plan EA-1)"
     ),
+    "0027_two_factor_restore": (
+        "restores the two-factor tables and adds the session's second factor (DD-014 FORCED)"
+    ),
 }
 
 

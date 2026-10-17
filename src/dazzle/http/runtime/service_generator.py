@@ -401,6 +401,7 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
                     current_user,
                     is_superuser=is_superuser,
                     grant_store=_grant_store,
+                    second_factor_at=getattr(auth_context, "mfa_verified_at", None),
                 )
                 if result is not None and not result.is_valid and result.error is not None:
                     raise result.error

@@ -28,19 +28,12 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from dazzle.http.runtime.auth.cookie_name import read_session_id, set_session_cookies
-from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
 from dazzle.http.runtime.auth.leftover_oauth_code import leftover_honest_oauth_code
 from dazzle.http.runtime.auth.leftover_sso_provider import leftover_honest_sso_provider
-from dazzle.http.runtime.auth.org_activation import (
-    FORBIDDEN_SENTINEL,
-    _login_redirect_for_outcome,
-    activate_session_for_login,
-    memberships_required,
-)
 from dazzle.http.runtime.auth.redirect_safety import (
     is_safe_redirect_path as _is_safe_redirect_path,
 )
+from dazzle.http.runtime.auth.sign_in import complete_sign_in
 from dazzle.http.runtime.auth.sso_config import SsoProviderConfig, get_provider
 
 _logger = logging.getLogger(__name__)
@@ -240,38 +233,20 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
             )
             return RedirectResponse(url="/login?error=sso_failed", status_code=303)
 
-        # Session-fixation defence (#1198): regenerate the session id on
-        # SSO callback success — invalidate any pre-auth session cookie the
-        # client presented so an attacker-planted id can't survive into the
-        # authenticated state.
-        pre_auth_sid = read_session_id(request, default=cookie_name)
-
         # Pull the next-URL the initiate route stashed in the session.
         next_url = request.session.pop("sso_next", "") if hasattr(request, "session") else ""
         safe_next = next_url if next_url and _is_safe_redirect_path(next_url) else "/app"
 
-        # Phase 2 (auth Plan 1b): activate an org context for the proven identity.
-        # For Activated the SSO next-URL is honoured; NeedsPicker/NoOrgs override it
-        # to the picker / no-orgs page; HostForbidden → 403.
-        outcome = activate_session_for_login(auth_store, user, request)
-        membership_id, redirect_to = _login_redirect_for_outcome(
-            outcome, safe_next, memberships_required=memberships_required(request)
-        )
-        if redirect_to == FORBIDDEN_SENTINEL:
-            return forbidden_org_response(request)  # #1393: branded host-pin 403
-        session = auth_store.create_session(user, active_membership_id=membership_id)
-        if pre_auth_sid and pre_auth_sid != session.id:
-            auth_store.delete_session(pre_auth_sid)
-
-        response = RedirectResponse(url=redirect_to, status_code=303)
-        set_session_cookies(
-            response,
+        # The single sign-in completion point (#1804): a social provider's sign-in is a
+        # primary factor, so a user with 2FA is challenged exactly as a password one is.
+        return await complete_sign_in(
             request,
-            session_id=session.id,
-            csrf_secret=session.csrf_secret,
-            user_roles=list(getattr(user, "roles", []) or []),
-            default_cookie_name=cookie_name,
+            auth_store,
+            user,
+            method=f"sso:{provider}",
+            mode="redirect",
+            next_url=safe_next,
+            cookie_name=cookie_name,
         )
-        return response
 
     return router

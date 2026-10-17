@@ -92,7 +92,9 @@ async def emit_user_logged_in(
     Args:
         user: The authenticated user.
         session_id: The session ID created for this login.
-        method: How the user authenticated (``password``, ``jwt``).
+        method: How the user authenticated (``password``, ``magic_link``,
+            ``sso:<provider>``, ``enterprise_oidc``, ``jwt``, ...), suffixed with the
+            second factor when one was completed (``password+totp``; DD-014).
     """
     envelope = EventEnvelope.create(
         event_type=AUTH_USER_LOGGED_IN,

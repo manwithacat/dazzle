@@ -322,6 +322,12 @@ class TransitionGuardSpec(BaseModel):
     guard_message: str | None = Field(
         default=None, description="Human-readable message when guard fails"
     )
+    requires_second_factor: bool = Field(
+        default=False, description="The acting session completed a second factor (DD-014)"
+    )
+    second_factor_max_age_seconds: int | None = Field(
+        default=None, description="...within this many seconds (DD-014)"
+    )
 
     @property
     def role_alternatives(self) -> tuple[str, ...]:

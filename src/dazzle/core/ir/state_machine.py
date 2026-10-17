@@ -67,6 +67,7 @@ class TransitionGuard(BaseModel):
     - Role requirements: role(admin) (user must have role)
     - Custom conditions: when condition_expr
     - Expression guards (v0.29.0): guard: self->signatory->aml_status == "completed"
+    - Second-factor guards (DD-014): guard: session.second_factor [within N minutes]
     """
 
     # Field that must be set for the transition
@@ -87,6 +88,11 @@ class TransitionGuard(BaseModel):
     guard_expr: Expr | None = None
     # Optional human-readable message for guard failure
     guard_message: str | None = None
+
+    # DD-014: ``guard: session.second_factor`` — the acting session must have completed a
+    # second factor; with ``within N minutes|hours`` it must have done so that recently.
+    requires_second_factor: bool = False
+    second_factor_max_age_seconds: int | None = None
 
     model_config = ConfigDict(frozen=True)
 

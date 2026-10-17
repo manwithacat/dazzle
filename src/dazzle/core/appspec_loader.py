@@ -32,5 +32,8 @@ def load_project_appspec(project_root: Path) -> AppSpec:
     dsl_files = discover_dsl_files(project_root, manifest)
     modules = parse_modules(dsl_files)
     return build_appspec(
-        modules, manifest.project_root, known_renderers=known_renderer_names(manifest)
+        modules,
+        manifest.project_root,
+        known_renderers=known_renderer_names(manifest),
+        two_factor=manifest.auth.two_factor,
     )

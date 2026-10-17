@@ -9,6 +9,7 @@ from typing import Literal
 
 from dazzle.core.db_url import normalise_postgres_scheme
 from dazzle.core.errors import DazzleError
+from dazzle.core.ir.security import TwoFactorConfig, TwoFactorMethod
 
 _FRAGMENT_CHROME_WARNED = False
 
@@ -203,6 +204,10 @@ class AuthConfig:
 
     # Enterprise auth (DD-013): OIDC sign-in / SCIM provisioning, opt-in per protocol
     enterprise: EnterpriseAuthConfig = field(default_factory=EnterpriseAuthConfig)
+
+    # Two-factor sign-in (DD-014): [auth.two_factor], off by default. Threaded onto
+    # the IR as AppSpec.security.two_factor by build_appspec.
+    two_factor: TwoFactorConfig = field(default_factory=TwoFactorConfig)
 
     # Security settings
     password_min_length: int = 8
@@ -724,6 +729,67 @@ def _parse_enterprise_auth(data: object) -> EnterpriseAuthConfig:
     return EnterpriseAuthConfig(protocols=list(dict.fromkeys(protocols)))
 
 
+_TWO_FACTOR_KEYS = frozenset({"enabled", "methods", "recovery_code_count", "enforce_for_roles"})
+
+
+def _two_factor_methods(data: dict[str, object]) -> tuple[TwoFactorMethod, ...]:
+    allowed = [m.value for m in TwoFactorMethod]
+    methods = data.get("methods", ["totp"])
+    names = methods if isinstance(methods, list) else []
+    if not names or not all(isinstance(m, str) and m in allowed for m in names):
+        raise ValueError(
+            f"[auth.two_factor] methods must be a non-empty list drawn from {allowed!r}; got "
+            f"{methods!r}. Recovery codes are always issued; WebAuthn, SMS and other factors "
+            "are out of scope (docs/decisions/DD-014-two-factor-authentication.md)."
+        )
+    return tuple(TwoFactorMethod(str(m)) for m in dict.fromkeys(names))
+
+
+def _two_factor_roles(data: dict[str, object], enabled: bool) -> tuple[str, ...]:
+    roles = data.get("enforce_for_roles", [])
+    names = roles if isinstance(roles, list) else None
+    if names is None or not all(isinstance(r, str) and r for r in names):
+        raise ValueError(
+            f"[auth.two_factor] enforce_for_roles must be a list of role names; got {roles!r}"
+        )
+    if names and not enabled:
+        raise ValueError("[auth.two_factor] enforce_for_roles requires enabled = true")
+    return tuple(str(r) for r in dict.fromkeys(names))
+
+
+def _parse_two_factor_auth(data: object) -> TwoFactorConfig:
+    """Parse ``[auth.two_factor]`` (DD-014); a malformed table raises.
+
+        [auth.two_factor]
+        enabled = true
+        methods = ["totp", "email_otp"]   # default ["totp"]
+        recovery_code_count = 8
+        enforce_for_roles = ["accountant"]
+
+    WebAuthn, SMS and other factors are out of DD-014's scope: an unknown method is
+    an error, as is ``enforce_for_roles`` without ``enabled = true``.
+    """
+    if not isinstance(data, dict):
+        raise ValueError("[auth.two_factor] must be a TOML table")
+    unknown_keys = sorted(set(data) - _TWO_FACTOR_KEYS)
+    if unknown_keys:
+        raise ValueError(
+            f"[auth.two_factor] unknown keys {unknown_keys!r}; allowed: {sorted(_TWO_FACTOR_KEYS)!r}"
+        )
+    enabled = data.get("enabled", False)
+    if not isinstance(enabled, bool):
+        raise ValueError(f"[auth.two_factor] enabled must be true or false; got {enabled!r}")
+    count = data.get("recovery_code_count", 8)
+    if isinstance(count, bool) or not isinstance(count, int) or not 4 <= count <= 20:
+        raise ValueError(f"[auth.two_factor] recovery_code_count must be 4..20; got {count!r}")
+    return TwoFactorConfig(
+        enabled=enabled,
+        methods=_two_factor_methods(data),
+        recovery_code_count=count,
+        enforce_for_roles=_two_factor_roles(data, enabled),
+    )
+
+
 def _parse_storage_configs(data: dict[str, object]) -> dict[str, StorageConfig]:
     """Parse ``[storage.<name>]`` blocks from manifest TOML data (#932).
 
@@ -933,6 +999,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         jwt=jwt_config,
         oauth_providers=oauth_providers,
         enterprise=_parse_enterprise_auth(auth_data.get("enterprise", {})),
+        two_factor=_parse_two_factor_auth(auth_data.get("two_factor", {})),
         password_min_length=auth_data.get("password_min_length", 8),
         max_login_attempts=auth_data.get("max_login_attempts", 5),
         lockout_duration_minutes=auth_data.get("lockout_duration_minutes", 15),

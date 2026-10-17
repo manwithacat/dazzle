@@ -1,7 +1,7 @@
 """Auth routes subsystem.
 
-Registers authentication routes (login/register/logout), social auth (OAuth2)
-and JWT routes. Auth deps (AuthStore, AuthMiddleware, auth_dep,
+Registers authentication routes (login/register/logout), social auth (OAuth2),
+two-factor sign-in (DD-014) and JWT routes. Auth deps (AuthStore, AuthMiddleware, auth_dep,
 optional_auth_dep) are set on SubsystemContext by DazzleBackendApp._setup_auth().
 """
 
@@ -16,6 +16,9 @@ from dazzle.http.runtime.auth.enterprise_login import ENTERPRISE_OIDC_STATE_ATTR
 from dazzle.http.runtime.auth.enterprise_routes import create_enterprise_sso_routes
 from dazzle.http.runtime.auth.oidc_provider import register_native_oidc
 from dazzle.http.runtime.auth.scim_routes import create_scim_routes
+from dazzle.http.runtime.auth.second_factor import require_two_factor_runtime
+from dazzle.http.runtime.auth.sign_in import TWO_FACTOR_STATE_ATTR
+from dazzle.http.runtime.auth.two_factor_routes import create_two_factor_routes
 from dazzle.http.runtime.jwt_middleware import JWTMiddleware
 from dazzle.http.runtime.lifespan_hooks import register_lifespan_hook
 from dazzle.http.runtime.subsystems import SubsystemContext
@@ -285,6 +288,7 @@ class AuthSubsystem:
             ctx.app.include_router(create_sso_routes())
 
         self._mount_enterprise(ctx, protocols)
+        self._mount_two_factor(ctx)
 
         # SES webhook (if SES is configured)
         try:
@@ -293,6 +297,26 @@ class AuthSubsystem:
             register_ses_webhook(ctx.app)
         except Exception:
             logger.info("SES webhooks not available, skipping registration")
+
+    def _mount_two_factor(self, ctx: SubsystemContext) -> None:
+        """Two-factor sign-in (DD-014), declared by ``[auth.two_factor] enabled = true``.
+
+        The config lands on ``app.state.two_factor`` where the single sign-in
+        completion point (``auth.sign_in``) reads it; the routes and pages mount only
+        when enabled. A deployment that cannot encrypt TOTP secrets fails here.
+        """
+        security = getattr(ctx.appspec, "security", None)
+        cfg = getattr(security, "two_factor", None)
+        setattr(ctx.app.state, TWO_FACTOR_STATE_ATTR, cfg)
+        if cfg is None or not cfg.enabled:
+            return
+        require_two_factor_runtime(cfg)
+        ctx.app.include_router(create_two_factor_routes())
+        logger.info(
+            "Two-factor sign-in mounted: methods=%s enforce_for_roles=%s",
+            [m.value for m in cfg.methods],
+            list(cfg.enforce_for_roles),
+        )
 
     def _mount_enterprise(self, ctx: SubsystemContext, protocols: list[str]) -> None:
         """Mount each declared enterprise protocol and register the boot guard (DD-013).

@@ -289,7 +289,12 @@ def lint_command(
                 return
 
         modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, mf.project_root, known_renderers=known_renderer_names(mf))
+        appspec = build_appspec(
+            modules,
+            mf.project_root,
+            known_renderers=known_renderer_names(mf),
+            two_factor=mf.auth.two_factor,
+        )
         errors, warnings, relevance = lint_appspec(appspec, extended=True)
 
         # #1413: same static signpost as `validate` — point at the runtime gate

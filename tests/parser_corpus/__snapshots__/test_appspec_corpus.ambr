@@ -1003,6 +1003,7 @@
                 'guards': list([
                   dict({
                     'requires_field': 'assignee',
+                    'requires_second_factor': False,
                   }),
                 ]),
                 'to_state': 'assigned',
@@ -1018,6 +1019,7 @@
                 'guards': list([
                   dict({
                     'requires_field': 'resolution_note',
+                    'requires_second_factor': False,
                   }),
                 ]),
                 'to_state': 'resolved',
@@ -1038,6 +1040,7 @@
                 'guards': list([
                   dict({
                     'requires_role': 'admin',
+                    'requires_second_factor': False,
                   }),
                 ]),
                 'to_state': 'open',
@@ -1152,6 +1155,7 @@
                 'guards': list([
                   dict({
                     'requires_role': 'manager',
+                    'requires_second_factor': False,
                   }),
                 ]),
                 'to_state': 'cancelled',

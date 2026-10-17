@@ -142,6 +142,22 @@ class CSRFConfig:
             "/auth/members/remove",
             # auth Plan 3c.ii: the member's own profile upsert.
             "/me/profile",
+            # DD-014: two-factor enrolment, step-up and management act on a signed-in
+            # session (or an enrolment-only challenge). The pending-sign-in verify and
+            # email-code posts stay NA_PREAUTH like login: they carry no session.
+            "/auth/2fa/setup/totp",
+            "/auth/2fa/verify/totp",
+            "/auth/2fa/setup/email-otp",
+            "/auth/2fa/verify/email-otp",
+            "/auth/2fa/setup/totp/submit",
+            "/auth/2fa/setup/email-otp/submit",
+            "/auth/2fa/verify/email-otp/submit",
+            "/auth/2fa/step-up",
+            "/auth/2fa/step-up/submit",
+            "/auth/2fa/recovery/regenerate",
+            "/auth/2fa/totp",
+            "/auth/2fa/email-otp",
+            "/auth/2fa/settings/submit",
         ]
     )
     # Signature-authenticated endpoints (spec §4.1 NA_SIGNATURE). The HMAC /
