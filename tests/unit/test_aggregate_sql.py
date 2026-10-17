@@ -431,6 +431,30 @@ class TestBuildAggregateSQLMultiDim:
         assert 'fk_0."name" AS "dim_0_label"' in sql
         assert 'fk_1."name" AS "dim_1_label"' in sql
 
+    def test_two_dims_with_avg_and_l3_measures_one_group_by(self) -> None:
+        """#1800: a pivot's avg + L3 measures over two FK dims stay qualified
+        with the source table and share one GROUP BY."""
+        sql, params = build_aggregate_sql(
+            table_name="MarkingResult",
+            placeholder_style="%s",
+            dimensions=[
+                Dimension(name="question", fk_table="Question", fk_display_field="label"),
+                Dimension(name="klass", fk_table="Klass", fk_display_field="name"),
+            ],
+            measures={"avg_score": "avg:score", "facility": "avg"},
+            filters=None,
+            measure_expressions={
+                "facility": (
+                    '("MarkingResult"."score" / NULLIF("MarkingResult"."max_score", %s))',
+                    [0],
+                )
+            },
+        )
+        assert 'AVG("MarkingResult"."score") AS "avg_score"' in sql
+        assert 'AVG(("MarkingResult"."score" / NULLIF(' in sql
+        assert sql.count("GROUP BY") == 1
+        assert params[0] == 0
+
 
 # ---------------------------------------------------------------------------
 # rows_to_buckets

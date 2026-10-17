@@ -15,6 +15,7 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.parser import parse_modules
 from dazzle.core.validator import (
     validate_comparison_regions,
+    validate_pivot_measures,
     validate_region_filter_aggregate_reach,
 )
 
@@ -152,3 +153,41 @@ def test_region_filter_aggregate_reach(tmp_path: Path, aggregate: str, warns: bo
 """
     _, warnings = validate_region_filter_aggregate_reach(_appspec(dsl, tmp_path, entities))
     assert any("W_REGION_FILTER_NOT_ON_AGGREGATE" in w for w in warnings) is warns
+
+
+@pytest.mark.parametrize(
+    ("measures", "code"),
+    [
+        (["total: sum(amount)", "mean: avg(amount)", "share: round(mean / total * 100)"], None),
+        (["n: count(Sale)", "refunds: count(Refund)"], "E_PIVOT_MEASURE_CROSS_ENTITY"),
+        (
+            ["big: sum(amount where amount > 100)", "small: sum(amount where amount < 10)"],
+            "E_PIVOT_MEASURE_WHERE_MISMATCH",
+        ),
+        (["n: count(Sale where region = current_bucket)"], "E_PIVOT_MEASURE_UNSUPPORTED"),
+        (["n: count(Sale window week_from_monday on sold_at)"], "E_PIVOT_MEASURE_UNSUPPORTED"),
+    ],
+)
+def test_pivot_measures(tmp_path: Path, measures: list[str], code: str | None) -> None:
+    """#1800: pivot measures are any count/sum/avg/min/max over the source sharing one where."""
+    entities = _ENTITY.replace(
+        "  amount: decimal(12,2)\n",
+        "  amount: decimal(12,2)\n  channel: str(20)\n  sold_at: datetime\n",
+        1,
+    ).replace(
+        "workspace w",
+        'entity Refund "Refund":\n  id: uuid pk\n  amount: decimal(12,2)\n\nworkspace w',
+    )
+    lines = "\n".join(f"      {m}" for m in measures)
+    dsl = f"""  pivot:
+    source: Sale
+    display: pivot_table
+    group_by: [region, channel]
+    aggregate:
+{lines}
+"""
+    errors, _ = validate_pivot_measures(_appspec(dsl, tmp_path, entities))
+    if code is None:
+        assert errors == []
+    else:
+        assert any(code in e for e in errors), errors

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date, timedelta
+
+import pytest
 
 from dazzle.core.date_expr_eval import date_expr_filter_value, evaluate_date_expr
 from dazzle.core.ir.dates import (
@@ -48,3 +50,24 @@ def test_field_ref_base_stays_unresolved() -> None:
         right=DurationLiteral(value=30, unit=DurationUnit.DAYS),
     )
     assert evaluate_date_expr(expr) is None
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected"),
+    [
+        (DateLiteralKind.START_OF_WEEK, date(2026, 11, 16)),  # ISO Monday
+        (DateLiteralKind.START_OF_MONTH, date(2026, 11, 1)),
+        (DateLiteralKind.START_OF_QUARTER, date(2026, 10, 1)),
+        (DateLiteralKind.START_OF_YEAR, date(2026, 1, 1)),
+    ],
+)
+def test_start_of_anchors_on_tenant_today(
+    monkeypatch: pytest.MonkeyPatch, kind: DateLiteralKind, expected: date
+) -> None:
+    """#1800: start_of(period) is the first day of the period containing the
+    tenant's today (a Wednesday here); the attention dump-dict form agrees."""
+    monkeypatch.setattr("dazzle.core.date_expr_eval.calendar_today", lambda: date(2026, 11, 18))
+    lit = DateLiteral(kind=kind)
+    assert evaluate_date_expr(lit) == expected
+    assert evaluate_date_expr(lit.model_dump()) == expected
+    assert date_expr_filter_value(lit) == expected.isoformat()

@@ -481,8 +481,53 @@ def _resolve_bucket_cast(entity_spec: Any, field_name: str) -> str:
     return "date" if kind == "date" else "timestamptz"
 
 
+def _pivot_measure_plan(
+    aggregates: dict[str, Any],
+    source_entity: str,
+    placeholder: str,
+) -> tuple[dict[str, str], dict[str, tuple[str, list[Any]]], ConditionExpr | None] | None:
+    """Plan the measures of one pivot GROUP BY (#1800).
+
+    Returns ``(measures, measure_expressions, shared_where)`` for
+    ``Repository.aggregate``, or ``None`` with a warning naming the metric
+    when an AggregateRef cannot be a measure of one scope-aware GROUP BY over
+    ``source_entity``: a cross-entity aggregate, a ``current_bucket``
+    sentinel, a ``window``, or a where that differs from the first one.
+    DerivedMetric entries are skipped here and evaluated per row afterwards.
+    """
+    measures: dict[str, str] = {}
+    measure_expressions: dict[str, tuple[str, list[Any]]] = {}
+    wheres: list[ConditionExpr | None] = []
+    for name, ref in aggregates.items():
+        if not isinstance(ref, AggregateRef):
+            continue
+        reason = None
+        if ref.entity not in (None, source_entity) or (ref.func == "count" and not ref.entity):
+            reason = f"it aggregates {ref.entity!r}, not the pivot source {source_entity!r}"
+        elif ref.window is not None or _condition_references_current_bucket(ref.where):
+            reason = "window / current_bucket is not a pivot measure"
+        elif wheres and ref.where != wheres[0]:
+            reason = "every pivot measure must share one where"
+        if reason is not None:
+            logger.warning("pivot_table measure %r skipped the pivot: %s", name, reason)
+            return None
+        wheres.append(ref.where)
+        if ref.expression is not None:
+            # Qualify bare columns with the source table — the FK label JOIN
+            # would otherwise make a shared column name ambiguous (#1791).
+            measures[name] = ref.func
+            measure_expressions[name] = compile_aggregate_expression(
+                ref.expression, placeholder=placeholder, table_alias=ref.entity or source_entity
+            )
+        else:
+            measures[name] = "count" if ref.func == "count" else f"{ref.func}:{ref.column}"
+    if not measures:
+        return None
+    return measures, measure_expressions, wheres[0]
+
+
 async def _compute_pivot_buckets(
-    aggregates: dict[str, str],
+    aggregates: dict[str, Any],
     repositories: dict[str, Any] | None,
     group_by_dims: list[Any],
     *,
@@ -506,17 +551,17 @@ async def _compute_pivot_buckets(
     if not aggregates or not repositories or not source_entity:
         return [], []
 
-    # Only the simple case (count(<source_entity>) with no current_bucket)
-    # routes through the pivot fast path. Other shapes fall through.
-    metric_name, ref = next(iter(aggregates.items()))
-    if not isinstance(ref, AggregateRef) or ref.func != "count":
-        return [], []
-    entity_name = ref.entity or ""
-    if entity_name != source_entity or _condition_references_current_bucket(ref.where):
-        return [], []
     source_repo = repositories.get(source_entity)
     if source_repo is None:
         return [], []
+    # Every AggregateRef must be one measure of a single scope-aware GROUP BY
+    # over the source (#1800): count(<source>) or sum/avg/min/max of a source
+    # column / L3 expression, all sharing one where. Anything else is skipped.
+    placeholder = getattr(getattr(source_repo, "db", None), "placeholder", "%s")
+    plan = _pivot_measure_plan(aggregates, source_entity, placeholder)
+    if plan is None:
+        return [], []
+    measures, measure_expressions, shared_where = plan
 
     # Resolve each dim — FK target spec (if any), display field via probe,
     # or time-bucket via BucketRef (cycle 28).
@@ -530,7 +575,7 @@ async def _compute_pivot_buckets(
             dimensions.append(
                 Dimension(
                     name=dim_entry.field,
-                    truncate=dim_entry.unit,
+                    truncate=dim_entry.unit,  # type: ignore[arg-type]
                     bucket_cast=_resolve_bucket_cast(source_entity_spec, dim_entry.field),
                 )
             )
@@ -574,13 +619,16 @@ async def _compute_pivot_buckets(
         )
 
     # Typed where + scope → one AND-composed predicate (#1774).
-    merged_filters = _build_aggregate_filters(ref.where, scope_filters, source_repo, source_entity)
+    merged_filters = _build_aggregate_filters(
+        shared_where, scope_filters, source_repo, source_entity
+    )
 
     try:
         buckets = await source_repo.aggregate(
             dimensions=dimensions,
-            measures={metric_name: "count"},
+            measures=measures,
             filters=merged_filters or None,
+            measure_expressions=measure_expressions or None,
         )
     except Exception:
         # Promoted to ERROR for #854 — a silent WARNING on a pivot region's
@@ -599,24 +647,42 @@ async def _compute_pivot_buckets(
         )
         return [], dim_specs
 
-    out: list[dict[str, Any]] = []
-    for b in buckets:
-        row: dict[str, Any] = {}
-        for spec in dim_specs:
-            raw = b.dimensions.get(spec["name"])
-            row[spec["name"]] = raw
-            if spec["is_fk"]:
-                lbl_key = f"{spec['name']}_label"
-                row[lbl_key] = b.dimensions.get(lbl_key) or raw
-            elif spec.get("is_time_bucket"):
-                # Formatted label + ISO string for chart axes / JSON.
-                row[f"{spec['name']}_label"] = _format_bucket_label(raw, spec["unit"])
-                if isinstance(raw, _dt.datetime | _dt.date):
-                    row[spec["name"]] = raw.isoformat()
-        for k, v in b.measures.items():
-            row[k] = v
-        out.append(row)
-    return out, dim_specs
+    return [_pivot_row(b, dim_specs, aggregates) for b in buckets], dim_specs
+
+
+def _pivot_row(
+    b: Any, dim_specs: list[dict[str, Any]], aggregates: dict[str, Any]
+) -> dict[str, Any]:
+    """One pivot row: dimension keys + labels, then every metric in declaration order.
+
+    AggregateRef metrics read the bucket's measure; DerivedMetric entries
+    (#1800 — e.g. a facility percentage) evaluate over the row's metrics so
+    far, in Python, adding zero queries.
+    """
+    row: dict[str, Any] = {}
+    for spec in dim_specs:
+        raw = b.dimensions.get(spec["name"])
+        row[spec["name"]] = raw
+        if spec["is_fk"]:
+            lbl_key = f"{spec['name']}_label"
+            row[lbl_key] = b.dimensions.get(lbl_key) or raw
+        elif spec.get("is_time_bucket"):
+            # Formatted label + ISO string for chart axes / JSON.
+            row[f"{spec['name']}_label"] = _format_bucket_label(raw, spec["unit"])
+            if isinstance(raw, _dt.datetime | _dt.date):
+                row[spec["name"]] = raw.isoformat()
+    values: dict[str, Any] = {}
+    for name, ref in aggregates.items():
+        if isinstance(ref, DerivedMetric):
+            try:
+                values[name] = _evaluate_derived_expr(ref.expression, values)
+            except Exception:  # defensive — a bad tree must not kill the pivot
+                logger.warning("Derived metric %r evaluation failed", name, exc_info=True)
+                values[name] = 0
+        else:
+            values[name] = b.measures.get(name, 0)
+    row.update(values)
+    return row
 
 
 async def _aggregate_via_groupby(

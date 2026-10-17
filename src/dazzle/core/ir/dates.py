@@ -26,15 +26,28 @@ class DateLiteralKind(StrEnum):
 
     TODAY = "today"  # Current date (date type)
     NOW = "now"  # Current datetime (datetime type)
+    # Calendar anchors (#1800) — the first day of the current period in the
+    # tenant calendar. Conditions only (filter: / where: / when:). Week is
+    # the ISO week (Monday), matching date_trunc('week').
+    START_OF_WEEK = "start_of_week"
+    START_OF_MONTH = "start_of_month"
+    START_OF_QUARTER = "start_of_quarter"
+    START_OF_YEAR = "start_of_year"
+
+
+#: Periods accepted by ``start_of(<period>)`` (#1800). Named periods such as
+#: ``term`` are parked in DD-017.
+CALENDAR_PERIODS: tuple[str, ...] = ("week", "month", "quarter", "year")
 
 
 class DateLiteral(BaseModel):
     """
-    A date literal (today or now).
+    A date literal: today, now, or a calendar anchor.
 
     Examples:
         - today - Current date
         - now - Current datetime
+        - start_of(week) - Monday of the current ISO week (#1800)
     """
 
     kind: DateLiteralKind = Field(description="The date literal keyword")
@@ -42,6 +55,8 @@ class DateLiteral(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     def __str__(self) -> str:
+        if self.kind.value.startswith("start_of_"):
+            return f"start_of({self.kind.value.removeprefix('start_of_')})"
         return self.kind.value
 
 

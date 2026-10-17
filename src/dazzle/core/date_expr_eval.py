@@ -73,10 +73,25 @@ def _base_instant(expr: Any) -> date | datetime | None:
         return calendar_today()
     if kind == "now":
         return datetime.now(UTC)
+    if kind.startswith("start_of_"):
+        return _start_of(kind.removeprefix("start_of_"), calendar_today())
     left = _get(expr, "left")
     if left is None or isinstance(left, str):
         return None
     return evaluate_date_expr(left)
+
+
+def _start_of(period: str, t: date) -> date | None:
+    """First day of the current calendar period (#1800); week is ISO Monday."""
+    if period == "week":
+        return t - timedelta(days=t.weekday())
+    if period == "month":
+        return t.replace(day=1)
+    if period == "quarter":
+        return t.replace(month=3 * ((t.month - 1) // 3) + 1, day=1)
+    if period == "year":
+        return t.replace(month=1, day=1)
+    return None
 
 
 def _arithmetic(expr: Any) -> tuple[str, int, str]:

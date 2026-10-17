@@ -11,7 +11,10 @@ Tests cover:
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from dazzle.core.dsl_parser_impl import Parser, parse_dsl
+from dazzle.core.errors import ParseError
 from dazzle.core.ir import (
     DateArithmeticExpr,
     DateArithmeticOp,
@@ -212,6 +215,48 @@ class TestParserConditions:
         assert result.comparison is not None
         assert result.comparison.value.date_expr is not None
         assert isinstance(result.comparison.value.date_expr, DateLiteral)
+
+
+class TestStartOf:
+    """#1800: ``start_of(<period>)`` — a calendar anchor in conditions."""
+
+    @staticmethod
+    def _condition(text: str):
+        parser = Parser(text, Path("test.dsl"))
+        parser.tokens = Lexer(text, Path("test.dsl")).tokenize()
+        parser.pos = 0
+        return parser.parse_condition_expr()
+
+    @pytest.mark.parametrize("period", ["week", "month", "quarter", "year"])
+    def test_anchor_parses_and_echoes(self, period: str) -> None:
+        expr = self._condition(f"marked_at >= start_of({period})").comparison.value.date_expr
+        assert expr == DateLiteral(kind=DateLiteralKind(f"start_of_{period}"))
+        assert str(expr) == f"start_of({period})"
+
+    def test_anchor_takes_a_duration_tail(self) -> None:
+        expr = self._condition("marked_at >= start_of(month) - 7d").comparison.value.date_expr
+        assert isinstance(expr, DateArithmeticExpr)
+        assert expr.left == DateLiteral(kind=DateLiteralKind.START_OF_MONTH)
+        assert str(expr) == "start_of(month) - 7d"
+
+    @pytest.mark.parametrize(("period", "hint"), [("fortnight", ""), ("term", "DD-017")])
+    def test_unknown_period_names_the_four(self, period: str, hint: str) -> None:
+        with pytest.raises(ParseError, match="week, month, quarter, year") as exc:
+            self._condition(f"marked_at >= start_of({period})")
+        assert hint in str(exc.value)
+
+    def test_anchor_in_aggregate_where(self) -> None:
+        from tests.unit._aggregate_test_helpers import agg
+
+        ref = agg("count(Mark where marked_at >= start_of(quarter))")
+        assert ref.where.comparison.value.date_expr == DateLiteral(
+            kind=DateLiteralKind.START_OF_QUARTER
+        )
+
+    def test_bare_start_of_stays_a_literal(self) -> None:
+        value = self._condition("label = start_of").comparison.value
+        assert value.date_expr is None
+        assert value.literal == "start_of"
 
 
 # =============================================================================

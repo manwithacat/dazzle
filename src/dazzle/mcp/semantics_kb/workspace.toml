@@ -20,7 +20,7 @@ debugger.
 
 Fast path (recommended — one SQL query, scope evaluated once):
 - ``count(<source_entity>)`` with ``group_by: <field>`` — bar_chart
-- ``count(<source_entity>)`` with ``group_by: [<a>, <b>]`` — pivot_table
+- ``count`` / ``sum`` / ``avg`` / ``min`` / ``max`` over the source (plus derived metrics) with ``group_by: [<a>, <b>]`` — pivot_table; every measure shares one ``where`` (#1800)
 - ``count(<source_entity>)`` with ``group_by: bucket(<ts>, day|week|month|quarter|year)`` — time-series (line_chart) — v0.60.0
 - ``sum:<col>``, ``avg:<col>``, ``min:<col>``, ``max:<col>`` — numeric measures
 

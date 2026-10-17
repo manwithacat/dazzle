@@ -25,6 +25,7 @@ from .validator import (
     validate_nav_curation,
     validate_outlier_decorators,
     validate_persona_nav_refs,
+    validate_pivot_measures,
     validate_process_step_service_refs,
     validate_rag_decorators,
     validate_rbac_matrix_diagnostics,
@@ -169,6 +170,11 @@ def lint_appspec(
 
     # #1773: a region `filter:` can't narrow a cross-entity aggregate
     errors, warnings = validate_region_filter_aggregate_reach(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # #1800: every pivot_table measure must fit one GROUP BY over the source
+    errors, warnings = validate_pivot_measures(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

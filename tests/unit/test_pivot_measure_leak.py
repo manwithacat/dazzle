@@ -70,3 +70,27 @@ def test_pivot_html_does_not_leak_dim_keys_as_measures() -> None:
     assert html.count("is-measure") >= 4  # 2 header+cell pairs for count + leftover zzz
     assert "zzz" in html
     assert "Auth" in html
+
+
+def test_pivot_html_renders_every_measure_column() -> None:
+    """#1800: a multi-measure pivot (avg + derived percentage) renders one
+    header and one cell per measure, decimals intact."""
+    html = FragmentRenderer().render(
+        WorkspaceRegionAdapter().build(  # type: ignore[arg-type]
+            _FakePivot(),
+            {
+                "pivot_dim_specs": [
+                    {"name": "question", "label": "Question", "is_fk": False},
+                    {"name": "klass", "label": "Klass", "is_fk": False},
+                ],
+                "pivot_buckets": [
+                    {"question": "Q1", "klass": "7A", "avg_score": 7.25, "facility_pct": 62.5},
+                ],
+            },
+        )
+    )
+    assert ">Avg Score<" in html
+    assert ">Facility Pct<" in html
+    assert "7.25" in html
+    assert "62.5" in html
+    assert html.count("is-measure") == 4  # two measure headers + two cells

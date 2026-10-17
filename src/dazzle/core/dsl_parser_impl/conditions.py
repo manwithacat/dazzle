@@ -29,6 +29,7 @@ class ConditionParserMixin:
         file: Any
         _parse_literal_value: Any
         _parse_date_expr: Any  # From TypeParserMixin
+        _at_start_of: Any  # From TypeParserMixin (#1800)
         _parse_duration_literal: Any  # From TypeParserMixin
 
     def parse_condition_expr(self) -> ir.ConditionExpr:
@@ -324,8 +325,8 @@ class ConditionParserMixin:
             self.expect(TokenType.RBRACKET)
             return ir.ConditionValue(values=values)
 
-        # v0.10.2: Check for date expressions (today, now)
-        if self.match(TokenType.TODAY) or self.match(TokenType.NOW):
+        # v0.10.2: Check for date expressions (today, now); #1800 start_of(...)
+        if self.match(TokenType.TODAY) or self.match(TokenType.NOW) or self._at_start_of():
             date_expr = self._parse_date_expr()
             return ir.ConditionValue(date_expr=date_expr)
 

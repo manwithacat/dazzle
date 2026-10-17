@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 275 BaseModels, 103 Enums, 17 other (functions / typealiases / constants)
+# Counts: 275 BaseModels, 103 Enums, 18 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -2691,6 +2691,10 @@ enum: DateArithmeticOp
 enum: DateLiteralKind
   members:
     - NOW = 'now'
+    - START_OF_MONTH = 'start_of_month'
+    - START_OF_QUARTER = 'start_of_quarter'
+    - START_OF_WEEK = 'start_of_week'
+    - START_OF_YEAR = 'start_of_year'
     - TODAY = 'today'
 
 enum: DensityEnum
@@ -3399,6 +3403,7 @@ enum: WorkspaceAccessLevel
 
 category: constant
   - AI_JOB_FIELDS: list (len=12)
+  - CALENDAR_PERIODS: tuple (len=4)
   - CURRENCY_SCALES: dict (len=29)
   - DEFAULT_CURRENCY_SCALE: int = 2
   - FEEDBACK_REPORT_FIELDS: tuple (len=27)

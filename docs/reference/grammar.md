@@ -437,7 +437,14 @@ condition_term
 comparison    ::= field_path comp_op value
                 | aggregate_call comp_op value ;
 
-value         ::= STRING | NUMBER | IDENT | "[" value ("," value)* "]" ;
+value         ::= STRING | NUMBER | IDENT | date_expr | calendar_anchor
+                | "[" value ("," value)* "]" ;
+
+calendar_anchor
+              ::= "start_of" "(" calendar_period ")" (("+" | "-") duration_expr)? ;
+
+calendar_period
+              ::= "week" | "month" | "quarter" | "year" ;
 
 operator      ::= "=" | "!=" | ">" | "<" | ">=" | "<="
                 | "in" | "not" "in" | "is" | "is" "not" ;

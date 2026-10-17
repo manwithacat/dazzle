@@ -949,6 +949,9 @@ field comparisons, function calls, role checks, date arithmetic, and logical ope
 #   today, now           - Current date/datetime
 #   today + 7d           - Date plus duration
 #   now - 24h            - Datetime minus duration
+#   start_of(week)       - Monday of the current ISO week (#1800, conditions only)
+#   start_of(month|quarter|year) - First day of the current calendar period
+#   start_of(month) - 7d - Anchor plus/minus a duration
 
 # List membership:
 #   field in [val1, val2, val3]
@@ -987,6 +990,11 @@ threshold: amount > 1000
 recent:
   source: AuditLog
   filter: created_at > now - 24h
+
+# Calendar anchor: "this week" means since Monday, not the last 7 days (#1800)
+marked_this_week:
+  source: MarkingResult
+  filter: marked_at >= start_of(week)
 ```
 
 **Related:** [Attention Signals](ux.md#attention-signals), [Scope](ux.md#scope), [Regions](workspaces.md#regions), [Access Rules](access-control.md#access-rules), [Invariant](entities.md#invariant)

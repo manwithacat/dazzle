@@ -715,6 +715,30 @@ class TestStrategyCGroupByFastPath:
         assert params == ["d-1"]
         assert "null" not in filters.values()
 
+    def test_start_of_week_binds_the_iso_monday(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """#1800: `start_of(week)` in an aggregate where and in a region filter
+        binds the Monday of the tenant's current week — not a rolling `now - 7d`."""
+        import datetime as dt
+        import logging
+
+        from dazzle.http.runtime.scope_filters import _extract_condition_filters
+        from dazzle.http.runtime.workspace_aggregation import _build_aggregate_filters
+
+        monkeypatch.setattr(
+            "dazzle.core.date_expr_eval.calendar_today", lambda: dt.date(2026, 10, 15)
+        )
+        ref = agg("count(MarkingResult where marked_at >= start_of(week))")
+        filters = _build_aggregate_filters(
+            ref.where, None, _make_aggregate_repo([]), "MarkingResult"
+        )
+        sql, params = filters["__scope_predicate"]
+        assert '"marked_at" >= %s' in sql
+        assert params == ["2026-10-12"]
+
+        region_filters: dict[str, Any] = {}
+        _extract_condition_filters(ref.where, "u-1", region_filters, logging.getLogger(__name__))
+        assert region_filters == {"marked_at__gte": "2026-10-12"}
+
     @pytest.mark.asyncio()
     async def test_aggregate_failure_falls_back_to_slow_path(self) -> None:
         """If .aggregate raises, the old enumeration loop kicks in as backup."""
@@ -910,6 +934,136 @@ class TestPivotBuckets:
         # dim_specs still produced — header rendering survives the failure.
         assert len(specs) == 1
         assert specs[0]["name"] == "severity"
+
+    @staticmethod
+    def _measure_repo(measures: dict[str, Any]) -> MagicMock:
+        from dazzle.http.runtime.aggregate import AggregateBucket
+
+        repo = MagicMock()
+        repo.db.placeholder = "%s"
+        repo.entity_spec = SimpleNamespace(
+            name="MarkingResult",
+            fields=[
+                SimpleNamespace(name="question", type=SimpleNamespace(kind="scalar")),
+                SimpleNamespace(name="klass", type=SimpleNamespace(kind="scalar")),
+            ],
+        )
+        repo.aggregate = AsyncMock(
+            return_value=[
+                AggregateBucket(dimensions={"question": "Q1", "klass": "7A"}, measures=measures)
+            ]
+        )
+        return repo
+
+    @pytest.mark.asyncio()
+    async def test_avg_measures_and_derived_percentage_in_one_group_by(self) -> None:
+        """#1800: avg measures ride one two-dim GROUP BY; a derived facility
+        percentage is computed per row from that row's measures."""
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import Parser
+        from dazzle.core.lexer import tokenize
+        from dazzle.http.runtime.workspace_aggregation import _compute_pivot_buckets
+
+        facility = Parser(
+            tokenize("round(awarded / available * 100)\n", Path("t.dsl")), Path("t.dsl")
+        ).parse_derived_metric({"awarded", "available"})
+        repo = self._measure_repo({"awarded": 5.0, "available": 8.0})
+        rows, _ = await _compute_pivot_buckets(
+            {
+                "awarded": agg("avg(score)"),
+                "available": agg("avg(max_score)"),
+                "facility_pct": facility,
+            },
+            {"MarkingResult": repo},
+            ["question", "klass"],
+            source_entity="MarkingResult",
+            source_entity_spec=repo.entity_spec,
+            scope_filters=None,
+        )
+        repo.aggregate.assert_awaited_once()
+        assert repo.aggregate.call_args.kwargs["measures"] == {
+            "awarded": "avg:score",
+            "available": "avg:max_score",
+        }
+        assert rows == [
+            {
+                "question": "Q1",
+                "klass": "7A",
+                "awarded": 5.0,
+                "available": 8.0,
+                "facility_pct": 62,
+            }
+        ]
+
+    @pytest.mark.asyncio()
+    async def test_l3_expression_measure_is_qualified_with_the_source(self) -> None:
+        """#1800 + #1791: an L3 expression measure compiles with the source table
+        prefix so the FK label JOIN cannot make its columns ambiguous."""
+        from dazzle.http.runtime.workspace_aggregation import _compute_pivot_buckets
+
+        repo = self._measure_repo({"facility": 0.625})
+        await _compute_pivot_buckets(
+            {"facility": agg("avg(score::float / nullif(max_score, 0))")},
+            {"MarkingResult": repo},
+            ["question", "klass"],
+            source_entity="MarkingResult",
+            source_entity_spec=repo.entity_spec,
+            scope_filters=None,
+        )
+        kwargs = repo.aggregate.call_args.kwargs
+        assert kwargs["measures"] == {"facility": "avg"}
+        expr_sql, _ = kwargs["measure_expressions"]["facility"]
+        assert '"MarkingResult"."score"' in expr_sql
+        assert '"MarkingResult"."max_score"' in expr_sql
+
+    @pytest.mark.asyncio()
+    @pytest.mark.parametrize(
+        ("aggregates", "reason"),
+        [
+            (
+                {"n": "count(MarkingResult)", "other": "avg(Manuscript.score)"},
+                "not the pivot source",
+            ),
+            (
+                {
+                    "a": "avg(score where status = done)",
+                    "b": "avg(max_score where status = open)",
+                },
+                "share one where",
+            ),
+            (
+                {"n": "count(MarkingResult where question = current_bucket)"},
+                "current_bucket",
+            ),
+            (
+                {"n": "count(MarkingResult window week_from_monday on marked_at)"},
+                "window",
+            ),
+        ],
+    )
+    async def test_unplannable_measure_skips_pivot_with_warning(
+        self, caplog, aggregates: dict[str, str], reason: str
+    ) -> None:
+        """#1800: a measure one GROUP BY over the source cannot carry skips the
+        pivot (no query) and says which metric and why — never silently."""
+        import logging
+
+        from dazzle.http.runtime.workspace_aggregation import _compute_pivot_buckets
+
+        repo = self._measure_repo({})
+        with caplog.at_level(logging.WARNING, logger="dazzle.http.runtime.workspace_aggregation"):
+            rows, _ = await _compute_pivot_buckets(
+                {name: agg(expr) for name, expr in aggregates.items()},
+                {"MarkingResult": repo},
+                ["question", "klass"],
+                source_entity="MarkingResult",
+                source_entity_spec=repo.entity_spec,
+                scope_filters=None,
+            )
+        assert rows == []
+        repo.aggregate.assert_not_called()
+        assert any(reason in r.getMessage() for r in caplog.records)
 
 
 # ---------------------------------------------------------------------------

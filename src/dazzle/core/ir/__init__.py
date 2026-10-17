@@ -69,6 +69,7 @@ from .conditions import (
 
 # Date Expressions (v0.10.2)
 from .dates import (
+    CALENDAR_PERIODS,
     DateArithmeticExpr,
     DateArithmeticOp,
     DateExpr,
@@ -843,6 +844,7 @@ __all__ = [
     "ComputedExpr",
     "ComputedFieldSpec",
     # Date Expressions (v0.10.2)
+    "CALENDAR_PERIODS",
     "DateLiteralKind",
     "DateLiteral",
     "DateArithmeticOp",

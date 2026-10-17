@@ -622,21 +622,24 @@ class TypeParserMixin:
             - now (DateLiteral)
             - today + 7d (DateArithmeticExpr)
             - now - 24h (DateArithmeticExpr)
+            - start_of(week|month|quarter|year) [± duration] (#1800)
 
         Returns:
             DateLiteral or DateArithmeticExpr
         """
-        # Parse the base (today or now)
+        # Parse the base (today, now, or start_of(<period>))
         if self.match(TokenType.TODAY):
             self.advance()
             base = ir.DateLiteral(kind=ir.DateLiteralKind.TODAY)
         elif self.match(TokenType.NOW):
             self.advance()
             base = ir.DateLiteral(kind=ir.DateLiteralKind.NOW)
+        elif self._at_start_of():
+            base = self._parse_start_of()
         else:
             token = self.current_token()
             raise make_parse_error(
-                f"Expected 'today' or 'now', got {token.value}",
+                f"Expected 'today', 'now' or 'start_of(...)', got {token.value}",
                 self.file,
                 token.line,
                 token.column,
@@ -660,8 +663,40 @@ class TypeParserMixin:
                 right=duration,
             )
 
-        # Just a literal (today or now)
+        # Just a literal (today, now, start_of(...))
         return base
+
+    def _at_start_of(self) -> bool:
+        """``start_of`` followed by ``(`` — recognised by value, not reserved."""
+        tok = self.current_token()
+        return bool(
+            tok.type == TokenType.IDENTIFIER
+            and tok.value == "start_of"
+            and self.peek_token().type == TokenType.LPAREN
+        )
+
+    def _parse_start_of(self) -> ir.DateLiteral:
+        """Parse ``start_of(<period>)`` — a calendar anchor (#1800)."""
+        self.advance()  # consume `start_of`
+        self.expect(TokenType.LPAREN)
+        period_tok = self.expect_identifier_or_keyword()
+        period = period_tok.value
+        if period not in ir.CALENDAR_PERIODS:
+            hint = (
+                " Named periods (term, half-term) are not supported yet — see "
+                "docs/decisions/DD-017-calendar-periods.md."
+                if "term" in period
+                else ""
+            )
+            raise make_parse_error(
+                f"Invalid start_of period {period!r}. Expected one of "
+                f"{', '.join(ir.CALENDAR_PERIODS)}.{hint}",
+                self.file,
+                period_tok.line,
+                period_tok.column,
+            )
+        self.expect(TokenType.RPAREN)
+        return ir.DateLiteral(kind=ir.DateLiteralKind(f"start_of_{period}"))
 
     # ------------------------------------------------------------------
     # parse_field_modifiers and default-value sub-parsers

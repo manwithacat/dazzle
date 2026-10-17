@@ -53,12 +53,14 @@ class TestGenerateGrammar:
             ["## DSL Examples", "```dsl"],
             ["## Parser Mixin Coverage", "| Module | Class | Category |"],
             ["Auto-generated", "grammar_gen.py"],
+            ['"start_of" "(" calendar_period ")"', '"week" | "month" | "quarter" | "year"'],
         ],
         ids=[
             "test_includes_ebnf_block",
             "test_includes_dsl_examples",
             "test_includes_parser_mixin_table",
             "test_auto_generated_notice",
+            "test_includes_calendar_anchor_1800",
         ],
     )
     def test_grammar_contains_tokens(self, tokens: list[str]) -> None:

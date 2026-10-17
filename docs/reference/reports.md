@@ -68,7 +68,22 @@ alert_pivot:
     count: count(Alert)
 ```
 
-One row per `(system, severity)` combination. FK columns LEFT JOIN with indexed aliases (`fk_0`, `fk_1`, ...) so two FKs to the same table don't collide. Count for each cell computed in the same query. No kept example declares a multi-dim pivot; for working single-dim `bar_chart` references see `examples/invoice_ops` (`audit_mix`, `group_by: status`) and `examples/hr_records` (`salary_mix`, `group_by: reason`).
+One row per `(system, severity)` combination. FK columns LEFT JOIN with indexed aliases (`fk_0`, `fk_1`, ...) so two FKs to the same table don't collide. Count for each cell computed in the same query.
+
+**Pivot measures (#1800).** A pivot takes the grouped-aggregate measure vocabulary, not just `count` — `count(<source>)`, `sum` / `avg` / `min` / `max` of a source column or an L3 expression, and derived metrics over them. Every measure is a column of the **same** scope-aware `GROUP BY` (declaration order = column order); derived metrics evaluate per cell in Python, adding no query. A percentage is a derived metric, not a `ratio` keyword:
+
+```dsl
+facility_index:
+  source: MarkingResult
+  display: pivot_table
+  group_by: [question, klass]
+  aggregate:
+    awarded: avg(score)
+    available: avg(max_score)
+    facility_pct: round(awarded / available * 100)
+```
+
+Because one query computes every cell, every measure in a pivot shares **one `where`** (put row narrowing in the region `filter:`), aggregates the region's `source:` entity, and carries no `window` / `current_bucket`. `dazzle validate` rejects the rest (`E_PIVOT_MEASURE_WHERE_MISMATCH`, `E_PIVOT_MEASURE_CROSS_ENTITY`, `E_PIVOT_MEASURE_UNSUPPORTED`); at runtime such a pivot renders empty with a warning naming the metric. A lone `count(<source>)` pivot emits exactly the SQL it always did. No kept example declares a multi-dim pivot; for working single-dim `bar_chart` references see `examples/invoice_ops` (`audit_mix`, `group_by: status`) and `examples/hr_records` (`salary_mix`, `group_by: reason`).
 
 ## Time bucketing (v0.60.0)
 
@@ -120,7 +135,7 @@ The runtime picks automatically:
 | `count(<source>)` | Fast | Distribution on the source entity — this is the case #847–#851 fixed |
 | `count(<source> where status = 'open')` | Fast | Filter before count, still single query |
 | `count(<other> where fk = current_bucket)` | Slow | Cross-entity count per bucket; keep cardinality low |
-| `avg:score` | Fast (single-dim only in v0.59.3) | Numeric measure on source |
+| `avg:score` | Fast (single- and multi-dim) | Numeric measure on source; pivots take it since #1800 |
 
 The fast path is scope-safe by construction — one `WHERE` clause, one `GROUP BY`, no possibility of the enumeration-vs-count divergence from #847.
 
@@ -176,6 +191,28 @@ week_energy:
 Windows compile to one `WITH _anchor AS (SELECT MAX(<on>) …)` CTE plus per-measure `CASE WHEN` so this-week kWh, elapsed hours, and last-week kWh still share a single scope-safe round-trip. Average kW is `sum(value_delta) / sum(elapsed_hours)` via a derived metric — not `avg(value_delta)` and not `/ 24`. `date_trunc('week')` is ISO Monday (Postgres); this does **not** follow `locale.week_start`.
 
 `where` still works inside the same call (`sum(Reading.value_delta where meter_kind = export window week_from_monday on taken_at)`). Metrics that share entity + `on` + `where` batch; a different `where` is a second query.
+
+### Calendar anchors (#1800)
+
+Three different "this week"s — pick the one the persona means:
+
+| Form | Window | Use when |
+|---|---|---|
+| `marked_at >= now - 7d` | Rolling: the 7 days before this request | "Last 7 days" — slides with the clock |
+| `window week_from_monday on marked_at` | Last-reading: Monday of the week holding `max(marked_at)` in scope | Meter books — a quiet week still shows the last week with data |
+| `marked_at >= start_of(week)` | Calendar: Monday of the current week in the tenant calendar | "This week" / "since Monday" — a quiet week reads 0 |
+
+```dsl
+hod_week:
+  source: MarkingResult
+  filter: department = current_context
+  display: metrics
+  aggregate:
+    marked_this_week: count(MarkingResult where marked_at >= start_of(week))
+    marked_this_month: count(MarkingResult where marked_at >= start_of(month))
+```
+
+`start_of(week | month | quarter | year)` is a date expression usable wherever a condition takes `today` / `now` — region `filter:`, aggregate `where`, attention `when:` — and takes the same duration tail (`start_of(month) - 7d`). It is not a field default or an invariant term. `today` is the tenant calendar day; the week starts on **ISO Monday** (the same rule as `date_trunc('week')` and `week_from_monday`), not `locale.week_start`. Named periods (`start_of(term)`, a project `calendar:`) and `window … anchored_to today` are parked in [DD-017](../decisions/DD-017-calendar-periods.md).
 
 ## Plant-total vs legal-entity (#1675)
 
