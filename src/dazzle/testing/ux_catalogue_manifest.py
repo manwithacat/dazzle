@@ -184,21 +184,4 @@ CATALOGUE_MANIFEST: dict[str, CatalogueEntry] = {
         "sample_items": [],
         "canned_buckets": _TIME_BUCKETS,
     },
-    "cat_radar": {
-        "description": "Polar profile — one spoke per team, value = box count for that team.",
-        "marker": "dz-radar-region",
-        "sample_items": [],
-        "canned_buckets": [
-            {
-                "dimensions": {"team": "platform", "team_label": "platform"},
-                "measures": {"count": 12},
-            },
-            {
-                "dimensions": {"team": "payments", "team_label": "payments"},
-                "measures": {"count": 7},
-            },
-            {"dimensions": {"team": "growth", "team_label": "growth"}, "measures": {"count": 4}},
-            {"dimensions": {"team": "data", "team_label": "data"}, "measures": {"count": 9}},
-        ],
-    },
 }

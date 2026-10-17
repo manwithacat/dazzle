@@ -35,7 +35,6 @@ from dazzle.render.fragment.ingest.models import (
     Pipeline,
     PivotTable,
     QueueRow,
-    Radar,
     SearchBox,
     SearchResultRow,
     SearchSelectShell,
@@ -705,10 +704,6 @@ def pivot_root_attrs(_p: PivotTable) -> str:
     return "data-dz-pivot"
 
 
-def radar_root_attrs(_r: Radar) -> str:
-    return "data-dz-radar"
-
-
 def time_series_root_attrs(_t: TimeSeries) -> str:
     return "data-dz-time-series"
 
@@ -1024,28 +1019,6 @@ def render_search_box(s: SearchBox) -> str:
         f"</div>"
         f"</div>"
     )
-
-
-def render_radar(r: Radar) -> str:
-    """Model → radar region (matches HM contracts/radar.py)."""
-    root_attrs = radar_root_attrs(r)
-    if not r.axes:
-        return (
-            f'<div class="dz-radar-region" {root_attrs}>'
-            f'<p class="dz-empty-dense" role="status">'
-            f"{_html.escape(r.empty_message)}</p>"
-            f"</div>"
-        )
-    peak = r.peak_display
-    if not peak:
-        max_val = max((a.value for a in r.axes), default=0) or 0
-        peak = str(int(max_val)) if max_val == int(max_val) else str(max_val)
-    summary = (
-        f'<p class="dz-chart-summary">'
-        f"{len(r.axes)} spokes · 1 series · peak {_html.escape(peak)}"
-        f"</p>"
-    )
-    return f'<div class="dz-radar-region" {root_attrs}>{r.svg_html}{summary}</div>'
 
 
 def render_time_series(t: TimeSeries) -> str:

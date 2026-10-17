@@ -161,7 +161,6 @@ _SINGLE_DIM_CHART_MODES: frozenset[str] = frozenset(
     {
         "BAR_CHART",
         "LINE_CHART",
-        "RADAR",
         "COMPARISON",
         "INSIGHT_SUMMARY",
     }
@@ -243,7 +242,7 @@ async def compute_region_render_inputs(
     if group_by and not gb_is_bucket and display in _GROUPED_MODES and ctx.entity_spec:
         kanban_columns = compute_kanban_columns(ctx.entity_spec, group_by)
 
-    # Single-dim bucketed aggregates (bar_chart / line_chart / radar /
+    # Single-dim bucketed aggregates (bar_chart / line_chart /
     # comparison / insight_summary). #887: scope-gated.
     bucketed_metrics: list[dict[str, Any]] = []
     if (

@@ -74,7 +74,7 @@ class RegionContext(TypedDict, total=False):
     aggregates: Any
     audit_enabled: bool
 
-    # --- charts (bar / line / radar / comparison / cohort / pivot) ---
+    # --- charts (bar / line / comparison / cohort / pivot) ---
     axes: Any
     buckets: Any
     cells: Any

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from dazzle.render.filters import clerk_chart_axis_label, clerk_stage_label
+from dazzle.render.filters import clerk_stage_label
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.ingest import BarChart as BarChartSeam
@@ -25,8 +25,6 @@ from dazzle.render.fragment.ingest import CalendarEvent as CalendarEventSeam
 from dazzle.render.fragment.ingest import Diagram as DiagramSeam
 from dazzle.render.fragment.ingest import KanbanCard as KanbanCardSeam
 from dazzle.render.fragment.ingest import Pipeline as PipelineSeam
-from dazzle.render.fragment.ingest import Radar as RadarSeam
-from dazzle.render.fragment.ingest import RadarAxis as RadarAxisSeam
 from dazzle.render.fragment.ingest import TimelineEvent as TimelineEventSeam
 from dazzle.render.fragment.ingest import TimeSeries as TimeSeriesSeam
 from dazzle.render.fragment.ingest import TimeSeriesLayer as TimeSeriesLayerSeam
@@ -38,7 +36,6 @@ from dazzle.render.fragment.ingest import (
     render_diagram,
     render_kanban_card,
     render_pipeline,
-    render_radar,
     render_time_series,
     render_timeline_event,
 )
@@ -50,7 +47,6 @@ from dazzle.render.fragment.primitives import (
     KanbanCard,
     KanbanRegion,
     PipelineSteps,
-    Radar,
     Timeline,
     TimelineEvent,
     TimeSeries,
@@ -306,33 +302,6 @@ class _RenderChartsMixin:
                 label=t.label,
                 view=view,
                 points=[TimeSeriesPointSeam(label=lbl, value=val) for lbl, val in t.points],
-                svg_html=svg,
-                peak_display=max_val_str,
-            )
-        )
-
-    def _emit_radar(self, r: Radar, ctx: RenderContext) -> str:
-        """Render a Radar via HM dual-lock Radar seam.
-
-        SVG geometry stays in ``dazzle.render.svg.radar_svg``.
-        Spoke labels use clerk_chart_axis_label so ``api`` dumps
-        ``Api``, not the schema token (oral #188).
-        """
-        from dazzle.render.filters import _metric_number_filter
-        from dazzle.render.svg import radar_svg
-
-        if not r.axes:
-            return render_radar(RadarSeam(label=r.label, axes=[]))
-
-        axes = tuple((clerk_chart_axis_label(lbl) or str(lbl), val) for lbl, val in r.axes)
-        svg = radar_svg(r.label, axes)
-        max_val = max((v for _, v in axes), default=1) or 1
-        max_for_filter = int(max_val) if max_val == int(max_val) else max_val
-        max_val_str = _metric_number_filter(max_for_filter)
-        return render_radar(
-            RadarSeam(
-                label=r.label,
-                axes=[RadarAxisSeam(label=lbl, value=val) for lbl, val in axes],
                 svg_html=svg,
                 peak_display=max_val_str,
             )

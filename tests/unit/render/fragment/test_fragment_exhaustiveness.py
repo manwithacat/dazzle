@@ -105,7 +105,6 @@ from dazzle.render.fragment import (
     QueueRegion,
     QueueRow,
     QueueTransition,
-    Radar,
     RawHTML,
     RefPicker,
     Region,
@@ -271,8 +270,6 @@ def _sample_for(primitive_type: type) -> object:
         return Diagram(nodes=("A", "B"), edges=(("A", "B"),))
     if primitive_type is TimeSeries:
         return TimeSeries(label="x", points=(("a", 1.0),))
-    if primitive_type is Radar:
-        return Radar(label="x", axes=(("a", 1.0), ("b", 2.0), ("c", 3.0)))
     if primitive_type is PipelineSteps:
         return PipelineSteps(stages=(PipelineStage(label="Step"),))
     if primitive_type is PipelineStage:

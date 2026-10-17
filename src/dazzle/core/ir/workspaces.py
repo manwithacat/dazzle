@@ -68,7 +68,6 @@ class DisplayMode(StrEnum):
     ACTIVITY_FEED = "activity_feed"  # v0.44.0: Activity feed / timeline display
     PIVOT_TABLE = "pivot_table"  # v0.59.3: Multi-dimension cross-tab view (cycle 25)
     LINE_CHART = "line_chart"  # v0.60.0: Time-series line chart (cycle 28)
-    RADAR = "radar"  # v0.61.28 (#879): polar/radar profile shape
     PIPELINE_STEPS = "pipeline_steps"  # v0.61.56 (#890): sequential-stage workflow
     STATUS_LIST = "status_list"  # v0.61.69 (#7): vertical icon + title + copy + state-pill list
     CONFIRM_ACTION_PANEL = (

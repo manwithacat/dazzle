@@ -197,7 +197,6 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "insight_summary",  # #1470 deterministic narrative
         "diagram",
         "line_chart",
-        "radar",
         "cohort_strip",  # #1018 (v0.67.7) — adapter live; data resolution pending
         "day_timeline",  # #1016 (v0.67.8) — adapter live; data resolution pending
         "entity_card",  # #1017 (v0.67.8) — adapter live; data resolution pending

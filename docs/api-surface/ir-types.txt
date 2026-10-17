@@ -2747,7 +2747,6 @@ enum: DisplayMode
     - PIPELINE_STEPS = 'pipeline_steps'
     - PIVOT_TABLE = 'pivot_table'
     - QUEUE = 'queue'
-    - RADAR = 'radar'
     - STATUS_LIST = 'status_list'
     - SUMMARY = 'summary'
     - TABBED_LIST = 'tabbed_list'

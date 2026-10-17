@@ -69,8 +69,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|tree|calendar|dashboard-card|cohort-strip|day-timeline|entity-card|grid-region|pipeline|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|tree|calendar|dashboard-card|cohort-strip|day-timeline|entity-card|grid-region|pipeline|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|tree|calendar|dashboard-card|cohort-strip|day-timeline|entity-card|grid-region|pipeline|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|tree|calendar|dashboard-card|cohort-strip|day-timeline|entity-card|grid-region|pipeline|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -889,28 +889,6 @@ def test_pipeline_emission_conforms_to_pipeline_contract() -> None:
     assert "data-dz-pipeline" in html
     assert "Lead" in html
     assert "dz-pipeline-stages" in html
-
-
-def test_radar_emission_conforms_to_radar_contract() -> None:
-    """Real FragmentRenderer Radar path satisfies contracts/radar.py."""
-    pytest.importorskip("fastapi")
-    from dazzle.render.fragment.primitives.data import Radar as RadarFrag
-    from dazzle.render.fragment.renderer import FragmentRenderer
-
-    radar_mod = load_hm_module("contracts/radar.py")
-    kit = load_hm_module("contracts/_kit.py")
-    html = FragmentRenderer().render(
-        RadarFrag(
-            label="Coverage",
-            axes=(("Auth", 80.0), ("API", 65.0), ("UI", 90.0)),
-        )
-    )
-    violations = kit.validate_dom(html, radar_mod.DOM_CONTRACT, require_root=True)
-    assert not violations, violations
-    assert "data-dz-radar" in html
-    assert "dz-chart-summary" in html
-    assert "<svg" in html
-    assert "3 spokes" in html
 
 
 def test_time_series_emission_conforms_to_time_series_contract() -> None:

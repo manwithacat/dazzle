@@ -23,7 +23,6 @@ from dazzle.render.fragment.primitives.data import (
     MetricTile,
     Pagination,
     PivotTable,
-    Radar,
     ReferenceBand,
     ReferenceLine,
     SearchBox,
@@ -147,11 +146,6 @@ def test_rejects_empty_required_field(ctor: Callable[[], object], match: str) ->
             id="time_series_series.points",
         ),
         pytest.param(
-            lambda: Radar(label="x", axes=()),
-            "at least one axis",
-            id="radar.axes",
-        ),
-        pytest.param(
             lambda: BarTrack(rows=(), max_value=100.0),
             "at least one row",
             id="bar_track.rows",
@@ -251,12 +245,6 @@ def test_rejects_invalid_enum_value(ctor: Callable[[], object], match: str) -> N
             "edge to",
             id="diagram.edge_unknown_to",
         ),
-        # Two axes collapse to a line — not visually a radar.
-        pytest.param(
-            lambda: Radar(label="x", axes=(("a", 1.0), ("b", 2.0))),
-            "at least 3 axes",
-            id="radar.two_axes",
-        ),
         pytest.param(
             lambda: BarTrack(rows=(("X", 1.0, "1"),), max_value=100.0),  # type: ignore[arg-type]
             "arity mismatch",
@@ -319,10 +307,6 @@ def test_rejects_structural_violation(ctor: Callable[[], object], match: str) ->
         pytest.param(
             lambda: Diagram(mermaid_source="erDiagram\n    A {\n        str x\n    }"),
             id="diagram.mermaid_source_without_nodes",
-        ),
-        pytest.param(
-            lambda: Radar(label="x", axes=(("a", 1.0), ("b", 2.0), ("c", 3.0))),
-            id="radar.three_axes",
         ),
         pytest.param(
             lambda: BarTrack(

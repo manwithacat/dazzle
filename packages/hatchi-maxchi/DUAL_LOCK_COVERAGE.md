@@ -11,9 +11,9 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 | Component CSS modules | 76 |
 | Controllers | 34 |
 | Contract modules | 146 |
-| Dual-lock schema+DOM | 30 |
+| Dual-lock schema+DOM | 29 |
 | Dual-lock DOM-only | 101 |
-| Dual-lock deferred | 15 |
+| Dual-lock deferred | 16 |
 | Contract with no dual-lock row | 0 |
 
 Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
@@ -126,7 +126,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `queue` | `queue.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `queue_filters` | `queue_filters.py` | `—` | yes | no | no | **DOM-only** |
 | `queue_region` | `queue_region.py` | `—` | yes | no | no | **DOM-only** |
-| `radar` | `radar.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `radar` | `radar.py` | `—` | yes | yes | yes | **deferred** |
 | `ref_picker` | `ref_picker.py` | `—` | yes | no | no | **DOM-only** |
 | `region` | `region.py` | `—` | yes | no | no | **DOM-only** |
 | `related_group` | `related_group.py` | `—` | yes | no | no | **DOM-only** |

@@ -167,21 +167,3 @@ cat_line:
     count: count(Box)
   empty: "No boxes"
 ```
-
-## Radar
-
-Polar profile — one spoke per team, value = box count for that team.
-
-<div class="dz-catalogue-preview" markdown="0">
-<div data-dz-region data-dz-region-name="cat_radar" id="region-cat_radar"><div class="dz-radar-region" data-dz-radar><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" class="dz-radar-svg dz-chart-svg" role="img" aria-label="Cat Radar radar — 4 spokes, peak 12"><polygon points="160.0,128.0 192.0,160.0 160.0,192.0 128.0,160.0" fill="none" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.6"/><polygon points="160.0,96.0 224.0,160.0 160.0,224.0 96.0,160.0" fill="none" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.6"/><polygon points="160.0,64.0 256.0,160.0 160.0,256.0 64.0,160.0" fill="none" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.6"/><polygon points="160.0,32.0 288.0,160.0 160.0,288.0 32.0,160.00000000000003" fill="none" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.6"/><line x1="160.0" y1="160.0" x2="160.0" y2="32.0" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.7"/><line x1="160.0" y1="160.0" x2="288.0" y2="160.0" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.7"/><line x1="160.0" y1="160.0" x2="160.0" y2="288.0" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.7"/><line x1="160.0" y1="160.0" x2="32.0" y2="160.00000000000003" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.7"/><polygon points="160.0,32.0 234.66666666666669,160.0 160.0,202.66666666666666 64.0,160.0" fill="var(--colour-brand)" fill-opacity="0.15" stroke="var(--colour-brand)" stroke-width="1.5" stroke-linejoin="round"/><circle cx="160.0" cy="32.0" r="3" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>Platform value: 12</title></circle><circle cx="234.66666666666669" cy="160.0" r="3" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>Payments value: 7</title></circle><circle cx="160.0" cy="202.66666666666666" r="3" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>Growth value: 4</title></circle><circle cx="64.0" cy="160.0" r="3" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>Data value: 9</title></circle><text x="160.0" y="18.0" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">Platform</text><text x="302.0" y="160.0" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">Payments</text><text x="160.0" y="302.0" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">Growth</text><text x="18.0" y="160.00000000000003" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, 'SF Mono', Menlo, monospace">Data</text></svg><p class="dz-chart-summary">4 spokes · 1 series · peak 12</p></div></div>
-</div>
-
-```dsl
-cat_radar:
-  source: Box
-  display: radar
-  group_by: team
-  aggregate:
-    count: count(Box)
-  empty: "No boxes"
-```

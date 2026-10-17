@@ -1043,28 +1043,6 @@ class MetricsGrid:
 
 
 @dataclass(frozen=True, slots=True)
-class Radar:
-    """Polar/radar profile shape — value per named axis.
-
-    Each `axes` entry is `(axis_label, value)`. The shape is used to
-    visualise multi-dimensional comparisons where every dimension uses
-    the same scale (e.g. a skill-set radar, a feature-coverage radar).
-    """
-
-    label: str
-    axes: tuple[tuple[str, float], ...]
-
-    def __post_init__(self) -> None:
-        if not self.axes:
-            raise ValueError("Radar requires at least one axis")
-        if len(self.axes) < 3:
-            raise ValueError(
-                f"Radar requires at least 3 axes (got {len(self.axes)}); "
-                f"fewer collapses to a line and is not visually a radar"
-            )
-
-
-@dataclass(frozen=True, slots=True)
 class DateRangePicker:
     """Two-input from/to date range filter for list/queue regions.
 

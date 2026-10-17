@@ -271,7 +271,7 @@ def _build_diagram_data(display_mode: str, app_spec: Any) -> str:
 # need to adapt; agents updating example DSL after this ship is the
 # expected workflow.
 #
-# Three kinds still render dedicated Jinja templates: `radar`,
+# Two kinds still render dedicated Jinja templates:
 # `audit_history`, `tab_data`. Each lacks a fully-tested adapter
 # builder + IR-side data path; future ships graduate them.
 _TYPED_SHIM = "workspace/regions/_typed_primitive.html"
@@ -299,7 +299,6 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "COMPARISON": _TYPED_SHIM,  # #1470 ranked league
     "ACTIVITY_FEED": _TYPED_SHIM,
     "LIST": _TYPED_SHIM,
-    "RADAR": _TYPED_SHIM,  # Phase 4 region migration (v0.67.70)
     # AUDIT_HISTORY + TAB_DATA: no DSL consumer + no typed adapter; they
     # fall through to the default `_TYPED_SHIM` and render an empty
     # primitive body. Detail-page audit history is served separately by

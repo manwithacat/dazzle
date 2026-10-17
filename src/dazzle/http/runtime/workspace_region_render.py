@@ -16,7 +16,7 @@ Pipeline (post phases 1-5):
 
 Family layout (22 displays):
 
-- **chart** (5): BAR_CHART, LINE_CHART, RADAR, COMPARISON, INSIGHT_SUMMARY
+- **chart** (5): BAR_CHART, LINE_CHART, COMPARISON, INSIGHT_SUMMARY
 - **list** (7): LIST, KANBAN, QUEUE, TIMELINE, GRID, ACTIVITY_FEED,
   CONVERSATION
 - **card** (5): ENTITY_CARD (async), CONFIRM_ACTION_PANEL, METRICS,
@@ -159,7 +159,6 @@ _CHART_FAMILY: frozenset[str] = frozenset(
     {
         "BAR_CHART",
         "LINE_CHART",
-        "RADAR",
         "COMPARISON",
         "INSIGHT_SUMMARY",
     }
@@ -407,24 +406,6 @@ def _build_chart_adapter_ctx(
     elif display_upper == "INSIGHT_SUMMARY":
         adapter_ctx["insight_narrative"] = inputs.insight_narrative
         adapter_ctx["stored_insight"] = inputs.stored_insight
-    elif display_upper == "RADAR":
-        # Radar consumes (label, value) axis tuples — the bucketed
-        # metrics shape is one step richer than what the primitive
-        # wants, so we coerce here.
-        radar_axes: list[tuple[str, float]] = []
-        for entry in inputs.bucketed_metrics or []:
-            if not isinstance(entry, dict):
-                continue
-            label = str(entry.get("label", "") or "")
-            raw_val = entry.get("value", 0) or 0
-            try:
-                val = float(raw_val)
-            except (TypeError, ValueError):
-                val = 0.0
-            if label:
-                radar_axes.append((label, val))
-        adapter_ctx["axes"] = radar_axes
-        adapter_ctx["chart_label"] = ctx_region.title
 
     # Quiet the noqa: BucketRef is only used when display is KANBAN
     # (which is list family); keeping the import scoped to this

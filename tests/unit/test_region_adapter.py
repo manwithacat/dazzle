@@ -277,8 +277,6 @@ _RENDER_CASES = [
             ("kanban", {}, "No tasks yet."),
             # Bar chart: a bucket missing a usable key/value drops; pure garbage → empty.
             ("bar_chart", {"buckets": [None, 42, "string"]}, "No data."),
-            # Radar's __post_init__ raises on <3 axes; the adapter degrades instead.
-            ("radar", {"axes": [("A", 1), ("B", 2)]}, "Need 3+ axes."),
             # Uncoercible time-series points drop; pure garbage → empty.
             ("line_chart", {"points": [None, 42, "string"]}, "No points."),
         ]
@@ -946,25 +944,7 @@ _RENDER_CASES = [
         },
         counts={'hx-trigger="load"': 2, 'hx-trigger="intersect once"': 1},
     ),
-    # ── radar / line chart / diagram ──
-    _case(
-        "radar-render-smoke",
-        _r("radar"),
-        {"axes": [("Python", 9), ("Go", 7), ("Rust", 5), ("JavaScript", 6)]},
-        ("dz-radar", "Python", "Go", "Rust"),
-    ),
-    _case(
-        "radar-alt-dict-axis-shapes",
-        _r("radar"),
-        {
-            "axes": [
-                {"axis": "Xaxis", "value": 1},
-                {"label": "Yaxis", "value": 2},
-                {"axis": "Zaxis", "value": 3},
-            ]
-        },
-        ("Xaxis", "Yaxis", "Zaxis"),
-    ),
+    # ── line chart / diagram ──
     # v0.66.110: legacy region wrapper class is dz-line-chart-region.
     _case(
         "line-chart-render-smoke",

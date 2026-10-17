@@ -277,11 +277,3 @@ workspace ux_catalogue "UX Catalogue":
     aggregate:
       count: count(Box)
     empty: "No boxes"
-
-  cat_radar:
-    source: Box
-    display: radar
-    group_by: team
-    aggregate:
-      count: count(Box)
-    empty: "No boxes"

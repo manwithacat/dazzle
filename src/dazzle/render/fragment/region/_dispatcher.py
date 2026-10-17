@@ -96,7 +96,6 @@ class WorkspaceRegionAdapter(
         "comparison": "_build_comparison",  # #1470 ranked league
         "insight_summary": "_build_insight_summary",  # #1470 deterministic narrative
         "diagram": "_build_diagram",
-        "radar": "_build_radar",
         "queue": "_build_queue",
         "activity_feed": "_build_activity_feed",
         "conversation": "_build_conversation",  # bubble hyperpart stack

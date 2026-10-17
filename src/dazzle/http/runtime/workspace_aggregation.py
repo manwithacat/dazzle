@@ -937,7 +937,7 @@ async def _compute_bucketed_aggregates(
     # ---- Fast path: ALL aggregates against `source_entity` with no
     # current_bucket — fire them as one multi-measure GROUP BY query.
     # Originally bar-chart's count(source) case (#847–#851); generalised
-    # in v0.61.32 to support multiple measures so radar / line / area can
+    # in v0.61.32 to support multiple measures so line / area can
     # render multi-series profiles (#879, #883). The slow sentinel path
     # below stays for `count(OtherEntity where ... = current_bucket)`
     # expressions that need true per-bucket queries.

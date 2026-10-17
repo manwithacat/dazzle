@@ -105,18 +105,6 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "PivotTable",
     ),
     (
-        "contracts/radar.py",
-        "Radar",
-        "dazzle.render.fragment.ingest",
-        "Radar",
-    ),
-    (
-        "contracts/radar.py",
-        "RadarAxis",
-        "dazzle.render.fragment.ingest",
-        "RadarAxis",
-    ),
-    (
         "contracts/time_series.py",
         "TimeSeries",
         "dazzle.render.fragment.ingest",
@@ -665,6 +653,10 @@ DOM_ONLY_DEFERRED: list[tuple[str, str]] = [
     (
         "contracts/histogram.py",
         "Dazzle emitter retired — no consumer (ADR-0057 ship G); HM gallery only",
+    ),
+    (
+        "contracts/radar.py",
+        "Dazzle emitter retired — no consumer (ADR-0057 flense, 2026-10-17); HM gallery only",
     ),
     (
         "contracts/profile_card.py",

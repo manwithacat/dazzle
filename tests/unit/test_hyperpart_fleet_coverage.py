@@ -103,7 +103,7 @@ SIGNALS: dict[str, object] = {
     "histogram": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     "box-plot": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     # Dual-lock chart fleet (ops_dashboard regions)
-    "radar": r"display:\s*radar",
+    "radar": "exempt:display mode retired — no consumer (ADR-0057 flense, 2026-10-17); HM gallery only",
     "time-series": r"display:\s*line_chart",
     "progress-region": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",
     "profile-card": "exempt:display mode retired — no consumer (ADR-0057 ship G); HM gallery only",

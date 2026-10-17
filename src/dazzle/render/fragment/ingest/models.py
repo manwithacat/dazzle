@@ -529,26 +529,6 @@ class Pipeline(BaseModel):
     body_html: str = ""
 
 
-# ── Radar seam copy (contracts/radar.py) ─────────────────────────────
-
-
-class RadarAxis(BaseModel):
-    """One radar spoke."""
-
-    label: str
-    value: float = 0.0
-
-
-class Radar(BaseModel):
-    """Polar radar — dual-lock unit for radar."""
-
-    label: str = ""
-    axes: list[RadarAxis] = Field(default_factory=list)
-    svg_html: str = ""
-    peak_display: str = ""
-    empty_message: str = "No data available."
-
-
 # ── Time-series seam copy (contracts/time_series.py) ─────────────────
 
 

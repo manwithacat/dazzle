@@ -66,7 +66,6 @@ from dazzle.render.fragment.primitives.data import (
     PivotTable,
     PivotTableRegion,
     QueueRegion,
-    Radar,
     RelatedGroup,
     SearchBox,
     Sequence,
@@ -174,7 +173,6 @@ Fragment = (
     | PivotTable
     | Diagram
     | TimeSeries
-    | Radar
     | MetricTile
     | MetricsGrid
     | DetailGrid

@@ -49,7 +49,6 @@ _SUPPORTING_DISPLAYS = frozenset(
         "metrics",
         "bar_chart",
         "line_chart",
-        "radar",
         "pivot_table",
         "comparison",
         "insight_summary",

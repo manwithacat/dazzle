@@ -34,7 +34,6 @@ Before you write DSL, pick the cardinality × visualisation:
 | Pivot table | `pivot_table` | 1..N | Alerts by (system, severity) with counts |
 | Kanban | `kanban` | 1 | Tickets by status as columns |
 | Line chart | `line_chart` | 1 (time) | Alerts per day |
-| Radar | `radar` | 1 (≥3 values) | Profile shape across categories |
 | Comparison | `comparison` | 1 | Ranked league with outlier flags |
 
 Each consumes a different IR shape. `bar_chart` reads `group_by: <field>`. `pivot_table` reads `group_by: [<field>, <field>]`. `line_chart` reads `group_by: bucket(<ts>, <unit>)`. `metrics` reads only `aggregate:`.

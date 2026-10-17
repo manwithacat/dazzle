@@ -54,7 +54,6 @@ _CHROME_DISPLAYS: frozenset[str] = frozenset(
         "diagram",
         "tabbed_list",
         "insight_summary",
-        "radar",
         "pipeline_steps",
         "confirm_action_panel",
     }

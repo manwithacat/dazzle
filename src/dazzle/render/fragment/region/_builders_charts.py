@@ -3,7 +3,6 @@
 Houses the chart builders that share the `_parse_reference_lines` /
 `_parse_reference_bands` helpers and the same Surface-wrapping pattern:
 
-  - _build_radar           radar polar profile (≥3 axes)
   - _build_line_chart      time-series line (single or overlaid series)
   - _build_diagram         Mermaid ER diagram (with structural fallback)
   - _build_comparison      ranked league (bar-track rows + outlier flags)
@@ -26,7 +25,6 @@ from html import escape as _html_escape
 from typing import Any, Literal
 
 from dazzle.render.filters import (
-    clerk_chart_axis_label,
     clerk_stage_label,
 )
 from dazzle.render.fragment import (
@@ -35,7 +33,6 @@ from dazzle.render.fragment import (
     Diagram,
     EmptyState,
     Fragment,
-    Radar,
     RawHTML,
     ReferenceBand,
     ReferenceLine,
@@ -234,49 +231,6 @@ class _BuildersChartsMixin:
     family mixins (cards/tables/timeline/metrics/misc) follow the same
     pattern across subsequent PRs against #1065.
     """
-
-    def _build_radar(self, region: Any, ctx: RegionContext) -> Surface:
-        """`display: radar` regions render as a Radar polar profile.
-
-        ctx shape:
-            axes: list of (label, value) tuples or {axis, value} dicts
-            chart_label: optional override
-        """
-        title = _region_title(region)
-        chart_label = str(ctx.get("chart_label") or title or "Radar")
-        raw_axes = ctx.get("axes") or []
-        axes: list[tuple[str, float]] = []
-        for entry in raw_axes:
-            if isinstance(entry, (list, tuple)) and len(entry) >= 2:
-                try:
-                    raw_label = entry[0]
-                    shown = clerk_chart_axis_label(raw_label) or str(raw_label)
-                    axes.append((shown, float(entry[1])))
-                except (TypeError, ValueError):
-                    continue
-            elif isinstance(entry, dict):
-                raw_label = entry.get("axis") or entry.get("label") or ""
-                shown = clerk_chart_axis_label(raw_label) or str(raw_label)
-                try:
-                    val = float(entry.get("value") or 0)
-                except (TypeError, ValueError):
-                    val = 0.0
-                if shown:
-                    axes.append((shown, val))
-
-        body: Fragment
-        # Radar primitive requires ≥3 axes; fewer collapses to a line.
-        # Adapter degrades to EmptyState rather than crashing.
-        if len(axes) < 3:
-            body = EmptyState(
-                title=_chart_empty_title(region, ctx),
-                description=getattr(region, "empty_message", None)
-                or "Radar requires at least 3 axes.",
-            )
-        else:
-            body = Radar(label=chart_label, axes=tuple(axes))
-
-        return _wrap_surface(title, "report", body)
 
     def _build_line_chart(self, region: Any, ctx: RegionContext) -> Surface:
         """Render a TimeSeries primitive as a line chart.

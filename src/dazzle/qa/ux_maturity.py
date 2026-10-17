@@ -161,7 +161,7 @@ def _probe_1c() -> ProbeResult:
         is None
     )
     _, kinds = _display_kinds()
-    have = kinds & {"comparison", "radar"}
+    have = kinds & {"comparison"}
     ok = unset_is_kpi and scalar_unset_is_kpi and bool(have)
     return ProbeResult(
         ok,

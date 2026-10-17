@@ -88,7 +88,6 @@ from dazzle.render.fragment.primitives import (
     PivotTableRegion,
     Popover,
     QueueRegion,
-    Radar,
     RefPicker,
     Region,
     RelatedGroup,
@@ -293,8 +292,6 @@ class FragmentRenderer(
                 return self._emit_diagram(fragment, ctx)
             case TimeSeries():
                 return self._emit_time_series(fragment, ctx)
-            case Radar():
-                return self._emit_radar(fragment, ctx)
             case PipelineSteps():
                 return self._emit_pipeline_steps(fragment, ctx)
             case MetricTile():

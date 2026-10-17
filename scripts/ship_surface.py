@@ -228,8 +228,6 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_bar_chart_level_acronym.py",
     # cycle 2321: kanban / badge / FilterBar region tokens must not dump Emea (oral #187)
     "tests/unit/test_region_acronym_dump.py",
-    # cycle 2322: radar axes must not dump api/critical (oral #188)
-    "tests/unit/test_chart_axis_dump.py",
     # cycle 2324: temporal workspace as-of snapshot must not be silent (oral #190)
     "tests/unit/test_as_of_snapshot_chrome.py",
     # cycle 2325: shell breadcrumbs must not dump Issuereport (oral #191)

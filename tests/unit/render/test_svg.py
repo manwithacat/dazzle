@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from dazzle.render.svg import radar_svg, time_series_svg
+from dazzle.render.svg import time_series_svg
 
 
 @dataclass
@@ -38,8 +38,6 @@ _TWO_SERIES = (("high", (("W1", 2.0),)), ("low", (("W1", 1.0),)))
     "build",
     [
         pytest.param(lambda: time_series_svg("x", ()), id="time-series-empty-points"),
-        # Radar with <3 axes is degenerate (legacy falls back to a list).
-        pytest.param(lambda: radar_svg("x", (("a", 1.0), ("b", 2.0))), id="radar-under-three-axes"),
     ],
 )
 def test_degenerate_input_renders_nothing(build: Callable[[], str]) -> None:
@@ -150,29 +148,6 @@ def test_degenerate_input_renders_nothing(build: Callable[[], str]) -> None:
             (">W1<", ">W2<", ">W3<"),
             {},
             id="multi-series-x-axis-is-ordered-union",
-        ),
-        # 4 grid rings + 1 data polygon; tooltips follow the legacy macro
-        # `{{ label }} {{ series_name }}: {{ value | metric_number }}`.
-        pytest.param(
-            lambda: radar_svg(
-                "Skills", (("Python", 9.0), ("Go", 7.0), ("Rust", 5.0), ("JavaScript", 6.0))
-            ),
-            ('viewBox="0 0 320 320"', ">Python<", ">Go<", "<title>Python value: 9</title>"),
-            {"<polygon ": 5, "<line ": 4, "<circle ": 4},
-            id="radar-grid-rings-spokes-and-data-polygon",
-        ),
-        pytest.param(
-            lambda: radar_svg("x", (("a", 3.0), ("b", 5.0), ("c", 1.0))),
-            ('aria-label="x radar — 3 spokes, peak 5"',),
-            {},
-            id="radar-aria-label-count-and-peak",
-        ),
-        # Spoke 0 at 12 o'clock: cx=160, cy=160-128=32 on the 100% ring.
-        pytest.param(
-            lambda: radar_svg("x", (("top", 1.0), ("right", 1.0), ("bottom", 1.0), ("left", 1.0))),
-            ("160.0,32.0",),
-            {},
-            id="radar-first-spoke-at-top",
         ),
     ],
 )
