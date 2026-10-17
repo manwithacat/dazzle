@@ -382,13 +382,13 @@ class TestSurfaceContextPrefix:
 
 pytest.importorskip("fastapi")
 
+from dazzle.http.runtime.handlers.write_handlers import _hub_origin  # noqa: E402
 from dazzle.http.runtime.htmx_render import _with_htmx_triggers  # noqa: E402
 from dazzle.http.runtime.route_generator import (  # noqa: E402
     HandlerConfig,
     RouteSpec,
     _extract_result_id,
     _htmx_current_url,
-    _htmx_parent_url,
     create_create_handler,
 )
 
@@ -550,26 +550,27 @@ class TestHtmxCurrentUrl:
         assert _htmx_current_url(request) is None
 
 
-class TestHtmxParentUrl:
-    """Test _htmx_parent_url helper for post-delete redirect."""
+class TestHubOrigin:
+    """#1790: ``_hub_origin`` recognises a record hub ``/app/{slug}/{id}`` only.
 
-    def test_strips_trailing_id_segment(self) -> None:
-        request = MagicMock()
-        request.headers = {
-            "HX-Request": "true",
-            "hx-current-url": "http://localhost:3000/tasks/abc-123",
-        }
-        assert _htmx_parent_url(request) == "/tasks"
+    Replaced the blind ``_htmx_parent_url`` (parent of HX-Current-URL),
+    which sent a delete from a list page ``/app/invoice`` to ``/app``.
+    """
 
-    def test_returns_root_for_single_segment(self) -> None:
-        request = MagicMock()
-        request.headers = {"HX-Request": "true", "hx-current-url": "http://localhost:3000/tasks"}
-        assert _htmx_parent_url(request) == "/"
-
-    def test_returns_none_for_non_htmx(self) -> None:
-        request = MagicMock()
-        request.headers = {}
-        assert _htmx_parent_url(request) is None
+    @pytest.mark.parametrize(
+        ("url", "expected"),
+        [
+            ("http://localhost:3000/app/invoice/abc-123", ("invoice", "abc-123")),
+            ("/app/invoice/abc-123/", ("invoice", "abc-123")),
+            ("http://localhost:3000/app/invoice", None),
+            ("http://localhost:3000/app/workspaces/my_invoices", None),
+            ("http://localhost:3000/app/Invoice/abc", None),
+            ("http://localhost:3000/tasks/abc-123", None),
+            (None, None),
+        ],
+    )
+    def test_hub_origin(self, url: str | None, expected: tuple[str, str] | None) -> None:
+        assert _hub_origin(url) == expected
 
 
 # ===================================================================

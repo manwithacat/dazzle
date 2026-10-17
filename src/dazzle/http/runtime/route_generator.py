@@ -6,7 +6,7 @@ section rather than scanning the file):
   L 150  Contracts          HandlerConfig, RouteSpec (shared CRUD bundle)
   L 255  Request utils      _set_handler_annotations, _is_htmx_request,
                              _wants_html, _forbidden_detail,
-                             _htmx_current_url, _htmx_parent_url
+                             _htmx_current_url
   L 300  Access helpers     _normalize_role (shared by audit_wrap,
                              scope_filters, workspace builders, list path)
   L 315  Result utils       _extract_result_id (shared by audit_wrap +
@@ -175,7 +175,6 @@ from dazzle.http.runtime.route_support import (  # noqa: E402, F401  (re-exporte
     _extract_result_id,
     _forbidden_detail,
     _htmx_current_url,
-    _htmx_parent_url,
     _is_htmx_request,
     _normalize_role,
     _set_handler_annotations,
@@ -648,7 +647,8 @@ class RouteGenerator:
                     service=service,
                     include_field_changes=_include_fc,
                     soft_delete=self.entity_soft_delete.get(entity_name or "", False),
-                )
+                ),
+                entity_slug=_entity_slug,
             )
             self._add_route(endpoint, handler, response_model=None)
 

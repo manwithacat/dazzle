@@ -41,7 +41,6 @@ __all__ = [
     "_extract_result_id",
     "_forbidden_detail",
     "_htmx_current_url",
-    "_htmx_parent_url",
     "_is_htmx_request",
     "_normalize_role",
     "_set_handler_annotations",
@@ -152,18 +151,6 @@ def _wants_html(request: Any) -> bool:
 def _htmx_current_url(request: Any) -> str | None:
     """Return the HX-Current-URL header if this is an HTMX request, else None."""
     return request.headers.get("hx-current-url") if _is_htmx_request(request) else None
-
-
-def _htmx_parent_url(request: Any) -> str | None:
-    """Return the parent of HX-Current-URL (e.g. /tasks/abc → /tasks) for post-delete redirect."""
-    url = _htmx_current_url(request)
-    if not url:
-        return None
-    from urllib.parse import urlparse
-
-    parsed = urlparse(url)
-    parent = parsed.path.rsplit("/", 1)[0] or "/"
-    return parent
 
 
 def _normalize_role(role: str) -> str:

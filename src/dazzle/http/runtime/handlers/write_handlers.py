@@ -14,7 +14,7 @@ A leaf module by design: it must not import ``route_generator`` at module
 level (``route_generator`` imports these names back at module level so the
 ``route_generator.<name>`` call sites, importers, and patch points keep
 resolving there). The shared route-dispatch surface it needs (``RouteSpec``,
-``_extract_result_id``, ``_htmx_current_url``, ``_htmx_parent_url``,
+``_extract_result_id``, ``_htmx_current_url``, ``_is_htmx_request``,
 ``_set_handler_annotations``) comes from the ``route_support`` leaf at top
 level — extracted there in the 2026-06-20 smells round to break the import
 cycle that previously forced lazy in-function imports.
@@ -30,11 +30,12 @@ from urllib.parse import urlparse
 from uuid import UUID
 
 from fastapi import HTTPException, Request
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from dazzle.http.runtime.audit_wrap import _wrap_with_auth
 from dazzle.http.runtime.document_routes import verify_file_triple
-from dazzle.http.runtime.htmx import is_peek_request
+from dazzle.http.runtime.htmx import htmx_trigger_headers, is_peek_request
 from dazzle.http.runtime.htmx_render import _with_htmx_triggers
 from dazzle.http.runtime.http_errors import require_found
 from dazzle.http.runtime.next_record import leftover_honest_origin, resolve_after_next_url
@@ -48,7 +49,7 @@ from dazzle.http.runtime.route_support import (
     RouteSpec,
     _extract_result_id,
     _htmx_current_url,
-    _htmx_parent_url,
+    _is_htmx_request,
     _set_handler_annotations,
 )
 from dazzle.http.runtime.scope_filters import _enforce_create_scope, _enforce_update_scope
@@ -63,21 +64,30 @@ def _create_detail_url(entity_slug: str, result: Any) -> str | None:
     return None
 
 
-def _nested_on_other_hub(current_url: str | None, entity_slug: str) -> bool:
-    """True when create ran from another entity's hub (stay put).
+def _hub_origin(current_url: str | None) -> tuple[str, str] | None:
+    """``(slug, id)`` when ``current_url`` is a record hub ``/app/{slug}/{id}``.
 
-    ``/app/workspaces/{name}`` is a job desk, not a hub — land on the new
-    record. Leftover path tokens are not a hub either.
+    ``/app/workspaces/{name}`` is a job desk, not a hub. Leftover path
+    tokens are not a hub either. Anything else (list page, workspace, no
+    URL) is ``None``.
     """
-    if not current_url or not entity_slug:
-        return False
+    if not current_url:
+        return None
     parts = [p for p in urlparse(current_url).path.rstrip("/").split("/") if p]
     if len(parts) != 3 or parts[0] != "app":
-        return False
+        return None
     slug = leftover_honest_origin(parts[1])
     if not slug or slug == "workspaces":
+        return None
+    return slug, parts[2]
+
+
+def _nested_on_other_hub(current_url: str | None, entity_slug: str) -> bool:
+    """True when create ran from another entity's hub (stay put)."""
+    if not entity_slug:
         return False
-    return slug != entity_slug
+    origin = _hub_origin(current_url)
+    return origin is not None and origin[0] != entity_slug
 
 
 def _create_settle_urls(
@@ -88,6 +98,22 @@ def _create_settle_urls(
     if is_peek_request(request) or _nested_on_other_hub(_htmx_current_url(request), entity_slug):
         return None, detail
     return detail, detail
+
+
+def _delete_settle_url(request: Any, entity_slug: str) -> str | None:
+    """#1790: delete stays where it was issued, unless from the record's own page.
+
+    From this entity's detail page (``/app/{slug}/{id}``) there is nothing
+    left to show, so land on the list surface. Everywhere else (list page,
+    workspace, another entity's hub, no ``HX-Current-URL``) the row's own
+    swap removes it in place — no navigation.
+    """
+    if not entity_slug:
+        return None
+    origin = _hub_origin(_htmx_current_url(request))
+    if origin is not None and origin[0] == entity_slug:
+        return f"/app/{entity_slug}"
+    return None
 
 
 async def _parse_request_body(request: Any) -> dict[str, Any]:
@@ -667,10 +693,15 @@ def create_update_handler(
     )
 
 
-def create_delete_handler(spec: "RouteSpec") -> Callable[..., Any]:
+def create_delete_handler(spec: "RouteSpec", *, entity_slug: str = "") -> Callable[..., Any]:
     """Create a handler for delete operations with optional Cedar-style access control.
 
     See :class:`RouteSpec` for the per-route contract (#1011).
+
+    Args:
+        entity_slug: URL slug of this entity. A delete issued from the
+            record's own detail page (``/app/{slug}/{id}``) redirects to
+            ``/app/{slug}``; anywhere else it stays put (#1790).
     """
 
     service = spec.service
@@ -711,13 +742,15 @@ def create_delete_handler(spec: "RouteSpec") -> Callable[..., Any]:
             raise HTTPException(status_code=409, detail=str(exc))
         if not result:
             raise HTTPException(status_code=404, detail="Not found")
-        return _with_htmx_triggers(
-            request,
-            {"deleted": True},
-            entity_name,
-            "deleted",
-            redirect_url=_htmx_parent_url(request),
-        )
+        if not _is_htmx_request(request):
+            return {"deleted": True}
+        # #1790: 200 + empty HTML so the row's ``outerHTML`` swap removes it
+        # (204 is in htmx 4's ``noSwap``; a JSON body would land in the <tr>).
+        headers = htmx_trigger_headers(entity_name, "deleted")
+        redirect_url = _delete_settle_url(request, entity_slug)
+        if redirect_url:
+            headers["HX-Redirect"] = redirect_url
+        return HTMLResponse(content="", status_code=200, headers=headers)
 
     return _wrap_with_auth(
         _core,

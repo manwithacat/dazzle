@@ -69,6 +69,11 @@ Interaction modes for surfaces. Each mode renders a different UI:
 - review: Read-only view optimized for approval/review workflows.
 - custom: Free-form surface for dashboard panels or specialized views.
 
+Post-mutation landing is decided by where the request came from (HX-Current-URL):
+- create lands on the new record's detail page, unless it ran in a peek drawer or nested on another entity's hub, where it stays (#1667).
+- a state transition or edit reloads the page it was issued from, unless the workspace region declares after: next, which lands on the next matching record (#1664).
+- delete stays where it was issued: on a list page or workspace the row is removed in place and a toast confirms it. Only a delete from the record's own detail page (/app/<entity>/<id>) leaves, landing on the list surface /app/<entity> (#1790).
+
 ### Syntax
 
 ```dsl
