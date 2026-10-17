@@ -794,6 +794,7 @@ class _SurfaceState:
     open_via: str | None = None
     open_via_targets: list[ir.OpenViaTarget] = field(default_factory=list)
     page_size: int | None = None  # #1792
+    row_transitions: ir.RowTransitions | None = None  # #1813
 
 
 # ---------- Token-keyed keyword parsers ---------- #
@@ -846,6 +847,21 @@ def _kw_peek(parser: Any, state: _SurfaceState) -> None:
     parser.advance()  # consume `peek`
     parser.expect(TokenType.COLON)
     state.peek = parser.enum_from_token(ir.PeekMode, parser.expect_identifier_or_keyword())
+    parser.skip_newlines()
+
+
+def _kw_row_transitions(parser: Any, state: _SurfaceState) -> None:
+    """``row_transitions: all|none`` — state transitions on list rows (#1813).
+
+    ``none`` keeps a record's transitions on its detail page only. An unknown
+    value is a parse error via ``enum_from_token``; ``mode: list`` is enforced
+    by the validator.
+    """
+    parser.advance()  # consume `row_transitions`
+    parser.expect(TokenType.COLON)
+    state.row_transitions = parser.enum_from_token(
+        ir.RowTransitions, parser.expect_identifier_or_keyword()
+    )
     parser.skip_newlines()
 
 
@@ -1067,6 +1083,7 @@ _SURFACE_IDENT_KEYWORDS: dict[str, KeywordParser[_SurfaceState]] = {
     "peek": _kw_peek,  # #1494 (2c) — action-proximate detail mode
     "open": _kw_open,  # #1603 — list row open via FK hop
     "page_size": kw_page_size,  # #1792 — rows per page
+    "row_transitions": _kw_row_transitions,  # #1813 — SM transitions on list rows
 }
 
 
@@ -1135,6 +1152,7 @@ def _build_surface(
         open_entity=state.open_entity,
         open_via_targets=list(state.open_via_targets),
         page_size=state.page_size,  # #1792
+        row_transitions=state.row_transitions,  # #1813
     )
 
 

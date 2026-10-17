@@ -533,6 +533,8 @@ class RouteGenerator:
                 search_fields=_search_fields,
                 filter_fields=_filter_fields,
                 htmx_bulk_actions=bool(_htmx.get("bulk_actions")),
+                htmx_row_transitions=bool(_htmx.get("row_transitions", True)),
+                htmx_row_transitions_by_table_id=_htmx.get("row_transitions_by_table_id"),
                 htmx_inline_editable=list(_htmx.get("inline_editable") or []),
                 ref_targets=self.entity_ref_targets.get(entity_name or ""),
                 fk_graph=self.fk_graph,

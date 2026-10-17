@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 from .. import ir
 from ..errors import make_parse_error
 from ..ir.domain import AUTH_IDENTITY_SOURCES
+from ..ir.state_machine import generic_transition_confirm, transition_action_label
 from ..lexer import TokenType
 from .dispatch import KeywordParser, parse_block_with_dispatch
 from .fitness import parse_fitness_block
@@ -2147,6 +2148,8 @@ class EntityParserMixin:
 
         Syntax (inline):
             open -> assigned: requires assignee
+            draft -> sent "Send for signature" confirm "Email the signatory now?"
+            sent -> withdrawn "Withdraw" confirm: role(admin)   # bare confirm (#1813)
             published -> canonical requires summary  # colon-free form
             resolved -> closed: auto after 7 days OR manual
             * -> open: role(admin)
@@ -2169,6 +2172,25 @@ class EntityParserMixin:
 
         # Parse to_state
         to_state = self.expect_identifier_or_keyword().value
+
+        # #1813: optional control label and confirm —
+        #   draft -> sent "Send for signature" confirm "Email the signatory now?"
+        #   draft -> sent confirm                  # generic question from the label
+        label: str | None = None
+        confirm: str | None = None
+        if self.match(TokenType.STRING):
+            tok = self.advance()
+            label = tok.value
+            if not label.strip():
+                raise make_parse_error(
+                    "a transition label cannot be empty", self.file, tok.line, tok.column
+                )
+        if self.match(TokenType.CONFIRM):
+            self.advance()
+            if self.match(TokenType.STRING):
+                confirm = self.advance().value
+            else:
+                confirm = generic_transition_confirm(label or transition_action_label(to_state))
 
         # Optional colon and guards/modifiers
         trigger = ir.TransitionTrigger.MANUAL
@@ -2199,6 +2221,8 @@ class EntityParserMixin:
             trigger=trigger,
             guards=guards,
             auto_spec=auto_spec,
+            label=label,
+            confirm=confirm,
         )
 
     def _at_session_second_factor(self) -> bool:

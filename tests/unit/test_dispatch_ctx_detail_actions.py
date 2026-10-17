@@ -97,7 +97,7 @@ def test_dispatch_ctx_threads_edit_delete_back_urls() -> None:
 
 
 def test_dispatch_ctx_threads_transitions_with_full_shape() -> None:
-    """Each transition serialises to {to_state, label, api_url} so the
+    """Each transition serialises to {to_state, label, api_url, confirm} so the
     adapter can compose Buttons without re-reading model attrs."""
     ctx = _build_dispatch_ctx(_RC(_detail_with_all_actions()), _Surface())
     transitions = ctx["transitions"]
@@ -106,6 +106,7 @@ def test_dispatch_ctx_threads_transitions_with_full_shape() -> None:
         "to_state": "in_progress",
         "label": "Mark in progress",
         "api_url": "/_dazzle/tasks/abc/transitions/in_progress",
+        "confirm": "",
     }
 
 

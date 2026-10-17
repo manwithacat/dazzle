@@ -1173,6 +1173,7 @@
         'related_groups': list([
         ]),
         'render': None,
+        'row_transitions': None,
         'search_fields': list([
         ]),
         'sections': list([
@@ -1246,6 +1247,7 @@
         'related_groups': list([
         ]),
         'render': None,
+        'row_transitions': None,
         'search_fields': list([
         ]),
         'sections': list([
@@ -1331,6 +1333,7 @@
         'related_groups': list([
         ]),
         'render': None,
+        'row_transitions': None,
         'search_fields': list([
         ]),
         'sections': list([
@@ -1404,6 +1407,7 @@
         'related_groups': list([
         ]),
         'render': None,
+        'row_transitions': None,
         'search_fields': list([
         ]),
         'sections': list([
@@ -1498,6 +1502,7 @@
         'related_groups': list([
         ]),
         'render': None,
+        'row_transitions': None,
         'search_fields': list([
         ]),
         'sections': list([
@@ -1628,6 +1633,7 @@
         'related_groups': list([
         ]),
         'render': None,
+        'row_transitions': None,
         'search_fields': list([
         ]),
         'sections': list([

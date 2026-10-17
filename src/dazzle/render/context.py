@@ -279,6 +279,7 @@ class TransitionContext(BaseModel):
     label: str
     api_url: str = ""
     from_state: str = ""  # #1558 3c: source state for current-state gating ("*" = any)
+    confirm: str = ""  # #1813: hx-confirm question; "" = fires on click
 
 
 class RelatedTabContext(BaseModel):

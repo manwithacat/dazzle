@@ -43,6 +43,24 @@ def state_name(state: object) -> str:
     return state if isinstance(state, str) else getattr(state, "name", str(state))
 
 
+def transition_action_label(to_state: str) -> str:
+    """The default label of a transition control: an *action*, not the live status.
+
+    Bare state titles (``Active``) read as current status next to status
+    chips on detail headers and list rows — agent acceptance panels flag
+    this as a pilot blocker (fieldtest_hub cycle 1286). Prefix with
+    ``Set to`` so the affordance is clearly a change intent. An authored
+    transition label (``draft -> sent "Send for signature"``, #1813) replaces it.
+    """
+    title = str(to_state).replace("_", " ").title()
+    return f"Set to {title}"
+
+
+def generic_transition_confirm(label: str) -> str:
+    """The question a bare ``confirm`` on a transition asks (#1813)."""
+    return f"{label} — are you sure?"
+
+
 class TimeUnit(StrEnum):
     """Time units for auto-transition delays."""
 
@@ -227,6 +245,10 @@ class StateTransition(WildcardTransition, BaseModel):
         guards: Conditions that must be met for the transition
         auto_spec: Specification for automatic transitions
         effects: post-commit side-effects (create/update) fired on the transition
+        label: authored control label (#1813); ``None`` = ``Set to <State>``
+        confirm: question asked before the transition fires (#1813); ``None`` =
+            no confirm. A bare ``confirm`` is resolved by the parser to a generic
+            question built from the label.
     """
 
     from_state: str
@@ -235,6 +257,8 @@ class StateTransition(WildcardTransition, BaseModel):
     guards: list[TransitionGuard] = Field(default_factory=list)
     auto_spec: AutoTransitionSpec | None = None
     effects: list[StepEffect] = Field(default_factory=list)
+    label: str | None = None
+    confirm: str | None = None
 
     model_config = ConfigDict(frozen=True)
 

@@ -65,7 +65,7 @@ from dazzle.render.breadcrumbs import clerk_list_empty_kind
 from dazzle.render.context import TransitionContext
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
 from dazzle.render.fragment.renderer._data_row import render_data_table_rows
-from dazzle.render.fragment.state_affordance import transition_action_label
+from dazzle.render.fragment.state_affordance import transition_affordances
 
 if TYPE_CHECKING:
     from dazzle.core.ir.fk_graph import FKGraph
@@ -268,26 +268,13 @@ def list_state_transitions(
     """#1558 3c: ``(state_transitions, status_field, transition_endpoint)`` for a
     list of a state-machine entity — preserving ``from_state`` so each row can be
     gated to its current state. Empty triple when the entity has no state machine.
-    Endpoint mirrors the queue's ``/{plural}`` REST convention."""
+    Endpoint mirrors the queue's ``/{plural}`` REST convention. Labels and
+    confirms come from the one builder, :func:`transition_affordances` (#1813)."""
     sm = getattr(entity_spec, "state_machine", None) if entity_spec is not None else None
     if not sm:
         return (), "", ""
     endpoint = f"/{to_api_plural(entity_name)}"
-    seen: set[tuple[str, str]] = set()
-    out: list[TransitionContext] = []
-    for t in sm.transitions:
-        key = (t.from_state, t.to_state)
-        if key not in seen:
-            seen.add(key)
-            out.append(
-                TransitionContext(
-                    from_state=t.from_state,
-                    to_state=t.to_state,
-                    label=transition_action_label(t.to_state),
-                    api_url=f"{endpoint}/{{id}}",
-                )
-            )
-    return tuple(out), sm.status_field, endpoint
+    return transition_affordances(sm, f"{endpoint}/{{id}}"), sm.status_field, endpoint
 
 
 def create_list_handler(
@@ -309,6 +296,8 @@ def create_list_handler(
     htmx_empty_message: str = "No items found.",
     htmx_create_url: str | None = None,
     htmx_bulk_actions: bool = False,
+    htmx_row_transitions: bool = True,
+    htmx_row_transitions_by_table_id: dict[str, bool] | None = None,
     htmx_inline_editable: list[str] | None = None,
     search_fields: list[str] | None = None,
     filter_fields: list[str] | None = None,
@@ -391,6 +380,10 @@ def create_list_handler(
         # (Never threaded before — API-hydrated rows NEVER had checkboxes, one
         # of the four legs of the dead-bulk-feature chain.)
         request.state.htmx_bulk_actions = htmx_bulk_actions
+        # #1813: `row_transitions: none` on the list surface in view drops the
+        # state-transition controls from its rows (per table_id, like peek).
+        request.state.htmx_row_transitions = htmx_row_transitions
+        request.state.htmx_row_transitions_by_table_id = htmx_row_transitions_by_table_id or {}
         # C2.3: the editable column set — hydrated cells render their
         # dz-grid-edit seams from it (also never threaded before: rows lost
         # the edit affordance when ADR-0049 moved row rendering to /api).
@@ -886,7 +879,12 @@ async def _list_handler_body(
             # DELETE (built-in bulk delete) is allowed. Compile-time
             # htmx_bulk_actions alone re-painted boxes for denied personas
             # after HTMX hydrate while the shell had suppressed the bar.
-            if not _can_update:
+            # #1813: the list surface in view may keep transitions off its rows
+            # (`row_transitions: none`); unresolvable table → the entity default.
+            _row_transitions = (
+                getattr(request.state, "htmx_row_transitions_by_table_id", None) or {}
+            ).get(table_id, getattr(request.state, "htmx_row_transitions", True))
+            if not _can_update or not _row_transitions:
                 _st_transitions = ()
             # #1787 C: per row, the transitions the SM's role/expression guards
             # would refuse this principal — never offered (the PUT still decides).

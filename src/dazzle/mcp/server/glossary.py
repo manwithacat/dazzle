@@ -304,12 +304,19 @@ transitions:
   from_state -> to_state: requires field_name
   from_state -> to_state: role(role_name)
   * -> to_state: role(admin)  # wildcard: from any state
+  from_state -> to_state "Send for signature" confirm "Email the signatory now?"
 ```
 
 **Guards:**
 - `requires field_name` - Field must be non-null before transition
 - `role(name)` - User must have the specified role
 - No guard - Transition always allowed
+
+**Control label and confirm (#1813):** a quoted string after the target state
+labels the transition's button everywhere it renders (list rows, detail, queue)
+in place of `Set to <State>`; `confirm "question"` asks before it fires (bare
+`confirm` asks a generic question built from the label). A list surface with
+`row_transitions: none` offers no transitions on its rows (detail only).
 
 **Example:**
 ```dsl

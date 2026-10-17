@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 277 BaseModels, 104 Enums, 22 other (functions / typealiases / constants)
+# Counts: 277 BaseModels, 105 Enums, 22 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -1978,8 +1978,10 @@ ir_class: StateTransition
     - to_state: str
   optional:
     - auto_spec: AutoTransitionSpec | None = None
+    - confirm: str | None = None
     - effects: list[StepEffect] = []
     - guards: list[TransitionGuard] = []
+    - label: str | None = None
     - trigger: TransitionTrigger = <TransitionTrigger.MANUAL: 'manual'>
 
 ir_class: StatusListEntrySpec
@@ -2173,6 +2175,7 @@ ir_class: SurfaceSpec
     - refresh_interval: int | None = None
     - related_groups: list[RelatedGroup] = []
     - render: str | None = None
+    - row_transitions: RowTransitions | None = None
     - search_fields: list[str] = []
     - sections: list[SurfaceSection] = []
     - show_history: bool = False
@@ -3178,6 +3181,11 @@ enum: RetryBackoff
   members:
     - EXPONENTIAL = 'exponential'
     - LINEAR = 'linear'
+
+enum: RowTransitions
+  members:
+    - ALL = 'all'
+    - NONE = 'none'
 
 enum: SectionKind
   members:

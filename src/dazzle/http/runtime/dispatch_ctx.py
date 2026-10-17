@@ -334,6 +334,7 @@ def _detail_actions_from_context(detail: Any) -> dict[str, Any]:
             "to_state": getattr(t, "to_state", "") or "",
             "label": getattr(t, "label", "") or "",
             "api_url": getattr(t, "api_url", "") or "",
+            "confirm": getattr(t, "confirm", "") or "",  # #1813
         }
         for t in (getattr(detail, "transitions", []) or [])
     ]

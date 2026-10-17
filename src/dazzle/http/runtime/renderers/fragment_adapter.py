@@ -45,6 +45,7 @@ from dazzle.render.fragment import (
     Fragment,
     FragmentRenderer,
     Heading,
+    HxTrigger,
     Link,
     ListFilterBar,
     RawHTML,
@@ -725,6 +726,10 @@ class FragmentSurfaceAdapter:
                     hx_target=TargetSelector("body"),
                     hx_swap="innerHTML",
                     hx_vals=json.dumps(vals),
+                    # #1813: an authored confirm gates the click; the button
+                    # owns its explicit click trigger (INV-10, #1802).
+                    hx_trigger=HxTrigger("click"),
+                    hx_confirm=str(t.get("confirm") or "") or None,
                     data_action=f"{entity_name}.transition.{to_state}",
                 )
             )

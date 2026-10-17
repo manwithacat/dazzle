@@ -35,7 +35,7 @@ from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_catalog_id,
     leftover_honest_catalog_option_values,
 )
-from dazzle.render.fragment.state_affordance import transition_action_label
+from dazzle.render.fragment.state_affordance import transition_affordances
 
 
 def _coerce_float(value: Any) -> float | None:
@@ -304,6 +304,9 @@ def compute_queue(
 ) -> tuple[list[dict[str, str]], str, str]:
     """Build (transitions, status_field, api_endpoint) for a QUEUE region.
 
+    Each transition dict is ``{to_state, label, confirm}`` (#1813: the authored
+    label / confirm, else ``Set to <State>`` / ``""``).
+
     Reads the entity's state-machine transitions and emits one
     transition dict per distinct ``to_state`` (first-occurrence wins
     on the order they appear in the IR — preserves the curated order
@@ -327,17 +330,12 @@ def compute_queue(
             if _transition_needs_inspect(t):
                 inspect_blocked.add(dest)
         seen: set[str] = set()
-        for t in sm.transitions:
-            to_state = t.to_state if isinstance(t.to_state, str) else str(t.to_state)
-            if to_state in seen or to_state in inspect_blocked:
+        # #1813: labels + confirms from the one transition-control builder.
+        for t in transition_affordances(sm, ""):
+            if t.to_state in seen or t.to_state in inspect_blocked:
                 continue
-            seen.add(to_state)
-            transitions.append(
-                {
-                    "to_state": to_state,
-                    "label": transition_action_label(to_state),
-                }
-            )
+            seen.add(t.to_state)
+            transitions.append({"to_state": t.to_state, "label": t.label, "confirm": t.confirm})
         # #1626 re-eval: queue rows must not show the full state-machine
         # button wall (Approved|Rejected|Paid|…). Prefer commercial
         # primary/secondary actions, hard-cap at 2.
@@ -1392,7 +1390,10 @@ def compute_kanban_columns(
 
 
 def _manual_transition_targets(sm: Any, current: str) -> tuple[str, ...]:
-    """Legal manual (non-AUTO) to-states from *current* — empty when none."""
+    """Legal manual (non-AUTO) to-states from *current* — empty when none.
+
+    #1813: a transition with an authored ``confirm`` is not a drag target — a
+    board drop has no confirm step, so it stays on the record's buttons."""
     if not current:
         return ()
     get_from = getattr(sm, "get_transitions_from", None)
@@ -1402,7 +1403,7 @@ def _manual_transition_targets(sm: Any, current: str) -> tuple[str, ...]:
     for t in transitions or []:
         trigger = getattr(t, "trigger", None)
         trigger_val = str(getattr(trigger, "value", trigger) or "").lower()
-        if trigger_val == "auto":
+        if trigger_val == "auto" or getattr(t, "confirm", None):
             continue
         to_state = t.to_state if isinstance(t.to_state, str) else str(t.to_state)
         if to_state == current or to_state in seen:

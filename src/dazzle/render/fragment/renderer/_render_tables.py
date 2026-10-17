@@ -1021,22 +1021,19 @@ class _RenderTablesMixin:
                 f', "_from_workspace": "{ctx.escape_attr(q.after_workspace)}", '
                 f'"_from_region": "{ctx.escape_attr(q.after_region)}"'
             )
-        buttons = "".join(
-            f'<button type="button" '
-            f'class="dz-queue-action" '
-            f'hx-put="{ctx.escape_attr(q.queue_api_endpoint)}/'
-            f'{ctx.escape_attr(row.row_id)}" '
-            f'hx-vals=\'{{"{q.queue_status_field}": '
-            f'"{t.to_state}"{extra}}}\' '
-            f'hx-target="closest [data-dz-region]" '
-            f'hx-swap="innerHTML">'
-            f"{ctx.escape(t.label)}"
-            f"</button>"
-            for t in applicable
-        )
-        return (
-            f'<div class="dz-queue-row-actions" onclick="event.stopPropagation()">{buttons}</div>'
-        )
+        endpoint = f"{ctx.escape_attr(q.queue_api_endpoint)}/{ctx.escape_attr(row.row_id)}"
+        buttons: list[str] = []
+        for t in applicable:
+            # #1813: an authored confirm gates this button's own explicit click
+            # trigger (INV-10, #1802).
+            confirm = f' hx-confirm="{ctx.escape_attr(t.confirm)}"' if t.confirm else ""
+            buttons.append(
+                f'<button type="button" class="dz-queue-action" hx-put="{endpoint}" '
+                f'hx-vals=\'{{"{q.queue_status_field}": "{t.to_state}"{extra}}}\' '
+                f'hx-target="closest [data-dz-region]" hx-swap="innerHTML" '
+                f'hx-trigger="click"{confirm}>{ctx.escape(t.label)}</button>'
+            )
+        return f'<div class="dz-queue-row-actions" onclick="event.stopPropagation()">{"".join(buttons)}</div>'
 
     def _emit_queue_region(self, q: QueueRegion, ctx: RenderContext) -> str:
         """Render a QueueRegion via HM dual-lock QueueRow seams.

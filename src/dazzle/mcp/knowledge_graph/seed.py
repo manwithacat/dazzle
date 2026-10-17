@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
 SEED_SCHEMA_VERSION = (
-    61  # v61: page_purpose concept teaches `ux: show_purpose` + `[ui] page_purpose` (#1811);
+    62  # v62: state_machine concept teaches transition label/confirm + row_transitions (#1813);
+    # v61: page_purpose concept teaches `ux: show_purpose` + `[ui] page_purpose` (#1811);
     # v60: list_columns concept + page_size in pagination/regions (#1792);
     # v59: app_scripts concept explains project asset fingerprinting (#1793);
     # v58: metrics drill action + primary_actions replaces inferred CTA + drawer (#1798);

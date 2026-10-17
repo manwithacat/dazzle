@@ -1,7 +1,7 @@
 {
-  "src_lines": 328760,
-  "test_lines": 319070,
-  "docs_lines": 49410,
+  "src_lines": 329718,
+  "test_lines": 319422,
+  "docs_lines": 49431,
   "construct_count": 31,
   "written": "2026-10-17",
   "exceptions": [
@@ -577,6 +577,15 @@
         "test_lines"
       ],
       "reason": "#1807 #1811 consumer-forced"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1813 transition labels/confirms + row_transitions, consumer-forced"
     }
   ]
 }

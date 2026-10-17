@@ -372,6 +372,19 @@ class SurfaceAccessSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class RowTransitions(StrEnum):
+    """Whether a list surface's rows offer state-machine transitions (#1813).
+
+    - ``all``  — every transition valid from the row's state (the default).
+    - ``none`` — no transition controls on the rows; transitions stay on the
+      detail page. For records where a one-click state change next to a status
+      badge is the wrong affordance (an agreement, a consent).
+    """
+
+    ALL = "all"
+    NONE = "none"
+
+
 class PeekMode(StrEnum):
     """Action-proximate detail mode for a list surface (#1494, UX-maturity 2c).
 
@@ -478,8 +491,17 @@ class SurfaceSpec(BaseModel):
     # framework default (`DEFAULT_PAGE_SIZE`). The pager shows when the
     # matched total exceeds it.
     page_size: int | None = Field(default=None, ge=1, le=MAX_PAGE_SIZE)
+    # #1813: `row_transitions: none` drops the state-transition controls from
+    # this list's rows. None = unset = `all` (kept nullable so unset surfaces do
+    # not churn the corpus snapshot). Validated to `mode: list`.
+    row_transitions: RowTransitions | None = None
 
     model_config = ConfigDict(frozen=True)
+
+    @property
+    def offers_row_transitions(self) -> bool:
+        """True unless the surface declares ``row_transitions: none`` (#1813)."""
+        return self.row_transitions is not RowTransitions.NONE
 
     def list_columns(self) -> list[ColumnSpec]:
         """The surface's field lines as list columns, in author order (#1792)."""

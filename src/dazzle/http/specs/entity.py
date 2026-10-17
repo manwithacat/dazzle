@@ -380,6 +380,10 @@ class StateTransitionSpec(WildcardTransition, BaseModel):
     trigger: TransitionTrigger = Field(default=TransitionTrigger.MANUAL, description="Trigger type")
     guards: list[TransitionGuardSpec] = Field(default_factory=list, description="Guard conditions")
     auto_spec: AutoTransitionSpec | None = Field(default=None, description="Auto transition config")
+    label: str | None = Field(default=None, description="Authored control label (#1813)")
+    confirm: str | None = Field(
+        default=None, description="Question asked before the transition fires (#1813)"
+    )
 
     model_config = ConfigDict(frozen=True)
 

@@ -1688,6 +1688,14 @@ class DazzleBackendApp:
                 _s.name: resolve_peek_mode(_s, entity).value
                 for _s in _entity_all_list_surfaces.get(entity.name, [])
             }
+            # #1813: `row_transitions: none` per list surface, keyed like peek.
+            # The entity default (no table_id resolvable) offers row transitions
+            # only when EVERY list surface does — a legal record's list never
+            # leaks a one-click state change through an unkeyed fetch.
+            row_transitions_by_table_id: dict[str, bool] = {}
+            for _s in _entity_all_list_surfaces.get(entity.name, []):
+                row_transitions_by_table_id[_s.name] = _s.offers_row_transitions
+                row_transitions_by_table_id[f"dt-{_s.name}"] = _s.offers_row_transitions
             # #1603: per-surface open-via detail templates (key both surface.name
             # and dt-{name} — HTMX table_id is `dt-{surface.name}`).
             from dazzle.page.open_via import (
@@ -1743,6 +1751,8 @@ class DazzleBackendApp:
                 # the entity-list rows into the inline detail-panel chevron.
                 "peek_mode": resolve_peek_mode(_ls, entity).value if _ls else "off",
                 "peek_by_table_id": peek_by_table_id,
+                "row_transitions": all(row_transitions_by_table_id.values()),
+                "row_transitions_by_table_id": row_transitions_by_table_id,
                 # Convergence C1.1: rows hydrated over /api render bulk-select
                 # checkboxes iff the (first) list surface declares bulk actions
                 # (first-surface value, same convention as peek_mode).

@@ -1,20 +1,44 @@
-"""#1558 (3c → L4): the single gating rule for state-machine transition
-affordances — which transitions are valid from a record's current state.
-Shared by the detail-view filter and the list-row render. Pure, no I/O."""
+"""#1558 (3c → L4): the single builder and gating rule for state-machine
+transition affordances — what each control says and asks (#1813), and which
+transitions are valid from a record's current state. Shared by the detail
+view, the list-row render and the queue. Pure, no I/O."""
 
+from typing import Any
+
+from dazzle.core.ir.state_machine import transition_action_label
 from dazzle.render.context import TransitionContext
 
 
-def transition_action_label(to_state: str) -> str:
-    """Label a transition button as an *action*, not the live status.
+def transition_affordances(state_machine: Any, api_url: str) -> tuple[TransitionContext, ...]:
+    """#1813: the ONE builder of transition controls — list rows, detail and
+    queue all read it, so an authored label / confirm reaches every control.
 
-    Bare state titles (``Active``) read as current status next to status
-    chips on detail headers and list rows — agent acceptance panels flag
-    this as a pilot blocker (fieldtest_hub cycle 1286). Prefix with
-    ``Set to`` so the affordance is clearly a change intent.
+    ``state_machine`` is the IR ``StateMachineSpec`` or its runtime twin; empty
+    when there is none. One affordance per distinct ``(from_state, to_state)``
+    edge (two edges into one target from different sources are distinct), with
+    ``from_state`` kept for current-state gating (:func:`gated_row_transitions`).
+    The label is the authored one or ``Set to <State>``; ``confirm`` is the
+    authored question or ``""``.
     """
-    title = str(to_state).replace("_", " ").title()
-    return f"Set to {title}"
+    if not state_machine:
+        return ()
+    seen: set[tuple[str, str]] = set()
+    out: list[TransitionContext] = []
+    for t in state_machine.transitions:
+        key = (t.from_state, t.to_state)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(
+            TransitionContext(
+                from_state=t.from_state,
+                to_state=t.to_state,
+                label=t.label or transition_action_label(t.to_state),
+                confirm=t.confirm or "",
+                api_url=api_url,
+            )
+        )
+    return tuple(out)
 
 
 def gated_row_transitions(

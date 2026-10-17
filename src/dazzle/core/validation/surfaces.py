@@ -302,6 +302,13 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                                     f"'{element.field_name}': {fmt_err}"
                                 )
 
+        # #1813: `row_transitions:` gates the transition controls on LIST rows.
+        if surface.row_transitions is not None and surface.mode != ir.SurfaceMode.LIST:
+            errors.append(
+                f"Surface '{surface.name}' declares `row_transitions:` but mode is "
+                f"{surface.mode.value} — it only applies to `mode: list` (#1813)"
+            )
+
         # #1603 / #1600 P2 — open: Entity via field | first_non_null(...) hops
         open_targets = list(getattr(surface, "open_via_targets", None) or [])
         if not open_targets and (

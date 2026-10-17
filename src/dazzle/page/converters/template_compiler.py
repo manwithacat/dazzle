@@ -53,7 +53,7 @@ from dazzle.render.filters import (
     clerk_related_tab_fk_label,
     status_tone_map,
 )
-from dazzle.render.fragment.state_affordance import transition_action_label
+from dazzle.render.fragment.state_affordance import transition_affordances
 from dazzle.render.iban_cell import iban_field_name
 from dazzle.render.rating_cell import rating_field_name
 from dazzle.render.temperature_cell import temperature_field_name
@@ -1359,23 +1359,9 @@ def _compile_view_surface(
     if entity and entity.state_machine:
         sm = entity.state_machine
         status_field = sm.status_field if hasattr(sm, "status_field") else "status"
-        # #1558 3c: keep from_state so the request-time detail filter and the
-        # list-row render can gate by the record's current state. Dedup by
-        # (from_state, to_state) — two edges to the same target from different
-        # sources are distinct affordances.
-        seen: set[tuple[str, str]] = set()
-        for t in sm.transitions:
-            key = (t.from_state, t.to_state)
-            if key not in seen:
-                seen.add(key)
-                transitions.append(
-                    TransitionContext(
-                        from_state=t.from_state,
-                        to_state=t.to_state,
-                        label=transition_action_label(t.to_state),
-                        api_url=f"{api_endpoint}/{{id}}",
-                    )
-                )
+        # #1558 3c / #1813: the one transition-control builder — from_state kept
+        # for the request-time detail gate; authored label + confirm carried.
+        transitions = list(transition_affordances(sm, f"{api_endpoint}/{{id}}"))
 
     # Build section-to-visible-condition map for propagating to related tabs (#501)
     _section_vis_map: dict[str, dict[str, Any]] = {}

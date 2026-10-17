@@ -894,6 +894,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                 f'hx-method="put" hx-action="{endpoint_attr}/{item_id_attr}" '
                 f'hx-push-url="false" '
                 f'hx-trigger="click" '
+                f"{_transition_confirm_attr(t)}"
                 f'hx-vals=\'{{"{status_field_attr}": '
                 f'"{_html_mod.escape(t.to_state, quote=True)}"}}\' '
                 f'aria-label="{_html_mod.escape(t.label, quote=True)}">'
@@ -947,6 +948,17 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         actions_cell=actions_cell,
         peek_panel_row=peek_panel_row,
     )
+
+
+def _transition_confirm_attr(t: Any) -> str:
+    """``hx-confirm`` for a transition chip with an authored confirm (#1813).
+
+    The chip keeps its own ``hx-trigger="click"`` (INV-10), so the dz-confirm
+    controller gates exactly this gesture."""
+    confirm = str(getattr(t, "confirm", "") or "")
+    if not confirm:
+        return ""
+    return f'hx-confirm="{_html_mod.escape(confirm, quote=True)}" '
 
 
 def render_data_row(

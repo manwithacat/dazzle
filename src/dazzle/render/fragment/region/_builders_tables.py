@@ -758,7 +758,7 @@ class _BuildersTablesMixin:
             metrics: list of metric dicts (label, value, etc.)
             endpoint, region_name: HTMX wiring (chrome + transitions)
             filter_columns, active_filters, date_range, csv_export: chrome
-            queue_transitions: list of {label, to_state}
+            queue_transitions: list of {label, to_state, confirm}
             queue_status_field: str — field name carrying current state
             queue_api_endpoint: str URL — base URL for transitions
                 (transitions PUT to f"{queue_api_endpoint}/{item.id}")
@@ -805,6 +805,7 @@ class _BuildersTablesMixin:
                 QueueTransition(
                     label=str(tr.get("label") or to_state),
                     to_state=to_state,
+                    confirm=str(tr.get("confirm") or ""),
                 )
             )
 

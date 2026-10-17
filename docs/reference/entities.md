@@ -567,13 +567,16 @@ entity Booking "Booking":
 
 ## State Machine
 
-Define allowed status/state transitions with optional guards. Prevents invalid state changes and documents workflow rules declaratively.
+Define allowed status/state transitions with optional guards. Prevents invalid state changes and documents workflow rules declaratively. Each manual transition renders as a control on list rows, the detail page and queues, labelled `Set to <State>` unless the transition names its own label; `confirm` puts a question in front of it (#1813). A list surface with `row_transitions: none` keeps the controls off its rows, for records whose state change must be one click deeper (an agreement, a consent).
 
 ### Syntax
 
 ```dsl
 transitions:
   <from_state> -> <to_state>
+  <from_state> -> <to_state> "<Control label>"                  # replaces "Set to <State>"
+  <from_state> -> <to_state> "<Control label>" confirm "<Question?>"
+  <from_state> -> <to_state> "<Control label>" confirm: role(<role_name>)   # bare confirm: generic question
   <from_state> -> <to_state>: requires <field_name>
   <from_state> -> <to_state>: role(<role_name>)
   <from_state> -> <to_state>: auto after <N> days
@@ -586,6 +589,12 @@ transitions:
 #   auto after <N> days       - Auto-transition after delay
 #   auto after <N> hours      - (also: minutes)
 #   auto ... OR manual        - Allow manual trigger too
+
+# List surface: keep transitions off the rows (detail page only)
+#   surface <name> "<Title>":
+#     uses entity <EntityName>
+#     mode: list
+#     row_transitions: none        # default: all
 
 # NOT supported in transitions (use invariants instead):
 #   field != null        - Use: requires field

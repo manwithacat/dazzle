@@ -345,6 +345,8 @@ def _convert_transition(ir_trans: ir.StateTransition) -> StateTransitionSpec:
         trigger=_convert_trigger(ir_trans.trigger),
         guards=[_convert_guard(g) for g in ir_trans.guards],
         auto_spec=_convert_auto_spec(ir_trans.auto_spec) if ir_trans.auto_spec else None,
+        label=ir_trans.label,  # #1813
+        confirm=ir_trans.confirm,
         # #1319 / ADR-0032 Slice B — survive the IR→runtime conversion.
     )
 

@@ -311,9 +311,17 @@ transitions_block ::= "transitions" ":" NEWLINE
                         transition_rule+
                       DEDENT ;
 
-transition_rule ::= from_state "->" to_state transition_spec? NEWLINE
-                | from_state "->" to_state ":" NEWLINE
+transition_rule ::= from_state "->" to_state transition_control? transition_spec? NEWLINE
+                | from_state "->" to_state transition_control? ":" NEWLINE
                   INDENT transition_item+ DEDENT ;
+
+transition_control
+              ::= STRING ("confirm" STRING?)?
+                | "confirm" STRING? ;
+                  (* #1813: STRING labels the transition's control everywhere it
+                     renders (default "Set to <State>"); confirm asks the STRING
+                     before the transition fires — bare confirm asks a generic
+                     question built from the label *)
 
 transition_item ::= "guard" ":" guard_body NEWLINE guard_message?
                 | transition_constraint NEWLINE ;
@@ -493,6 +501,9 @@ surface_body_line
                 | "mode" ":" ("view" | "create" | "edit" | "list" | "custom") NEWLINE
                 | "priority" ":" ("critical" | "high" | "medium" | "low") NEWLINE
                 | "page_size" ":" NUMBER NEWLINE   (* #1792: mode: list, 1..100 *)
+                | "row_transitions" ":" ("all" | "none") NEWLINE
+                                                   (* #1813: mode: list; none = no state
+                                                      transitions on the rows *)
                 | section_decl
                 | surface_action_decl ;
 

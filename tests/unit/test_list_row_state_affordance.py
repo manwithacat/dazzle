@@ -42,7 +42,7 @@ _TABLE_CSS = _REPO / "packages" / "hatchi-maxchi" / "components" / "table.css"
 
 def _t(frm, to):
     # Label formatting mirrors the compile build: action intent, not bare status.
-    from dazzle.render.fragment.state_affordance import transition_action_label
+    from dazzle.core.ir.state_machine import transition_action_label
 
     return TransitionContext(
         from_state=frm,
@@ -182,6 +182,7 @@ def test_actions_header_and_cell_share_end_alignment():
 
 from types import SimpleNamespace  # noqa: E402
 
+from dazzle.core.ir import StateMachineSpec, StateTransition  # noqa: E402
 from dazzle.core.strings import to_api_plural  # noqa: E402
 from dazzle.http.runtime.handlers.list_handlers import (  # noqa: E402
     build_data_table,
@@ -191,11 +192,11 @@ from dazzle.render.fragment.renderer._data_row import render_data_table_rows  # 
 
 
 def _entity_with_sm():
-    sm = SimpleNamespace(
+    sm = StateMachineSpec(
         status_field="status",
         transitions=[
-            SimpleNamespace(from_state="open", to_state="in_progress"),
-            SimpleNamespace(from_state="in_progress", to_state="resolved"),
+            StateTransition(from_state="open", to_state="in_progress"),
+            StateTransition(from_state="in_progress", to_state="resolved"),
         ],
     )
     return SimpleNamespace(state_machine=sm, name="Ticket")

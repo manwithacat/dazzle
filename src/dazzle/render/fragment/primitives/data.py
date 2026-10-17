@@ -765,11 +765,13 @@ class QueueTransition:
     current `queue_status_field` value to decide whether to render
     the button). HTMX wiring is `hx-put="{endpoint}/{id}"` with
     `hx-vals='{"<status_field>": "<to_state>"}'`, posted form-urlencoded
-    (json-enc was dropped in the htmx 4 migration).
+    (json-enc was dropped in the htmx 4 migration). A non-empty `confirm`
+    renders as `hx-confirm` (#1813).
     """
 
     label: str
     to_state: str
+    confirm: str = ""
 
 
 @dataclass(frozen=True, slots=True)
