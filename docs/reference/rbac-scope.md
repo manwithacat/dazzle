@@ -501,6 +501,44 @@ Same primitive as the declarative form. For `create`, pass `payload`
 instead of `row_id` — the framework walks the `scope: create:`
 predicate against the post-default payload.
 
+### Raw connections — bind the RLS GUCs (#1772)
+
+`implements` / `check_entity_op` gate the request; they do not fence a
+connection the handler opens itself. On a `shared_schema` app the
+Postgres fence reads `dazzle.tenant_id` and the scope policies read
+`dazzle.user_<attr>` — an app-owned psycopg / psycopg2 connection has
+neither, so every fenced row is denied (reads return 0 rows, inserts
+fail `WITH CHECK`). Bind them with the framework's own resolver; never
+copy it:
+
+```python
+import psycopg
+from dazzle.http.runtime.auth import bind_rls, current_auth
+
+async def handler(request: Request):
+    with psycopg.connect(DATABASE_URL) as conn:
+        bind_rls(conn, current_auth(request), session=True)
+        ...  # fenced reads/writes now see exactly the caller's tenant
+```
+
+- `bind_rls(conn, auth=None, *, session=False) -> str | None` sets
+  `dazzle.tenant_id` and each `dazzle.user_<attr>` via
+  `set_config(name, %s, is_local)` (values are bind parameters only) and
+  returns the bound tenant id. Same rules as the auth dependency
+  (`resolve_rls_gucs`): tenant only from the active membership's
+  partition root, unresolved attrs left unbound, unauthenticated binds
+  nothing — all fail-closed.
+- `auth` omitted copies the GUCs the current request already bound (the
+  call for a custom renderer, which has no `request`).
+- `session=False` (default) is transaction-local, matching the
+  framework lease. **On an autocommit connection it binds nothing past
+  the `SELECT`** — fail-closed but silent. Open a transaction first or
+  pass `session=True` for a short-lived per-request connection; never
+  `session=True` on a pooled connection shared across principals.
+- A route override that calls a framework service / repository instead
+  of opening a connection uses `bind_rls_context(auth)` — it sets the
+  per-request contextvars the framework's own lease reads.
+
 ### Failure modes
 
 - **Annotation absent** → handler runs unguarded (legacy behaviour

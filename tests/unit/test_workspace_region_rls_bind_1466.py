@@ -2,7 +2,7 @@
 
 These three handlers self-authenticate via ``auth_middleware.get_auth_context``
 (the routes register with plain ``app.get`` and gate personas inline — no FastAPI
-auth dependency), so ``dependencies._bind_rls_tenant_id`` — which sets the
+auth dependency), so ``rls_bind.bind_rls_context`` — which sets the
 ``dazzle.tenant_id`` / ``dazzle.user_<attr>`` contextvars the leased Postgres
 connection reads at lease time — was never called. On a ``shared_schema`` / RLS app
 the unbound connection then fenced every row → each region rendered its empty-state
@@ -49,12 +49,12 @@ def _region_ctx(mw: Any, *, require_auth: bool = True) -> WorkspaceRegionContext
 
 def _record_bind(monkeypatch: pytest.MonkeyPatch) -> list[object]:
     calls: list[object] = []
-    # _bind_rls_tenant_id is imported at module top in both consumer modules (the
+    # bind_rls_context is imported at module top in both consumer modules (the
     # binding is module-level, not a call-time source import), so patch it in each
     # consumer namespace — patching the source `_deps` would miss the bound name.
     recorder = lambda ctx: calls.append(ctx)  # noqa: E731
-    monkeypatch.setattr(_prelude, "_bind_rls_tenant_id", recorder)
-    monkeypatch.setattr(_handlers, "_bind_rls_tenant_id", recorder)
+    monkeypatch.setattr(_prelude, "bind_rls_context", recorder)
+    monkeypatch.setattr(_handlers, "bind_rls_context", recorder)
     return calls
 
 

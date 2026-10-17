@@ -290,7 +290,7 @@ def _resolve_marker(
         # id, not the auth UserRecord id, and those differ when auth ≠ entity.
         # Fall back to the auth user id when entity_id is unresolvable (tests,
         # or apps where the two coincide by convention). `_LazyUserAttrs.get`
-        # routes through lazy `_resolve_user_attribute`; a plain dict returns
+        # routes through lazy `resolve_user_attribute`; a plain dict returns
         # None and falls back.
         entity_id = user_attrs.get("entity_id")
         return entity_id if entity_id is not None else user_id

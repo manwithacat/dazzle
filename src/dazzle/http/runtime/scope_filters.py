@@ -27,6 +27,7 @@ from fastapi import HTTPException
 from dazzle.core.date_expr_eval import date_expr_filter_value
 from dazzle.db.sql import quote_identifier
 from dazzle.http.runtime.auth import AuthContext, effective_roles_of
+from dazzle.http.runtime.rls_bind import RBAC_DENY, resolve_user_attribute
 
 # Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
 # 2026-06-20). Was lazily imported from route_generator to dodge an import cycle;
@@ -145,13 +146,13 @@ def _build_via_subquery(
             if target == "current_user":
                 # Prefer DSL User entity ID over auth user ID so via
                 # clauses matching ref User fields work correctly (#534).
-                resolved = _resolve_user_attribute("entity_id", auth_context)
-                if resolved == "__RBAC_DENY__":
+                resolved = resolve_user_attribute("entity_id", auth_context)
+                if resolved == RBAC_DENY:
                     resolved = user_id  # fallback to auth ID
             else:
                 attr_name = target[len("current_user.") :]
-                resolved = _resolve_user_attribute(attr_name, auth_context)
-                if resolved == "__RBAC_DENY__":
+                resolved = resolve_user_attribute(attr_name, auth_context)
+                if resolved == RBAC_DENY:
                     # Null FK on the user — no possible junction match.
                     # Return an impossible subquery so the caller gets zero
                     # rows instead of a 500 from a type-mismatch (#580).
@@ -177,74 +178,6 @@ def _build_via_subquery(
     subquery_sql = f"SELECT {select_field} FROM {junction_table} WHERE {where_sql}"  # nosemgrep
 
     return entity_field, subquery_sql, params
-
-
-def _resolve_user_attribute(attr_name: str, auth_context: "AuthContext | None") -> Any:
-    """Resolve a ``current_user.<attr_name>`` dotted reference to a concrete value.
-
-    Resolution order:
-    1. Built-in ``UserRecord`` fields (``id``, ``email``, ``username``, etc.)
-    2. ``auth_context.preferences`` dict (domain-specific attributes like
-       ``school``, ``school_id``, etc.)
-
-    If the attribute is not found, returns ``"__RBAC_DENY__"`` so the caller
-    can inject an impossible filter — enforcing deny-by-default security.
-    """
-    _RBAC_DENY = "__RBAC_DENY__"
-
-    if auth_context is None:
-        return _RBAC_DENY
-
-    # auth Plan 1d: tenant_id is sourced ONLY from the active membership (the
-    # hard FK source the RLS fence reads). A membership-less session resolves to
-    # the deny sentinel → the scope predicate / fence denies (fail-closed). The
-    # legacy preferences/domain-user fallback for tenant_id was removed (clean
-    # break) — only the active membership is authoritative now. Other
-    # current_user.<attr> scope refs (school, department, …) still resolve via
-    # the user/preferences path below.
-    if attr_name == "tenant_id":
-        membership = getattr(auth_context, "active_membership", None)
-        if membership is not None and getattr(membership, "tenant_id", None):
-            # #1463: bind the membership's archetype:tenant partition root — the id
-            # the RLS rows are partitioned at — not the raw membership tenant. For a
-            # flat tenancy or a root membership these are equal; for a leaf (School)
-            # membership in a hierarchy (Trust ▸ School) partition_root_id is the
-            # root (Trust), so the fence matches the rows' partition key. Falls back
-            # to tenant_id for un-backfilled rows (NULL partition_root_id). This is a
-            # trivial sync read — the resolution happened once at write time.
-            partition_root = getattr(membership, "partition_root_id", None)
-            if isinstance(partition_root, str) and partition_root:
-                return partition_root
-            return str(membership.tenant_id)
-        return _RBAC_DENY
-
-    user = getattr(auth_context, "user", None)
-
-    # 1. Built-in UserRecord fields (id, email, username, ...).
-    # Only accept scalar primitives — avoids MagicMock/object auto-attribute
-    # hits in tests and rejects non-serialisable field values in production.
-    _SCALAR = str | int | float | bool
-    if user is not None:
-        # Try exact attribute name first
-        user_val = getattr(user, attr_name, None)
-        if isinstance(user_val, _SCALAR):
-            return str(user_val)
-        # Also try <attr>_id variant (e.g. "school" → try "school_id")
-        user_val_id = getattr(user, f"{attr_name}_id", None)
-        if isinstance(user_val_id, _SCALAR):
-            return str(user_val_id)
-
-    # 2. Preferences dict (stores domain-level attributes as strings).
-    # Treat None values as missing — they must not bypass the deny sentinel (#591).
-    prefs: dict[str, str] = getattr(auth_context, "preferences", {}) or {}
-    if attr_name in prefs and prefs[attr_name] is not None:
-        return prefs[attr_name]
-    # Also try <attr>_id variant in preferences
-    attr_id_key = f"{attr_name}_id"
-    if attr_id_key in prefs and prefs[attr_id_key] is not None:
-        return prefs[attr_id_key]
-
-    return _RBAC_DENY
 
 
 def _extract_condition_filters(
@@ -299,7 +232,7 @@ def _extract_condition_filters(
 
     # Helper: assign a filter, using subquery if field is a dotted FK path (#556)
     def _set_filter(fld: str, val: Any) -> None:
-        if val == "__RBAC_DENY__":
+        if val == RBAC_DENY:
             # Null FK / missing attribute — use impossible subquery so the
             # query returns zero rows instead of crashing with a type error (#580).
             filters[f"{fld}__in_subquery"] = ("SELECT NULL WHERE FALSE", [])
@@ -326,8 +259,8 @@ def _extract_condition_filters(
         if field and value == "current_user" and op_val in ("=", "eq", "equals"):
             # Prefer DSL User entity ID over auth user ID so comparisons
             # against ref User fields work correctly (#546).
-            resolved = _resolve_user_attribute("entity_id", auth_context)
-            _set_filter(field, user_id if resolved == "__RBAC_DENY__" else resolved)
+            resolved = resolve_user_attribute("entity_id", auth_context)
+            _set_filter(field, user_id if resolved == RBAC_DENY else resolved)
         elif (
             field
             and isinstance(value, str)
@@ -335,7 +268,7 @@ def _extract_condition_filters(
             and op_val in ("=", "eq", "equals")
         ):
             attr_name = value[len("current_user.") :]
-            _set_filter(field, _resolve_user_attribute(attr_name, auth_context))
+            _set_filter(field, resolve_user_attribute(attr_name, auth_context))
         elif field and value == "current_context" and op_val in ("=", "eq", "equals"):
             # Context selector (#857): resolve to the selected entity id if
             # a selection is active; skip the filter entirely when cleared
@@ -444,8 +377,8 @@ def _extract_condition_filters(
         if field and raw_value == "current_user" and op_val in ("=", "eq", "equals"):
             # Prefer DSL User entity ID over auth user ID so comparisons
             # against ref User fields work correctly (#546).
-            resolved = _resolve_user_attribute("entity_id", auth_context)
-            _set_filter(field, user_id if resolved == "__RBAC_DENY__" else resolved)
+            resolved = resolve_user_attribute("entity_id", auth_context)
+            _set_filter(field, user_id if resolved == RBAC_DENY else resolved)
         elif (
             field
             and isinstance(raw_value, str)
@@ -453,7 +386,7 @@ def _extract_condition_filters(
             and op_val in ("=", "eq", "equals")
         ):
             attr_name = raw_value[len("current_user.") :]
-            _set_filter(field, _resolve_user_attribute(attr_name, auth_context))
+            _set_filter(field, resolve_user_attribute(attr_name, auth_context))
         elif field and raw_value == "current_context" and op_val in ("=", "eq", "equals"):
             # Context selector (#857): resolve to the selected entity id if
             # a selection is active; skip the filter entirely when cleared
@@ -937,7 +870,7 @@ class _LazyUserAttrs(dict):  # type: ignore[type-arg]
 
     A `dict` subclass so it satisfies the `user_attrs: dict[str, Any]`
     contract of `check_create_predicate`, but resolves any requested
-    attribute name on demand via `_resolve_user_attribute` (built-in
+    attribute name on demand via `resolve_user_attribute` (built-in
     UserRecord fields + `auth_context.preferences`). This is what makes
     `current_user.org` — and any other DSL-chosen attribute — resolvable
     in create-scope predicates without a hardcoded allowlist (#1174).
@@ -954,8 +887,8 @@ class _LazyUserAttrs(dict):  # type: ignore[type-arg]
         self._auth_context = auth_context
 
     def __missing__(self, key: str) -> Any:
-        resolved = _resolve_user_attribute(key, self._auth_context)
-        value = None if resolved == "__RBAC_DENY__" else resolved
+        resolved = resolve_user_attribute(key, self._auth_context)
+        value = None if resolved == RBAC_DENY else resolved
         self[key] = value  # cache for repeated lookups within one predicate
         return value
 
@@ -1120,11 +1053,11 @@ def _enforce_create_scope(
     # rather than copy a hardcoded allowlist of attribute names (which silently
     # over-denies for any attr not on the list — e.g. acme_billing's
     # `current_user.org`, #1174), resolve every requested attribute lazily
-    # through `_resolve_user_attribute` — the same canonical resolver the
+    # through `resolve_user_attribute` — the same canonical resolver the
     # read/list scope path uses. It reads built-in UserRecord fields *and*
     # `auth_context.preferences` (where domain attributes like `org` are
     # merged from the DSL User entity by `_load_domain_user_attributes`).
-    # `_resolve_user_attribute` returns the `__RBAC_DENY__` sentinel for an
+    # `resolve_user_attribute` returns the `__RBAC_DENY__` sentinel for an
     # unresolvable attribute; we translate that to None so the create-scope
     # walker's `_compare` rejects it (fail-closed), identical to the previous
     # "missing key → None" behaviour. `auth_context` is threaded in from the
@@ -1457,8 +1390,8 @@ def _resolve_predicate_filters(
     for p in raw_params:
         if isinstance(p, CurrentUserRef):
             # Prefer DSL User entity ID over auth user ID (#546)
-            resolved = _resolve_user_attribute("entity_id", auth_context)
-            resolved_params.append(user_id if resolved == "__RBAC_DENY__" else resolved)
+            resolved = resolve_user_attribute("entity_id", auth_context)
+            resolved_params.append(user_id if resolved == RBAC_DENY else resolved)
         elif isinstance(p, CurrentTenantRef):
             # #1394: bind the host-resolved tenant id. No host tenant in context
             # (non-tenant request / apex host) → deny cleanly, never an unfenced
@@ -1469,8 +1402,8 @@ def _resolve_predicate_filters(
                 return None
             resolved_params.append(host_tid)
         elif isinstance(p, UserAttrRef):
-            resolved = _resolve_user_attribute(p.attr_name, auth_context)
-            if resolved == "__RBAC_DENY__":
+            resolved = resolve_user_attribute(p.attr_name, auth_context)
+            if resolved == RBAC_DENY:
                 # Null FK — deny cleanly instead of passing sentinel to SQL (#580)
                 _log_unresolved_scope_ref(entity_name, operation, f"current_user.{p.attr_name}")
                 return None

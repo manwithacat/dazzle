@@ -1,7 +1,7 @@
 {
-  "src_lines": 322443,
-  "test_lines": 313413,
-  "docs_lines": 48548,
+  "src_lines": 322549,
+  "test_lines": 313631,
+  "docs_lines": 48615,
   "construct_count": 31,
   "written": "2026-10-17",
   "exceptions": [
@@ -390,6 +390,15 @@
         "docs_lines"
       ],
       "reason": "#1776 consumer-forced: response headers through transport: app"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1772 consumer-forced (AegisMark): public bind_rls leaf"
     }
   ]
 }

@@ -61,6 +61,7 @@ default.
 - `docs/reference/tenant-hosts.md`
 - `src/dazzle/http/runtime/tenant/{middleware,apex_middleware,cookies,guard,resolver}.py`
 - `src/dazzle/http/runtime/tenant_isolation.py`
+- `src/dazzle/http/runtime/rls_bind.py` — one RLS GUC resolver (`resolve_rls_gucs`); `bind_rls_context` for the framework lease, public `bind_rls(conn, auth)` for app-owned connections (#1772)
 - `src/dazzle/http/runtime/auth/apex_discovery.py`
 - `src/dazzle/core/ir/domain.py` `TenantHostSpec`; `src/dazzle/core/validation/tenancy.py`
 - `src/dazzle/signing/routes.py` `_signing_rls_tenant` (#1656)

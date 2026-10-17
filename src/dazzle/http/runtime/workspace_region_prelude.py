@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from dazzle.core.strings import normalize_role
-from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
+from dazzle.http.runtime.rls_bind import bind_rls_context
 from dazzle.http.runtime.tenant_isolation import (
     get_current_rls_user_attrs,
     set_current_rls_user_attrs,
@@ -120,14 +120,14 @@ async def resolve_request_user_context(
 
     # #1466: bind the per-request RLS GUCs (dazzle.tenant_id / dazzle.user_<attr>)
     # on this request task. Workspace region routes self-authenticate via
-    # get_auth_context (no FastAPI auth dependency, so _bind_rls_tenant_id is never
+    # get_auth_context (no FastAPI auth dependency, so bind_rls_context is never
     # called otherwise) — without this the leased connection reads an unset
     # dazzle.tenant_id and a shared_schema/RLS app denies every row, so each region
     # renders its empty-state under the non-bypass role. Mirrors the page-path fix
     # (#1428, page_routes.py). Bound after the prefs splice above so the
     # current_user.<attr> scope GUCs resolve; fail-closed + idempotent.
     if auth_ctx_for_filters is not None:
-        _bind_rls_tenant_id(auth_ctx_for_filters)
+        bind_rls_context(auth_ctx_for_filters)
 
     # Step 4: build filter context for attention signals + grant
     # evaluation. Carries the resolved entity, the entity id, and

@@ -76,8 +76,8 @@ def _make_hierarchy_schema(scratch_url: str) -> None:
 def test_leaf_membership_resolves_root_and_fences_to_it(scratch_url: str) -> None:
     from dazzle.http.runtime.auth.partition_root import PartitionHierarchy
     from dazzle.http.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.rls_bind import resolve_user_attribute
     from dazzle.http.runtime.rls_schema import build_rls_policy_ddl
-    from dazzle.http.runtime.scope_filters import _resolve_user_attribute
 
     _make_hierarchy_schema(scratch_url)
 
@@ -110,9 +110,9 @@ def test_leaf_membership_resolves_root_and_fences_to_it(scratch_url: str) -> Non
     # 1) write-path: partition_root_id is the Trust (root), not the raw School.
     assert m.partition_root_id == trust_a, "leaf membership must store the partition root (Trust A)"
 
-    # 2) bind-path: _resolve_user_attribute('tenant_id') binds the root.
+    # 2) bind-path: resolve_user_attribute('tenant_id') binds the root.
     ctx = type("Ctx", (), {"active_membership": m, "user": None, "preferences": {}})()
-    assert _resolve_user_attribute("tenant_id", ctx) == trust_a
+    assert resolve_user_attribute("tenant_id", ctx) == trust_a
 
     # 3) real fence as a NON-superuser (superusers bypass RLS).
     role = f"proot_app_{uuid.uuid4().hex[:8]}"

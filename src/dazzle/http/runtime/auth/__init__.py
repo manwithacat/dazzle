@@ -5,6 +5,16 @@ Provides session-based authentication with cookie management
 and JWT token endpoints.
 """
 
+# #1772: the public RLS binder for app-owned DB connections (custom routes /
+# renderers), next to the #933 custom-route helpers. Lives in the rls_bind leaf.
+from dazzle.http.runtime.rls_bind import (
+    RBAC_DENY,
+    RlsBinding,
+    bind_rls,
+    bind_rls_context,
+    resolve_rls_gucs,
+)
+
 from .crypto import hash_password, verify_password
 from .current import (
     current_auth,
@@ -78,6 +88,11 @@ __all__ = [
     "current_user_id",
     "register_auth_store",
     "require_auth",
+    "RBAC_DENY",
+    "RlsBinding",
+    "bind_rls",
+    "bind_rls_context",
+    "resolve_rls_gucs",
     "emit_user_email_verified",
     "emit_user_logged_in",
     "emit_user_password_changed",

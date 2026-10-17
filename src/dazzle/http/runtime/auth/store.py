@@ -563,7 +563,7 @@ class SessionStoreMixin:
         Phase-2 IDOR guard). The ``AND user_id = %s`` on the UPDATE is
         defence-in-depth so a stale/foreign ``session_id`` cannot be repointed.
         Returns True iff exactly one row moved. The RLS GUC re-binds on the next
-        request via ``validate_session`` → ``_bind_rls_tenant_id`` (Plan 1a).
+        request via ``validate_session`` → ``bind_rls_context`` (Plan 1a).
         """
         membership = self.get_membership(membership_id)
         if (
@@ -620,7 +620,7 @@ class SessionStoreMixin:
 
         # auth Plan 1a: resolve the session's active membership (if any). When
         # present it sources the RLS tenant id + effective roles (see
-        # AuthContext.effective_roles / _bind_rls_tenant_id).
+        # AuthContext.effective_roles / bind_rls_context).
         active_membership = None
         if session.active_membership_id:
             active_membership = self.get_membership(session.active_membership_id)

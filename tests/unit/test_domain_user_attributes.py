@@ -263,18 +263,18 @@ _RESOLUTION_CASES = [
 
 @pytest.mark.parametrize(("attr", "prefs", "expected"), _RESOLUTION_CASES)
 def test_current_user_attribute_resolution(attr: str, prefs: dict[str, str], expected: str) -> None:
-    from dazzle.http.runtime.scope_filters import _resolve_user_attribute
+    from dazzle.http.runtime.rls_bind import resolve_user_attribute
 
-    assert _resolve_user_attribute(attr, _auth(prefs=prefs)) == expected
+    assert resolve_user_attribute(attr, _auth(prefs=prefs)) == expected
 
 
 def test_current_user_tenant_id_binds_the_active_membership() -> None:
-    from dazzle.http.runtime.scope_filters import _resolve_user_attribute
+    from dazzle.http.runtime.rls_bind import resolve_user_attribute
 
-    assert _resolve_user_attribute("tenant_id", _auth(membership_tenant="t-1")) == "t-1"
+    assert resolve_user_attribute("tenant_id", _auth(membership_tenant="t-1")) == "t-1"
 
 
 def test_current_user_attribute_denies_without_auth_context() -> None:
-    from dazzle.http.runtime.scope_filters import _resolve_user_attribute
+    from dazzle.http.runtime.rls_bind import resolve_user_attribute
 
-    assert _resolve_user_attribute("school", None) == _DENY
+    assert resolve_user_attribute("school", None) == _DENY

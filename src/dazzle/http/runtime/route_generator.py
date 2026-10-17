@@ -143,7 +143,6 @@ from dazzle.http.runtime.scope_filters import (  # noqa: F401  (re-exported for 
     _LazyUserAttrs,
     _resolve_predicate_filters,
     _resolve_scope_filters,
-    _resolve_user_attribute,
     _row_to_payload_dict,
     _scoped_pre_read,
     _should_bypass_tenant_filter,

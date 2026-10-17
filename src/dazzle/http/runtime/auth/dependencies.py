@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException
 from fastapi import Request as FastAPIRequest
 
 from dazzle.core.strings import normalize_role
+from dazzle.http.runtime.rls_bind import bind_rls_context
 from dazzle.http.runtime.tenant_isolation import (
     get_current_tenant_schema,
     set_current_host_tenant_id,
@@ -107,73 +108,6 @@ def _resolve_auth_context(
     return bind_jwt_tenant_context(request, jwt_auth, auth_store)
 
 
-def _bind_rls_tenant_id(auth_context: AuthContext) -> None:
-    """Bind the RLS tenant id + scope-attr GUCs from the authenticated user.
-
-    Phase B binds ``dazzle.tenant_id`` (the shared_schema fence discriminator);
-    Phase C additionally binds the app-wide set of ``dazzle.user_<attr>`` GUCs
-    that the intra-tenant per-verb scope policies read. Both are set on the
-    leased connection per transaction (``pg_backend.connection()`` reads the
-    contextvars at lease time).
-
-    Auth in Dazzle is a per-route FastAPI dependency resolved *before* the
-    handler body runs — so the user's attributes only become available here, after
-    ``TenantMiddleware`` and before any DB query. Setting the contextvars at this
-    point therefore guarantees the GUCs are bound within the same transaction as
-    the fenced/scoped query.
-
-    Each attribute is resolved via the same ``current_user.<attr>`` lookup the
-    app-layer scope filters use (built-in fields → preferences). A missing /
-    unresolvable attribute (``__RBAC_DENY__``) is left unbound — its GUC stays
-    unset so the fence / scope predicate denies (fail-closed). Values are never
-    empty-string (companion §6.3): ``_resolve_user_attribute`` only returns a
-    concrete scalar or the deny sentinel.
-
-    The app-wide attr set is registered once at startup
-    (``register_rls_user_attr_names``); when empty (non-``shared_schema`` / no
-    scope rules) this resolves only ``tenant_id`` exactly as Phase B did.
-
-    asyncio gives each request task its own contextvar copy, so the binding dies
-    with the task — no explicit reset needed (mirrors the audit-context wiring).
-    """
-    if not auth_context.is_authenticated:
-        return
-    # Local import: scope_filters imports auth at module load, so importing it
-    # at top level here would create a circular import.
-    from dazzle.http.runtime.scope_filters import _resolve_user_attribute
-    from dazzle.http.runtime.tenant_isolation import (
-        get_rls_user_attr_names,
-        set_current_rls_user_attrs,
-        set_current_tenant_id,
-    )
-
-    # auth Plan 1d: tenant_id is bound ONLY from the active membership (the hard
-    # FK source). The legacy preferences/domain-user fallback was removed (clean
-    # break) — `_resolve_user_attribute("tenant_id")` is now itself
-    # membership-only, so this stays consistent with the scope-filter path. A
-    # membership-less session leaves dazzle.tenant_id unbound → the fence denies
-    # (fail-closed). Never empty-string (companion §6.3).
-    tenant_id = _resolve_user_attribute("tenant_id", auth_context)
-    if isinstance(tenant_id, str) and tenant_id and tenant_id != "__RBAC_DENY__":
-        set_current_tenant_id(tenant_id)
-
-    # Phase C — resolve every scope-referenced current_user attr into the
-    # per-request GUC map, keyed by the bare attr name (the connection layer
-    # prefixes it with the shared USER_GUC_PREFIX → dazzle.user_<attr>). An attr
-    # that resolves to the deny sentinel, an empty string, or a non-scalar is
-    # omitted → its GUC stays unset → its predicate denies (fail-closed;
-    # companion §6.3 — an empty-string GUC would also be a hard cast error).
-    user_attr_names = get_rls_user_attr_names()
-    if user_attr_names:
-        resolved: dict[str, str] = {}
-        for attr in user_attr_names:
-            value = _resolve_user_attribute(attr, auth_context)
-            if isinstance(value, str) and value and value != "__RBAC_DENY__":
-                resolved[attr] = value
-        if resolved:
-            set_current_rls_user_attrs(resolved)
-
-
 def create_auth_dependency(
     auth_store: AuthStore,
     cookie_name: str = "dazzle_session",
@@ -236,7 +170,7 @@ def create_auth_dependency(
                     detail=f"Required roles: {require_roles}",
                 )
 
-        _bind_rls_tenant_id(auth_context)
+        bind_rls_context(auth_context)
         _bind_apex_lens(request, auth_context)
         _bind_schema_from_membership(request, auth_context)
         return auth_context
@@ -293,7 +227,7 @@ def create_deny_dependency(
         # standalone on a tenant-scoped route the GUC would otherwise be unset.
         # The bind is guarded on is_authenticated and fail-closed, so the
         # empty/unauthenticated early returns above need no equivalent call.
-        _bind_rls_tenant_id(auth_context)
+        bind_rls_context(auth_context)
         _bind_apex_lens(request, auth_context)
         _bind_schema_from_membership(request, auth_context)
         return auth_context
@@ -325,7 +259,7 @@ def create_optional_auth_dependency(
         # An expired/invalid session stays anonymous (helper no-ops when
         # unauthenticated); a valid cross-tenant cookie 403s.
         _enforce_cross_tenant(request, auth_context)
-        _bind_rls_tenant_id(auth_context)
+        bind_rls_context(auth_context)
         _bind_apex_lens(request, auth_context)
         _bind_schema_from_membership(request, auth_context)
         return auth_context

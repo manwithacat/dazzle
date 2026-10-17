@@ -77,6 +77,35 @@ only the *novel* logic. If you genuinely need a generated route gone, suppress i
 with the entity's `expose:` allowlist (#1420 Slice 2) — don't shadow it with an
 un-gated override.
 
+## Escape — irreducible raw DB keeps the Postgres fence live
+
+Some handler bodies genuinely need their own connection (a bulk import, a
+`COPY`, a report query the Repository can't express). Gate the request as above,
+then bind the RLS GUCs on that connection with the framework's resolver
+(#1772) — never a hand-copied one:
+
+```python
+# dazzle:route-override POST /encumbrances/import
+# dazzle:implements Encumbrance.create via id
+from dazzle.http.runtime.auth import bind_rls, current_auth
+
+async def handler(request, id: str):
+    with psycopg.connect(DATABASE_URL) as conn:
+        bind_rls(conn, current_auth(request), session=True)  # dazzle.tenant_id + dazzle.user_<attr>
+        ...                                                  # raw SQL now runs inside the fence
+```
+
+`bind_rls` sets exactly what the framework binds on its own lease (tenant from
+the active membership's partition root, scope attrs, fail-closed on anything
+unresolved), so the `shared_schema` tenant fence and the per-verb scope policies
+stay enforced *in Postgres* even though the permit algebra can't see the SQL.
+Without it the connection is unfenced-by-omission: every fenced row is denied,
+and the tempting "fix" — connecting as a bypass role — removes the fence
+entirely. The default `session=False` is transaction-local; on an autocommit
+connection pass `session=True` (or open a transaction) or nothing stays bound.
+Reference: `docs/reference/rbac-scope.md` → "Raw connections — bind the RLS
+GUCs".
+
 ## Why this matters here
 
 ADR-0040's invariant is that **no route touching a domain entity exists outside

@@ -37,6 +37,7 @@ from dazzle.core.strings import normalize_role, to_api_plural
 from dazzle.http.runtime.dispatch_ctx import _build_dispatch_ctx as _build_dispatch_ctx
 from dazzle.http.runtime.htmx import HtmxDetails, is_peek_request
 from dazzle.http.runtime.mailbox_shape import is_mailbox_shape
+from dazzle.http.runtime.rls_bind import bind_rls_context
 from dazzle.http.runtime.slug_validator import validate_slug
 from dazzle.http.runtime.usage_signal import (
     USAGE_KIND_ACTION,
@@ -795,7 +796,7 @@ async def _resolve_auth_context(get_auth_context: Callable[..., Any] | None, req
         result = await result
     # #1428: bind the per-request RLS GUCs (dazzle.tenant_id / dazzle.user_<attr>)
     # on the page in-process path, exactly as the REST auth dependency does
-    # (dependencies.get_optional_user → _bind_rls_tenant_id). #1422 removed the
+    # (dependencies.get_optional_user → bind_rls_context). #1422 removed the
     # page→REST self-fetch hop that previously ran that dependency; without this
     # bind, a shared_schema/RLS app's leased connection denies every row to
     # in-process page reads/lists/mutations → RecordNotFound → 404. The helper is
@@ -803,9 +804,7 @@ async def _resolve_auth_context(get_auth_context: Callable[..., Any] | None, req
     # unbound, so the fence denies). Idempotent; per-task contextvars die with the
     # request task.
     if result is not None:
-        from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
-
-        _bind_rls_tenant_id(result)
+        bind_rls_context(result)
     return result
 
 

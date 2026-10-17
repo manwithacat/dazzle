@@ -176,7 +176,7 @@ def effective_roles_of(auth_context: object) -> list[str]:
         # doubles, whose auto-created `active_membership` is truthy but has a
         # non-sequence `roles` — those fall through to the legacy roles below
         # instead of silently resolving to an empty role set (the same MagicMock
-        # trap that requires `active_membership=None` in _bind_rls_tenant_id).
+        # trap that requires `active_membership=None` in bind_rls_context).
         if isinstance(m_roles, (list, tuple)):
             return list(m_roles)
     roles = getattr(auth_context, "roles", None)

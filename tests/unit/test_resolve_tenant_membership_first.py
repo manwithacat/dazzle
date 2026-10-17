@@ -5,7 +5,7 @@ an active membership, tenant_id resolves to the deny sentinel so the scope
 predicate / RLS fence denies (fail-closed)."""
 
 from dazzle.http.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
-from dazzle.http.runtime.route_generator import _resolve_user_attribute
+from dazzle.http.runtime.rls_bind import resolve_user_attribute
 
 
 def _ctx(*, membership_tid=None, prefs_tid=None):  # noqa: ANN001
@@ -25,7 +25,7 @@ def _ctx(*, membership_tid=None, prefs_tid=None):  # noqa: ANN001
 
 def test_tenant_id_prefers_active_membership() -> None:
     # Membership says tenant-A; preferences say tenant-LEGACY — membership wins.
-    val = _resolve_user_attribute(
+    val = resolve_user_attribute(
         "tenant_id", _ctx(membership_tid="tenant-A", prefs_tid="tenant-LEGACY")
     )
     assert val == "tenant-A"
@@ -34,7 +34,7 @@ def test_tenant_id_prefers_active_membership() -> None:
 def test_tenant_id_denies_without_membership_ignoring_prefs() -> None:
     # Plan 1d clean break: no membership → deny sentinel, even with a legacy
     # tenant_id preference present (the prefs fallback was removed).
-    val = _resolve_user_attribute("tenant_id", _ctx(prefs_tid="tenant-LEGACY"))
+    val = resolve_user_attribute("tenant_id", _ctx(prefs_tid="tenant-LEGACY"))
     assert val == "__RBAC_DENY__"
 
 
@@ -43,4 +43,4 @@ def test_non_tenant_attr_unaffected_by_membership() -> None:
     # when a membership is present — only tenant_id is membership-sourced.
     ctx = _ctx(membership_tid="tenant-A")
     ctx.preferences["school"] = "S1"
-    assert _resolve_user_attribute("school", ctx) == "S1"
+    assert resolve_user_attribute("school", ctx) == "S1"

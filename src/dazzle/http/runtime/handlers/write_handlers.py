@@ -437,7 +437,7 @@ def create_create_handler(
         _scope_user_roles = list(_extra.get("user_roles") or [])
         # `mode="json"` so UUID / datetime payload fields are normalised to
         # their string form. The create-scope walker compares them against
-        # `current_user.<attr>` values, which `_resolve_user_attribute`
+        # `current_user.<attr>` values, which `resolve_user_attribute`
         # always returns as `str` — a bare `model_dump()` would leave a
         # `ref` field as a `UUID` object, and `UUID(...) == "..."` is always
         # False, so an own-org create would 403 on a pure type mismatch (#1174).

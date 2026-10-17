@@ -8,7 +8,7 @@
 All POSTs are ownership-checked in the store (``set_session_active_membership``).
 A successful activation rotates the CSRF secret (privilege change) and re-sets
 the ``dazzle_csrf`` cookie; the RLS GUC re-binds on the next request via 1a's
-``validate_session`` → ``_bind_rls_tenant_id``.
+``validate_session`` → ``bind_rls_context``.
 """
 
 from typing import Annotated, Any

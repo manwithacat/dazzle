@@ -4,7 +4,7 @@ Unit coverage for the three pure-ish pieces of the fix:
   * ``build_partition_hierarchy`` — derive the parent graph from AppSpec entities.
   * ``resolve_partition_root`` — the sync probe-then-ascend walk (driven by a fake
     cursor that interprets the exact SQL the resolver emits).
-  * ``_resolve_user_attribute("tenant_id")`` — binds partition_root_id, falling
+  * ``resolve_user_attribute("tenant_id")`` — binds partition_root_id, falling
     back to tenant_id.
 
 The real-Postgres proof (RLS fence + host-confinement) lives in
@@ -165,7 +165,7 @@ def test_resolve_cycle_guard_truncates() -> None:
     assert resolve_partition_root(cur, "s", h) == "t"
 
 
-# ── _resolve_user_attribute("tenant_id") binds partition_root_id ──────────────
+# ── resolve_user_attribute("tenant_id") binds partition_root_id ──────────────
 
 
 @pytest.mark.parametrize(
@@ -186,11 +186,11 @@ def test_resolve_cycle_guard_truncates() -> None:
         pytest.param(None, "__RBAC_DENY__", id="no-membership-denies"),
     ],
 )
-def test_resolve_user_attribute_tenant_id(membership: Any, expected: str) -> None:
-    from dazzle.http.runtime.scope_filters import _resolve_user_attribute
+def testresolve_user_attribute_tenant_id(membership: Any, expected: str) -> None:
+    from dazzle.http.runtime.rls_bind import resolve_user_attribute
 
     ctx = SimpleNamespace(active_membership=membership, user=None, preferences={})
-    assert _resolve_user_attribute("tenant_id", ctx) == expected
+    assert resolve_user_attribute("tenant_id", ctx) == expected
 
 
 # ── reconcile_membership_partition_roots (boot backfill / refresh) ────────────

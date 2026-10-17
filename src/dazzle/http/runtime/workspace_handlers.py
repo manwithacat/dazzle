@@ -18,7 +18,7 @@ import logging
 from typing import Any
 
 from dazzle.core.strings import normalize_role
-from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
+from dazzle.http.runtime.rls_bind import bind_rls_context
 from dazzle.http.runtime.workspace_aggregation import _compute_aggregate_metrics
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_scope import _apply_workspace_scope_filters
@@ -220,11 +220,11 @@ async def _workspace_batch_handler(
 
     # #1466: bind the per-request RLS GUCs so the batched region reads below run
     # with dazzle.tenant_id resolved (this handler self-authenticates, so the
-    # auth dependency's _bind_rls_tenant_id never runs). Without it a shared_schema
+    # auth dependency's bind_rls_context never runs). Without it a shared_schema
     # /RLS app denies every row → empty regions. Same fix as the region path; the
     # prefs splice above means current_user.<attr> scope GUCs also bind.
     if _batch_auth_ctx is not None:
-        _bind_rls_tenant_id(_batch_auth_ctx)
+        bind_rls_context(_batch_auth_ctx)
 
     # Legacy filter context for backward compat
     _batch_filter_ctx: dict[str, Any] = {}
@@ -299,11 +299,11 @@ async def _workspace_stats_handler(
             break
 
     # #1466: bind dazzle.tenant_id before the scope-aware aggregate queries below.
-    # This handler self-authenticates, so the auth dependency's _bind_rls_tenant_id
+    # This handler self-authenticates, so the auth dependency's bind_rls_context
     # never runs — without it the aggregate's leased connection reads an unset
     # tenant GUC and a shared_schema/RLS app fences every row → all stats are 0.
     if _stats_auth_ctx is not None:
-        _bind_rls_tenant_id(_stats_auth_ctx)
+        bind_rls_context(_stats_auth_ctx)
 
     workspace_name = ""
     if region_ctxs:

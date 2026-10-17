@@ -35,7 +35,7 @@ from dazzle.http.runtime.tenant_isolation import (
 def _reset_rls_context():
     """Keep this module hermetic — reset the RLS contextvars + registry per test.
 
-    ``_bind_rls_tenant_id`` sets process/context state; without this reset a bind
+    ``bind_rls_context`` sets process/context state; without this reset a bind
     test would leak ``dazzle.tenant_id`` / ``dazzle.user_*`` into other modules'
     tests (e.g. Phase B's contextvar-roundtrip), making ordering-dependent.
     """
@@ -132,7 +132,7 @@ def test_bind_resolves_registered_attrs_into_contextvar(monkeypatch) -> None:
     Mirrors Phase B's tenant-id bind: ``__RBAC_DENY__``/None resolutions are
     skipped (their GUC stays unset → fail-closed).
     """
-    from dazzle.http.runtime.auth import dependencies as deps
+    from dazzle.http.runtime.rls_bind import bind_rls_context
 
     register_rls_user_attr_names({"id", "school_id", "absent_attr"})
     try:
@@ -147,7 +147,7 @@ def test_bind_resolves_registered_attrs_into_contextvar(monkeypatch) -> None:
             return resolved[attr]
 
         monkeypatch.setattr(
-            "dazzle.http.runtime.scope_filters._resolve_user_attribute",
+            "dazzle.http.runtime.rls_bind.resolve_user_attribute",
             fake_resolve,
         )
 
@@ -155,7 +155,7 @@ def test_bind_resolves_registered_attrs_into_contextvar(monkeypatch) -> None:
         auth_ctx.is_authenticated = True
         auth_ctx.active_membership = None
 
-        deps._bind_rls_tenant_id(auth_ctx)
+        bind_rls_context(auth_ctx)
 
         # tenant_id bound (Phase B behaviour preserved)
         from dazzle.http.runtime.tenant_isolation import get_current_tenant_id
@@ -176,7 +176,7 @@ def test_bind_omits_empty_string_value(monkeypatch) -> None:
     a hard ``::uuid`` cast error in the scope policy — so it must be dropped, same
     as ``__RBAC_DENY__`` (fail-closed: the predicate denies on the missing GUC).
     """
-    from dazzle.http.runtime.auth import dependencies as deps
+    from dazzle.http.runtime.rls_bind import bind_rls_context
 
     register_rls_user_attr_names({"id"})
     try:
@@ -185,14 +185,14 @@ def test_bind_omits_empty_string_value(monkeypatch) -> None:
             return "t1" if attr == "tenant_id" else ""
 
         monkeypatch.setattr(
-            "dazzle.http.runtime.scope_filters._resolve_user_attribute",
+            "dazzle.http.runtime.rls_bind.resolve_user_attribute",
             fake_resolve,
         )
 
         auth_ctx = MagicMock()
         auth_ctx.is_authenticated = True
         auth_ctx.active_membership = None
-        deps._bind_rls_tenant_id(auth_ctx)
+        bind_rls_context(auth_ctx)
 
         assert "id" not in get_current_rls_user_attrs()
     finally:
@@ -206,7 +206,7 @@ def test_bind_noop_when_no_registered_attrs(monkeypatch) -> None:
     must not bind a user-attr map, so ``get_current_rls_user_attrs()`` stays ``{}``
     (proving the dep left it alone — not that it actively set ``{}``).
     """
-    from dazzle.http.runtime.auth import dependencies as deps
+    from dazzle.http.runtime.rls_bind import bind_rls_context
 
     register_rls_user_attr_names(set())
 
@@ -214,14 +214,14 @@ def test_bind_noop_when_no_registered_attrs(monkeypatch) -> None:
         return "t1" if attr == "tenant_id" else "should-not-be-called"
 
     monkeypatch.setattr(
-        "dazzle.http.runtime.scope_filters._resolve_user_attribute",
+        "dazzle.http.runtime.rls_bind.resolve_user_attribute",
         fake_resolve,
     )
 
     auth_ctx = MagicMock()
     auth_ctx.is_authenticated = True
     auth_ctx.active_membership = None
-    deps._bind_rls_tenant_id(auth_ctx)
+    bind_rls_context(auth_ctx)
 
     assert get_current_rls_user_attrs() == {}
 

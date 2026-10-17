@@ -393,7 +393,7 @@ def _check_scope_create(
     # resolver `route_generator._enforce_create_scope` uses (#1174). A
     # `scope: create:` predicate may reference `current_user.<attr>` for
     # ANY DSL-chosen attribute (`org`, `school`, ...); resolving lazily
-    # through `_resolve_user_attribute` (built-in UserRecord fields +
+    # through `resolve_user_attribute` (built-in UserRecord fields +
     # `auth_context.preferences`) avoids the hardcoded-allowlist bug that
     # silently over-denied any attribute not on a fixed list.
     from dazzle.http.runtime.scope_filters import _LazyUserAttrs

@@ -5,7 +5,7 @@
 
 The profile is found via the app's ``is_profile`` entity + its Repository
 (``app.state.repositories``). The RLS GUC is bound from the active membership
-(``_bind_rls_tenant_id``) before touching the fenced profile table, so a create's
+(``bind_rls_context``) before touching the fenced profile table, so a create's
 ``tenant_id`` is auto-injected (Plan 1d) and RLS fences as defence-in-depth. The
 read is scoped explicitly to ``(identity_id, tenant_id)`` — the caller's own
 profile in their active org. ``identity_id`` is set server-side on create (never
@@ -21,6 +21,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.http.runtime.auth.cookie_name import read_session_id
 from dazzle.http.runtime.auth.product_name import product_name
+from dazzle.http.runtime.rls_bind import bind_rls_context
 
 # Fields the framework manages — never client-editable on a profile.
 _MANAGED = {"id", "tenant_id", "identity_id", "created_at", "updated_at"}
@@ -83,7 +84,6 @@ def create_profile_routes() -> APIRouter:
 
     @router.get("/me/profile", response_class=HTMLResponse, include_in_schema=False)
     async def my_profile(request: Request) -> HTMLResponse:
-        from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
         from dazzle.http.runtime.auth.profile_views import build_my_profile_view
         from dazzle.render.fragment.renderer import FragmentRenderer
 
@@ -91,7 +91,7 @@ def create_profile_routes() -> APIRouter:
         if gated is None:
             return HTMLResponse("Forbidden", status_code=403)
         store, ctx, entity, repo = gated
-        _bind_rls_tenant_id(ctx)  # bind dazzle.tenant_id from the active membership
+        bind_rls_context(ctx)  # bind dazzle.tenant_id from the active membership
         tenant_id = ctx.active_membership.tenant_id
         current = (
             await _current_profile(repo, identity_id=str(ctx.user.id), tenant_id=tenant_id) or {}
@@ -111,13 +111,11 @@ def create_profile_routes() -> APIRouter:
 
     @router.post("/me/profile", include_in_schema=False, response_model=None)
     async def upsert_my_profile(request: Request) -> Response:
-        from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
-
         gated = _ctx_and_repo(request)
         if gated is None:
             return HTMLResponse("Forbidden", status_code=403)
         _store, ctx, entity, repo = gated
-        _bind_rls_tenant_id(ctx)
+        bind_rls_context(ctx)
         tenant_id = ctx.active_membership.tenant_id
         identity_id = str(ctx.user.id)
         form = await request.form()

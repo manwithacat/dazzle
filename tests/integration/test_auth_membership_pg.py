@@ -205,12 +205,12 @@ def test_validate_session_no_membership_is_backward_compatible(scratch_url: str)
 
 
 def test_membership_drives_tenant_binding_end_to_end(scratch_url: str) -> None:
-    """DB membership -> validate_session -> _bind_rls_tenant_id sets the tenant
+    """DB membership -> validate_session -> bind_rls_context sets the tenant
     contextvar to the membership's tenant_id (which pg_backend reads to set the
     `dazzle.tenant_id` GUC; fence enforcement is proven in test_rls_enforcement_pg)."""
     from dazzle.http.runtime import tenant_isolation
-    from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
     from dazzle.http.runtime.auth.store import AuthStore
+    from dazzle.http.runtime.rls_bind import bind_rls_context
 
     store = AuthStore(database_url=scratch_url)
     store._init_db()
@@ -223,7 +223,7 @@ def test_membership_drives_tenant_binding_end_to_end(scratch_url: str) -> None:
 
     set_token = tenant_isolation.set_current_tenant_id("")  # reset to a known value
     try:
-        _bind_rls_tenant_id(ctx)
+        bind_rls_context(ctx)
         assert tenant_isolation.get_current_tenant_id() == "tenant-A"
         assert ctx.effective_roles == ["admin"]
     finally:

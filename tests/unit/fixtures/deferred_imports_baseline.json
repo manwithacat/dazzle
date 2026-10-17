@@ -105,7 +105,7 @@
   "src/dazzle/http/runtime/storage/proxy_routes.py": 2,
   "src/dazzle/http/runtime/predicate_compiler.py": 1,
   "src/dazzle/page/runtime/app_chrome.py": 1,
-  "src/dazzle/http/runtime/auth/profile_routes.py": 8,
+  "src/dazzle/http/runtime/auth/profile_routes.py": 4,
   "src/dazzle/mcp/server/handlers_consolidated.py": 2,
   "src/dazzle/core/linker.py": 3,
   "src/dazzle/rbac/verification_harness.py": 5,
@@ -169,7 +169,7 @@
   "src/dazzle/core/guide_concordance.py": 1,
   "src/dazzle/compliance/evidence.py": 1,
   "src/dazzle/http/runtime/workspace_handlers.py": 2,
-  "src/dazzle/http/runtime/auth/dependencies.py": 7,
+  "src/dazzle/http/runtime/auth/dependencies.py": 5,
   "src/dazzle/http/runtime/storage/s3_provider.py": 1,
   "src/dazzle/qa/capture.py": 2,
   "src/dazzle/cli/doctor.py": 5,
@@ -232,5 +232,5 @@
   "src/dazzle/db/rls_apply.py": 1,
   "src/dazzle/http/runtime/htmx_render.py": 3,
   "src/dazzle/cli/db.py": 35,
-  "src/dazzle/http/runtime/page_routes.py": 22
+  "src/dazzle/http/runtime/page_routes.py": 21
 }

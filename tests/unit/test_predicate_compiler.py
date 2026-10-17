@@ -91,7 +91,7 @@ class TestUserAttrCheck:
         sql, params = compile_predicate(p, "Teacher", _simple_graph())
         assert '"school_id" = %s' in sql
         # Params contain a UserAttrRef marker that the route handler resolves
-        # at request time via _resolve_user_attribute(attr_name, auth_context).
+        # at request time via resolve_user_attribute(attr_name, auth_context).
         assert len(params) == 1
         from dazzle.http.runtime.predicate_compiler import UserAttrRef
 
