@@ -24,7 +24,9 @@ def test_render_badge() -> None:
     r = FragmentRenderer()
     out = r.render(Badge(label="new", variant="success"))
     assert "new" in out
-    assert "dz-badge--variant-success" in out
+    # HM badge contract (#1799): tone on data-dz-tone + the WCAG tone glyph.
+    assert '<span class="dz-badge" data-dz-tone="success">' in out
+    assert "dz-badge-icon" in out
 
 
 def test_render_empty_state() -> None:

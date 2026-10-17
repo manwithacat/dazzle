@@ -226,6 +226,19 @@ select.dz-form-input {
  * x-show). Container uses .dz-file-upload (existing class on the
  * x-data root). */
 
+.dz-file-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+/* The native picker the widget registry reads (#1648) — sized to the form's
+ * type scale so it doesn't render at the UA's own font. */
+.dz-file-upload-input {
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
 .dz-file-upload-preview {
   display: flex;
   align-items: center;

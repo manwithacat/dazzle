@@ -90,10 +90,11 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 ```python
 """HYPERPART: card — bordered surface wrapping content.
 
-Dual-lock unit is the surface root. Header/body/footer slots and BEM
-token modifiers (``dz-card--radius-*`` etc.) are host-owned. Gallery KPI
-tiles use ``dz-card`` + content classes; substrate ``Card`` emits
-``dz-card`` + optional ``dz-card__header|body|footer``.
+Dual-lock unit is the surface root. Slots are ``dz-card-header`` /
+``dz-card-body`` / ``dz-card-footer``; token knobs ride ``data-dz-radius`` /
+``-border`` / ``-padding`` / ``-shadow`` (only where they differ from the
+resting card) and are host-owned. Gallery KPI tiles use ``dz-card`` + content
+classes; the substrate ``Card`` emits the same slot classes (#1799).
 """
 
 from contracts._kit import DomContract, Node

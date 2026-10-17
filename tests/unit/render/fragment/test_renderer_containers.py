@@ -23,7 +23,7 @@ def test_render_card_body_only() -> None:
     out = r.render(Card(body=Text("contents")))
     assert "dz-card" in out
     assert 'class="dz-text' in out
-    assert "dz-card__header" not in out
+    assert "dz-card-header" not in out
 
 
 def test_render_card_with_all_slots() -> None:
@@ -35,9 +35,10 @@ def test_render_card_with_all_slots() -> None:
             footer=Text("foot"),
         )
     )
-    assert "dz-card__header" in out
-    assert "dz-card__body" in out
-    assert "dz-card__footer" in out
+    # HM card slot classes (#1799), not the old BEM `dz-card__*`.
+    assert '<div class="dz-card-header">' in out
+    assert '<div class="dz-card-body">' in out
+    assert '<div class="dz-card-footer">' in out
 
 
 def test_render_surface_with_header() -> None:
@@ -68,11 +69,13 @@ def test_render_tabs() -> None:
 
 def test_render_drawer_side_class() -> None:
     r = FragmentRenderer()
-    out = r.render(Drawer(body=Text("contents"), side="left"))
-    assert "dz-drawer--side-left" in out
+    out = r.render(Drawer(body=Text("contents"), side="left", dialog_id="d1"))
+    # HM drawer (#1799): native dialog, edge on data-dz-side.
+    assert '<dialog class="dz-drawer" id="d1" data-dz-side="left">' in out
 
 
 def test_render_modal_size_class() -> None:
     r = FragmentRenderer()
     out = r.render(Modal(body=Text("contents"), size="lg"))
-    assert "dz-modal--size-lg" in out
+    # HM dialog (#1799): native dialog, width preset on data-dz-width.
+    assert '<dialog class="dz-dialog" data-dz-width="lg">' in out

@@ -1235,8 +1235,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "lazy-load via htmx. Not a focus-trapped/positioned popover.",
             '<details class="dz-popover"><summary class="dz-button" data-dz-variant="outline">'
             "Details</summary>"
-            '<div class="dz-popover__panel"><div class="hm-demo-title">Dimensions</div>'
-            '<p class="hm-demo-muted">Filters, previews, quick forms.</p></div></details>',
+            '<div class="dz-popover__panel"><div class="dz-popover__title">Dimensions</div>'
+            '<p class="dz-popover__body">Filters, previews, quick forms.</p></div></details>',
             notes="**Pick:** free content under a trigger — not an action list (menu). "
             "Not a tooltip (no auto-timeout by default). Light-dismiss: "
             "<strong>spatial</strong> Esc+outside; optional "

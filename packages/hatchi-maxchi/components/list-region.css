@@ -98,6 +98,12 @@
   padding-block: var(--space-sm);
 }
 
+/* A status chip in a cell keeps its label on one line — the column widens
+ * rather than the chip breaking (#1799; the grid's badge cells do the same). */
+.dz-list-table .dz-badge {
+  white-space: nowrap;
+}
+
 .dz-list-sort-link {
   cursor: pointer;
   user-select: none;

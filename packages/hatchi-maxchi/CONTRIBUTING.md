@@ -57,7 +57,7 @@ The gates you're most likely to trip, and what they mean, are described
 in the README's Development section. Two easy ones to remember:
 
 - every class your markup uses needs a CSS rule (or an explicit
-  `SEMANTIC_ONLY` entry with a comment) — including classes a controller
+  `SEMANTIC_ONLY` entry in `build.py` with a comment) — including classes a controller
   assigns from JS;
 - every `hx-*` request affordance needs a declared `Exchange` contract,
   and every declared contract needs a real affordance.

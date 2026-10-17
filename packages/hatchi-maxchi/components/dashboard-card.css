@@ -66,23 +66,78 @@
   border-color: var(--colour-brand);
 }
 
-/* Card header — drag handle zone. */
+/* Card token knobs (#1799) — the typed Fragment `Card` primitive emits
+ * `data-dz-radius|border|padding|shadow` only where its `CardTokens` differ
+ * from the resting look above (md radius, subtle border, normal padding,
+ * low shadow), so an untokened card is byte-for-byte the HM card. */
+.dz-card[data-dz-radius="none"] {
+  border-radius: 0;
+}
+
+.dz-card[data-dz-radius="sm"] {
+  border-radius: var(--radius-sm);
+}
+
+.dz-card[data-dz-radius="lg"] {
+  border-radius: var(--radius-lg);
+}
+
+.dz-card[data-dz-border="none"] {
+  border-color: transparent;
+}
+
+.dz-card[data-dz-border="emphatic"] {
+  border-color: color-mix(in oklch, var(--colour-text) 35%, var(--colour-border));
+}
+
+.dz-card[data-dz-shadow="none"] {
+  box-shadow: none;
+}
+
+.dz-card[data-dz-shadow="elevated"] {
+  box-shadow: var(--shadow-md);
+}
+
+.dz-card[data-dz-padding="compact"] > :is(.dz-card-header, .dz-card-body, .dz-card-footer) {
+  padding-inline: var(--space-sm);
+}
+
+.dz-card[data-dz-padding="comfortable"] > :is(.dz-card-header, .dz-card-body, .dz-card-footer) {
+  padding-inline: var(--space-lg);
+}
+
+/* Card header — title row. Inside a dashboard slot (`.dz-card-wrapper`)
+ * it is also the drag handle, so only there does it take the grab cursor;
+ * a standalone card's header is not draggable. */
 .dz-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-inline: var(--space-md);
   padding-block: var(--space-sm);
-  cursor: grab;
   min-height: 2.25rem;
 }
 
-.dz-card-header:active {
+.dz-card-wrapper .dz-card-header {
+  cursor: grab;
+}
+
+.dz-card-wrapper .dz-card-header:active {
   cursor: grabbing;
 }
 
 .dz-card-header.is-dragging {
   cursor: grabbing;
+}
+
+/* Card footer — trailing action row (the Fragment `Card.footer` slot). */
+.dz-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm) var(--space-md);
 }
 
 .dz-card-titles {

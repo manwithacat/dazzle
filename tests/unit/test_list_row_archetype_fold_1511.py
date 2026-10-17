@@ -34,12 +34,12 @@ def _render(emit_name: str, fragment: object) -> list[str]:
 
 
 class TestEmbeddedArchetype:
-    """`_emit_table` → `data-dz-list-kind="embedded"`, `dz-table__row`."""
+    """`_emit_table` → `data-dz-list-kind="embedded"`, HM `dz-list-row` (#1799)."""
 
     def test_plain_row(self) -> None:
         rows = _render("_emit_table", Table(columns=("Name", "Age"), rows=(("Ada", "36"),)))
         assert rows == [
-            '<tr data-dz-list-kind="embedded" class="dz-table__row"><td>Ada</td><td>36</td></tr>'
+            '<tr data-dz-list-kind="embedded" class="dz-list-row"><td>Ada</td><td>36</td></tr>'
         ]
 
     def test_linked_row_owns_the_drill(self) -> None:
@@ -49,7 +49,7 @@ class TestEmbeddedArchetype:
         )
         assert rows == [
             '<tr data-dz-list-kind="embedded" '
-            'class="dz-table__row dz-table__row--linked" '
+            'class="dz-list-row is-clickable" '
             'hx-get="/x/1" hx-push-url="true" hx-trigger="click" '
             'hx-preload="mouseover" hx-target="#main-content" hx-swap="innerHTML" tabindex="0">'
             "<td>Ada</td></tr>"
@@ -71,7 +71,7 @@ class TestEmbeddedArchetype:
         # follows its row across an idiomorph re-sort/paginate.
         assert rows[0].startswith(
             '<tr id="dz-grid-row-id1" data-dz-row-id="id1" data-dz-list-kind="embedded" '
-            'class="dz-table__row"><td class="dz-tr-checkbox-cell" '
+            'class="dz-list-row"><td class="dz-tr-checkbox-cell" '
             'onclick="event.stopPropagation()">'
         )
         assert rows[0].endswith("<td>Ada</td></tr>")

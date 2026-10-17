@@ -633,10 +633,6 @@
   margin-block-end: var(--space-md);
 }
 
-.dz-review-notes-wrap[hidden] {
-  display: none;
-}
-
 .dz-review-notes-label {
   display: block;
   font-size: var(--text-sm);

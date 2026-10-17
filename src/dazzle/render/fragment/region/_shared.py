@@ -276,9 +276,11 @@ def _render_status_badge_html(
     """Replicate the legacy `render_status_badge` macro byte-for-byte.
 
     Used by `_render_typed_value` for `type=="badge"` cells in DETAIL,
-    LIST, TIMELINE etc. — the typed `Badge` primitive emits a different
-    class scheme (`dz-badge--variant-X`) so for byte-equivalence with
-    the legacy macro we replicate its HTML directly via `RawHTML`.
+    LIST, TIMELINE etc. The typed `Badge` primitive emits the same HM
+    `.dz-badge[data-dz-tone]` shape (#1799) but takes a fixed variant, not a
+    raw value; this helper resolves the tone from the value (semantic map,
+    name guess) and carries the `role`/`aria-label` status semantics, so the
+    cell path keeps its own emitter and wraps it in `RawHTML`.
 
     Mirrors the macro's value-coalescing: None / "" / "—" → em-dash
     placeholder. Otherwise tone resolved via `_badge_tone_filter`,

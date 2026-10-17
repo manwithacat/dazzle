@@ -23,6 +23,12 @@ dialog.dz-dialog {
   outline: none;
 }
 
+/* Width presets (data-dz-width) — the same steps as the drawer's; md is the
+ * default above. Emitted by the Fragment `Modal(size=…)` primitive (#1799). */
+dialog.dz-dialog[data-dz-width="sm"] { width: min(24rem, calc(100vw - 2rem)); }
+dialog.dz-dialog[data-dz-width="lg"] { width: min(42rem, calc(100vw - 2rem)); }
+dialog.dz-dialog[data-dz-width="xl"] { width: min(56rem, calc(100vw - 2rem)); }
+
 dialog.dz-dialog:focus,
 dialog.dz-dialog:focus-visible {
   outline: none;

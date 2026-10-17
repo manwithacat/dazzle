@@ -1,6 +1,6 @@
 {
-  "src_lines": 324964,
-  "test_lines": 316353,
+  "src_lines": 325083,
+  "test_lines": 316573,
   "docs_lines": 49042,
   "construct_count": 31,
   "written": "2026-10-17",
@@ -466,26 +466,25 @@
       "date": "2026-10-17",
       "rose": [
         "src_lines",
+        "test_lines"
+      ],
+      "reason": "#1799 Fragment renderer emits HM classes; conformance gate + HM rules for previously unstyled primitives"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "test_lines"
+      ],
+      "reason": "#1799 Fragment renderer emits HM classes; conformance gate + HM rules for previously unstyled primitives"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
         "test_lines",
         "docs_lines"
       ],
-      "reason": "#1794 topbar_title setting, identity chip and renderer Principal (consumer-forced by AegisMark)"
-    },
-    {
-      "date": "2026-10-17",
-      "rose": [
-        "src_lines",
-        "test_lines"
-      ],
-      "reason": "#1794 topbar_title, identity chip, renderer principal (consumer-forced)"
-    },
-    {
-      "date": "2026-10-17",
-      "rose": [
-        "src_lines",
-        "test_lines"
-      ],
-      "reason": "#1792 U18 ref-cell truncation + U5 media-column policy (consumer-forced)"
+      "reason": "#1799 Fragment primitives emit HM class names + bundle conformance gate (consumer-forced)"
     }
   ]
 }

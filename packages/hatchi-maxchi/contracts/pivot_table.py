@@ -1,17 +1,18 @@
 """HYPERPART: pivot-table — simple cross-tab HTML table shell.
 
-Dual-lock unit is the table root. Caption, dimension headers, and cell
-values are host-owned. Class ``.dz-pivot-table`` is the stable substrate
-root (``_emit_pivot_table``). Distinct from the region dual-lock in
+Dual-lock unit is the table root, marked ``data-dz-pivot-table``
+(``_emit_pivot_table``); the skin is the pivot grid (``dz-pivot-grid``,
+measure cells ``is-measure``, #1799). Caption, dimension headers, and cell
+values are host-owned. Distinct from the region dual-lock in
 ``contracts/pivot.py`` (``data-dz-pivot``).
 """
 
-from contracts._kit import DomContract, Node
+from contracts._kit import DomContract, Node, Present
 
 DOM_CONTRACT = DomContract(
     part="pivot-table",
-    root=".dz-pivot-table",
-    nodes=(Node(".dz-pivot-table", attrs={}),),
+    root="[data-dz-pivot-table]",
+    nodes=(Node("[data-dz-pivot-table]", attrs={"data-dz-pivot-table": Present()}),),
 )
 
 __all__ = ["DOM_CONTRACT"]

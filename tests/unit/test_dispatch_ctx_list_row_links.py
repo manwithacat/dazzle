@@ -119,7 +119,7 @@ def test_list_skeleton_hydrates_rows_from_api_not_inline() -> None:
     # dz-grid:refresh always joins the load trigger.
     assert 'hx-trigger="load, dz-grid:refresh"' in html
     # no inline data rows / per-row drill at first paint
-    assert "dz-table__row--linked" not in html
+    assert 'data-dz-list-kind="embedded"' not in html
     assert "Alice" not in html
     assert "Bob" not in html
 

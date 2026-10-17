@@ -82,7 +82,7 @@ class TestSkeletonTableChrome:
         html = _render(Table(columns=("Name",), rows=(("Ada",),), caption="X", has_actions=True))
         assert "<caption" not in html
         assert "dz-table-th-actions" not in html
-        assert '<table class="dz-table">' in html
+        assert '<table class="dz-list-table">' in html
 
 
 # ── 4b: DataListScroll — scroll/loading/scroll-x/empty/loading-sr shell ──

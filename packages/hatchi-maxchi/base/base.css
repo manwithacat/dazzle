@@ -138,6 +138,17 @@ button:disabled {
   opacity: 0.6;
 }
 
+/* `hidden` means hidden (#1799). The UA rule is `[hidden] { display: none }`
+ * with no precedence, so any component that sets `display: flex|grid` on a
+ * shell or strip silently un-hides it — the attribute a renderer or an htmx
+ * swap sets then does nothing. `!important` in the base layer outranks every
+ * normal declaration in later layers and in unlayered consumer CSS, which is
+ * the point: a component never needs to re-state `[hidden]`. until-found
+ * keeps its UA behaviour (content-visibility, so find-in-page can reveal). */
+[hidden]:not([hidden="until-found"]) {
+  display: none !important;
+}
+
 /* Code + pre — monospace family, neutral surface. */
 
 code,

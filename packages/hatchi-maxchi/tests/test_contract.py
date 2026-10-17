@@ -16,7 +16,7 @@ sys.path.insert(0, str(PKG))
 sys.path.insert(0, str(PKG / "site"))
 
 from blueprints import BLUEPRINTS  # noqa: E402
-from build import build_css, build_js  # noqa: E402
+from build import SEMANTIC_ONLY, build_css, build_js  # noqa: E402
 from registry import HYPERPARTS  # noqa: E402
 
 # hx-* attributes that make a server request (each REQUIRES a declared
@@ -47,65 +47,6 @@ def _methods_in_markup(partial: str) -> set[str]:
     return methods
 
 
-# Structural wrappers that intentionally carry no rule of their own
-# (styled via inheritance / parent selectors). Additions here need a
-# comment in the component's CSS explaining why.
-SEMANTIC_ONLY = {
-    "dz-alert__body",
-    # dz-empty-state__description removed 2026-07-09: it gained a style rule
-    # (color + font-size) when the detail-view empty-state was folded into HM
-    # (HMC-003c), so it is no longer semantic-only.
-    # tab panel container: identity for the controller + a swap target; its
-    # visibility rides the native `hidden` attribute, so it carries no rule.
-    "dz-tabs__panel",
-    # the select-column <col> in the grid's colgroup: a structural marker so
-    # the resize/visibility extensions can address data cols by exclusion —
-    # the table stays layout:auto, so the col itself needs no width rule.
-    "dz-table-col-select",
-    # region-body wrappers (W1): the workspace card slot provides the box;
-    # these wrappers are the emitters' structural anchors and have never
-    # carried rules (verbatim from Dazzle, where they were also rule-less).
-    "dz-status-list-region",
-    "dz-action-grid-region",
-    "dz-queue-region",
-    "dz-timeline-region",
-    "dz-funnel-chart-region",
-    "dz-bar-chart-region",
-    "dz-heatmap-region",
-    "dz-bullet-region",
-    "dz-pivot-region",
-    # dz-bar-track-region removed from SEMANTIC_ONLY — it gained grid
-    # column-stop rules with the summary-alignment fix.
-    "dz-histogram-region",
-    "dz-box-plot-region",
-    "dz-progress-region",
-    "dz-line-chart-region",
-    "dz-area-chart-region",
-    "dz-radar-region",
-    "dz-profile-card-region",
-    "dz-grid-region",
-    "dz-list-region",
-    "dz-task-inbox-region",  # dual-lock root; chips/items own styling
-    "dz-cohort-strip-region",  # dual-lock root; lenses/cells own styling
-    "dz-day-timeline-region",  # dual-lock root; slots own styling
-    "dz-entity-card-region",  # dual-lock root; sections own styling
-    "dz-pipeline-steps-region",  # dual-lock root; stages own styling
-    # wizard stage block: visibility rides the native `hidden` attribute
-    # (dz-wizard.js); the fields inside carry the styling.
-    "dz-wizard-stage",
-    # money widget root: the data-dz-money marker + scale attribute are
-    # the contract; the styled box is the inner dz-form-money-group.
-    "dz-money",
-    # search-box results container: the htmx swap target + aria-live
-    # region — pure structure, its children (count/list/rows) carry the
-    # styling.
-    "dz-search-box-results",
-    # task-inbox item skeleton (items/link/body/title/meta/empty) gained
-    # rules in cycle 1355 coherence drain (list-style + flex row/urgency
-    # tones) — removed from SEMANTIC_ONLY when styles landed.
-}
-
-
 def _all_partials():
     """Every published markup string — Hyperpart demos AND Blueprint pages
     (a typo'd class in either ships unstyled to every consumer)."""
@@ -123,12 +64,20 @@ def _used_classes() -> set[str]:
     return used
 
 
+def _ruled_classes() -> set[str]:
+    """Every `dz-*` class named in a selector of the dz- build — exact class
+    tokens, so `.dz-card-body` does not count as a rule for `.dz-card`
+    (a substring check hid unstyled classes behind longer siblings)."""
+    css = re.sub(r"/\*.*?\*/", "", build_css("dz-"), flags=re.DOTALL)
+    return set(re.findall(r"\.(dz-[A-Za-z0-9_-]+)", css))
+
+
 def test_every_registry_class_has_a_rule() -> None:
     # Registry partials carry the dz- SOURCE form; check against the dz-
     # build (the published default is unprefixed, but the source is dz-).
-    css = build_css("dz-")
+    ruled = _ruled_classes()
     missing = sorted(
-        cls for cls in _used_classes() if f".{cls}" not in css and cls not in SEMANTIC_ONLY
+        cls for cls in _used_classes() if cls not in ruled and cls not in SEMANTIC_ONLY
     )
     assert not missing, (
         f"registry HTML uses classes with no rule in the bundle: {missing}. "
@@ -184,7 +133,7 @@ def test_js_assigned_classes_have_rules() -> None:
     Every dz-* class a controller can put in the DOM must have a rule in
     the built bundle. State classes (`is-*`) are exempt: they style via
     compound selectors on their host."""
-    css = build_css("dz-")
+    ruled = _ruled_classes()
     controllers = sorted((PKG / "controllers").glob("*.js"))
     assign_re = re.compile(r"""(?:className\s*=\s*|classList\.add\()["']([^"']+)["']""")
     missing = []
@@ -193,7 +142,7 @@ def test_js_assigned_classes_have_rules() -> None:
             for cls in m.group(1).split():
                 if not cls.startswith("dz-") or cls in SEMANTIC_ONLY:
                     continue
-                if f".{cls}" not in css:
+                if cls not in ruled:
                     missing.append(f"{f.name}: .{cls}")
     assert not missing, (
         "controller-assigned classes with no CSS rule in the bundle:\n  " + "\n  ".join(missing)
@@ -201,8 +150,8 @@ def test_js_assigned_classes_have_rules() -> None:
 
 
 def test_semantic_only_list_is_not_stale() -> None:
-    css = build_css("dz-")
-    stale = sorted(cls for cls in SEMANTIC_ONLY if f".{cls}" in css)
+    ruled = _ruled_classes()
+    stale = sorted(cls for cls in SEMANTIC_ONLY if cls in ruled)
     assert not stale, f"now styled — remove from SEMANTIC_ONLY: {stale}"
 
 

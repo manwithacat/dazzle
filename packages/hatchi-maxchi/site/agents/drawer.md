@@ -244,13 +244,12 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
 
 ```python
-"""HYPERPART: drawer — edge-anchored panel (native dialog or aside).
+"""HYPERPART: drawer — edge-anchored panel (native dialog).
 
-Dual-lock unit is the drawer surface root. Gallery demos use
-``<dialog class="dz-drawer">`` opened via ``data-dz-dialog-open``; the
-substrate ``Drawer`` primitive emits ``<aside class="dz-drawer …">``.
-Slide-over peek also uses ``dialog.dz-drawer``. Class ``.dz-drawer`` is the
-stable cross-path selector.
+Dual-lock unit is the drawer surface root: ``<dialog class="dz-drawer">``
+opened via ``data-dz-dialog-open``, edge by ``data-dz-side``. The gallery,
+the slide-over peek and the substrate ``Drawer`` primitive (#1799) all emit
+this shape. Class ``.dz-drawer`` is the stable cross-path selector.
 """
 
 from contracts._kit import DomContract, Node

@@ -85,10 +85,10 @@ blast radius (who embeds / refuses this part).
 | `interactive` | `interactive` | `.dz-interactive` | .dz-interactive[] | — |
 | `item` | `item` | `.dz-item` | .dz-item[] | — |
 | `kanban` | `kanban` | `[data-dz-kanban-card]` | [data-dz-kanban-card][data-dz-kanban-card=present] | KanbanCard(allowed_to:tuple[str,...]:opt; attention_level:str:opt; attention_message:str:opt; drill_url:str:opt; fields_html:str:opt; from_state:str:opt; rank:float\|int\|str\|None:opt; row_id:str:opt; title:str:req) |
-| `kanban_board` | `kanban-board` | `.dz-kanban` | .dz-kanban[] | — |
+| `kanban_board` | `kanban-board` | `[data-dz-kanban]` | [data-dz-kanban][data-dz-kanban=present] | — |
 | `kanban_region` | `kanban-region` | `.dz-kanban-board` | .dz-kanban-board[] | — |
 | `kbd` | `kbd` | `.dz-kbd` | .dz-kbd[] | — |
-| `kpi` | `kpi` | `.dz-kpi` | .dz-kpi[] | — |
+| `kpi` | `kpi` | `[data-dz-kpi]` | [data-dz-kpi][data-dz-kpi=present] | — |
 | `layout_grid` | `layout-grid` | `.dz-grid` | .dz-grid[] | — |
 | `link` | `link` | `.dz-link` | .dz-link[] | — |
 | `list_region` | `list-region` | `[data-dz-list-region]` | [data-dz-list-region][data-dz-list-region=present] | ListRegion(body_html:str:opt) |
@@ -109,7 +109,7 @@ blast radius (who embeds / refuses this part).
 | `pdf` | `pdf` | `[data-dz-pdf]` | [data-dz-pdf][data-dz-pdf-lib=present, data-dz-pdf-src=present]; [data-dz-pdf-viewer][] | — |
 | `pipeline` | `pipeline` | `[data-dz-pipeline]` | [data-dz-pipeline][data-dz-pipeline=present] | Pipeline(body_html:str:opt) |
 | `pivot` | `pivot` | `[data-dz-pivot]` | [data-dz-pivot][data-dz-pivot=present] | PivotTable(dim_headers:list[str]:opt; empty_message:str:opt; measure_headers:list[str]:opt; rows:list[list[str]]:opt) |
-| `pivot_table` | `pivot-table` | `.dz-pivot-table` | .dz-pivot-table[] | — |
+| `pivot_table` | `pivot-table` | `[data-dz-pivot-table]` | [data-dz-pivot-table][data-dz-pivot-table=present] | — |
 | `popover` | `popover` | `details.dz-popover, .dz-popover` | details.dz-popover, .dz-popover[] | — |
 | `profile_card` | `profile-card` | `[data-dz-profile-card]` | [data-dz-profile-card][data-dz-profile-card=present] | ProfileCard(avatar_url:str:opt; facts:list[str]:opt; initials:str:opt; primary:str:opt; secondary:str:opt; stats:list[tuple[str,str]]:opt) |
 | `progress` | `progress-region` | `[data-dz-progress-region]` | [data-dz-progress-region][data-dz-progress-region=present] | Progress(complete_count:int:opt; complete_pct:float:opt; stages:list[ProgressStage]:opt; total:int:opt); ProgressStage(complete:bool:opt; count:int:opt; name:str:req) |

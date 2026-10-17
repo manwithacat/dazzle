@@ -202,6 +202,96 @@ PUBLIC_CSS_PROPS = (
 )
 
 
+# Structural wrappers that intentionally carry no rule of their own
+# (styled via inheritance / parent selectors). Additions here need a
+# comment explaining why (here and/or in the component's CSS). Shared with
+# the Dazzle Fragment-renderer conformance gate (#1799).
+SEMANTIC_ONLY: frozenset[str] = frozenset(
+    {
+        "dz-alert__body",
+        # dz-empty-state__description removed 2026-07-09: it gained a style rule
+        # (color + font-size) when the detail-view empty-state was folded into HM
+        # (HMC-003c), so it is no longer semantic-only.
+        # tab panel container: identity for the controller + a swap target; its
+        # visibility rides the native `hidden` attribute, so it carries no rule.
+        "dz-tabs__panel",
+        # the select-column <col> in the grid's colgroup: a structural marker so
+        # the resize/visibility extensions can address data cols by exclusion —
+        # the table stays layout:auto, so the col itself needs no width rule.
+        "dz-table-col-select",
+        # region-body wrappers (W1): the workspace card slot provides the box;
+        # these wrappers are the emitters' structural anchors and have never
+        # carried rules (verbatim from Dazzle, where they were also rule-less).
+        "dz-status-list-region",
+        "dz-action-grid-region",
+        "dz-queue-region",
+        "dz-timeline-region",
+        "dz-funnel-chart-region",
+        "dz-bar-chart-region",
+        "dz-heatmap-region",
+        "dz-bullet-region",
+        "dz-pivot-region",
+        # dz-bar-track-region removed from SEMANTIC_ONLY — it gained grid
+        # column-stop rules with the summary-alignment fix.
+        "dz-histogram-region",
+        "dz-box-plot-region",
+        "dz-progress-region",
+        "dz-line-chart-region",
+        "dz-area-chart-region",
+        "dz-radar-region",
+        "dz-profile-card-region",
+        "dz-grid-region",
+        "dz-list-region",
+        "dz-task-inbox-region",  # dual-lock root; chips/items own styling
+        "dz-cohort-strip-region",  # dual-lock root; lenses/cells own styling
+        "dz-day-timeline-region",  # dual-lock root; slots own styling
+        "dz-entity-card-region",  # dual-lock root; sections own styling
+        "dz-pipeline-steps-region",  # dual-lock root; stages own styling
+        # wizard stage block: visibility rides the native `hidden` attribute
+        # (dz-wizard.js); the fields inside carry the styling.
+        "dz-wizard-stage",
+        # money widget root: the data-dz-money marker + scale attribute are
+        # the contract; the styled box is the inner dz-form-money-group.
+        "dz-money",
+        # search-box results container: the htmx swap target + aria-live
+        # region — pure structure, its children (count/list/rows) carry the
+        # styling.
+        "dz-search-box-results",
+        # task-inbox item skeleton (items/link/body/title/meta/empty) gained
+        # rules in cycle 1355 coherence drain (list-style + flex row/urgency
+        # tones) — removed from SEMANTIC_ONLY when styles landed.
+        # tree root: the nodes/summaries carry the chrome and `data-dz-tree`
+        # is the controller hook. (Surfaced in #1799 when the class gates
+        # moved from substring to exact class-token matching.)
+        "dz-tree",
+        # ── Fragment-renderer structural classes (#1799). The Dazzle gate
+        # (tests/unit/render/fragment/test_fragment_bundle_conformance.py) holds
+        # every class the typed renderer emits to "has a rule OR is listed here",
+        # so this set is the one allowlist for both repos.
+        # htmx behaviour wrapper: carries hx-* attrs around any child; it must
+        # not add a box of its own.
+        "dz-interactive",
+        # Region kind modifiers with no kind-specific chrome (list / detail /
+        # related / form have rules in fragment-primitives.css; these kinds
+        # take the base `.dz-region` flow — the modifier names the kind for
+        # host CSS and agents).
+        "dz-region--kind-calendar",
+        "dz-region--kind-dashboard",
+        "dz-region--kind-kanban",
+        "dz-region--kind-report",
+        # detail-grid region root (HM contracts/detail_grid.py): the
+        # `dz-detail-region-grid` <dl> inside carries the layout, like every
+        # other `*-region` root above.
+        "dz-detail-region",
+        # CalendarGrid view modifiers: the event list reads the same in each
+        # view (fragment-primitives.css calendar note).
+        "dz-calendar--view-day",
+        "dz-calendar--view-week",
+        "dz-calendar--view-month",
+    }
+)
+
+
 def build_css(prefix: str = DEFAULT_PREFIX) -> str:
     parts = [LAYER_ORDER, ""]
     for layer, rel in CSS_SOURCES:

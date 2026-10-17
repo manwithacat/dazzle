@@ -32,6 +32,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from dazzle.render.filters import badge_icon_html
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html
 from dazzle.render.fragment.ingest import EmptyState as EmptyStateSeam
@@ -68,6 +69,16 @@ from dazzle.render.open_discovery import hub_open_discovery_attrs
 
 if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
+
+
+# Badge.variant → the HM badge tone vocabulary (badge.css `data-dz-tone`).
+_BADGE_VARIANT_TONES: dict[str, str] = {
+    "default": "neutral",
+    "info": "info",
+    "success": "success",
+    "warning": "warning",
+    "danger": "destructive",
+}
 
 
 class _RenderLayoutMixin:
@@ -277,26 +288,32 @@ class _RenderLayoutMixin:
         return f'<div class="{cls}">{body}</div>'
 
     def _emit_card(self, c: Card, ctx: RenderContext) -> str:
+        """HM card contract (#1799): `.dz-card` surface with the HM slot
+        classes `dz-card-header` / `dz-card-body` / `dz-card-footer`. Card
+        tokens ride `data-dz-*` knobs, emitted only where they differ from
+        the HM card's resting look (the `CardTokens` defaults)."""
         tokens = c.tokens if c.tokens is not None else ctx.tokens.card
-        cls_parts = [
-            "dz-card",
-            f"dz-card--radius-{tokens.radius}",
-            f"dz-card--border-{tokens.border}",
-            f"dz-card--padding-{tokens.padding}",
-            f"dz-card--shadow-{tokens.shadow}",
-        ]
-        cls = " ".join(cls_parts)
-        parts = [f'<div class="{cls}">']
+        knobs = "".join(
+            f' data-dz-{name}="{value}"'
+            for name, value, default in (
+                ("radius", tokens.radius, "md"),
+                ("border", tokens.border, "subtle"),
+                ("padding", tokens.padding, "normal"),
+                ("shadow", tokens.shadow, "low"),
+            )
+            if value != default
+        )
+        parts = [f'<div class="dz-card"{knobs}>']
         if c.header is not None:
             parts.append(
-                f'<div class="dz-card__header">{self._emit(c.header, ctx)}</div>'  # type: ignore[arg-type]
+                f'<div class="dz-card-header">{self._emit(c.header, ctx)}</div>'  # type: ignore[arg-type]
             )
         parts.append(
-            f'<div class="dz-card__body">{self._emit(c.body, ctx)}</div>'  # type: ignore[arg-type]
+            f'<div class="dz-card-body">{self._emit(c.body, ctx)}</div>'  # type: ignore[arg-type]
         )
         if c.footer is not None:
             parts.append(
-                f'<div class="dz-card__footer">{self._emit(c.footer, ctx)}</div>'  # type: ignore[arg-type]
+                f'<div class="dz-card-footer">{self._emit(c.footer, ctx)}</div>'  # type: ignore[arg-type]
             )
         parts.append("</div>")
         return "".join(parts)
@@ -358,12 +375,28 @@ class _RenderLayoutMixin:
         )
 
     def _emit_drawer(self, d: Drawer, ctx: RenderContext) -> str:
-        cls = f"dz-drawer dz-drawer--side-{d.side}"
-        return f'<aside class="{cls}">{self._emit(d.body, ctx)}</aside>'  # type: ignore[arg-type]
+        """HM drawer (#1799): a native `<dialog class="dz-drawer">` anchored by
+        `data-dz-side` (right is the HM default), opened by a
+        `[data-dz-dialog-open="<dialog_id>"]` trigger."""
+        id_attr = f' id="{ctx.escape_attr(d.dialog_id)}"' if d.dialog_id else ""
+        side = ' data-dz-side="left"' if d.side == "left" else ""
+        body = self._emit(d.body, ctx)  # type: ignore[arg-type]
+        return (
+            f'<dialog class="dz-drawer"{id_attr}{side}>'
+            f'<div class="dz-drawer__body">{body}</div></dialog>'
+        )
 
     def _emit_modal(self, m: Modal, ctx: RenderContext) -> str:
-        cls = f"dz-modal dz-modal--size-{m.size}"
-        return f'<div class="{cls}" role="dialog">{self._emit(m.body, ctx)}</div>'  # type: ignore[arg-type]
+        """HM dialog (#1799): a native `<dialog class="dz-dialog">`, width by
+        `data-dz-width` (md is the HM default), opened by a
+        `[data-dz-dialog-open="<dialog_id>"]` trigger."""
+        id_attr = f' id="{ctx.escape_attr(m.dialog_id)}"' if m.dialog_id else ""
+        width = f' data-dz-width="{m.size}"' if m.size != "md" else ""
+        body = self._emit(m.body, ctx)  # type: ignore[arg-type]
+        return (
+            f'<dialog class="dz-dialog"{id_attr}{width}>'
+            f'<div class="dz-dialog__body">{body}</div></dialog>'
+        )
 
     def _emit_tabs(self, t: Tabs, ctx: RenderContext) -> str:
         """Render an eager (content-inline) tab strip using the HM `tabs`
@@ -403,8 +436,14 @@ class _RenderLayoutMixin:
         return lucide_icon_html(i.name, cls=f"dz-icon dz-icon--size-{i.size}")
 
     def _emit_badge(self, b: Badge, ctx: RenderContext) -> str:
-        cls = f"dz-badge dz-badge--variant-{b.variant}"
-        return f'<span class="{cls}">{ctx.escape(b.label)}</span>'
+        """HM badge contract (#1799): one `.dz-badge` class, the tone on
+        `data-dz-tone`, and the leading tone glyph so status is never
+        colour-only (WCAG 1.4.1) — the same shape as the status-badge cells."""
+        tone = _BADGE_VARIANT_TONES[b.variant]
+        return (
+            f'<span class="dz-badge" data-dz-tone="{tone}">'
+            f"{badge_icon_html(tone)}{ctx.escape(b.label)}</span>"
+        )
 
     def _emit_empty_state(self, e: EmptyState, ctx: RenderContext) -> str:
         """Render EmptyState via HM dual-lock empty-state seam."""

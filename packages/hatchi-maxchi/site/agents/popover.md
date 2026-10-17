@@ -15,8 +15,8 @@ Disclosure popover (`<details>`) — free-content panel; body can lazy-load via 
 <details class="popover">
   <summary class="button" data-variant="outline">Details</summary>
   <div class="popover__panel">
-    <div class="hm-demo-title">Dimensions</div>
-    <p class="hm-demo-muted">Filters, previews, quick forms.</p>
+    <div class="popover__title">Dimensions</div>
+    <p class="popover__body">Filters, previews, quick forms.</p>
   </div>
 </details>
 ```

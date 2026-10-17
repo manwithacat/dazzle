@@ -92,13 +92,6 @@
   cursor: pointer;
 }
 
-/* A filtered-out option is removed from flow (the `hidden` attribute the
- * controller toggles) — restated because the row's own `display` would
- * otherwise win over the UA `[hidden]` rule. */
-.dz-combobox-option[hidden] {
-  display: none;
-}
-
 /* Hover + keyboard active-descendant highlight share one wash; the chosen
  * option carries aria-selected for the persistent tick of state. */
 .dz-combobox-option:hover,
@@ -117,10 +110,6 @@
   border-block-start: 1px solid var(--colour-border);
   color: var(--colour-brand-text);
   font-weight: var(--weight-medium);
-}
-
-.dz-combobox-create[hidden] {
-  display: none;
 }
 
 .dz-combobox-empty {

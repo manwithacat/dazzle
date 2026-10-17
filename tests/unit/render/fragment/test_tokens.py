@@ -15,7 +15,7 @@ def test_card_tokens_defaults() -> None:
     assert t.radius == "md"
     assert t.border == "subtle"
     assert t.padding == "normal"
-    assert t.shadow == "none"
+    assert t.shadow == "low"
 
 
 def test_card_tokens_invalid_radius() -> None:

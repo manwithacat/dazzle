@@ -793,7 +793,7 @@ class _RenderShellMixin:
                 f'<a class="dz-link" href="{action}">Now</a>'
             )
         return (
-            f'<form class="dz-workspace-context dz-workspace-as-of" method="get" '
+            f'<form class="dz-workspace-context" method="get" '
             f'action="{action}" hx-boost="true" data-test-id="dz-workspace-as-of">'
             f'<label class="dz-workspace-context-label" for="{input_id}">As of</label>'
             f'<input id="{input_id}" class="dz-workspace-context-select" type="date" '

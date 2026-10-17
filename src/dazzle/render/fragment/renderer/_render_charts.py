@@ -32,6 +32,7 @@ from dazzle.render.fragment.ingest import TimeSeries as TimeSeriesSeam
 from dazzle.render.fragment.ingest import TimeSeriesLayer as TimeSeriesLayerSeam
 from dazzle.render.fragment.ingest import TimeSeriesPoint as TimeSeriesPointSeam
 from dazzle.render.fragment.ingest import (
+    kanban_board_root_attrs,
     render_bar_chart,
     render_calendar,
     render_diagram,
@@ -190,13 +191,18 @@ class _RenderChartsMixin:
         )
 
     def _emit_kanban_board(self, k: KanbanBoard, ctx: RenderContext) -> str:
+        # #1799: the HM kanban skin (`dz-kanban-board` → `dz-kanban-column` →
+        # `dz-kanban-stack`); `data-dz-kanban` is this static board's dual-lock
+        # root (HM contracts/kanban_board.py). No `data-dz-kanban-board` — that
+        # attribute opts a workspace board into the rearrange controller.
         cols = "".join(
-            f'<div class="dz-kanban__column" data-dz-key="{ctx.escape_attr(key)}">'
+            f'<div class="dz-kanban-column" data-dz-key="{ctx.escape_attr(key)}">'
+            '<div class="dz-kanban-stack">'
             + "".join(self._emit(item, ctx) for item in items)  # type: ignore[arg-type]
-            + "</div>"
+            + "</div></div>"
             for key, items in k.columns
         )
-        return f'<div class="dz-kanban">{cols}</div>'
+        return f'<div class="dz-kanban-board" {kanban_board_root_attrs()}>{cols}</div>'
 
     def _emit_calendar_grid(self, c: CalendarGrid, ctx: RenderContext) -> str:
         """Render CalendarGrid via HM dual-lock calendar seam."""

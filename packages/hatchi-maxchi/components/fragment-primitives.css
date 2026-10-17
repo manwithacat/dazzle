@@ -362,51 +362,12 @@
   }
 
   .dz-region--kind-list {
-    /* List-mode region wraps a Table primitive. The table itself
-       inherits its core styling from table.css; this rule provides
-       the list-context spacing and any list-specific cascade
-       (e.g. dz-table inside .dz-region--kind-list gets the same
-       row-hover treatment as the Jinja .dz-list-table path). */
+    /* List-mode region wraps the list shell (DataListScroll → `.dz-table`
+       div + `.dz-table-grid`) or an embedded Table, which renders the HM
+       list-region table (`.dz-list-table`, list-region.css) — #1799 retired
+       the `.dz-region--kind-list > .dz-table` rules that styled a
+       `<table class="dz-table">` the renderer no longer emits. */
     overflow-x: auto;
-  }
-
-  .dz-region--kind-list > .dz-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--colour-surface);
-  }
-
-  .dz-region--kind-list > .dz-table thead > tr {
-    border-block-end: 1px solid var(--colour-border);
-    text-align: left;
-  }
-
-  .dz-region--kind-list > .dz-table th {
-    padding: var(--space-sm) var(--space-md);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
-    color: var(--colour-text-muted);
-  }
-
-  .dz-region--kind-list > .dz-table > tbody > tr {
-    border-block-end: 1px solid var(--colour-border);
-    transition: background-color 0.12s ease;
-  }
-
-  .dz-region--kind-list > .dz-table > tbody > tr:last-child {
-    border-block-end: none;
-  }
-
-  .dz-region--kind-list > .dz-table > tbody > tr:hover {
-    /* No --colour-surface-hover token exists yet; light/dark fallback
-       picks a subtle tint that works in both modes. Promote to a token
-       when more surfaces need it. */
-    background: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.04));
-  }
-
-  .dz-region--kind-list > .dz-table td {
-    padding: var(--space-sm) var(--space-md);
-    color: var(--colour-text);
   }
 
   /* Detail kind — definition-list-shaped layout. Each child Row
@@ -729,4 +690,306 @@
 
 .dz-page > .dz-stack:has(> .dz-card .dz-empty-state) .dz-empty-state__action a:hover {
   background: var(--brand-700);
+}
+
+/* ── Typed-primitive conformance (#1799) ─────────────────────────────────
+ * Every `dz-*` class the Fragment renderer emits has a rule in the bundle
+ * (Dazzle gate: tests/unit/render/fragment/test_fragment_bundle_conformance.py).
+ * The rules below close the classes that shipped with none. Structural
+ * wrappers that genuinely carry no rule are listed in build.py
+ * SEMANTIC_ONLY with their reason. */
+
+/* Nav labels — a long entity name ellipsizes inside the sidebar instead of
+ * wrapping the row (the link/summary is the flex row; the label shrinks). */
+.dz-nav-link__label,
+.dz-nav-group__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Submit — the primary fill is the default variant's own rule, so every
+ * variant modifier the primitive emits has one. */
+.dz-submit--variant-primary {
+  color: var(--colour-brand-contrast);
+  background: var(--colour-brand);
+}
+
+/* Split — two-pane layout (`Split.ratio` → grid tracks); stacks below 48rem.
+ * The panes are grid items that may hold wide content, hence min-width: 0. */
+.dz-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.dz-split--ratio-1_1 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.dz-split--ratio-1_2 { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+.dz-split--ratio-2_1 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.dz-split--ratio-1_3 { grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); }
+.dz-split--ratio-3_1 { grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); }
+
+.dz-split__start,
+.dz-split__end {
+  min-width: 0;
+}
+
+@media (max-width: 48rem) {
+  .dz-split[class] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Calendar (CalendarGrid / HM contracts/calendar.py) — a dated event list.
+ * The `dz-calendar--view-*` modifier names the view for host CSS; the list
+ * reads the same in each, so the modifiers are SEMANTIC_ONLY. */
+.dz-calendar > ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dz-calendar__event {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: baseline;
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-calendar__event > time {
+  flex-shrink: 0;
+  color: var(--colour-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cohort strip (#1017) — lens toggle + a wrapping row of member cells:
+ * initials halo, name, subtitle, toned primary value, optional action. */
+.dz-cohort-strip-lenses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-block-end: var(--space-md);
+}
+
+.dz-cohort-strip-lens {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--colour-text-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.dz-cohort-strip-lens.is-active,
+.dz-cohort-strip-lens[aria-current="true"] {
+  border-color: var(--colour-brand);
+  color: var(--colour-brand-text);
+  font-weight: var(--weight-semibold);
+}
+
+.dz-cohort-strip-lens:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.dz-cohort-strip-body {
+  min-width: 0;
+}
+
+.dz-cohort-strip-cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.dz-cohort-strip-cell {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "halo name primary"
+    "halo subtitle primary"
+    "action action action";
+  column-gap: var(--space-sm);
+  align-items: center;
+  flex: 1 1 15rem;
+  max-width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  text-decoration: none;
+}
+
+a.dz-cohort-strip-cell:hover,
+a.dz-cohort-strip-cell:focus-visible {
+  border-color: var(--colour-brand);
+  outline: none;
+}
+
+.dz-cohort-strip-cell-halo {
+  grid-area: halo;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  background: var(--colour-surface-muted);
+  color: var(--colour-brand-text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.02em;
+}
+
+.dz-cohort-strip-cell-name {
+  grid-area: name;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1.25;
+}
+
+.dz-cohort-strip-cell-subtitle {
+  grid-area: subtitle;
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.dz-cohort-strip-cell-primary {
+  grid-area: primary;
+  padding: 0.125rem var(--space-sm);
+  border-radius: var(--radius-full);
+  background: var(--colour-surface-muted);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.dz-cohort-strip-cell-primary[data-dz-tone="good"] { color: var(--colour-success); }
+.dz-cohort-strip-cell-primary[data-dz-tone="warn"] { color: var(--colour-warning); }
+.dz-cohort-strip-cell-primary[data-dz-tone="bad"] { color: var(--colour-danger); }
+
+.dz-cohort-strip-cell-action {
+  grid-area: action;
+  margin-block-start: var(--space-xs);
+}
+
+.dz-cohort-strip-empty,
+.dz-day-timeline-empty,
+.dz-entity-card-empty {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
+/* Day timeline (#1016) — a vertical run of slot cards; the active slot is
+ * accented, slots already past recede. */
+.dz-day-timeline-slots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dz-day-timeline-slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  text-decoration: none;
+}
+
+.dz-day-timeline-slot[data-dz-position="active"] {
+  border-color: var(--colour-brand);
+  box-shadow: inset 3px 0 0 var(--colour-brand);
+}
+
+.dz-day-timeline-slot[data-dz-position="before"] {
+  opacity: 0.7;
+}
+
+a.dz-day-timeline-slot:hover,
+a.dz-day-timeline-slot:focus-visible {
+  border-color: var(--colour-brand);
+  outline: none;
+}
+
+.dz-day-timeline-slot-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.dz-day-timeline-slot-body {
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
+.dz-day-timeline-slot-action {
+  margin-block-start: var(--space-xs);
+}
+
+/* Entity card (#1017) — a 360° record composite: main column + sidebar,
+ * collapsing to one column below 48rem. */
+.dz-entity-card-heading {
+  margin: 0 0 var(--space-md);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.dz-entity-card-sections {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-md);
+  align-items: start;
+}
+
+.dz-entity-card-section {
+  grid-column: 1;
+  min-width: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+}
+
+.dz-entity-card-section[data-dz-column="sidebar"] {
+  grid-column: 2;
+}
+
+@media (max-width: 48rem) {
+  .dz-entity-card-sections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dz-entity-card-section[data-dz-column="sidebar"] {
+    grid-column: 1;
+  }
+}
+
+.dz-entity-card-section-label {
+  margin-block-end: var(--space-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--colour-text-muted);
+}
+
+.dz-entity-card-section-body {
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--colour-text);
 }

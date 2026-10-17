@@ -30,6 +30,57 @@
   height: auto;
 }
 
+/* Structural mode (no Mermaid source): the node list as chips and the edge
+ * list as `from → to` rows (#1799 — this markup shipped unstyled). */
+.dz-diagram {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.dz-diagram__nodes,
+.dz-diagram__edges {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dz-diagram__nodes {
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.dz-diagram__edges {
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.dz-diagram__node {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.dz-diagram__edge {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+}
+
+.dz-diagram__edge-from,
+.dz-diagram__edge-to {
+  font-weight: var(--weight-medium);
+}
+
+.dz-diagram__edge-arrow {
+  color: var(--colour-text-muted);
+}
+
 .dz-diagram-empty {
   font-size: var(--text-sm);
   color: var(--colour-text-muted);

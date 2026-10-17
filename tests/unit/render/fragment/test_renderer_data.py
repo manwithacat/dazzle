@@ -20,8 +20,9 @@ from dazzle.render.fragment.renderer import FragmentRenderer
     [
         pytest.param(
             Table(columns=("title", "status"), rows=(("Buy milk", "open"), ("Walk dog", "done"))),
-            ("<table", "Buy milk", "Walk dog", "dz-table"),
-            (),
+            # HM list-region table (#1799) — never the `.dz-table` shell class.
+            ('<table class="dz-list-table">', "Buy milk", "Walk dog"),
+            ('class="dz-table"',),
             {"<tr": 3},  # 1 header + 2 body rows
             id="table",
         ),
@@ -34,8 +35,15 @@ from dazzle.render.fragment.renderer import FragmentRenderer
         ),
         pytest.param(
             KPI(label="Revenue", value="$42k", trend="up", delta="+12%"),
-            ("Revenue", "$42k", "dz-kpi--trend-up"),
-            (),
+            # HM metric-tile skin + KPI dual-lock root (#1799).
+            (
+                '<div class="dz-metric-tile" data-dz-kpi>',
+                '<div class="dz-metric-label">Revenue</div>',
+                '<div class="dz-metric-value">$42k</div>',
+                'data-dz-delta-tone="positive" data-dz-delta-direction="up"',
+                '<span class="dz-metric-delta-value">+12%</span>',
+            ),
+            ("data-dz-metric-key",),
             {},
             id="kpi",
         ),
@@ -72,9 +80,9 @@ from dazzle.render.fragment.renderer import FragmentRenderer
                 columns=("low", "high"),
                 cells={("auth", "low"): 1, ("auth", "high"): 2},
             ),
-            ("<table", "auth", "low", "high"),
+            ('<table class="dz-pivot-grid" data-dz-pivot-table>', "auth", "low", "high"),
             (),
-            {},
+            {'<td class="is-measure">': 2},
             id="pivot-table",
         ),
         pytest.param(
@@ -86,9 +94,10 @@ from dazzle.render.fragment.renderer import FragmentRenderer
         ),
         pytest.param(
             KanbanBoard(columns=(("open", (Text("a"), Text("b"))), ("done", ()))),
-            ("dz-kanban",),
-            (),
-            {"dz-kanban__column": 2},
+            # HM kanban skin; never the rearrange controller's opt-in (#1799).
+            ('<div class="dz-kanban-board" data-dz-kanban>',),
+            ("data-dz-kanban-board",),
+            {'class="dz-kanban-column"': 2, 'class="dz-kanban-stack"': 2},
             id="kanban-board",
         ),
         pytest.param(

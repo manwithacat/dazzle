@@ -43,7 +43,7 @@ from dazzle.testing.ux.htmx_client import _extract_workspace_layout, parse_html
 # (pre-substrate Jinja era) and retained only for hand-authored utility markup.
 #
 # Sub-part classes (`dz-card-wrapper`, `dz-card-header`, `dz-card-body`,
-# `dz-card-title`, `dz-card__header`, …) are NOT surfaces — match the EXACT
+# `dz-card-footer`, `dz-card-title`, …) are NOT surfaces — match the EXACT
 # `dz-card` token so the positioning wrapper and header/body never self-nest.
 _SEMANTIC_CARD_SURFACE = "dz-card"
 
@@ -54,7 +54,7 @@ def _has_card_chrome(class_attr: str | None) -> bool:
     A card surface carries the exact ``dz-card`` token — the shape emitted by
     both the dashboard slot and the standalone Card primitive since ADR-0049.
     Matched exactly so the ``dz-card-wrapper`` positioner and
-    ``dz-card-header``/``-body``/``__header`` sub-parts never count as their own
+    ``dz-card-header``/``-body``/``-footer`` sub-parts never count as their own
     surface (which would self-nest).
 
     The legacy Tailwind-utility heuristic (a rounded element with a full border)

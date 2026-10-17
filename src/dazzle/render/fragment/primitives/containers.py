@@ -169,22 +169,27 @@ class Tabs:
 
 @dataclass(frozen=True, slots=True)
 class Drawer:
-    """Slide-over panel. Anchored to a screen edge."""
+    """Slide-over panel anchored to the left or right edge — the HM drawer
+    (`<dialog class="dz-drawer">`). `dialog_id` is the id a
+    `[data-dz-dialog-open]` trigger opens it by."""
 
     body: object
-    side: Literal["left", "right", "top", "bottom"] = "right"
+    side: Literal["left", "right"] = "right"
+    dialog_id: str = ""
 
     def __post_init__(self) -> None:
-        if self.side not in ("left", "right", "top", "bottom"):
+        if self.side not in ("left", "right"):
             raise ValueError(f"invalid side {self.side!r}")
 
 
 @dataclass(frozen=True, slots=True)
 class Modal:
-    """Centered overlay dialog."""
+    """Centered overlay dialog — the HM dialog (`<dialog class="dz-dialog">`).
+    `dialog_id` is the id a `[data-dz-dialog-open]` trigger opens it by."""
 
     body: object
     size: Literal["sm", "md", "lg", "xl"] = "md"
+    dialog_id: str = ""
 
     def __post_init__(self) -> None:
         if self.size not in ("sm", "md", "lg", "xl"):

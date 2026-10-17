@@ -68,3 +68,13 @@
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
 }
+
+/* The delta figure carries the tone colour at weight; the comparison
+ * period ("vs last week") recedes so the number reads first (#1799). */
+.dz-metric-delta-value {
+  font-weight: var(--weight-medium);
+}
+
+.dz-metric-delta-period {
+  color: var(--colour-text-muted);
+}

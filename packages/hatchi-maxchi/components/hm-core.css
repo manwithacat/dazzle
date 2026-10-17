@@ -271,6 +271,21 @@ a.dz-user-chip-link:hover .dz-user-chip__name {
   z-index: 40;
 }
 
+/* Panel content slots — the Fragment `Popover(title=, body=)` primitive and
+ * the gallery partial both use them (#1799). */
+.dz-popover__title {
+  margin-block-end: var(--space-xs);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+}
+
+.dz-popover__body {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
 .dz-popover[data-dz-align="end"] .dz-popover__panel {
   inset-inline-start: auto;
   inset-inline-end: 0;

@@ -24,7 +24,9 @@ class CardTokens:
     radius: Literal["none", "sm", "md", "lg"] = "md"
     border: Literal["none", "subtle", "emphatic"] = "subtle"
     padding: Literal["compact", "normal", "comfortable"] = "normal"
-    shadow: Literal["none", "low", "elevated"] = "none"
+    # "low" is the HM card's resting shadow (TASTE-2) — the default renders
+    # the plain HM card; "none" flattens it (#1799).
+    shadow: Literal["none", "low", "elevated"] = "low"
 
     def __post_init__(self) -> None:
         if self.radius not in _RADII:

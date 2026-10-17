@@ -106,10 +106,15 @@
   transform: translateY(0.5px);
 }
 
-.dz-button[data-dz-variant="primary"]:disabled,
-.dz-button[data-dz-variant="primary"][aria-disabled="true"] {
+/* Disabled — every variant, not only primary (#1799). `:disabled` covers
+   <button>; `aria-disabled="true"` covers the <a class="dz-button"> form,
+   which has no native disabled state. pointer-events: none also suppresses
+   each variant's hover/active step and stops a disabled link navigating. */
+.dz-button:disabled,
+.dz-button[aria-disabled="true"] {
   opacity: 0.6;
   pointer-events: none;
+  box-shadow: none;
 }
 
 /* Size modifier — smaller button used by inline action rows

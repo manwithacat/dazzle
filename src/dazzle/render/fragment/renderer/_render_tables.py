@@ -47,6 +47,8 @@ from dazzle.render.fragment.ingest import PivotTable as PivotTableSeam
 from dazzle.render.fragment.ingest import QueueRow as QueueRowSeam
 from dazzle.render.fragment.ingest import StatusListEntry as StatusListEntrySeam
 from dazzle.render.fragment.ingest import (
+    kpi_root_attrs,
+    pivot_table_root_attrs,
     render_activity_row,
     render_bar_track,
     render_grid_region,
@@ -102,6 +104,15 @@ from dazzle.render.open_discovery import create_cta_open_attr_suffix
 
 if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
+
+
+# KPI.trend → (metric-delta tone, arrow glyph) — HM metrics/action-grid CSS
+# colours `.dz-metric-delta[data-dz-delta-tone]`.
+_KPI_TREND_DELTA: dict[str, tuple[str, str]] = {
+    "up": ("positive", "↑"),
+    "down": ("destructive", "↓"),
+    "flat": ("neutral", "→"),
+}
 
 
 class _RenderTablesMixin:
@@ -322,13 +333,17 @@ class _RenderTablesMixin:
                     cells_html=cells_html,
                     row_id_attr=row_id_attr,
                     checkbox_cell=checkbox_cell,
-                    class_extra=" dz-table__row--linked" if url else "",
+                    class_extra=" is-clickable" if url else "",
                     drill_attrs=drill_row_attrs(ctx.escape_attr(url)) if url else "",
                 )
             )
         body_rows = "".join(body_parts)
+        # #1799: an embedded (non-skeleton) table is the HM list-region table
+        # (`dz-list-table`), not `.dz-table` — that class is the grid's list
+        # SHELL div (`display: flex; flex-direction: column`), which stripped
+        # an embedded table of its column alignment.
         return (
-            f'<table class="dz-table">'
+            f'<table class="dz-list-table">'
             f"<thead><tr>{head_cells}</tr></thead>"
             f"<tbody>{body_rows}</tbody>"
             f"</table>"
@@ -850,27 +865,51 @@ class _RenderTablesMixin:
         )
 
     def _emit_kpi(self, k: KPI, ctx: RenderContext) -> str:
-        cls = f"dz-kpi dz-kpi--trend-{k.trend}"
-        delta_html = f'<span class="dz-kpi__delta">{ctx.escape(k.delta)}</span>' if k.delta else ""
+        """KPI composes the HM metric tile skin (#1799): `dz-metric-tile` +
+        `dz-metric-label` / `dz-metric-value` / `dz-metric-delta`, the same
+        chrome a workspace metrics region renders, so a KPI sits inside a Card
+        body without nesting card chrome. `data-dz-kpi` is its own dual-lock
+        root (HM contracts/kpi.py) — it carries no `data-dz-metric-key`, which
+        names a metrics-region tile. The trend drives the delta strip's arrow
+        and tone (up = positive, down = destructive, flat = neutral); a trend
+        with no delta text still shows its arrow, named for screen readers."""
+        delta_html = ""
+        if k.delta or k.trend != "flat":
+            tone, arrow = _KPI_TREND_DELTA[k.trend]
+            text = (
+                f'<span class="dz-metric-delta-value">{ctx.escape(k.delta)}</span>'
+                if k.delta
+                else f'<span class="visually-hidden">Trending {k.trend}</span>'
+            )
+            delta_html = (
+                f'<div class="dz-metric-delta" data-dz-delta-tone="{tone}" '
+                f'data-dz-delta-direction="{k.trend}">'
+                f'<span aria-hidden="true">{arrow}</span> {text}</div>'
+            )
         return (
-            f'<div class="{cls}">'
-            f'<div class="dz-kpi__label">{ctx.escape(k.label)}</div>'
-            f'<div class="dz-kpi__value">{ctx.escape(k.value)}</div>'
+            f'<div class="dz-metric-tile" {kpi_root_attrs()}>'
+            f'<div class="dz-metric-label">{ctx.escape(k.label)}</div>'
+            f'<div class="dz-metric-value">{ctx.escape(k.value)}</div>'
             f"{delta_html}"
             f"</div>"
         )
 
     def _emit_pivot_table(self, p: PivotTable, ctx: RenderContext) -> str:
-        head = "".join(f"<th>{ctx.escape(c)}</th>" for c in p.columns)
+        # #1799: skinned by the HM pivot grid (`dz-pivot-grid`, measure cells
+        # `is-measure`); `data-dz-pivot-table` is the part's dual-lock root
+        # (HM contracts/pivot_table.py).
+        head = "".join(f'<th class="is-measure">{ctx.escape(c)}</th>' for c in p.columns)
         body = "".join(
             "<tr>"
-            + f"<th>{ctx.escape(row)}</th>"
-            + "".join(f"<td>{p.cells.get((row, col), 0)}</td>" for col in p.columns)
+            + f'<th scope="row">{ctx.escape(row)}</th>'
+            + "".join(
+                f'<td class="is-measure">{p.cells.get((row, col), 0)}</td>' for col in p.columns
+            )
             + "</tr>"
             for row in p.rows
         )
         return (
-            f'<table class="dz-pivot-table">'
+            f'<table class="dz-pivot-grid" {pivot_table_root_attrs()}>'
             f"<caption>{ctx.escape(p.label)}</caption>"
             f"<thead><tr><th></th>{head}</tr></thead>"
             f"<tbody>{body}</tbody>"

@@ -75,11 +75,13 @@ class _RowArchetype:
 
 # The three archetypes (design §3.3). `data-table` is the rich CRUD row (the
 # HM grid root's delegated controllers); `embedded` is the plain Fragment `Table` row;
-# `region` is the workspace `kind: list` row. All three flow through
+# `region` is the workspace `kind: list` row. `embedded` and `region` share the
+# HM list-region row skin (`dz-list-row` in a `dz-list-table`, #1799) and differ
+# only in `data-dz-list-kind`. All three flow through
 # `assemble_list_row` — only HTML production converges; RBAC/scope/sort and the
 # per-archetype cell content stay in the callers.
 ARCHETYPE_DATA_TABLE = _RowArchetype("dz-tr-row group", "data-table")
-ARCHETYPE_EMBEDDED = _RowArchetype("dz-table__row", "embedded")
+ARCHETYPE_EMBEDDED = _RowArchetype("dz-list-row", "embedded")
 ARCHETYPE_LIST_REGION = _RowArchetype("dz-list-row", "region")
 
 

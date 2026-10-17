@@ -404,6 +404,24 @@ def bar_chart_root_attrs(_c: BarChart) -> str:
     return "data-dz-bar-chart"
 
 
+def kpi_root_attrs() -> str:
+    """Assemble the KPI tile dual-lock root (HM contracts/kpi.py) — sole emitter site."""
+    return "data-dz-kpi"
+
+
+def kanban_board_root_attrs() -> str:
+    """Assemble the static kanban-board dual-lock root (HM
+    contracts/kanban_board.py) — sole emitter site. Never the rearrange
+    controller's ``data-dz-kanban-board`` opt-in."""
+    return "data-dz-kanban"
+
+
+def pivot_table_root_attrs() -> str:
+    """Assemble the cross-tab table dual-lock root (HM contracts/pivot_table.py)
+    — sole emitter site."""
+    return "data-dz-pivot-table"
+
+
 def _render_metric_delta_html(tile: MetricTile) -> str:
     """Delta strip under a metric value (#1626 S2/F1 spacing + abs-pct omit)."""
     if not tile.delta_direction:

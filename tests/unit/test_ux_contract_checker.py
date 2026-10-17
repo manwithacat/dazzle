@@ -346,12 +346,13 @@ class TestFindNestedChromes:
                 "</div></article></div>",
                 [("article", "div")],
             ),
-            # Standalone Card primitive: dz-card surface with dz-card__body sub-part
-            # (a BEM element, NOT a second surface) → single chrome layer, clean.
+            # Standalone Card primitive: dz-card surface with the HM slot
+            # sub-parts (NOT second surfaces) → single chrome layer, clean.
             (
-                '<div class="dz-card dz-card--radius-md dz-card--border-md">'
-                '<div class="dz-card__header"><h3>Title</h3></div>'
-                '<div class="dz-card__body"><p>body</p></div>'
+                '<div class="dz-card" data-dz-radius="lg">'
+                '<div class="dz-card-header"><h3>Title</h3></div>'
+                '<div class="dz-card-body"><p>body</p></div>'
+                '<div class="dz-card-footer"><p>foot</p></div>'
                 "</div>",
                 [],
             ),
@@ -362,7 +363,7 @@ class TestFindNestedChromes:
             "test_ignores_siblings",
             "test_dashboard_slot_with_bare_region_is_clean",
             "test_region_emitting_own_dz_card_is_nested",
-            "test_standalone_card_bem_subparts_are_clean",
+            "test_standalone_card_slot_subparts_are_clean",
         ],
     )
     def test_find_nested_chromes(self, html: str, expected: list) -> None:
