@@ -78,6 +78,7 @@ class AppChrome:
 
 
 _FRAMEWORK_BUNDLE_CSS = "/static/dist/dazzle.min.css"
+PROJECT_CUSTOM_CSS = "/static/css/custom.css"
 _FRAMEWORK_BUNDLE_JS = "/static/dist/dazzle.min.js"
 # #1276: lucide UMD bundle ships in the wheel at the same dist path.
 # Must load before the framework bundle so `window.lucide.createIcons()`
@@ -209,6 +210,12 @@ def resolve_app_chrome(
                 exc_info=True,
             )
             leaf_theme = None
+
+    # #1796: a project's `static/css/custom.css` was linked by the site and auth
+    # pages only; the app shell never saw it. Link it after the theme chain so it
+    # can override, the same auto-detection the site routes use.
+    if project_root is not None and (project_root / "static" / "css" / "custom.css").is_file():
+        css_links.append(PROJECT_CUSTOM_CSS)
 
     # Feedback widget (`feedback_widget: enabled`) — the FeedbackReport entity
     # and /feedbackreports API are linker-generated; this mounts the client.

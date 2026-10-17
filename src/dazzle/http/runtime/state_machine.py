@@ -476,15 +476,18 @@ class TransitionValidator:
             if guard.requires_role:
                 if not is_superuser:
                     normalized = {normalize_role(r) for r in (user_roles or [])}
-                    if guard.requires_role not in normalized:
+                    alternatives = guard.role_alternatives  # any-of (#1797)
+                    if not any(role in normalized for role in alternatives):
+                        wanted = " or ".join(
+                            f"'{clerk_transition_state(role)}'" for role in alternatives
+                        )
                         return TransitionValidationResult.failure(
                             GuardNotSatisfiedError(
                                 from_state,
                                 to_state,
                                 "role",
                                 guard.requires_role,
-                                f"User must have role "
-                                f"'{clerk_transition_state(guard.requires_role)}' "
+                                f"User must have role {wanted} "
                                 f"for transition '{clerk_transition_state(from_state)}' "
                                 f"-> '{clerk_transition_state(to_state)}'",
                             )

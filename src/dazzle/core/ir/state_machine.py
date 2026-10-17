@@ -75,6 +75,11 @@ class TransitionGuard(BaseModel):
     # Role that user must have for the transition
     requires_role: str | None = None
 
+    # #1797: alternatives — ``role(a, b)`` / ``role(a) or role(b)`` — the user must
+    # hold ANY of these. ``requires_role`` is the first of them for readers that
+    # only know the single-role form. Empty for a single-role guard.
+    requires_any_role: tuple[str, ...] = ()
+
     # Custom condition expression (string for now, can be ConditionExpr later)
     condition: str | None = None
 
@@ -94,6 +99,13 @@ class TransitionGuard(BaseModel):
     def is_role_guard(self) -> bool:
         """Check if this is a role-based guard."""
         return self.requires_role is not None
+
+    @property
+    def role_alternatives(self) -> tuple[str, ...]:
+        """Every role that satisfies this guard (one for the single-role form)."""
+        if self.requires_any_role:
+            return self.requires_any_role
+        return (self.requires_role,) if self.requires_role else ()
 
     @property
     def is_expr_guard(self) -> bool:

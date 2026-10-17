@@ -2313,6 +2313,7 @@ ir_class: TransitionGuard
     - condition: str | None = None
     - guard_expr: Literal | FieldRef | DurationLiteral | BinaryExpr | UnaryExpr | FuncCall | InExpr | IfExpr | None = None
     - guard_message: str | None = None
+    - requires_any_role: tuple[str, Ellipsis] = ()
     - requires_field: str | None = None
     - requires_role: str | None = None
 

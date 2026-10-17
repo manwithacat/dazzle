@@ -170,3 +170,19 @@ class TestFeedbackWidgetPage:
         html = self._render(("/static/dist/dazzle.min.js", FEEDBACK_WIDGET_JS), "")
         assert FEEDBACK_WIDGET_JS in html
         assert "dz-user-email" not in html
+
+
+class TestProjectCustomCss1796:
+    """`static/css/custom.css` reaches the app shell, after the theme chain (#1796)."""
+
+    def test_custom_css_linked_after_theme_chain_when_present(self, tmp_path) -> None:
+        (tmp_path / "static" / "css").mkdir(parents=True)
+        (tmp_path / "static" / "css" / "custom.css").write_text("body{}")
+        chrome = resolve_app_chrome(None, project_root=tmp_path, manifest=None)
+        links = [u.split("?")[0] for u in chrome.css_links]
+        assert "/static/css/custom.css" in links
+        assert links.index("/static/css/custom.css") == len(links) - 1
+
+    def test_no_custom_css_no_link(self, tmp_path) -> None:
+        chrome = resolve_app_chrome(None, project_root=tmp_path, manifest=None)
+        assert all("custom.css" not in u for u in chrome.css_links)

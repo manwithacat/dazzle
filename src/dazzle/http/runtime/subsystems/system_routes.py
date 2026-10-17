@@ -18,6 +18,7 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.action_visibility import enforce_integration_action
 from dazzle.http.runtime.auth.dependencies import create_admin_dependency
+from dazzle.http.runtime.service_map import entity_service_map
 from dazzle.http.runtime.subsystems import SubsystemContext
 
 if TYPE_CHECKING:
@@ -470,13 +471,26 @@ class SystemRoutesSubsystem:
             status_fields=ctx.config.entity_status_fields,
         )
 
+        # #1797: ``ctx.services`` is keyed by service name, not entity name — the
+        # old ``ctx.services.get(entity_name)`` missed for every entity, so no
+        # ``on_transition`` block had ever run on this path, silently.
+        by_entity = entity_service_map(ctx.services)
         wired = 0
+        unwired: list[str] = []
         for entity_name in entity_transitions:
-            service = ctx.services.get(entity_name)
+            service = by_entity.get(entity_name)
             if service and isinstance(service, CRUDService):
                 service.on_updated(runner.on_entity_updated)
                 wired += 1
+            else:
+                unwired.append(entity_name)
 
+        if unwired:
+            logger.warning(
+                "Transition effects NOT wired for %s: no CRUD service carries that "
+                "entity_name, so their on_transition effects will never run (#1797)",
+                ", ".join(sorted(unwired)),
+            )
         if wired:
             logger.info("Transition effects wired for %d entity/entities", wired)
 

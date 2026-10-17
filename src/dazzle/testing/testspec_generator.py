@@ -583,6 +583,7 @@ def generate_state_machine_flows(entity: EntitySpec, appspec: AppSpec) -> list[F
         # Role guards: resolve every persona carrying the required role so the
         # transition can be exercised under an authenticated context (#1186).
         # A transition may declare more than one role guard; collect them all.
+        # An any-of guard (#1797) is satisfied by its first alternative.
         required_roles = [g.requires_role for g in transition.guards if g.requires_role]
 
         if transition.is_wildcard:

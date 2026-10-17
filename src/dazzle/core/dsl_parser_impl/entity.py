@@ -2004,6 +2004,30 @@ class EntityParserMixin:
             token.column,
         )
 
+    def _parse_role_guard(self) -> ir.TransitionGuard:
+        """``role(a)`` | ``role(a, b)`` | ``role(a) or role(b)`` → one guard (#1797).
+
+        The grammar always documented ``role(a, b)``; the parser took one name and
+        treated a following ``or`` as whitespace, so ``role(a) or role(b)`` produced
+        two guards that were ANDed. Every role in the list is an alternative.
+        """
+        roles: list[str] = []
+        while True:
+            self.expect(TokenType.ROLE)
+            self.expect(TokenType.LPAREN)
+            roles.append(self.expect_identifier_or_keyword().value)
+            while self.match(TokenType.COMMA):
+                self.advance()
+                roles.append(self.expect_identifier_or_keyword().value)
+            self.expect(TokenType.RPAREN)
+            if self.match(TokenType.OR) and self.peek_token(1).type == TokenType.ROLE:
+                self.advance()
+                continue
+            break
+        if len(roles) == 1:
+            return ir.TransitionGuard(requires_role=roles[0])
+        return ir.TransitionGuard(requires_role=roles[0], requires_any_role=tuple(roles))
+
     def _parse_transition_inline_guard(
         self,
     ) -> tuple[
@@ -2026,13 +2050,9 @@ class EntityParserMixin:
                 field_name = self.expect_identifier_or_keyword().value
                 guards.append(ir.TransitionGuard(requires_field=field_name))
 
-            # role(role_name)
+            # role(a) | role(a, b) | role(a) or role(b): one guard, any of the roles (#1797)
             elif self.match(TokenType.ROLE):
-                self.advance()
-                self.expect(TokenType.LPAREN)
-                role_name = self.expect_identifier_or_keyword().value
-                self.expect(TokenType.RPAREN)
-                guards.append(ir.TransitionGuard(requires_role=role_name))
+                guards.append(self._parse_role_guard())
 
             # auto after N days/hours/minutes
             elif self.match(TokenType.AUTO):
@@ -2073,10 +2093,17 @@ class EntityParserMixin:
                 self.advance()
                 trigger = ir.TransitionTrigger.MANUAL
 
-            # OR connector
+            # A bare `or` here joined guards that are ANDed (#1797): refuse rather than
+            # silently require both. `or` is consumed inside the role guard.
             elif self.match(TokenType.OR):
-                self.advance()
-                continue
+                tok = self.current_token()
+                raise make_parse_error(
+                    "'or' joins role guards only: write role(a) or role(b) (or role(a, b)); "
+                    "other guards on one transition are all required",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
 
             else:
                 token = self.current_token()
@@ -2232,13 +2259,9 @@ class EntityParserMixin:
                 field_name = self.expect_identifier_or_keyword().value
                 guards.append(ir.TransitionGuard(requires_field=field_name))
 
-            # role(role_name)
+            # role(a) | role(a, b) | role(a) or role(b): one guard, any of the roles (#1797)
             elif self.match(TokenType.ROLE):
-                self.advance()
-                self.expect(TokenType.LPAREN)
-                role_name = self.expect_identifier_or_keyword().value
-                self.expect(TokenType.RPAREN)
-                guards.append(ir.TransitionGuard(requires_role=role_name))
+                guards.append(self._parse_role_guard())
 
             # auto after N days/hours/minutes
             elif self.match(TokenType.AUTO):

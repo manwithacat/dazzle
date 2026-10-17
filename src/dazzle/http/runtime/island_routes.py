@@ -12,24 +12,9 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from dazzle.core.ir.islands import IslandSpec
+from dazzle.http.runtime.service_map import entity_service_map
 
 logger = logging.getLogger(__name__)
-
-
-def _build_entity_service_map(services: dict[str, Any]) -> dict[str, Any]:
-    """Build a mapping from entity name to its CRUD service.
-
-    The services dict is keyed by service name (e.g. ``list_tasks``,
-    ``create_task``).  Island routes need to look up by entity name
-    (e.g. ``Task``).  We iterate once and pick the first CRUDService
-    for each entity.
-    """
-    entity_map: dict[str, Any] = {}
-    for svc in services.values():
-        ename = getattr(svc, "entity_name", None)
-        if ename and ename not in entity_map:
-            entity_map[ename] = svc
-    return entity_map
 
 
 def create_island_routes(
@@ -53,7 +38,7 @@ def create_island_routes(
 
     # Services are keyed by service name (e.g. "list_tasks"), not entity
     # name.  Build a reverse lookup from entity name → CRUDService.
-    entity_services = _build_entity_service_map(services)
+    entity_services = entity_service_map(services)
 
     for island in islands:
         if not island.entity:

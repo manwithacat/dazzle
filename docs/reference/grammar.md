@@ -321,9 +321,12 @@ transition_spec ::= ":" transition_constraint+ ;
 
 transition_constraint
               ::= "requires" IDENT
-                | "role" "(" IDENT ("," IDENT)* ")"
+                | role_guard
                 | "auto" "after" NUMBER time_unit ("or" "manual")?
                 | "manual" ;
+
+role_guard    ::= "role" "(" IDENT ("," IDENT)* ")" ("or" "role" "(" IDENT ")")* ;
+                  (* one guard; the user must hold ANY listed role (#1797) *)
 
 time_unit     ::= "minutes" | "hours" | "days" ;
 

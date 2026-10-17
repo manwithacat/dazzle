@@ -368,7 +368,7 @@ def _build_state_machines(
                 if g.requires_field:
                     label_parts.append(f"requires {g.requires_field}")
                 elif g.requires_role:
-                    label_parts.append(f"role({g.requires_role})")
+                    label_parts.append(f"role({', '.join(g.role_alternatives)})")
                 elif g.condition:
                     label_parts.append(g.condition)
 

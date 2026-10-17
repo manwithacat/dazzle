@@ -313,12 +313,22 @@ class TransitionGuardSpec(BaseModel):
 
     requires_field: str | None = Field(default=None, description="Field that must be set")
     requires_role: str | None = Field(default=None, description="Role user must have")
+    requires_any_role: list[str] = Field(
+        default_factory=list, description="Alternatives: the user must hold any of these (#1797)"
+    )
     guard_expr: dict[str, Any] | None = Field(
         default=None, description="Typed expression AST (serialized IR Expr)"
     )
     guard_message: str | None = Field(
         default=None, description="Human-readable message when guard fails"
     )
+
+    @property
+    def role_alternatives(self) -> tuple[str, ...]:
+        """Every role that satisfies this guard (one for the single-role form; #1797)."""
+        if self.requires_any_role:
+            return tuple(self.requires_any_role)
+        return (self.requires_role,) if self.requires_role else ()
 
     model_config = ConfigDict(frozen=True)
 

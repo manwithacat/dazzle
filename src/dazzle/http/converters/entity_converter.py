@@ -320,6 +320,7 @@ def _convert_guard(ir_guard: ir.TransitionGuard) -> TransitionGuardSpec:
     return TransitionGuardSpec(
         requires_field=ir_guard.requires_field,
         requires_role=ir_guard.requires_role,
+        requires_any_role=list(ir_guard.requires_any_role),
         guard_expr=guard_expr_dict,
         guard_message=ir_guard.guard_message,
     )
