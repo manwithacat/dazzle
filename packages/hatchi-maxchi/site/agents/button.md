@@ -1,6 +1,6 @@
 # Button (`button`)
 
-Primary, outline, ghost, destructive — chromatic accent CTAs.
+Primary, outline, ghost, destructive — chromatic accent CTAs (secondary = outline).
 
 > **Layer:** L1 surface · **Recipe:** _(unset — see docs/agent/pick-a-surface.md)_
 > Curriculum: `AGENTS.md` · pick matrix: `docs/agent/pick-a-surface.md` · blast radius: `CONSUMER_MAP.md`
@@ -81,6 +81,10 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 Dual-lock unit is the control root. Variant/size/htmx attrs are host-owned.
 Gallery and Dazzle substrate both use class ``.dz-button`` (plus
 ``data-dz-variant`` / ``data-dz-size`` when styled).
+
+HM has one secondary look: ``data-dz-variant="secondary"`` is a styled alias of
+``outline`` (secondary = outline), same as the Python ``Button(variant="secondary")``
+mapping.
 """
 
 from contracts._kit import DomContract, Node

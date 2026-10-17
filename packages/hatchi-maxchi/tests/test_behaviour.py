@@ -4497,6 +4497,53 @@ def test_toast_stack_host_pause_dismiss_and_client_fire(page) -> None:  # type: 
     assert page.locator(".toast__title, .dz-toast__title").filter(has_text="Host test").count() == 1
 
 
+def test_toast_controls_work_under_a_real_pointer_and_swipe_still_dismisses(page) -> None:  # type: ignore[no-untyped-def]
+    """#1806: pointer capture must not retarget clicks on toast actions / dismiss.
+
+    ``locator.click()`` drives a real pointerdown/up; capture-on-pointerdown used
+    to retarget the click to the toast so button handlers never ran. Swipe past the
+    threshold must still dismiss (capture happens once the swipe is real).
+    """
+    live = Path(__file__).resolve().parents[1] / "site" / "hyperparts" / "toast-live.html"
+    page.goto(live.as_uri())
+    page.wait_for_timeout(200)
+    page.evaluate(
+        """() => {
+          window.__undo = 0;
+          document.dispatchEvent(new CustomEvent('showToast', {detail: {
+            title: 'Pointer', message: 'Saved', duration: '60s',
+            actions: [{label: 'Undo', dismiss: false, onClick: () => { window.__undo++; }}],
+          }}));
+        }"""
+    )
+    page.wait_for_timeout(150)
+    toast = page.locator(".toast, .dz-toast").filter(has_text="Pointer")
+    assert toast.count() == 1
+    toast.locator(".toast__action, .dz-toast__action").click()
+    assert page.evaluate("window.__undo") == 1, "action handler must run under a real click"
+    toast.locator(".toast__close, .dz-toast__close").click()
+    page.wait_for_timeout(450)
+    assert page.locator(".toast, .dz-toast").filter(has_text="Pointer").count() == 0
+
+    page.evaluate(
+        """() => document.dispatchEvent(new CustomEvent('showToast', {detail: {
+          title: 'Swipe', message: 'Drag me', duration: '60s'}}))"""
+    )
+    page.wait_for_timeout(150)
+    swipe = page.locator(".toast, .dz-toast").filter(has_text="Swipe")
+    box = swipe.bounding_box()
+    assert box is not None
+    y = box["y"] + box["height"] / 2
+    x = box["x"] + 12
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.mouse.move(x + 30, y + 1, steps=3)
+    page.mouse.move(x + 90, y + 1, steps=3)
+    page.mouse.up()
+    page.wait_for_timeout(450)
+    assert page.locator(".toast, .dz-toast").filter(has_text="Swipe").count() == 0
+
+
 def test_kanban_rearrange_attrs_and_keyboard_move(page):  # type: ignore[no-untyped-def]
     """kanban Hyperpart: Linear-class rearrange seams are live in the gallery.
 

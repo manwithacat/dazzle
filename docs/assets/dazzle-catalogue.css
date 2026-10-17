@@ -1219,12 +1219,19 @@ dialog.dz-alert-dialog::backdrop {
 .dz-topbar-title {
   flex: 1 1 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .dz-topbar-title-text {
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
   color: var(--colour-text);
+  /* Truncate inside the flex box instead of overprinting the trailing cluster. */
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dz-topbar-user {
@@ -2102,6 +2109,7 @@ dialog.dz-alert-dialog::backdrop {
  * visual variant (canonical, matching `data-dz-tone` on badges/alerts):
  *   data-dz-variant="ghost"        no border, hover-tint only (back, cancel)
  *   data-dz-variant="outline"      bordered neutral (default action button)
+ *   data-dz-variant="secondary"    alias of outline (one secondary look: secondary = outline)
  *   data-dz-variant="destructive"  bordered danger (delete, revoke)
  *   data-dz-variant="primary"      filled brand (the recommended action)
  * and `data-dz-size="sm"` for the compact inline-row size.
@@ -2155,17 +2163,17 @@ dialog.dz-alert-dialog::backdrop {
   color: var(--colour-text);
 }
 
-.dz-button[data-dz-variant="outline"] {
+.dz-button:is([data-dz-variant="outline"], [data-dz-variant="secondary"]) {
   background: var(--colour-surface);
   color: var(--colour-text);
   border: 1px solid var(--colour-border);
 }
 
-.dz-button[data-dz-variant="outline"]:hover {
+.dz-button:is([data-dz-variant="outline"], [data-dz-variant="secondary"]):hover {
   background: var(--colour-bg);
 }
 
-.dz-button[data-dz-variant="outline"]:active {
+.dz-button:is([data-dz-variant="outline"], [data-dz-variant="secondary"]):active {
   background: var(--colour-surface-muted);
 }
 

@@ -272,7 +272,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "button",
             "Button",
             "Actions",
-            "Primary, outline, ghost, destructive — chromatic accent CTAs.",
+            "Primary, outline, ghost, destructive — chromatic accent CTAs (secondary = outline).",
             '<div class="hm-demo-row">'
             '<button class="dz-button" data-dz-variant="primary">Save changes</button>'
             '<button class="dz-button" data-dz-variant="outline">Cancel</button>'

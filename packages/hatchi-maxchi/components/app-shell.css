@@ -188,12 +188,19 @@
 .dz-topbar-title {
   flex: 1 1 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .dz-topbar-title-text {
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
   color: var(--colour-text);
+  /* Truncate inside the flex box instead of overprinting the trailing cluster. */
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dz-topbar-user {

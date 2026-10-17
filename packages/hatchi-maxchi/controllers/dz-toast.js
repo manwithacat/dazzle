@@ -247,18 +247,18 @@
     var startX = 0;
     var startY = 0;
     var tracking = false;
+    var captured = false;
 
     el.addEventListener("pointerdown", function (e) {
       if (el.__dzToastLeaving) return;
       if (e.button != null && e.button !== 0) return;
+      // A press on an action / dismiss control is a click, never a swipe:
+      // capturing the pointer here would retarget the click to the toast.
+      if (e.target && e.target.closest && e.target.closest("button, a, [role=button]")) return;
       tracking = true;
+      captured = false;
       startX = e.clientX;
       startY = e.clientY;
-      try {
-        el.setPointerCapture(e.pointerId);
-      } catch (_err) {
-        /* ignore */
-      }
     });
 
     el.addEventListener("pointermove", function (e) {
@@ -268,6 +268,15 @@
       if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
       // Prefer horizontal
       if (Math.abs(dx) > Math.abs(dy)) {
+        // Capture only once the gesture is a real horizontal swipe.
+        if (!captured) {
+          captured = true;
+          try {
+            el.setPointerCapture(e.pointerId);
+          } catch (_err) {
+            /* ignore */
+          }
+        }
         // Top-right stack: positive dx (outward) feels natural
         var shift = Math.max(0, dx);
         el.style.transform = "translateX(" + shift + "px)";

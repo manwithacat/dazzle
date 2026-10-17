@@ -2388,6 +2388,7 @@ dialog.alert-dialog::backdrop {
  * visual variant (canonical, matching `data-tone` on badges/alerts):
  *   data-variant="ghost"        no border, hover-tint only (back, cancel)
  *   data-variant="outline"      bordered neutral (default action button)
+ *   data-variant="secondary"    alias of outline (one secondary look: secondary = outline)
  *   data-variant="destructive"  bordered danger (delete, revoke)
  *   data-variant="primary"      filled brand (the recommended action)
  * and `data-size="sm"` for the compact inline-row size.
@@ -2441,17 +2442,17 @@ dialog.alert-dialog::backdrop {
   color: var(--colour-text);
 }
 
-.button[data-variant="outline"] {
+.button:is([data-variant="outline"], [data-variant="secondary"]) {
   background: var(--colour-surface);
   color: var(--colour-text);
   border: 1px solid var(--colour-border);
 }
 
-.button[data-variant="outline"]:hover {
+.button:is([data-variant="outline"], [data-variant="secondary"]):hover {
   background: var(--colour-bg);
 }
 
-.button[data-variant="outline"]:active {
+.button:is([data-variant="outline"], [data-variant="secondary"]):active {
   background: var(--colour-surface-muted);
 }
 
@@ -8505,12 +8506,19 @@ select.filter-select {
 .topbar-title {
   flex: 1 1 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .topbar-title-text {
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
   color: var(--colour-text);
+  /* Truncate inside the flex box instead of overprinting the trailing cluster. */
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .topbar-user {

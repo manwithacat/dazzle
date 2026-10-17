@@ -21,7 +21,7 @@
 
 ## Per-part agent files (one chunk per Hyperpart)
 
-- [Button](https://manwithacat.github.io/hatchi-maxchi/agents/button.md): Primary, outline, ghost, destructive — chromatic accent CTAs.
+- [Button](https://manwithacat.github.io/hatchi-maxchi/agents/button.md): Primary, outline, ghost, destructive — chromatic accent CTAs (secondary = outline).
 - [Badge](https://manwithacat.github.io/hatchi-maxchi/agents/badge.md): Colour + icon + text — status never relies on colour alone (WCAG 1.4.1).
 - [Alert](https://manwithacat.github.io/hatchi-maxchi/agents/alert.md): Tone-wash surfaces — an identity layer shadcn has no vocabulary for.
 - [Toast](https://manwithacat.github.io/hatchi-maxchi/agents/toast.md): Stack host + auto-dismiss notifications — title, body, optional actions; hover/focus pauses the timer (htmx OOB or client bridge).

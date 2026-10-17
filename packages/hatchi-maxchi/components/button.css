@@ -5,6 +5,7 @@
  * visual variant (canonical, matching `data-dz-tone` on badges/alerts):
  *   data-dz-variant="ghost"        no border, hover-tint only (back, cancel)
  *   data-dz-variant="outline"      bordered neutral (default action button)
+ *   data-dz-variant="secondary"    alias of outline (one secondary look: secondary = outline)
  *   data-dz-variant="destructive"  bordered danger (delete, revoke)
  *   data-dz-variant="primary"      filled brand (the recommended action)
  * and `data-dz-size="sm"` for the compact inline-row size.
@@ -58,17 +59,17 @@
   color: var(--colour-text);
 }
 
-.dz-button[data-dz-variant="outline"] {
+.dz-button:is([data-dz-variant="outline"], [data-dz-variant="secondary"]) {
   background: var(--colour-surface);
   color: var(--colour-text);
   border: 1px solid var(--colour-border);
 }
 
-.dz-button[data-dz-variant="outline"]:hover {
+.dz-button:is([data-dz-variant="outline"], [data-dz-variant="secondary"]):hover {
   background: var(--colour-bg);
 }
 
-.dz-button[data-dz-variant="outline"]:active {
+.dz-button:is([data-dz-variant="outline"], [data-dz-variant="secondary"]):active {
   background: var(--colour-surface-muted);
 }
 
