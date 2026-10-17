@@ -205,7 +205,9 @@ def test_delete_button_pins_hx_trigger_click() -> None:
     )
     assert 'hx-delete="/api/tasks/task-3"' in html
     assert 'hx-trigger="click"' in html
-    assert "hx-disinherit" in html
+    # #1802: htmx 4 ignores hx-disinherit; no list ancestor carries a load
+    # trigger any more, so the dead attribute is gone.
+    assert "hx-disinherit" not in html
 
 
 def test_simple_task_parses_open_via() -> None:

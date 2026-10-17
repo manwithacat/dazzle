@@ -552,11 +552,13 @@ class FragmentSurfaceAdapter:
         if ctx.get("show_history") and item_id and entity_name:
             ent = _esc_attr(entity_name)
             iid = _esc_attr(item_id)
+            # #1802: the loading line is the loader (replaced by the history),
+            # so the slot carries no `load` trigger for anything to inherit.
             audit = RawHTML(
-                f'<div class="dz-detail-audit-history" '
-                f'hx-get="/_dazzle/audit-history/{ent}/{iid}" '
-                'hx-trigger="load" hx-swap="innerHTML">'
-                '<p class="dz-audit-history__loading" aria-live="polite">'
+                '<div class="dz-detail-audit-history">'
+                '<p class="dz-audit-history__loading" aria-live="polite" '
+                f'hx-get="/_dazzle/audit-history/{ent}/{iid}" hx-trigger="load" '
+                'hx-target="closest .dz-detail-audit-history" hx-swap="innerHTML">'
                 "Loading history…</p></div>"
             )
             detail_body = Stack(children=(detail_body, audit), gap="md")

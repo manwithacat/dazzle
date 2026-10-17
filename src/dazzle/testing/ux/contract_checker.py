@@ -367,6 +367,113 @@ def find_hidden_primary_actions(html: str) -> list[tuple[str, str]]:
 
 
 # ---------------------------------------------------------------------------
+# Inherited load-trigger gate (issue #1802)
+# ---------------------------------------------------------------------------
+
+# Dazzle runs htmx 4 with `implicitInheritance = true` (dz-csrf.js), and htmx 4
+# has no `hx-disinherit`: every hx-* attribute on an ancestor is inherited by
+# every request element below it. A verb control that declares no trigger of
+# its own therefore picks up an ancestor's `load` / `every Ns` / `revealed` /
+# `intersect` and FIRES on its own — a peeked detail's `hx-post` + `hx-confirm`
+# "Release class" button opened its confirm the moment it was swapped in.
+# Structural rule: an element carrying such a trigger is never an ancestor of
+# server-swapped interactive content (it is a self-replacing loader inside the
+# slot, or a sibling that targets it).
+_VERB_ATTRS = ("hx-get", "hx-post", "hx-put", "hx-patch", "hx-delete")
+_SELF_FIRING_EVENTS = frozenset({"load", "revealed", "intersect", "every"})
+_VOID_TAGS = frozenset(
+    {
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "source",
+        "track",
+        "wbr",
+    }
+)
+
+
+def _self_firing_trigger(trigger: str | None) -> bool:
+    """True when an ``hx-trigger`` spec contains an event that fires without a
+    user gesture (``load``, ``every Ns``, ``revealed``, ``intersect``)."""
+    if not trigger:
+        return False
+    for part in trigger.split(","):
+        words = part.strip().split()
+        if words and words[0].split("[", 1)[0] in _SELF_FIRING_EVENTS:
+            return True
+    return False
+
+
+def _describe(tag: str, attrs: dict[str, str | None]) -> str:
+    parts = [tag]
+    if attrs.get("id"):
+        parts.append(f'id="{attrs["id"]}"')
+    for verb in _VERB_ATTRS:
+        if attrs.get(verb) is not None:
+            parts.append(f'{verb}="{attrs[verb]}"')
+            break
+    if attrs.get("hx-trigger"):
+        parts.append(f'hx-trigger="{attrs["hx-trigger"]}"')
+    return "<" + " ".join(parts) + ">"
+
+
+class _InheritedLoadTriggerScanner(HTMLParser):
+    """Flag each request element with no own ``hx-trigger`` whose ancestor
+    carries a self-firing trigger (it would inherit it under htmx 4)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        # (tag, descriptor-if-self-firing-else-None)
+        self._stack: list[tuple[str, str | None]] = []
+        self.found: list[tuple[str, str]] = []
+
+    def handle_starttag(self, tag: str, attrs_list: list[tuple[str, str | None]]) -> None:
+        attrs = dict(attrs_list)
+        if "hx-trigger" not in attrs and any(attrs.get(v) is not None for v in _VERB_ATTRS):
+            for _anc_tag, firing in reversed(self._stack):
+                if firing is not None:
+                    self.found.append((firing, _describe(tag, attrs)))
+                    break
+        if tag in _VOID_TAGS:
+            return
+        firing_desc = (
+            _describe(tag, attrs) if _self_firing_trigger(attrs.get("hx-trigger")) else None
+        )
+        self._stack.append((tag, firing_desc))
+
+    def handle_startendtag(self, tag: str, attrs_list: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs_list)
+        if tag not in _VOID_TAGS and self._stack and self._stack[-1][0] == tag:
+            self._stack.pop()
+
+    def handle_endtag(self, tag: str) -> None:
+        for i in range(len(self._stack) - 1, -1, -1):
+            if self._stack[i][0] == tag:
+                del self._stack[i:]
+                return
+
+
+def find_inherited_load_triggers(html: str) -> list[tuple[str, str]]:
+    """Return ``(ancestor, element)`` descriptors for each request element
+    (``hx-get|post|put|patch|delete``) that declares no ``hx-trigger`` but
+    sits under an ancestor whose ``hx-trigger`` contains ``load``, ``every``,
+    ``revealed`` or ``intersect``. ``[]`` means nothing on the page can fire
+    by inheritance. Gate for #1802 — run it on stitched (post-swap) DOM.
+    """
+    scanner = _InheritedLoadTriggerScanner()
+    scanner.feed(html)
+    return scanner.found
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -728,6 +835,21 @@ def check_contract(contract: Contract, html: str) -> Contract:
                 f"without pointer hover — add focus-within:opacity-* or keep "
                 f"the element always visible."
             )
+
+    # Inherited load-trigger gate (INV-10, issue #1802) — every page shape:
+    # a verb control under a self-firing ancestor trigger fires by itself
+    # under htmx 4 implicit inheritance.
+    inherited = find_inherited_load_triggers(html)
+    if inherited:
+        pairs = ", ".join(f"{anc} > {el}" for anc, el in inherited[:3])
+        more = f" (+ {len(inherited) - 3} more)" if len(inherited) > 3 else ""
+        errors.append(
+            f"Self-firing trigger inherited by a verb control — {pairs}{more}. "
+            f"An element whose hx-trigger fires without a gesture (load / every / "
+            f"revealed / intersect) must not be an ancestor of request elements: "
+            f"make it a self-replacing loader inside the slot or a sibling that "
+            f"targets it."
+        )
 
     if errors:
         contract.status = "failed"

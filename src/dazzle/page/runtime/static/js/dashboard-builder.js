@@ -330,25 +330,16 @@ function createDzDashboardBuilder(root) {
           display: entry.display || "list",
         },
         wsName,
+        true,
       );
 
       grid.appendChild(cardEl);
       this._pushUndo({ type: "add", cardId: newId });
 
-      if (typeof htmx !== "undefined") {
-        htmx.process(cardEl);
-        const bodyEl = cardEl.querySelector(".dz-card-body");
-        if (bodyEl) {
-          // #1494: mark this as a picker-added card so the server skips the
-          // `when_empty` auto self-demote default — a user who explicitly adds
-          // a card should see its empty-state, not have it immediately collapse.
-          htmx.ajax(
-            "GET",
-            "/api/workspaces/" + wsName + "/regions/" + regionName + "?added=1",
-            { target: "#" + bodyEl.id, swap: "innerHTML" },
-          );
-        }
-      }
+      // The skeleton's `load` trigger fetches the region (`?added=1`, #1494:
+      // a user who explicitly adds a card sees its empty-state rather than
+      // having it collapse).
+      if (typeof htmx !== "undefined") htmx.process(cardEl);
       this.showPicker = false;
       this._markDirty();
     },
@@ -378,7 +369,7 @@ function createDzDashboardBuilder(root) {
       this._markDirty();
     },
 
-    _buildCardElement(card, wsName) {
+    _buildCardElement(card, wsName, added) {
       // Build a card DOM tree using safe DOM methods (no innerHTML)
       // so the title and any project-controlled fields can't smuggle
       // markup. The chrome shape mirrors the server-rendered template
@@ -438,15 +429,29 @@ function createDzDashboardBuilder(root) {
       body.id = "region-" + card.region + "-" + card.id;
       // #962: data-display drives the per-mode min-height reservation in dashboard.css
       body.setAttribute("data-display", (card.display || "list").toLowerCase());
-      body.setAttribute(
-        "hx-get",
-        "/api/workspaces/" + wsName + "/regions/" + card.region,
-      );
-      body.setAttribute("hx-trigger", "load");
-      body.setAttribute("hx-swap", "innerHTML");
+      body.setAttribute("data-dz-region", "");
+      body.setAttribute("data-dz-region-name", card.region);
+      // #1802: the body carries no hx-* — under htmx 4 implicit inheritance a
+      // `load` trigger here would be inherited by every verb control in the
+      // region and fire on swap-in. The skeleton below is the loader: it
+      // targets the body and is replaced by the response (mirrors
+      // `_emit_dashboard_card`).
 
       const skeleton = document.createElement("div");
       skeleton.className = "dz-card-skeleton";
+      // #1494: a picker-added card asks with `?added=1` so the server skips
+      // the `when_empty` auto self-demote default.
+      skeleton.setAttribute(
+        "hx-get",
+        "/api/workspaces/" +
+          wsName +
+          "/regions/" +
+          card.region +
+          (added ? "?added=1" : ""),
+      );
+      skeleton.setAttribute("hx-trigger", "load");
+      skeleton.setAttribute("hx-target", "#" + body.id);
+      skeleton.setAttribute("hx-swap", "innerHTML");
       ["w-3-4", "is-thin", "is-thin w-5-6"].forEach((cls) => {
         const line = document.createElement("div");
         line.className = "dz-card-skeleton-line " + cls;

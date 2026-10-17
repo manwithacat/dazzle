@@ -3111,6 +3111,17 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  *   - clear:       `[data-grid-clear]` deselects everything
  *   - body:        `[data-grid-body]` (the tbody htmx swaps; `data-grid-src`
  *                  holds its immutable base endpoint, `hx-get` its current query)
+ *   - fetch:       `[data-grid-fetch]` (optional) — a separate request
+ *                  element (e.g. a hidden sibling `<tbody>` with
+ *                  `hx-target="next [data-grid-body]"`) that carries
+ *                  `data-grid-src`, `hx-get` and the `load, grid:refresh`
+ *                  trigger INSTEAD of the body. Use it whenever rows can hold
+ *                  server-swapped verb controls (a peek panel, an inline
+ *                  detail): under htmx 4 `implicitInheritance` a body that
+ *                  carries the trigger hands `load` (and its `hx-get`) to every
+ *                  control below it, which then fires on swap-in. When present
+ *                  the controller reads/writes the query on it and dispatches
+ *                  `grid:refresh` to it; the body stays a pure swap target.
  *   - sort:        `[data-grid-sort="<key>"]` (a header button) cycles the
  *                  clicked column through `data-grid-sort-cycle`
  *                  (default "asc desc none"); state lives on the th's `aria-sort`
@@ -3213,6 +3224,17 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     return el.closest ? el.closest("[data-grid]") : null;
   }
 
+  // The element that issues the rows GET: `[data-grid-fetch]` when the
+  // grid separates it from the body, else the body itself (see the `fetch`
+  // contract line above). Its `hx-get` is the current query, its
+  // `data-grid-src` the immutable base, and `grid:refresh` fires on it.
+  function fetchEl(root) {
+    return (
+      root.querySelector("[data-grid-fetch]") ||
+      root.querySelector("[data-grid-body]")
+    );
+  }
+
   function rowBoxes(root) {
     return Array.prototype.slice.call(
       root.querySelectorAll("[data-grid-select]"),
@@ -3300,7 +3322,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
   // through; empty attr means leftover was refused (do not re-invent
   // from src).
   function srcQueryParams(root) {
-    var body = root.querySelector("[data-grid-body]");
+    var body = fetchEl(root);
     var srcQs =
       ((body && body.getAttribute("data-grid-src")) || "").split("?")[1] ||
       "";
@@ -3530,7 +3552,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
   // shared half of refresh() and the URL-restore path (where the `load`
   // trigger or the popstate caller does the fetching).
   function setQuery(root) {
-    var body = root.querySelector("[data-grid-body]");
+    var body = fetchEl(root);
     if (!body) return null;
     var base = (
       body.getAttribute("data-grid-src") ||
@@ -3578,7 +3600,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     });
     // The tbody's hx-get query is the single source of truth for what the
     // grid is showing — mirror exactly that into the URL.
-    var body = root.querySelector("[data-grid-body]");
+    var body = fetchEl(root);
     var qs = ((body && body.getAttribute("hx-get")) || "").split("?")[1] || "";
     new URLSearchParams(qs).forEach(function (v, k) {
       sp.set(k, v);
@@ -3945,7 +3967,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     // rows came from — then the bulk keys LAST so they always win (a filter
     // named `action` etc. can't clobber the operation name).
     var payload = {};
-    var body = root.querySelector("[data-grid-body]");
+    var body = fetchEl(root);
     var qs = ((body && body.getAttribute("hx-get")) || "").split("?")[1] || "";
     qs.split("&").forEach(function (kv) {
       if (!kv) return;
@@ -4104,7 +4126,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
         // page_size) leaves hx-get unchanged — dispatching anyway would
         // re-fetch forever (GET storm; stack overflow under a synchronous
         // mock). Unsatisfiable params degrade, they don't loop.
-        var rbody = grids[i].querySelector("[data-grid-body]");
+        var rbody = fetchEl(grids[i]);
         var rBefore = rbody && rbody.getAttribute("hx-get");
         restoreFromUrl(grids[i]);
         if (rbody && rbody.getAttribute("hx-get") !== rBefore) {
@@ -4195,7 +4217,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     var grids = document.querySelectorAll("[data-grid][data-grid-url]");
     for (var i = 0; i < grids.length; i++) {
       if (!grids[i]._dzInitial) captureInitial(grids[i]);
-      var body = grids[i].querySelector("[data-grid-body]");
+      var body = fetchEl(grids[i]);
       // Back across a HASH-only history entry (e.g. in-page anchors) fires
       // popstate with the grid's params unchanged — skip the refetch when the
       // restore didn't change the query (no loading flash for a no-op).
@@ -4592,7 +4614,8 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  *             the Alpine `:class` bind used); a failed commit keeps the
  *             editor open with the server error in its `title`.
  *   - after a successful commit the controller fires `grid:refresh` on
- *             the tbody — the server re-renders rows, so rich display chrome
+ *             the grid's request element (the separate fetch element when
+ *             present, else the tbody) — the server re-renders rows, so rich display chrome
  *             (badges, dates) stays server-owned.
  */
 (function () {
@@ -4994,7 +5017,11 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
         closeEditor(root);
         // Server-owned rendering: refresh the rows so badge/date chrome is
         // re-rendered rather than patched client-side.
-        var body = root.querySelector("[data-grid-body]");
+        // The refresh goes to the grid's request element — the separate
+        // `[data-grid-fetch]` when there is one, else the body (grid.js).
+        var body =
+          root.querySelector("[data-grid-fetch]") ||
+          root.querySelector("[data-grid-body]");
         if (body) {
           body.dispatchEvent(
             new CustomEvent("grid:refresh", { bubbles: true }),

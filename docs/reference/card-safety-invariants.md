@@ -354,6 +354,53 @@ Notes on the detection rule:
 
 ---
 
+### INV-10: No self-firing trigger above swapped content
+
+**Rule**: An element whose `hx-trigger` fires without a user gesture
+(`load`, `every Ns`, `revealed`, `intersect`) is never an ancestor of
+request elements (`hx-get|post|put|patch|delete`). A slot that fetches
+its own content does it from a **self-replacing loader** inside the
+slot (the skeleton / spinner carries `hx-get` + `hx-trigger` +
+`hx-target` = the slot, and the response replaces it) or from a
+**sibling** that targets the slot (a list's hidden
+`data-dz-grid-fetch` tbody, a card's hidden `data-dz-region-poll`
+poller). The slot itself carries no hx-*.
+
+**Why**: Dazzle runs htmx 4 with `implicitInheritance = true`
+(`dz-csrf.js`), and htmx 4 has no `hx-disinherit`. Every hx-* on an
+ancestor is inherited by every control below it, so a verb button
+with no trigger of its own inherits `load` and fires on swap-in —
+and the ancestor's `hx-get` also beats the button's own verb. Issue
+#1802: peeking a list row opened the detail's "Release class"
+`hx-confirm` dialog by itself, Confirm focused.
+
+**Enforcement**:
+- Scanner: `find_inherited_load_triggers(html)` in
+  `contract_checker.py`; applied inside `check_contract` for every
+  contract type.
+- Composite gate: `test_htmx_workspace_composite.py::TestInheritedLoadTriggerGate`
+  renders the list skeleton + hydrated row + peeked verb body, every
+  dashboard-card variant (eager, lazy, polling, SSR + poll), lazy tabs
+  and the dual-pane list, stitched post-swap.
+
+**Bad shape** (pre-#1802):
+```html
+<tbody data-dz-grid-body hx-get="/api/task" hx-trigger="load, dz-grid:refresh">
+  <tr><td id="peek-content-1">
+    <button hx-post="/release" hx-confirm="Release?">Release</button>  <!-- fires on load ✗ -->
+  </td></tr>
+</tbody>
+```
+
+**Good shape**:
+```html
+<tbody hidden data-dz-grid-fetch hx-get="/api/task"
+       hx-trigger="load, dz-grid:refresh" hx-target="next [data-dz-grid-body]"></tbody>
+<tbody data-dz-grid-body>…rows, peek panels…</tbody>
+```
+
+---
+
 ## Adding a new invariant
 
 If you find a new class of card-safety regression:

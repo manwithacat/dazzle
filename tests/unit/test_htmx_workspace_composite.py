@@ -173,3 +173,120 @@ class TestAssembleWorkspaceComposite:
         )
         assert find_nested_chromes(composite) == []
         assert 'id="region-grade_distribution"' not in composite
+
+
+class TestInheritedLoadTriggerGate:
+    """#1802: under htmx 4 `implicitInheritance` a verb control with no trigger
+    of its own inherits an ancestor's `load` / `every` / `revealed` /
+    `intersect` and fires by itself. Every rendered slot that self-fetches
+    must keep that trigger off the ancestors of what it swaps in — checked on
+    the stitched (post-swap) DOM, with a confirm-gated verb button in the
+    swapped content."""
+
+    @staticmethod
+    def _verb_button() -> str:
+        from dazzle.render.fragment import URL, Button, FragmentRenderer, TargetSelector
+
+        return FragmentRenderer().render(
+            Button(
+                label="Release class",
+                variant="secondary",
+                visibility="visible",
+                hx_post=URL("/api/assessment-event/e1/release-class"),
+                hx_target=TargetSelector("#release-result"),
+                hx_swap="innerHTML",
+                hx_confirm="Release every script?",
+            )
+        )
+
+    def test_scanner_flags_a_verb_under_a_load_trigger(self) -> None:
+        from dazzle.testing.ux.contract_checker import find_inherited_load_triggers
+
+        pre_fix = (
+            '<tbody hx-get="/api/rows" hx-trigger="load, dz-grid:refresh">'
+            f'<tr><td id="peek-content-1">{self._verb_button()}</td></tr></tbody>'
+        )
+        found = find_inherited_load_triggers(pre_fix)
+        assert len(found) == 1
+        assert 'hx-post="/api/assessment-event/e1/release-class"' in found[0][1]
+
+    def test_list_with_peek_panel(self) -> None:
+        from dazzle.render.fragment import FragmentRenderer
+        from dazzle.render.fragment.primitives import RowCapabilities, Table
+        from dazzle.render.fragment.renderer._data_row import render_data_row
+        from dazzle.testing.ux.contract_checker import find_inherited_load_triggers
+
+        skeleton = FragmentRenderer().render(
+            Table(
+                columns=("Title",),
+                rows=(),
+                skeleton=True,
+                tbody_id="dt-task-body",
+                hx_endpoint="/api/task",
+                refresh_interval=30,
+            )
+        )
+        row = render_data_row(
+            ({"key": "title", "type": "str"},),
+            {"id": "t1", "title": "Sample"},
+            RowCapabilities(drill=True, delete=True, update=True, peek="expand"),
+            entity_name="Task",
+            api_endpoint="/api/task",
+            detail_url_template="/app/task/{id}",
+        )
+        html = apply_inner_swap(skeleton, "dt-task-body", row)
+        html = apply_inner_swap(html, "peek-content-t1", self._verb_button())
+        assert "Release class" in html
+        assert "hx-disinherit" not in html
+        assert find_inherited_load_triggers(html) == []
+
+    def test_workspace_region_slots(self) -> None:
+        from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
+        from dazzle.render.fragment import URL, FragmentRenderer, LazyTabPanel
+        from dazzle.render.fragment.primitives import DashboardCard, LazyTab
+        from dazzle.testing.ux.contract_checker import find_inherited_load_triggers
+
+        region = f'<div class="dz-queue-region">{self._verb_button()}</div>'
+        r = FragmentRenderer()
+        card_kwargs: tuple[dict[str, object], ...] = (
+            {"eager": True},
+            {"eager": False},
+            {"eager": True, "refresh_interval": 30},
+            {"ssr_html": "<p>first paint</p>", "refresh_interval": 30},
+        )
+        slots: list[tuple[str, str]] = []
+        for i, kw in enumerate(card_kwargs):
+            card = DashboardCard(
+                card_id=f"card-{i}",
+                name="queue",
+                title="Queue",
+                display="queue",
+                col_span=6,
+                row_order=i,
+                hx_endpoint="/api/workspaces/w/regions/queue",
+                **kw,  # type: ignore[arg-type]
+            )
+            slots.append((r.render(card), f"region-queue-card-{i}"))
+        tabs_html = r.render(
+            LazyTabPanel(
+                region_name="related",
+                tabs=(
+                    LazyTab(key="a", label="A", endpoint=URL("/api/a"), eager=True),
+                    LazyTab(key="b", label="B", endpoint=URL("/api/b")),
+                ),
+            )
+        )
+        slots += [(tabs_html, "tab-related-a"), (tabs_html, "tab-related-b")]
+        shell = render_master_detail_shell(
+            list_region="queue",
+            list_title="Queue",
+            list_endpoint="/api/workspaces/w/regions/queue",
+            detail_region="detail",
+            detail_title="Detail",
+            detail_endpoint_base="/api/workspaces/w/regions/detail",
+        )
+        slots.append((shell, "region-queue-card-list"))
+        for initial, slot_id in slots:
+            html = apply_inner_swap(initial, slot_id, region)
+            assert "Release class" in html, slot_id
+            assert find_inherited_load_triggers(html) == [], slot_id

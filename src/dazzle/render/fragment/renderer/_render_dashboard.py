@@ -38,6 +38,7 @@ from dazzle.render.fragment.primitives import (
     DayTimelineRegion,
     EntityCardRegion,
 )
+from dazzle.render.fragment.primitives.data import region_poll_id
 from dazzle.render.fragment.renderer._render_interactive import (
     _with_leftover_honest_temporal,
 )
@@ -46,19 +47,10 @@ if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
 
 
-def _dashboard_card_hx_trigger(c: DashboardCard, *, ssr_html: str) -> str:
-    """HTMX trigger list for a dashboard card body (#1677).
-
-    SSR first-paint skips ``load`` so the inlined body is not immediately
-    refetched. A poll (`refresh_interval`) remains as refresh.
-    """
-    extras: list[str] = []
-    if c.refresh_interval:
-        extras.append(f"every {c.refresh_interval}s")
-    if ssr_html:
-        return ", ".join(extras)
-    base = "load" if c.eager else "intersect once"
-    return ", ".join([base, *extras])
+def _dashboard_card_first_fetch_trigger(c: DashboardCard) -> str:
+    """The one-shot first fetch of a skeleton card body (#864): ``load`` when
+    eager (above the fold), ``intersect once`` when lazy."""
+    return "load" if c.eager else "intersect once"
 
 
 class _RenderDashboardMixin:
@@ -118,11 +110,13 @@ class _RenderDashboardMixin:
              optional `is-animating` + caller-supplied `css_class`).
           2. `<article class="dz-card">` with header (drag handle +
              titles + remove button), optional notice band, and body
-             (skeleton + lazy/eager HTMX trigger).
+             (a self-replacing skeleton loader) and, when polling, a hidden
+             poller sibling of the body.
           3. `<div class="dz-card-resize">` aria-hidden trailing handle.
 
-        Trigger is `'load'` when `eager=True` (above-the-fold; #864) and
-        `'intersect once'` when lazy; `refresh_interval` appends a poll."""
+        The skeleton's trigger is `'load'` when `eager=True` (above-the-fold;
+        #864) and `'intersect once'` when lazy; `refresh_interval` adds the
+        poller (`every Ns`). Neither is an ancestor of the region (#1802)."""
         wrapper_class = (
             f"dz-card-wrapper {c.css_class} is-animating"
             if c.css_class
@@ -184,7 +178,6 @@ class _RenderDashboardMixin:
             )
 
         ssr_html = getattr(c, "ssr_html", "") or ""
-        trigger = _dashboard_card_hx_trigger(c, ssr_html=ssr_html)
 
         # Leftover-honest temporal (cycle 2183). Bare
         # hx-get="{c.hx_endpoint}" used to drop include_closed /
@@ -202,12 +195,25 @@ class _RenderDashboardMixin:
         # data-dz-region on the body slot: HTMX region fetches return typed
         # body only (no nested chrome), so this is the stable JS / closest
         # filter handle. Unique id remains region-{name}-{card_id}.
-        hx_trigger_attr = f' hx-trigger="{ctx.escape_attr(trigger)}"' if trigger else ""
+        #
+        # #1802: the body is a pure swap target — it carries no hx-*. Under
+        # htmx 4 `implicitInheritance` (dz-csrf.js) every hx-* on an ancestor
+        # is inherited by each control in the swapped region, so a body with
+        # `hx-trigger="load"` fired every triggerless verb button (queue
+        # transitions, row deletes) on swap-in, and its `hx-get` beat their
+        # own verb. The first fetch rides the SKELETON, which targets the body
+        # and is replaced by the response (a self-replacing loader, never an
+        # ancestor of what it loads; it is visible, so `intersect once`
+        # works); the `every Ns` poll rides a hidden SIBLING.
+        body_id = f"region-{c.name}-{c.card_id}"
+        body_id_attr = ctx.escape_attr(body_id)
+        fetch_attrs = f'hx-get="{hx_get}" hx-target="#{body_id_attr}" hx-swap="innerHTML"'
         inner = (
             ssr_html
             if ssr_html
             else (
-                '<div class="dz-card-skeleton">'
+                f'<div class="dz-card-skeleton" {fetch_attrs} '
+                f'hx-trigger="{_dashboard_card_first_fetch_trigger(c)}">'
                 '<div class="dz-card-skeleton-line w-3-4"></div>'
                 '<div class="dz-card-skeleton-line is-thin"></div>'
                 '<div class="dz-card-skeleton-line is-thin w-5-6"></div>'
@@ -216,15 +222,18 @@ class _RenderDashboardMixin:
         )
         body_html = (
             f'<div class="dz-card-body" '
-            f'id="region-{ctx.escape_attr(c.name)}-{ctx.escape_attr(c.card_id)}" '
+            f'id="{body_id_attr}" '
             f'data-dz-region data-dz-region-name="{ctx.escape_attr(c.name)}" '
-            f'data-display="{ctx.escape_attr(c.display.lower())}" '
-            f'hx-get="{hx_get}"'
-            f"{hx_trigger_attr} "
-            f'hx-swap="innerHTML">'
+            f'data-display="{ctx.escape_attr(c.display.lower())}">'
             f"{inner}"
             f"</div>"
         )
+        if c.refresh_interval:
+            body_html += (
+                f'<div hidden id="{ctx.escape_attr(region_poll_id(body_id))}" '
+                f"data-dz-region-poll {fetch_attrs} "
+                f'hx-trigger="every {int(c.refresh_interval)}s"></div>'
+            )
 
         # #1494: addressable wrapper id (`card-{name}-{card_id}`, derivable
         # from the body's `region-{name}-{card_id}` hx-target) so an empty

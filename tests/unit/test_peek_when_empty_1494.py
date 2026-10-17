@@ -263,7 +263,7 @@ class TestWhenEmptyRenderSeam:
     """`_build_region_response` turns the resolved mode into native htmx removal
     when the fetch produced no rows."""
 
-    def _resp(self, ir_region, items, hx_target="region-recent-recent", is_added_card=False):
+    def _resp(self, ir_region, items, hx_target="div#region-recent-recent", is_added_card=False):
         from dazzle.http.runtime.workspace_region_handler import _build_region_response
 
         ctx = SimpleNamespace(ir_region=ir_region, ctx_region=SimpleNamespace(display="list"))
@@ -293,7 +293,10 @@ class TestWhenEmptyRenderSeam:
     def test_empty_collapse_reswap_delete(self):
         resp = self._resp(self._region(when_empty=WhenEmpty.COLLAPSE), items=[])
         assert resp.headers.get("HX-Reswap") == "delete"
-        assert bytes(resp.body).decode() == ""
+        # #1802: the poller sibling goes with the body (htmx 4 `tag#id` header).
+        assert bytes(resp.body).decode() == (
+            '<div id="poll-region-recent-recent" hx-swap-oob="delete"></div>'
+        )
 
     def test_empty_message_renders_normal_body(self):
         # Primary list, unset → message → the normal typed body (no removal).

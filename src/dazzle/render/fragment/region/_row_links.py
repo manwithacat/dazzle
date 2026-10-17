@@ -96,8 +96,7 @@ def _resolve_row_links(
 
     #1614: when no candidate resolves (null open-via FKs), try
     ``fallback_template`` (typically same-entity ``.../{id}``) so the
-    row keeps a drill + ``hx-trigger=click`` — which also shields action
-    buttons from inheriting tbody ``load`` (#1613).
+    row keeps its drill + ``hx-trigger=click``.
 
     Empty templates → empty tuple.
     """

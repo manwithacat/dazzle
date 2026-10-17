@@ -477,9 +477,10 @@ class _RenderLayoutMixin:
         `.dz-tabs` root), so there is no inline `onclick` JS here.
 
         Each tab points at its panel via `data-dz-tab-target`; each panel
-        (`.dz-tabs__panel`) fetches its own content via `hx-get`. The
-        first tab fires `load` (and is visible); subsequent panels carry
-        the native `hidden` attribute and fire `hx-trigger="intersect
+        (`.dz-tabs__panel`) fetches its own content via the `hx-get` on its
+        loading indicator, which targets the panel (#1802). The first tab
+        fires `load` (and is visible); subsequent panels carry the native
+        `hidden` attribute and their loaders fire `hx-trigger="intersect
         once"` — revealing a hidden panel is what triggers its lazy load.
 
         DOM ids: `tabs-<region>` for the `.dz-tabs` root, `tab-<region>-<key>`
@@ -498,13 +499,19 @@ class _RenderLayoutMixin:
             for tab in p.tabs
         )
 
+        # #1802: the panel carries no hx-* — its loading indicator is the
+        # loader (targets the panel, replaced by the response), so no control
+        # in the loaded tab inherits a `load` / `intersect` trigger under htmx 4
+        # implicit inheritance. A hidden panel hides its loader too, so
+        # revealing the panel is still what fires `intersect once`.
         panels = "".join(
             f'<div id="tab-{rname}-{ctx.escape_attr(tab.key)}" '
-            f'class="dz-tabs__panel"{"" if tab.key == active else " hidden"} '
+            f'class="dz-tabs__panel"{"" if tab.key == active else " hidden"}>'
+            f'<div class="dz-tabs__loading" '
             f'hx-get="{ctx.escape_attr(str(tab.endpoint))}" '
             f'hx-trigger="{"load" if (tab.eager or tab.key == active) else "intersect once"}" '
+            f'hx-target="#tab-{rname}-{ctx.escape_attr(tab.key)}" '
             f'hx-swap="innerHTML">'
-            f'<div class="dz-tabs__loading">'
             f'<svg fill="none" viewBox="0 0 24 24" aria-hidden="true">'
             f'<circle class="dz-spinner-track" cx="12" cy="12" r="10" '
             f'stroke="currentColor" stroke-width="4"></circle>'

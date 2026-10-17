@@ -31,8 +31,9 @@ def test_ssr_html_skips_skeleton_and_load_trigger() -> None:
     html = FragmentRenderer().render(_card(ssr_html="<div data-dz-metric>Avg Kw 360.1</div>"))
     assert "Avg Kw 360.1" in html
     assert "dz-card-skeleton" not in html
-    assert 'hx-trigger="load"' not in html
-    assert 'hx-get="/api/workspaces/daily_board/regions/week_energy"' in html
+    # #1802: an SSR body with no poll has nothing to fetch — no loader at all.
+    assert "hx-trigger" not in html
+    assert "hx-get" not in html
 
 
 def test_eager_without_ssr_still_skeleton_plus_load() -> None:

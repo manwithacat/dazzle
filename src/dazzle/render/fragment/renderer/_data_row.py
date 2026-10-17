@@ -505,7 +505,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     edit_link_html = ""
     # #1603: substitute all placeholders ({id}, {contact}, {assigned_to}, …)
     # via the shared format_map helper. #1614: null open-via FK falls back to
-    # same-entity detail so the row keeps hx-trigger=click (shields #1613).
+    # same-entity detail so the row keeps its drill + hx-trigger=click.
     fallback_tmpl = str(table.get("detail_url_fallback_template") or "")
     candidates = table.get("detail_url_candidates") or ()
     if isinstance(candidates, str):
@@ -842,8 +842,10 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         )
 
     # Delete action — omitted when DELETE is denied for this principal.
-    # #1613: hard-pin hx-trigger="click" so tbody hx-trigger=load cannot
-    # inherit onto destructive controls (implicitInheritance=true).
+    # #1613: hard-pin hx-trigger="click" — destructive controls declare their
+    # own event rather than relying on what an ancestor happens to carry
+    # (implicitInheritance=true). Since #1802 no list ancestor carries a load
+    # or poll trigger at all (the fetch lives on a sibling element).
     # Verb pin: htmx 4's determineMethodAndAction walks get → post → put →
     # patch → delete, resolving each through ancestor inheritance before
     # trying the next, so under a drillable row the row's `hx-get` beat this
@@ -898,10 +900,11 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                 f"{_html_mod.escape(t.label, quote=False)}</button>"
                 for t in valid
             )
-    # #1613: disinherit hx-trigger from tbody load onto action chrome.
+    # #1802: no `hx-disinherit` here — htmx 4 ignores it. The rows tbody
+    # carries no hx-* (the list's load/refresh lives on a sibling
+    # `data-dz-grid-fetch` element), so there is no trigger to inherit.
     actions_cell = (
-        '<td class="dz-tr-actions-cell" onclick="event.stopPropagation()" '
-        'hx-disinherit="hx-trigger">'
+        '<td class="dz-tr-actions-cell" onclick="event.stopPropagation()">'
         f'<div class="dz-tr-actions">{transition_buttons}{peek_toggle_html}'
         f"{detail_link_html}{secondary_context_html}{edit_link_html}{delete_button}</div>"
         "</td>"

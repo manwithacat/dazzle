@@ -246,23 +246,14 @@ def assemble_workspace_composite(
     """
     composite = initial_html
     for (card_id, region), region_html in region_htmls.items():
-        # Match <div ... id="region-{region}-{card_id}" ...>...</div>.
-        # The template's outer slot div wraps the skeleton; we replace
-        # that inner content but keep the outer wrapper so any
-        # surrounding attributes (hx-get, hx-trigger) remain intact.
-        pattern = re.compile(
-            r'(<div[^>]*\bid="region-'
-            + re.escape(region)
-            + r"-"
-            + re.escape(card_id)
-            + r'"[^>]*>)(.*?)(</div>)',
-            re.DOTALL,
-        )
-        composite = pattern.sub(
-            lambda m, html=region_html: m.group(1) + html + m.group(3),  # type: ignore[misc]
-            composite,
-            count=1,
-        )
+        # Replace the inner content of <div ... id="region-{region}-{card_id}">
+        # but keep the slot wrapper and its attributes intact. Depth-aware
+        # (apply_inner_swap): the skeleton has nested <div>s, and a lazy
+        # first-match `.*?</div>` left half of it behind the region body.
+        try:
+            composite = apply_inner_swap(composite, f"region-{region}-{card_id}", region_html)
+        except ValueError:
+            continue
     return composite
 
 

@@ -1580,10 +1580,10 @@ class DashboardCard:
     eyebrow: str = ""
     css_class: str = ""
     notice: DashboardNotice | None = None
-    # #1391: declarative live-refresh. When set (seconds, >= 5), the card's
-    # HTMX trigger appends `, every Ns` so the region-fetch endpoint re-renders
-    # on a poll. `None` = no polling (legacy). Composes with the lazy/eager
-    # base trigger.
+    # #1391: declarative live-refresh. When set (seconds, >= 5), the card
+    # gains a hidden poller sibling of its body (`every Ns`, #1802) so the
+    # region-fetch endpoint re-renders on a poll. `None` = no polling.
+    # Composes with the lazy/eager first fetch on the skeleton.
     refresh_interval: int | None = None
     # #1204: edit-mode chrome gating. When False (the safe default), the
     # `dz-card-actions` div (Remove card × button) is omitted entirely
@@ -1609,6 +1609,17 @@ class DashboardCard:
             raise ValueError("DashboardCard requires a region name")
         if self.col_span < 1:
             raise ValueError("col_span must be >= 1")
+
+
+def region_poll_id(body_id: str) -> str:
+    """DOM id of a region card body's poller element (#1802).
+
+    A card's `every Ns` poll lives on a hidden SIBLING of the body (never its
+    ancestor — htmx 4 implicit inheritance would hand the trigger to every
+    control in the swapped region), so the region handler's poll-stop (#1399)
+    removes it by this id with an OOB delete.
+    """
+    return f"poll-{body_id}"
 
 
 @dataclass(frozen=True, slots=True)

@@ -34,6 +34,17 @@
  *   - clear:       `[data-dz-grid-clear]` deselects everything
  *   - body:        `[data-dz-grid-body]` (the tbody htmx swaps; `data-dz-grid-src`
  *                  holds its immutable base endpoint, `hx-get` its current query)
+ *   - fetch:       `[data-dz-grid-fetch]` (optional) — a separate request
+ *                  element (e.g. a hidden sibling `<tbody>` with
+ *                  `hx-target="next [data-dz-grid-body]"`) that carries
+ *                  `data-dz-grid-src`, `hx-get` and the `load, dz-grid:refresh`
+ *                  trigger INSTEAD of the body. Use it whenever rows can hold
+ *                  server-swapped verb controls (a peek panel, an inline
+ *                  detail): under htmx 4 `implicitInheritance` a body that
+ *                  carries the trigger hands `load` (and its `hx-get`) to every
+ *                  control below it, which then fires on swap-in. When present
+ *                  the controller reads/writes the query on it and dispatches
+ *                  `dz-grid:refresh` to it; the body stays a pure swap target.
  *   - sort:        `[data-dz-grid-sort="<key>"]` (a header button) cycles the
  *                  clicked column through `data-dz-grid-sort-cycle`
  *                  (default "asc desc none"); state lives on the th's `aria-sort`
@@ -136,6 +147,17 @@
     return el.closest ? el.closest("[data-dz-grid]") : null;
   }
 
+  // The element that issues the rows GET: `[data-dz-grid-fetch]` when the
+  // grid separates it from the body, else the body itself (see the `fetch`
+  // contract line above). Its `hx-get` is the current query, its
+  // `data-dz-grid-src` the immutable base, and `dz-grid:refresh` fires on it.
+  function fetchEl(root) {
+    return (
+      root.querySelector("[data-dz-grid-fetch]") ||
+      root.querySelector("[data-dz-grid-body]")
+    );
+  }
+
   function rowBoxes(root) {
     return Array.prototype.slice.call(
       root.querySelectorAll("[data-dz-grid-select]"),
@@ -223,7 +245,7 @@
   // through; empty attr means leftover was refused (do not re-invent
   // from src).
   function srcQueryParams(root) {
-    var body = root.querySelector("[data-dz-grid-body]");
+    var body = fetchEl(root);
     var srcQs =
       ((body && body.getAttribute("data-dz-grid-src")) || "").split("?")[1] ||
       "";
@@ -453,7 +475,7 @@
   // shared half of refresh() and the URL-restore path (where the `load`
   // trigger or the popstate caller does the fetching).
   function setQuery(root) {
-    var body = root.querySelector("[data-dz-grid-body]");
+    var body = fetchEl(root);
     if (!body) return null;
     var base = (
       body.getAttribute("data-dz-grid-src") ||
@@ -501,7 +523,7 @@
     });
     // The tbody's hx-get query is the single source of truth for what the
     // grid is showing — mirror exactly that into the URL.
-    var body = root.querySelector("[data-dz-grid-body]");
+    var body = fetchEl(root);
     var qs = ((body && body.getAttribute("hx-get")) || "").split("?")[1] || "";
     new URLSearchParams(qs).forEach(function (v, k) {
       sp.set(k, v);
@@ -868,7 +890,7 @@
     // rows came from — then the bulk keys LAST so they always win (a filter
     // named `action` etc. can't clobber the operation name).
     var payload = {};
-    var body = root.querySelector("[data-dz-grid-body]");
+    var body = fetchEl(root);
     var qs = ((body && body.getAttribute("hx-get")) || "").split("?")[1] || "";
     qs.split("&").forEach(function (kv) {
       if (!kv) return;
@@ -1027,7 +1049,7 @@
         // page_size) leaves hx-get unchanged — dispatching anyway would
         // re-fetch forever (GET storm; stack overflow under a synchronous
         // mock). Unsatisfiable params degrade, they don't loop.
-        var rbody = grids[i].querySelector("[data-dz-grid-body]");
+        var rbody = fetchEl(grids[i]);
         var rBefore = rbody && rbody.getAttribute("hx-get");
         restoreFromUrl(grids[i]);
         if (rbody && rbody.getAttribute("hx-get") !== rBefore) {
@@ -1118,7 +1140,7 @@
     var grids = document.querySelectorAll("[data-dz-grid][data-dz-grid-url]");
     for (var i = 0; i < grids.length; i++) {
       if (!grids[i]._dzInitial) captureInitial(grids[i]);
-      var body = grids[i].querySelector("[data-dz-grid-body]");
+      var body = fetchEl(grids[i]);
       // Back across a HASH-only history entry (e.g. in-page anchors) fires
       // popstate with the grid's params unchanged — skip the refetch when the
       // restore didn't change the query (no loading flash for a no-op).

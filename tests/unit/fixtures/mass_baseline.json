@@ -1,7 +1,7 @@
 {
-  "src_lines": 326453,
-  "test_lines": 318457,
-  "docs_lines": 49306,
+  "src_lines": 326623,
+  "test_lines": 318580,
+  "docs_lines": 49353,
   "construct_count": 31,
   "written": "2026-10-17",
   "exceptions": [
@@ -527,6 +527,15 @@
         "test_lines"
       ],
       "reason": "#1801 policy gate resolves auth through the CRUD dependency's shared resolver; #1803 hidden-guard browser test"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1802 fetch element split from the rows body, INV-10 inherited-trigger gate"
     }
   ]
 }

@@ -118,8 +118,12 @@ class TestLiveRefreshParser:
 
 class TestLiveRefreshRenderer:
     def test_polling_clause_appended(self) -> None:
+        # #1802: the poll rides a hidden sibling of the body (never an
+        # ancestor of the region); the skeleton keeps the first `load`.
         html = _render(_make_card(refresh_interval=30))
-        assert 'hx-trigger="load, every 30s"' in html
+        assert 'hx-trigger="load"' in html
+        assert 'hx-trigger="every 30s"' in html
+        assert html.index('id="poll-region-') > html.index('class="dz-card-body"')
 
     def test_no_clause_when_absent(self) -> None:
         html = _render(_make_card(refresh_interval=None))
@@ -142,7 +146,8 @@ class TestLiveRefreshRenderer:
             refresh_interval=45,
         )
         html = _render(card)
-        assert 'hx-trigger="intersect once, every 45s"' in html
+        assert 'hx-trigger="intersect once"' in html
+        assert 'hx-trigger="every 45s"' in html
 
 
 class TestTerminalStateStop:
@@ -215,33 +220,28 @@ class TestTerminalStateStop:
 
 class TestRegionResponseBuild:
     """#1399 slice 2 — `_build_region_response` emits the htmx-native poll-stop:
-    a triggerless outerHTML self-replacement via the HX-Reswap response header
-    when complete; a plain innerHTML body otherwise."""
+    when complete, the body plus an OOB delete of the card's poller sibling
+    (#1802 — the poll no longer rides the body); a plain body otherwise."""
 
     def _build(self, ctx, fetched, html_body, hx_target):
         from dazzle.http.runtime.workspace_region_handler import _build_region_response
 
         return _build_region_response(ctx, fetched, html_body, hx_target)
 
-    def test_complete_with_target_emits_outerhtml_reswap(self) -> None:
+    @pytest.mark.parametrize("hx_target", ["div#region-jobs-card-2", "region-jobs-card-2"])
+    def test_complete_with_target_deletes_the_poller(self, hx_target: str) -> None:
+        # htmx 4 sends HX-Target as `tag#id`; a bare id is accepted too.
         ctx = TestTerminalStateStop._ctx(
             refresh_interval=30, state_machine=TestTerminalStateStop._sm(), display="LIST"
         )
         fetched = TestTerminalStateStop._fetched([{"status": "done"}])
-        resp = self._build(ctx, fetched, "<div data-dz-region>body</div>", "region-jobs-card-2")
+        resp = self._build(ctx, fetched, "<div data-dz-region>body</div>", hx_target)
 
-        assert resp.headers.get("HX-Reswap") == "outerHTML"
-        body = resp.body.decode()
-        # The triggerless replacement preserves id + class + lowercased display,
-        # carries the completion marker, and has NO polling trigger.
-        assert 'id="region-jobs-card-2"' in body
-        assert 'class="dz-card-body"' in body
-        assert 'data-display="list"' in body
-        assert body.startswith('<div class="dz-card-body" id="region-jobs-card-2" data-dz-region ')
-        assert 'data-dz-poll-complete="true"' in body
-        assert "hx-trigger" not in body
-        assert "every" not in body
-        assert "<div data-dz-region>body</div>" in body
+        assert resp.headers.get("HX-Reswap") is None
+        assert resp.body.decode() == (
+            "<div data-dz-region>body</div>"
+            '<div id="poll-region-jobs-card-2" hx-swap-oob="delete"></div>'
+        )
 
     def test_complete_without_target_falls_back_to_plain_body(self) -> None:
         ctx = TestTerminalStateStop._ctx(

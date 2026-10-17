@@ -267,13 +267,21 @@ class _RenderTablesMixin:
                 else ""
             )
             id_attr = f' id="{ctx.escape_attr(t.tbody_id)}"' if t.tbody_id else ""
-            # Convergence C1.1: the tbody is the grid controller's body seam —
-            # `data-dz-grid-body` + the immutable `data-dz-grid-src` base, and
-            # `dz-grid:refresh` joins the trigger so a sort / filter / page /
-            # bulk-refresh re-fetches with the controller-composed query. The
-            # Alpine @htmx:* loading bindings are gone (they bound htmx-2
-            # event names that never fire under the vendored htmx-4; loading
-            # is the pure-CSS `.htmx-request` overlay, #972).
+            # Convergence C1.1: the grid controller's body seam is the
+            # `data-dz-grid-body` tbody (the swap target) plus the
+            # `data-dz-grid-fetch` request element — the immutable
+            # `data-dz-grid-src` base, the current query on `hx-get`, and
+            # `dz-grid:refresh` in the trigger so a sort / filter / page /
+            # bulk-refresh re-fetches with the controller-composed query.
+            # Loading is the pure-CSS `.htmx-request` overlay (#972).
+            #
+            # #1802: the request element is a hidden SIBLING tbody, never the
+            # rows' ancestor. htmx 4 with `implicitInheritance` (dz-csrf.js)
+            # hands every ancestor hx-* attribute to every control below it:
+            # a peeked detail's `hx-post` + `hx-confirm` button inherited the
+            # rows tbody's `load` trigger and fired on swap-in. `hx-disinherit`
+            # is htmx 2 only, so the fix is structural — the rows tbody
+            # carries no hx-* at all.
             triggers: list[str] = []
             if t.hx_trigger:
                 triggers.append(t.hx_trigger)
@@ -287,14 +295,15 @@ class _RenderTablesMixin:
                 else ""
             )
             skeleton_tbody = (
-                f"<tbody{id_attr} data-dz-grid-body "
+                "<tbody hidden data-dz-grid-fetch "
                 f'data-dz-grid-src="{ctx.escape_attr(t.hx_endpoint)}" '
                 f'hx-get="{ctx.escape_attr(t.hx_endpoint)}"'
                 f"{trigger_attr} "
+                'hx-target="next [data-dz-grid-body]" '
                 'hx-swap="innerMorph" '
                 'hx-headers=\'{"Accept": "text/html"}\''
-                f"{indicator_attr} "
-                'class="dz-table-body"></tbody>'
+                f"{indicator_attr}></tbody>"
+                f'<tbody{id_attr} data-dz-grid-body class="dz-table-body"></tbody>'
             )
             # C2.2: per-column <col> resize targets — widths on the col
             # resize header + cells together, and cols survive tbody swaps.

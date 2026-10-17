@@ -159,11 +159,15 @@ def render_master_detail_shell(
         f'<div class="dz-card-body" id="{esc(list_body_id)}" '
         f'data-display="list" '
         f'data-dz-region data-dz-region-name="{esc(list_region)}" '
-        f'data-dz-master-detail-list-body="true" '
+        f'data-dz-master-detail-list-body="true">'
+        # #1802: the skeleton is the loader (targets the body, replaced by the
+        # response) — the body carries no hx-*, so no control in the swapped
+        # list inherits a `load` trigger under htmx 4 implicit inheritance.
+        f'<div class="dz-card-skeleton" '
         f'hx-get="{list_hx}" '
         f'hx-trigger="{esc(trigger)}" '
+        f'hx-target="#{esc(list_body_id)}" '
         f'hx-swap="innerHTML">'
-        f'<div class="dz-card-skeleton">'
         f'<div class="dz-card-skeleton-line w-3-4"></div>'
         f'<div class="dz-card-skeleton-line is-thin"></div>'
         f"</div></div></article></div>"

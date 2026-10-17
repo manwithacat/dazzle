@@ -62,7 +62,8 @@
  *             the Alpine `:class` bind used); a failed commit keeps the
  *             editor open with the server error in its `title`.
  *   - after a successful commit the controller fires `dz-grid:refresh` on
- *             the tbody — the server re-renders rows, so rich display chrome
+ *             the grid's request element (the separate fetch element when
+ *             present, else the tbody) — the server re-renders rows, so rich display chrome
  *             (badges, dates) stays server-owned.
  */
 (function () {
@@ -464,7 +465,11 @@
         closeEditor(root);
         // Server-owned rendering: refresh the rows so badge/date chrome is
         // re-rendered rather than patched client-side.
-        var body = root.querySelector("[data-dz-grid-body]");
+        // The refresh goes to the grid's request element — the separate
+        // `[data-dz-grid-fetch]` when there is one, else the body (dz-grid.js).
+        var body =
+          root.querySelector("[data-dz-grid-fetch]") ||
+          root.querySelector("[data-dz-grid-body]");
         if (body) {
           body.dispatchEvent(
             new CustomEvent("dz-grid:refresh", { bubbles: true }),

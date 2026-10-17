@@ -26,6 +26,7 @@ import asyncio
 import html as _html_mod
 import logging
 from typing import Any
+from urllib.parse import unquote
 
 from dazzle.core.ir import WhenEmpty
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
@@ -36,6 +37,7 @@ from dazzle.http.runtime.workspace_region_orchestration import compute_region_re
 from dazzle.http.runtime.workspace_region_prelude import resolve_request_user_context
 from dazzle.http.runtime.workspace_region_render import render_region_html
 from dazzle.page.runtime.when_empty_resolver import resolve_when_empty
+from dazzle.render.fragment.primitives.data import region_poll_id
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +81,25 @@ def _region_polling_complete(ctx: WorkspaceRegionContext, fetched: Any) -> bool:
     return all(_row_status(row, sm.status_field) in terminal for row in items)
 
 
+def _target_element_id(hx_target: str | None) -> str | None:
+    """The swap target's element id from the ``HX-Target`` request header.
+
+    htmx 4 sends ``tag#id`` (the id URI-encoded); a bare value is taken as the
+    id itself. ``None`` when the header is absent or names no id.
+    """
+    if not hx_target:
+        return None
+    _tag, sep, ident = hx_target.partition("#")
+    return (unquote(ident) if sep else hx_target) or None
+
+
+def _poller_oob_delete(body_id: str) -> str:
+    """OOB-delete the card body's poller sibling (#1802) — it, not the body,
+    carries the ``every Ns`` trigger, so removing it is what stops the poll."""
+    poll_id = _html_mod.escape(region_poll_id(body_id), quote=True)
+    return f'<div id="{poll_id}" hx-swap-oob="delete"></div>'
+
+
 def _build_region_response(
     ctx: WorkspaceRegionContext,
     fetched: Any,
@@ -89,21 +110,20 @@ def _build_region_response(
     """Build the region-fetch HTTP response, stopping the poll when complete.
 
     #1399 slice 2 — htmx-native poll-stop. htmx 4 removed the legacy HTTP-286
-    poll-cancel, so we stop via self-replacement instead: when the region is
-    complete, swap the *polling element itself* (the ``dz-card-body`` that
-    carries the ``every Ns`` trigger) for a triggerless copy via
-    ``HX-Reswap: outerHTML``. The old element leaves the DOM, so htmx's
-    ``setInterval(... e.isConnected ? rearm : clearInterval ...)`` self-clears
-    the poll; the new element has no trigger to re-arm.
+    poll-cancel, so we stop by removing the polling element. Since #1802 that
+    is the card body's hidden poller SIBLING (``poll-<body id>``, never an
+    ancestor of the region — htmx 4 implicit inheritance would hand its
+    trigger to every control in the swapped body): the response OOB-deletes
+    it, and htmx's ``setInterval(... e.isConnected ? rearm : clearInterval
+    ...)`` self-clears. The body itself takes the plain innerHTML swap.
 
-    The replacement preserves the element's id (read from the ``HX-Target``
-    request header, so multi-card regions each keep their own id), classes, and
-    ``data-display`` so layout/styling are unchanged. If ``HX-Target`` is absent
-    (no element id), we can't safely outerHTML-replace, so we fall back to the
-    normal innerHTML body and the region simply keeps polling — a safe no-op.
+    The body id comes from the ``HX-Target`` request header (``tag#id`` under
+    htmx 4), so multi-card regions each stop their own poller. Without it the
+    region simply keeps polling — a safe no-op.
     """
     from fastapi.responses import HTMLResponse
 
+    target_id = _target_element_id(hx_target)
     # #1494 (UX-maturity 3d): an empty region self-demotes per its resolved
     # `when_empty` mode (declarative-over-htmx-4 — native OOB / HX-Reswap, no
     # bespoke JS). Only when the fetch produced no rows; `message` (the default
@@ -112,15 +132,16 @@ def _build_region_response(
     # default — a user who explicitly adds a card should see its empty-state, not
     # have it immediately collapse/vanish. An *explicit* author `when_empty:`
     # still applies (their declared intent wins, even for an added card).
-    if hx_target and not getattr(fetched, "items", None):
+    if target_id and not getattr(fetched, "items", None):
         mode = resolve_when_empty(ctx.ir_region)
         if is_added_card and getattr(ctx.ir_region, "when_empty", None) is None:
             mode = WhenEmpty.MESSAGE
         if mode == WhenEmpty.SUPPRESS:
             # Remove the whole card: htmx OOB-delete the addressable wrapper
-            # (`card-…`, derived from the body's `region-…` hx-target). The
-            # empty main body would swap into the now-doomed card-body — moot.
-            wrapper_id = "card-" + hx_target.removeprefix("region-")
+            # (`card-…`, derived from the body's `region-…` hx-target; the
+            # poller lives inside it). The empty main body would swap into the
+            # now-doomed card-body — moot.
+            wrapper_id = "card-" + target_id.removeprefix("region-")
             return HTMLResponse(
                 content=(
                     f'<div id="{_html_mod.escape(wrapper_id, quote=True)}" '
@@ -129,22 +150,14 @@ def _build_region_response(
             )
         if mode == WhenEmpty.COLLAPSE:
             # Drop the empty body, keep the card chrome (title): delete the
-            # hx-target (the `dz-card-body`) via the swap-override header.
-            return HTMLResponse(content="", headers={"HX-Reswap": "delete"})
+            # hx-target (the `dz-card-body`) via the swap-override header, and
+            # its poller with it (a poll into a deleted target is pointless).
+            return HTMLResponse(
+                content=_poller_oob_delete(target_id), headers={"HX-Reswap": "delete"}
+            )
 
-    if hx_target and _region_polling_complete(ctx, fetched):
-        display = str(getattr(ctx.ctx_region, "display", "") or "").lower()
-        region_name = str(getattr(ctx.ctx_region, "name", "") or "")
-        # The replacement keeps the slot's region hook (ADR-0054 rule 1): in-
-        # region affordances (cohort lenses, queue actions) target
-        # `closest [data-dz-region]` and must still resolve after poll-stop.
-        replacement = (
-            f'<div class="dz-card-body" id="{_html_mod.escape(hx_target, quote=True)}" '
-            f'data-dz-region data-dz-region-name="{_html_mod.escape(region_name, quote=True)}" '
-            f'data-display="{_html_mod.escape(display, quote=True)}" '
-            f'data-dz-poll-complete="true">{html_body}</div>'
-        )
-        return HTMLResponse(content=replacement, headers={"HX-Reswap": "outerHTML"})
+    if target_id and _region_polling_complete(ctx, fetched):
+        return HTMLResponse(content=html_body + _poller_oob_delete(target_id))
     return HTMLResponse(content=html_body)
 
 

@@ -803,7 +803,10 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                 Exchange(
                     method="GET",
                     endpoint="/app/{region}/rows?q=&sort=&dir=&page=&page_size=",
-                    trigger="the tbody, on `load` and on `dz-grid:refresh` (fired by a sort "
+                    trigger="the tbody (or a separate `[data-dz-grid-fetch]` request element "
+                    "targeting it — required when rows can hold server-swapped verb controls, "
+                    "since htmx 4 implicit inheritance hands an ancestor's `load` to them), on "
+                    "`load` and on `dz-grid:refresh` (fired by a sort "
                     "click, a filter change, a debounced search keystroke, or a page "
                     "control) — with `page=` added for pagination",
                     response="the current page's `<tr>` rows for the query — each a `dz-tr-row` "
