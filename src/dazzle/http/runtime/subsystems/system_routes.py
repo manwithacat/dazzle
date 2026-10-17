@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import Depends, HTTPException, Request
 
+from dazzle.core.ir.fingerprint import appspec_fingerprint
 from dazzle.core.ir.integrations import MappingTriggerType
 from dazzle.core.ir.process import StepEffect
 from dazzle.core.manifest import load_manifest
@@ -527,8 +528,6 @@ class SystemRoutesSubsystem:
         # Compute DSL hash and capture startup time for /health. Canonical, so every
         # worker of one build reports the same value (#1786).
         import time
-
-        from dazzle.core.ir.fingerprint import appspec_fingerprint
 
         _dsl_hash = appspec_fingerprint(appspec)
         _start_time = time.monotonic()
