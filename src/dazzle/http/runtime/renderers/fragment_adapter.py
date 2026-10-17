@@ -13,6 +13,7 @@ import json
 import re
 from typing import Any
 
+from dazzle.core.ir.columns import DEFAULT_PAGE_SIZE
 from dazzle.core.ir.money import is_money_field_name
 from dazzle.core.ir.protocols import SurfaceLike, SurfaceMode
 from dazzle.core.strings import to_api_plural
@@ -234,7 +235,7 @@ class FragmentSurfaceAdapter:
         entity_title = str(ctx.get("entity_title", "") or "")
         create_url = str(ctx.get("create_url", "") or "").strip()
         create_label = str(ctx.get("create_label", "") or "").strip()
-        page_size = int(ctx.get("page_size", 20) or 20)
+        page_size = int(ctx.get("page_size") or DEFAULT_PAGE_SIZE)
         endpoint = str(ctx.get("endpoint", "") or "").strip()
         region_name = str(ctx.get("region_name", "") or "").strip()
         search_enabled = bool(ctx.get("search_enabled", False))
@@ -262,12 +263,19 @@ class FragmentSurfaceAdapter:
         col_labels = tuple(str(c.get("label", c.get("key", ""))) for c in visible)
         col_keys = tuple(str(c.get("key", "")) for c in visible)
         sortable_keys = tuple(str(c.get("key", "")) for c in visible if c.get("sortable"))
+        col_widths = tuple(str(c.get("width") or "") for c in visible)  # #1792
 
         # Skeleton hydrate endpoint carries the default sort (matches legacy).
         hx_endpoint = endpoint
         if sort_field and endpoint:
             sep = "&" if "?" in endpoint else "?"
             hx_endpoint = f"{endpoint}{sep}sort={sort_field}&dir={sort_dir}"
+        # #1792: a declared (non-default) page size rides the first `load` fetch
+        # too — the grid's refresh query carries it via the hidden carrier.
+        declared_page_size = page_size if page_size != DEFAULT_PAGE_SIZE else 0
+        if declared_page_size and endpoint:
+            sep = "&" if "?" in hx_endpoint else "?"
+            hx_endpoint = f"{hx_endpoint}{sep}page_size={declared_page_size}"
         # search_first lists omit the load trigger (the search drives the fetch).
         hx_trigger = "" if search_first else "load"
 
@@ -284,6 +292,7 @@ class FragmentSurfaceAdapter:
             caption=title,
             has_actions=True,
             column_keys=col_keys,
+            column_widths=col_widths,
             sortable_keys=sortable_keys,
             # C1.1 review fix: the default sort must be VISIBLE on the header
             # (aria-sort) — the grid controller composes every refresh query
@@ -315,6 +324,7 @@ class FragmentSurfaceAdapter:
             empty_action_href=create_url,
             empty_action_label=create_label,
             paginated=paginated,
+            page_size_param=declared_page_size,
         )
 
         # Toolbar: FTS search box (canonical) + working list filters.

@@ -13,6 +13,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .aggregates import AggregateRef, DerivedMetric
+from .columns import MAX_PAGE_SIZE, ColumnSpec
 from .conditions import ConditionExpr, ViaCondition
 from .location import SourceLocation
 from .ux import SortSpec, UXSpec
@@ -844,6 +845,13 @@ class WorkspaceRegion(BaseModel):
     filter: ConditionExpr | None = None
     sort: list[SortSpec] = Field(default_factory=list)
     limit: int | None = Field(None, ge=1, le=1000)
+    # #1792: rows per page with a pager (`page_size: 25`). `limit:` stays a
+    # row cap with no pager; the validator refuses both on one region.
+    page_size: int | None = Field(default=None, ge=1, le=MAX_PAGE_SIZE)
+    # #1792: authored column projection (`columns: title(width: 34%), status`).
+    # Order is authoritative and only the named fields render; empty = the
+    # framework's column heuristic (fitness.repr_fields / list surface / entity).
+    columns: list[ColumnSpec] = Field(default_factory=list)
     display: DisplayMode = DisplayMode.LIST
     # #1492 default-flip: render-time discriminator for "the author did not
     # choose a display mode" vs "the author explicitly wrote `display: list`".

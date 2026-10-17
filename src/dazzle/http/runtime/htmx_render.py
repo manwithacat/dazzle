@@ -29,6 +29,7 @@ from typing import Any
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import HTMLResponse, JSONResponse
 
+from dazzle.core.ir.columns import DEFAULT_PAGE_SIZE
 from dazzle.http.runtime.htmx_response import htmx_trigger_headers
 
 # Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
@@ -64,7 +65,7 @@ def _build_table_url_params(table: dict[str, Any], page: int, *, with_search: bo
     """
     import html as _html_mod
 
-    parts = [f"page={page}", f"page_size={table.get('page_size', 50)}"]
+    parts = [f"page={page}", f"page_size={table.get('page_size', DEFAULT_PAGE_SIZE)}"]
     if table.get("sort_field"):
         parts.append(f"sort={_html_mod.escape(str(table['sort_field']), quote=True)}")
         parts.append(f"dir={_html_mod.escape(str(table.get('sort_dir', '')), quote=True)}")
@@ -97,7 +98,7 @@ def _render_table_pagination(table: dict[str, Any]) -> str:
     if not table:
         return ""
     total = int(table.get("total", 0) or 0)
-    page_size = int(table.get("page_size", 50) or 50)
+    page_size = int(table.get("page_size") or DEFAULT_PAGE_SIZE)
     if total <= page_size:
         return ""
     total_pages = (total + page_size - 1) // page_size
@@ -233,7 +234,7 @@ def _render_table_sentinel(table: dict[str, Any]) -> str:
     if not table:
         return ""
     total = int(table.get("total", 0) or 0)
-    page_size = int(table.get("page_size", 50) or 50)
+    page_size = int(table.get("page_size") or DEFAULT_PAGE_SIZE)
     current_page = int(table.get("page", 1) or 1)
     if total <= current_page * page_size:
         return ""

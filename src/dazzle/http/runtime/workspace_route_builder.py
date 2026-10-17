@@ -23,6 +23,9 @@ from dazzle.http.runtime.workspace_columns import (
     build_entity_columns as _build_entity_columns,
 )
 from dazzle.http.runtime.workspace_columns import (
+    build_region_columns as _build_region_columns,
+)
+from dazzle.http.runtime.workspace_columns import (
     build_surface_columns as _build_surface_columns,
 )
 from dazzle.http.runtime.workspace_context import (
@@ -222,6 +225,7 @@ class WorkspaceRouteBuilder:
                 entity_name: str,
                 *,
                 display: str | None = None,
+                region_columns: Any = None,
             ) -> list[dict[str, Any]]:
                 """Build columns for workspace regions (grid/queue/list pads).
 
@@ -238,6 +242,15 @@ class WorkspaceRouteBuilder:
                 displays (``CARD_LIKE_DISPLAYS``); a list/queue region shows
                 them only when repr or the list surface names them.
                 """
+                # #1792: a region's authored `columns:` is the projection —
+                # order authoritative, only the named fields (naming an image
+                # field opts it in on any display), labels from the list surface.
+                if region_columns and entity_spec:
+                    return _build_region_columns(
+                        entity_spec,
+                        region_columns,
+                        _entity_list_surfaces.get(entity_name),
+                    )
                 media_thumbs = media_thumbs_for_display(display)
                 if entity_spec and _fitness_repr_field_names(entity_spec):
                     return _build_entity_columns(entity_spec, media_thumbs=media_thumbs)
@@ -321,7 +334,7 @@ class WorkspaceRouteBuilder:
                                 async def workspace_src_data(
                                     request: Request,
                                     page: int = 1,
-                                    page_size: int = 20,
+                                    page_size: int | None = None,
                                     sort: str | None = None,
                                     dir: str = "asc",
                                 ) -> Any:
@@ -381,7 +394,7 @@ class WorkspaceRouteBuilder:
                             async def workspace_tabbed_shell(
                                 request: Request,
                                 page: int = 1,
-                                page_size: int = 20,
+                                page_size: int | None = None,
                                 sort: str | None = None,
                                 dir: str = "asc",
                             ) -> Any:
@@ -472,6 +485,7 @@ class WorkspaceRouteBuilder:
                         _entity_spec,
                         _source,
                         display=getattr(ir_region, "display", None),
+                        region_columns=getattr(ir_region, "columns", None),
                     )
 
                     _region_ctx = WorkspaceRegionContext(
@@ -508,7 +522,7 @@ class WorkspaceRouteBuilder:
                         async def workspace_region_data(
                             request: Request,
                             page: int = 1,
-                            page_size: int = 20,
+                            page_size: int | None = None,
                             sort: str | None = None,
                             dir: str = "asc",
                         ) -> Any:
@@ -561,7 +575,7 @@ class WorkspaceRouteBuilder:
                     async def workspace_batch(
                         request: Request,
                         page: int = 1,
-                        page_size: int = 20,
+                        page_size: int | None = None,
                     ) -> Any:
                         return await _workspace_batch_handler(request, page, page_size, ctxs)
 

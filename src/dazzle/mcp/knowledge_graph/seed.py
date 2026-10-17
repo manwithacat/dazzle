@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
 SEED_SCHEMA_VERSION = (
-    59  # v59: app_scripts concept explains project asset fingerprinting (#1793);
+    60  # v60: list_columns concept + page_size in pagination/regions (#1792);
+    # v59: app_scripts concept explains project asset fingerprinting (#1793);
     # v58: metrics drill action + primary_actions replaces inferred CTA + drawer (#1798);
     # v57: pivot measures + start_of calendar anchors in the workspace/expressions KB (#1800);
     # v56: topbar_title concept teaches `[ui] topbar_title` (#1794);

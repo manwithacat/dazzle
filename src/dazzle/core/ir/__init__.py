@@ -41,6 +41,15 @@ from .audit import (
     AuditSpec,
 )
 
+# List columns + page size (#1792)
+from .columns import (
+    COLUMN_WIDTH_UNITS,
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
+    ColumnSpec,
+    column_width_error,
+)
+
 # Computed Fields
 from .computed import (
     AggregateCall,
@@ -724,6 +733,11 @@ __all__ = [
     "SubtypePanelBranch",
     "SubtypePanelSpec",
     "FieldFormatSpec",
+    "ColumnSpec",
+    "COLUMN_WIDTH_UNITS",
+    "DEFAULT_PAGE_SIZE",
+    "MAX_PAGE_SIZE",
+    "column_width_error",
     "SurfaceElement",
     "SurfaceSection",
     "SurfaceAction",

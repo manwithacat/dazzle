@@ -15,7 +15,7 @@ from collections import Counter
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core import ir
-from dazzle.core.ir import FieldTypeKind, SurfaceMode
+from dazzle.core.ir import DEFAULT_PAGE_SIZE, FieldTypeKind, SurfaceMode
 from dazzle.core.ir.money import CURRENCY_SCALES, get_currency_scale, is_money_field_name
 from dazzle.core.ir.triples import WidgetKind, resolve_widget
 from dazzle.core.strings import to_api_plural
@@ -429,6 +429,9 @@ def _build_columns(
                         semantic_map=_enum_semantic_map(
                             field_spec, entity.state_machine if entity else None
                         ),
+                        # #1792: field-line ColumnSpec hints.
+                        width=element.width or "",
+                        truncate=element.truncate,
                     )
                 )
     elif entity and entity.fields:
@@ -1118,6 +1121,7 @@ def _compile_list_surface(
             sort_field=default_sort_field,
             sort_dir=default_sort_dir,
             refresh_interval=getattr(surface, "refresh_interval", None),  # #1399 slice 3
+            page_size=surface.page_size or DEFAULT_PAGE_SIZE,  # #1792
             search_fields=search_fields,
             empty_message=empty_message,
             empty_collection=empty_collection,

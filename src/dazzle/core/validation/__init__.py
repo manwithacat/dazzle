@@ -24,6 +24,7 @@ everything here.
 from .appspec_checks import (
     validate_appspec,
 )
+from .columns import validate_list_columns
 from .conditions import (
     _condition_field_references,
     _validate_condition_fields,
@@ -217,6 +218,7 @@ __all__ = [
     "validate_tenancy_mode_implemented",
     "validate_outlier_decorators",
     "validate_rag_decorators",
+    "validate_list_columns",
     "validate_nav_curation",
     "validate_persona_nav_refs",
     "validate_process_step_service_refs",

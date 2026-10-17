@@ -13,6 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from dazzle.core.ir.columns import DEFAULT_PAGE_SIZE
 from dazzle.render.principal import Principal
 
 
@@ -41,6 +42,10 @@ class ColumnContext(BaseModel):
     # `resolve_status_tone` normalises them. Empty = none declared → the badge
     # tone falls back to the `_STATUS_TONE_MAP` name guess (byte-identical).
     semantic_map: dict[str, str] = Field(default_factory=dict)
+    # #1792: ColumnSpec hints from the surface field line (`width: 34%`,
+    # `truncate` / `truncate: false`). "" / None = no hint.
+    width: str = ""
+    truncate: bool | None = None
 
 
 class FieldSourceContext(BaseModel):
@@ -107,7 +112,7 @@ class TableContext(BaseModel):
     rows: list[dict[str, Any]] = Field(default_factory=list)
     total: int = 0
     page: int = 1
-    page_size: int = 20
+    page_size: int = DEFAULT_PAGE_SIZE  # #1792: surface `page_size:` overrides
     bulk_actions: bool = False
     # Ordered DSL bulk action names from `ux: bulk_actions:` (field
     # transitions). Empty when the surface only enables bulk for the

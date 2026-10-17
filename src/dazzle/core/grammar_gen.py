@@ -582,6 +582,7 @@ surface_body_line
               ::= "uses" "entity" IDENT NEWLINE
                 | "mode" ":" ("view" | "create" | "edit" | "list" | "custom") NEWLINE
                 | "priority" ":" ("critical" | "high" | "medium" | "low") NEWLINE
+                | "page_size" ":" NUMBER NEWLINE   (* #1792: mode: list, 1..100 *)
                 | section_decl
                 | surface_action_decl ;
 
@@ -599,7 +600,13 @@ surface_element_option
                 | "visible" ":" condition_expr
                 | "when" ":" invariant_expr   (* typed expression, as in invariants *)
                 | "help" ":" STRING
-                | "format" ":" IDENT (":" IDENT)? ;
+                | "format" ":" IDENT (":" IDENT)?
+                | column_modifier ;               (* #1792: list surfaces *)
+
+(* #1792: one list-column vocabulary for surface field lines and region columns. *)
+column_modifier
+              ::= "width" ":" NUMBER ("%" | "rem" | "ch")
+                | "truncate" (":" BOOLEAN)? ;
 
 (* #1787: one "on" line (required) and an optional "visible:" line, either order. *)
 surface_action_decl
@@ -699,12 +706,16 @@ region_directive
               ::= "source" ":" IDENT NEWLINE
                 | "filter" ":" filter_expr NEWLINE
                 | "sort" ":" sort_expr ("," sort_expr)* NEWLINE
-                | "limit" ":" NUMBER NEWLINE
+                | "limit" ":" NUMBER NEWLINE             (* row cap, no pager *)
+                | "page_size" ":" NUMBER NEWLINE         (* #1792: rows per page + pager, 1..100 *)
+                | "columns" ":" region_column ("," region_column)* NEWLINE   (* #1792 *)
                 | "display" ":" ("list" | "grid" | "timeline" | "map" | "detail") NEWLINE
                 | "action" ":" IDENT NEWLINE
                 | "empty" ":" STRING NEWLINE
                 | "stage" ":" STRING NEWLINE
                 | "aggregate" ":" NEWLINE INDENT metric_line+ DEDENT ;
+
+region_column ::= IDENT ("(" column_modifier ("," column_modifier)* ")")? ;
 
 metric_line   ::= IDENT ":" (aggregate_call | derived_metric_expr) NEWLINE ;
 

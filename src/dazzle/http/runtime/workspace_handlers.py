@@ -17,6 +17,7 @@ import asyncio
 import logging
 from typing import Any
 
+from dazzle.core.ir import DEFAULT_PAGE_SIZE
 from dazzle.core.strings import normalize_role
 from dazzle.http.runtime.rls_bind import bind_rls_context
 from dazzle.http.runtime.workspace_aggregation import _compute_aggregate_metrics
@@ -31,7 +32,7 @@ logger = logging.getLogger(__name__)
 async def _fetch_region_json(
     request: Any,
     page: int,
-    page_size: int,
+    page_size: int | None,
     ctx: WorkspaceRegionContext,
     filter_context: dict[str, Any] | None = None,
     *,
@@ -97,7 +98,13 @@ async def _fetch_region_json(
             if _scope_only_filters_batch:
                 filters = {**(filters or {}), **_scope_only_filters_batch}
 
-            limit = ctx.ctx_region.limit or page_size
+            # #1792: explicit ?page_size= > declared region page_size: > default.
+            limit = (
+                ctx.ctx_region.limit
+                or page_size
+                or getattr(ctx.ir_region, "page_size", None)
+                or DEFAULT_PAGE_SIZE
+            )
             include_rels = ctx.auto_include or None
             if _scope_denied:
                 result = {"items": [], "total": 0}
@@ -159,7 +166,7 @@ async def _fetch_region_json(
 async def _workspace_batch_handler(
     request: Any,
     page: int,
-    page_size: int,
+    page_size: int | None,
     region_ctxs: list[WorkspaceRegionContext],
 ) -> dict[str, Any]:
     """Fetch all workspace regions concurrently and return combined JSON."""

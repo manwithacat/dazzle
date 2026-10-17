@@ -580,10 +580,14 @@ class _BuildersTablesMixin:
         for col in columns:
             if not isinstance(col, dict):
                 continue
+            _truncate = col.get("truncate")
             list_columns.append(
                 ListColumn(
                     key=str(col.get("key") or ""),
                     label=str(col.get("label") or col.get("key") or ""),
+                    # #1792: ColumnSpec hints from region `columns:` / surface fields.
+                    width=str(col.get("width") or ""),
+                    truncate=_truncate if isinstance(_truncate, bool) else None,
                 )
             )
 
@@ -712,6 +716,9 @@ class _BuildersTablesMixin:
             row_links=row_links,
             master_detail_pane=bool(ctx.get("master_detail_pane")),
             master_detail_target=str(ctx.get("master_detail_target") or ""),
+            # #1792: a region that declares `page_size:` pages with a pager.
+            page=int(str(ctx.get("page") or 1)),
+            page_size=int(str(ctx.get("page_size") or 0)),
         )
 
         # If we have chrome, wrap the body in a Stack that also contains

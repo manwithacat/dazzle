@@ -11,6 +11,7 @@ from .. import ir
 from ..errors import make_parse_error
 from ..ir.location import SourceLocation
 from ..lexer import TokenType
+from ._columns import is_column_modifier, kw_page_size, parse_column_modifier
 from ._refresh import kw_refresh
 from .dispatch import (
     KeywordParser,
@@ -514,9 +515,11 @@ class SurfaceParserMixin:
 
         # Initial run of ``key=value`` options before any visible/when/help.
         options = self._parse_field_key_value_options()
-        # Then any mix of trailing visible:/when:/help:/format: + more key=value pairs.
+        # Then any mix of trailing visible:/when:/help:/format: + more key=value
+        # pairs + the #1792 list-column modifiers (width: / truncate).
+        column_hints: dict[str, Any] = {}
         field_visible, when_expr, help_text, field_format = self._parse_field_trailing_modifiers(
-            options
+            options, column_hints
         )
 
         return ir.SurfaceElement(
@@ -527,6 +530,8 @@ class SurfaceParserMixin:
             visible=field_visible,
             help=help_text,
             format=field_format,
+            width=column_hints.get("width"),
+            truncate=column_hints.get("truncate"),
         )
 
     def _parse_field_key_value_options(self) -> dict[str, Any]:
@@ -537,6 +542,9 @@ class SurfaceParserMixin:
         """
         options: dict[str, Any] = {}
         while self.match(TokenType.SOURCE) or self.match(TokenType.IDENTIFIER):
+            peek = self.peek_token()
+            if not peek or peek.type != TokenType.EQUALS:
+                break  # e.g. a bare `truncate` modifier (#1792)
             opt_key = self.advance().value
             self.expect(TokenType.EQUALS)
             options[opt_key] = self._parse_field_option_value()
@@ -553,12 +561,13 @@ class SurfaceParserMixin:
         return opt_val
 
     def _parse_field_trailing_modifiers(
-        self, options: dict[str, Any]
+        self, options: dict[str, Any], column_hints: dict[str, Any]
     ) -> tuple["ir.ConditionExpr | None", Any, str | None, "ir.FieldFormatSpec | None"]:
         """Consume any mix of trailing ``visible:`` / ``when:`` / ``help:``
-        / ``key=value`` modifiers in arbitrary order.
+        / ``key=value`` / ``width:`` / ``truncate`` modifiers in arbitrary order.
 
-        Mutates ``options`` in-place for any trailing key=value pairs.
+        Mutates ``options`` in-place for any trailing key=value pairs and
+        ``column_hints`` for the #1792 list-column modifiers.
         Returns ``(visible, when_expr, help)``. ``when_expr`` is typed
         Any because ``collect_line_as_expr`` returns a forward-referenced
         ``Expr`` union not re-exported via ``ir.``.
@@ -569,7 +578,11 @@ class SurfaceParserMixin:
         field_format: ir.FieldFormatSpec | None = None
 
         while True:
-            if self.match(TokenType.VISIBLE):
+            if is_column_modifier(self):
+                # #1792: `width: 34%` / `truncate` / `truncate: false` — the
+                # same modifiers a region `columns:` entry takes.
+                parse_column_modifier(self, column_hints)
+            elif self.match(TokenType.VISIBLE):
                 self.advance()
                 self.expect(TokenType.COLON)
                 field_visible = self.parse_condition_expr()
@@ -780,6 +793,7 @@ class _SurfaceState:
     open_entity: str | None = None
     open_via: str | None = None
     open_via_targets: list[ir.OpenViaTarget] = field(default_factory=list)
+    page_size: int | None = None  # #1792
 
 
 # ---------- Token-keyed keyword parsers ---------- #
@@ -1052,6 +1066,7 @@ _SURFACE_IDENT_KEYWORDS: dict[str, KeywordParser[_SurfaceState]] = {
     "refresh": kw_refresh,  # #1399 slice 3 — live-refresh poll interval
     "peek": _kw_peek,  # #1494 (2c) — action-proximate detail mode
     "open": _kw_open,  # #1603 — list row open via FK hop
+    "page_size": kw_page_size,  # #1792 — rows per page
 }
 
 
@@ -1119,6 +1134,7 @@ def _build_surface(
         open_via=state.open_via,
         open_entity=state.open_entity,
         open_via_targets=list(state.open_via_targets),
+        page_size=state.page_size,  # #1792
     )
 
 

@@ -125,7 +125,9 @@ Regions support date-range filtering (v0.34.0) with date_field + date_range flag
   [filter_map:]                              # Per-source filters (multi-source)
     [<EntityName>: <condition>]
   [sort: <field> [asc|desc], ...]            # Sort order
-  [limit: <1-1000>]                          # Max records
+  [limit: <1-1000>]                          # Row cap, no pager
+  [page_size: <1-100>]                       # Rows per page + pager (not with limit:)
+  [columns: <field>[(<modifiers>)], ...]     # Authored columns (see list_columns)
   [display: <list|grid|timeline|summary|metrics|kanban|bar_chart|queue|tabbed_list>]
   [action: <surface_name|workspace_name>]    # Click-through (metrics: whole tile)
   [empty: "<message>"]                       # Empty state message
@@ -175,7 +177,7 @@ workspace ops_dashboard "Operations Dashboard":
     display: list
 ```
 
-**Related:** [Workspace](workspaces.md#workspace), [Display Modes](workspaces.md#display-modes), [Aggregates](workspaces.md#aggregates)
+**Related:** [Workspace](workspaces.md#workspace), [Display Modes](workspaces.md#display-modes), [Aggregates](workspaces.md#aggregates), [List Columns](workspaces.md#list-columns), [Pagination](surfaces.md#pagination)
 
 ---
 
@@ -362,5 +364,71 @@ workspace dashboard "Dashboard":
 - Use Lucide icon names for visual clarity (hyphenated, e.g., file-text)
 
 **Related:** [Workspace](workspaces.md#workspace), [Regions](workspaces.md#regions)
+
+---
+
+## List Columns
+
+One column vocabulary for workspace regions and list surfaces (#1792). A column
+names a field and may carry two hints:
+
+- `width: <n>%|<n>rem|<n>ch` — lands as `style="width: …"` on the column's
+  `<col>`; columns without a width share the remaining width equally.
+- `truncate` / `truncate: true|false` — `false` lets a text or ref cell wrap
+  whole; `truncate` forces the one-line ellipsis. Unset keeps the list default
+  (text and ref cells truncate on a list surface).
+
+A region names its columns with `columns:`. The order is authoritative and only
+the named fields render — this is the opt-out for the framework's column
+heuristic (fitness.repr_fields / the entity's list surface / the entity's
+fields) and the opt-in for an image or file field on a non-card display.
+Ref fields show the related record's display name; dotted paths are not
+supported. `columns:` drives list, queue, grid, kanban and timeline regions;
+width/truncate hints only apply to `display: list` (a warning says so
+elsewhere). A multi-source region ignores `columns:`.
+
+A list surface has no `columns:` keyword — its columns are its `field` lines,
+which take the same `width:` / `truncate` modifiers.
+
+Validation: every name must be a field on the region's source entity
+(E_COLUMNS_UNKNOWN_FIELD), no name twice (E_COLUMNS_DUPLICATE), and a width
+must use %, rem or ch (parse error).
+
+### Syntax
+
+```dsl
+# Region
+<region_name>:
+  source: <Entity>
+  columns: <field>[(<modifier>, ...)], <field>, ...
+
+# List surface field line
+field <field> ["Label"] [width: <n>%|<n>rem|<n>ch] [truncate | truncate: false]
+
+# Modifiers
+width: 34%  |  width: 12rem  |  width: 20ch
+truncate    |  truncate: true  |  truncate: false
+```
+
+### Example
+
+```dsl
+workspace hod_cohort "Cohort":
+  pupils_below_target:
+    source: StudentProfile
+    display: list
+    columns: name(width: 30%), photo_url, tutor_group, latest_grade, target_grade
+    page_size: 25
+
+surface stack_list "My Stacks":
+  uses entity Stack
+  mode: list
+  section main:
+    field title "Title" width: 34%
+    field mark_scheme "Mark scheme" truncate
+    field status "Status"
+```
+
+**Related:** [Regions](workspaces.md#regions), [Section](surfaces.md#section), [Pagination](surfaces.md#pagination), [Display Modes](workspaces.md#display-modes)
 
 ---

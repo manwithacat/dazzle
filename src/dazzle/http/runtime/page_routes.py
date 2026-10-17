@@ -29,7 +29,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from dazzle.core import ir
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
 from dazzle.core.condition_eval import evaluate_condition
-from dazzle.core.ir import SurfaceMode, SurfaceSpec
+from dazzle.core.ir import MAX_PAGE_SIZE, SurfaceMode, SurfaceSpec
 from dazzle.core.ir.integrations import MappingTriggerType
 from dazzle.core.manifest import TopbarTitleMode
 from dazzle.core.strings import normalize_role, to_api_plural
@@ -2410,7 +2410,10 @@ async def _handle_table(prc: _PageRequestContext) -> None:
                 prc,
                 req_table.entity_name,
                 page=_parse_list_window(_qparams.get("page"), default=1),
-                page_size=_parse_list_window(_qparams.get("page_size"), default=20, hi=100),
+                # #1792: the surface's declared page_size (TableContext) is the default.
+                page_size=_parse_list_window(
+                    _qparams.get("page_size"), default=req_table.page_size, hi=MAX_PAGE_SIZE
+                ),
                 sort=_list_sort,
                 direction=_list_dir,
                 search=_list_search,

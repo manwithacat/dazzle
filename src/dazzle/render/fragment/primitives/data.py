@@ -208,6 +208,10 @@ class Table:
     # button (aria-sort state-in-DOM + sort icon), not a static label.
     # Only consulted in skeleton mode alongside `column_keys`.
     sortable_keys: tuple[str, ...] = ()
+    # #1792: per-column width hints aligned to `column_keys` (``""`` = none).
+    # A width lands as `style="width: …"` on the column's `<col>` and `<th>`
+    # (skeleton mode only); unsized columns share the remainder.
+    column_widths: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         # Skeleton (list) tables may have zero data columns — they still render
@@ -266,6 +270,10 @@ class DataListScroll:
     # fills via its `hx-swap-oob` pagination swap (list_handlers). False for
     # infinite-scroll lists (no footer).
     paginated: bool = True
+    # #1792: a surface-declared `page_size:`. >0 emits a hidden
+    # `[data-dz-grid-page-size]` carrier so every grid refresh (sort / filter /
+    # page) asks the API for this window; 0 = the API's default.
+    page_size_param: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -541,10 +549,17 @@ _STATUS_LIST_STATES = ("neutral", "positive", "warning", "destructive", "accent"
 
 @dataclass(frozen=True, slots=True)
 class ListColumn:
-    """Column definition for a `ListRegion` table."""
+    """Column definition for a `ListRegion` table.
+
+    ``width`` / ``truncate`` are the #1792 ColumnSpec hints: a width (``34%``,
+    ``12rem``, ``20ch``) lands on the column's ``<col>``; ``truncate=True``
+    wraps the cell in the one-line ellipsis span. ``""`` / ``None`` = no hint.
+    """
 
     key: str
     label: str
+    width: str = ""
+    truncate: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -594,6 +609,12 @@ class ListRegion:
     master_detail_pane: bool = False
     # CSS selector for the detail pane (``#dz-md-detail-<region>``).
     master_detail_target: str = ""
+    # #1792: page window when the region declares `page_size:`. 0 = unpaged
+    # (the "Showing N of M" overflow line); >0 renders a pager when
+    # ``total > page_size``. Page buttons re-fetch ``csv_endpoint`` (the
+    # region endpoint) into the enclosing region.
+    page: int = 1
+    page_size: int = 0
 
     def __post_init__(self) -> None:
         for i, row in enumerate(self.rows):

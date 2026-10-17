@@ -32,6 +32,7 @@ from fastapi import Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
+from dazzle.core.ir.columns import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from dazzle.core.strings import entity_slug, normalize_role, to_api_plural
 from dazzle.http.runtime.action_visibility import refused_row_transitions
 from dazzle.http.runtime.audit_wrap import _log_audit_decision
@@ -401,7 +402,9 @@ def create_list_handler(
             request: Request,
             auth_context: AuthContext = Depends(optional_auth_dep),
             page: int = Query(1, ge=1, description="Page number"),
-            page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+            page_size: int = Query(
+                DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Items per page"
+            ),
             sort: str | None = Query(None, description="Sort field"),
             dir: str = Query("asc", description="Sort direction (asc/desc)"),
             search: str | None = Query(None, description="Search query"),
@@ -465,7 +468,9 @@ def create_list_handler(
     async def _noauth_handler(
         request: Request,
         page: int = Query(1, ge=1, description="Page number"),
-        page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+        page_size: int = Query(
+            DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Items per page"
+        ),
         sort: str | None = Query(None, description="Sort field"),
         dir: str = Query("asc", description="Sort direction (asc/desc)"),
         search: str | None = Query(None, description="Search query"),

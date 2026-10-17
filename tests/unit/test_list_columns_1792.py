@@ -1,186 +1,203 @@
-"""#1792 list-column defects, rendered through the public path (DSL → AppSpec → HTML).
+"""#1792 — one column grammar for regions and list surfaces, plus `page_size:`.
 
-U18 — a ``ref`` cell under the fixed-layout data table carries the same
-``dz-tr-cell-truncate`` wrapper as a text cell, with the full display name in
-``title=``, so a long name ellipsizes instead of wrapping the row.
-
-U5 — image/file fields are auto-derived into a region's columns only for
-card-like displays (``grid`` / ``kanban``); a ``list`` / ``queue`` /
-``status_list`` / ``timeline`` region shows them only when the author names them.
+Region ``columns: title(width: 34%), owner(truncate), status`` and a list
+surface's ``field title "Title" width: 34%`` both produce ``ir.ColumnSpec`` data
+and render through the same column path. ``page_size:`` sets the rows per page.
 """
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
+from dazzle.core import ir
+from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.errors import ParseError
 from dazzle.core.linker import build_appspec
-from dazzle.core.parser import parse_modules
+from dazzle.core.lint import lint_appspec
+from dazzle.http.runtime.dispatch_ctx import _build_dispatch_ctx
 from dazzle.http.runtime.handlers.list_handlers import build_data_table
-from dazzle.http.runtime.workspace_columns import (
-    build_entity_columns,
-    build_surface_columns,
-    media_thumbs_for_display,
-)
+from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
+from dazzle.http.runtime.workspace_columns import build_region_columns, build_surface_columns
+from dazzle.page.converters.template_compiler import compile_surface_to_context
+from dazzle.render.fragment import FragmentRenderer
 from dazzle.render.fragment.region import WorkspaceRegionAdapter
-from dazzle.render.fragment.renderer import FragmentRenderer
 from dazzle.render.fragment.renderer._data_row import render_data_table_rows
 
-_PHOTO = "https://placehold.co/64x64/111111/FFFFFF/png?text=A"
-_LONG_TITLE = "AQA GCSE English Literature Paper 1 Section A — Macbeth"
-
-_DSL = """module t
+_HEAD = """module t
 app t "T"
 
-entity MarkScheme "Mark Scheme":
+entity Owner "Owner":
   id: uuid pk
-  title: str(300) required
+  name: str(100) required
 
 entity Stack "Stack":
   id: uuid pk
   title: str(200) required
-  mark_scheme: ref MarkScheme
+  status: enum[draft, marked]=draft
+  photo_url: str(500)
+  owner: ref Owner
+"""
 
-entity Pupil "Pupil":
-  id: uuid pk
-  surname: str(100) required
-  forename: str(100) required
-  photo_url: str(1000)
-  year_group: str(10)
+_APP = (
+    _HEAD
+    + """
+surface stack_list "Stacks":
+  uses entity Stack
+  mode: list
+  page_size: 25
+  section main:
+    field title "Title" width: 34%
+    field owner "Owner" truncate: false
+    field status "Status" truncate
 
-  fitness:
-    repr_fields: [surname, forename, year_group]
+workspace desk "Desk":
+  stacks:
+    source: Stack
+    display: list
+    columns: title(width: 34%), photo_url, status(width: 8rem, truncate: false), owner(truncate)
+    page_size: 25
+"""
+)
 
-entity Upload "Upload":
-  id: uuid pk
-  name: str(200) required
-  attachment: file
 
+def _appspec(text: str) -> ir.AppSpec:
+    *_, fragment = parse_dsl(text, Path("t.dsl"))
+    module = ir.ModuleIR(name="t", file=Path("t.dsl"), fragment=fragment)
+    return build_appspec([module], "t")
+
+
+def test_region_and_surface_produce_the_same_column_specs() -> None:
+    spec = _appspec(_APP)
+    region = spec.workspaces[0].regions[0]
+    surface = spec.get_surface("stack_list")
+    assert surface is not None
+
+    assert region.page_size == 25 and surface.page_size == 25
+    assert region.columns == [
+        ir.ColumnSpec(field="title", width="34%"),
+        ir.ColumnSpec(field="photo_url"),
+        ir.ColumnSpec(field="status", width="8rem", truncate=False),
+        ir.ColumnSpec(field="owner", truncate=True),
+    ]
+    assert surface.list_columns() == [
+        ir.ColumnSpec(field="title", width="34%"),
+        ir.ColumnSpec(field="owner", truncate=False),
+        ir.ColumnSpec(field="status", truncate=True),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("snippet", "message"),
+    [
+        ("columns: title(width: 34px)", "must be a number followed by"),
+        ("columns: title(width: 120%)", "cannot exceed 100%"),
+        ("columns: owner.name", "dotted paths are not supported"),
+        ("columns: title(wrap)", "Unknown column modifier"),
+        ("page_size: 0", "page_size must be a whole number from 1 to 100"),
+        ("page_size: 101", "page_size must be a whole number from 1 to 100"),
+    ],
+)
+def test_region_column_grammar_rejects_bad_values(snippet: str, message: str) -> None:
+    text = _HEAD + f'\nworkspace desk "Desk":\n  stacks:\n    source: Stack\n    {snippet}\n'
+    with pytest.raises(ParseError, match=message):
+        parse_dsl(text, Path("t.dsl"))
+
+
+@pytest.mark.parametrize(
+    ("region_body", "code"),
+    [
+        ("columns: title, headline", "E_COLUMNS_UNKNOWN_FIELD"),
+        ("columns: title, status, title", "E_COLUMNS_DUPLICATE"),
+        ("limit: 10\n    page_size: 25", "E_REGION_PAGE_SIZE_LIMIT"),
+    ],
+)
+def test_validator_rejects_bad_region_columns(region_body: str, code: str) -> None:
+    text = (
+        _HEAD
+        + '\nworkspace desk "Desk":\n  stacks:\n    source: Stack\n    display: list\n'
+        + f"    {region_body}\n"
+    )
+    errors, _warnings, _ = lint_appspec(_appspec(text))
+    assert any(code in e for e in errors), errors
+
+
+def test_region_list_renders_only_named_columns_in_order_with_widths() -> None:
+    spec = _appspec(_APP)
+    region = spec.workspaces[0].regions[0]
+    entity = spec.get_entity("Stack")
+    columns = build_region_columns(entity, region.columns)
+
+    # Order authoritative; the named image field is opted back in on a list.
+    assert [c["key"] for c in columns] == ["title", "photo_url", "status", "owner"]
+    items = [
+        {
+            "id": f"00000000-0000-0000-0000-0000000000{i:02d}",
+            "title": f"Stack {i:02d}",
+            "photo_url": "",
+            "status": "draft",
+            "owner": None,
+        }
+        for i in range(25)
+    ]
+    ctx = {
+        "items": items,
+        "columns": columns,
+        "total": 40,
+        "page": 1,
+        "page_size": 25,
+        "endpoint": "/api/workspaces/desk/regions/stacks",
+        "region_name": "stacks",
+    }
+    html = FragmentRenderer().render(WorkspaceRegionAdapter().build(region, ctx))
+
+    assert (
+        '<colgroup><col data-dz-col="title" style="width: 34%">'
+        '<col data-dz-col="photo_url">'
+        '<col data-dz-col="status" style="width: 8rem">'
+        '<col data-dz-col="owner"></colgroup>'
+    ) in html
+    assert 'style="table-layout: fixed"' in html
+    # 40 matches at 25 per page → a pager whose buttons re-fetch the region.
+    assert "data-dz-pagination" in html
+    assert "/api/workspaces/desk/regions/stacks?page=2&amp;page_size=25" in html
+
+
+def test_list_surface_field_width_and_page_size_reach_the_list_page() -> None:
+    spec = _appspec(_APP)
+    surface = spec.get_surface("stack_list")
+    assert surface is not None
+    page_ctx = compile_surface_to_context(surface, spec.get_entity("Stack"))
+    dispatch = _build_dispatch_ctx(page_ctx, surface)
+    html = FragmentRenderer().render(FragmentSurfaceAdapter().build(surface, dispatch))
+
+    assert '<col data-dz-col="title" style="width: 34%">' in html
+    assert '<th data-dz-col="title" style="width: 34%"' in html
+    # The declared page size rides the first fetch and every grid refresh.
+    assert "page_size=25" in html.split("data-dz-grid-src=", 1)[1].split('"')[1]
+    assert '<input type="hidden" data-dz-grid-page-size value="25">' in html
+
+
+def test_list_rows_honour_the_truncate_opt_out() -> None:
+    spec = _appspec(
+        _HEAD
+        + """
 surface stack_list "Stacks":
   uses entity Stack
   mode: list
   section main:
-    field title "Title"
-    field mark_scheme "Mark Scheme"
-
-workspace desk "Desk":
-  pupils_list:
-    source: Pupil
-    display: list
-  pupils_queue:
-    source: Pupil
-    display: queue
-  pupils_status:
-    source: Pupil
-    display: status_list
-  pupils_grid:
-    source: Pupil
-    display: grid
-  pupils_kanban:
-    source: Pupil
-    display: kanban
-    group_by: year_group
-  uploads_list:
-    source: Upload
-    display: list
-  uploads_grid:
-    source: Upload
-    display: grid
+    field title "Title" truncate: false
+    field photo_url "Photo"
 """
-
-
-@pytest.fixture(scope="module")
-def appspec(tmp_path_factory: pytest.TempPathFactory):
-    dsl_dir = tmp_path_factory.mktemp("dsl1792")
-    (dsl_dir / "app.dsl").write_text(_DSL, encoding="utf-8")
-    return build_appspec(parse_modules([dsl_dir / "app.dsl"]), "t")
-
-
-def _entity(appspec, name: str):
-    return next(e for e in appspec.domain.entities if e.name == name)
-
-
-def _region(appspec, name: str):
-    ws = next(w for w in appspec.workspaces if w.name == "desk")
-    return next(r for r in ws.regions if r.name == name)
-
-
-def _region_columns(appspec, region_name: str) -> list[dict]:
-    """The column derivation the workspace route builder applies to a region."""
-    region = _region(appspec, region_name)
-    return build_entity_columns(
-        _entity(appspec, region.source),
-        media_thumbs=media_thumbs_for_display(region.display),
+    )
+    columns = build_surface_columns(spec.get_entity("Stack"), spec.get_surface("stack_list"))
+    long_title = "AQA GCSE English Literature Paper 1 Section A — Macbeth, extract question"
+    item = {"id": "00000000-0000-0000-0000-000000000001", "title": long_title, "photo_url": "x"}
+    rows = render_data_table_rows(
+        build_data_table({"columns": columns, "table_id": "stack_list"}, [item])
     )
 
-
-def test_ref_cell_carries_truncate_wrapper_and_full_title(appspec) -> None:
-    """U18: a long ref display name sits in the text-cell truncate wrapper."""
-    entity = _entity(appspec, "Stack")
-    surface = next(s for s in appspec.surfaces if s.name == "stack_list")
-    table = {
-        "columns": build_surface_columns(entity, surface),
-        "entity_name": "Stack",
-        "api_endpoint": "/stacks",
-        "table_id": "dt-stack_list",
-    }
-    item = {
-        "id": "s1",
-        "title": "Macbeth mock",
-        "mark_scheme": {"id": "ms1", "title": _LONG_TITLE},
-        "mark_scheme_display": _LONG_TITLE,
-    }
-    html = render_data_table_rows(build_data_table(table, [item]))
-    cell = html.split('data-dz-col="mark_scheme"', 1)[1].split("</td>", 1)[0]
-    assert f'<span class="dz-tr-cell-truncate" title="{_LONG_TITLE}">{_LONG_TITLE}</span>' in cell
-
-
-@pytest.mark.parametrize(
-    ("region_name", "media_key", "expected"),
-    [
-        pytest.param("pupils_list", "photo_url", False, id="list-drops-injected-image"),
-        pytest.param("pupils_queue", "photo_url", False, id="queue-drops-injected-image"),
-        pytest.param("pupils_status", "photo_url", False, id="status_list-drops-injected-image"),
-        pytest.param("pupils_grid", "photo_url", True, id="grid-keeps-image"),
-        pytest.param("pupils_kanban", "photo_url", True, id="kanban-keeps-image"),
-        pytest.param("uploads_list", "attachment", False, id="list-drops-file"),
-        pytest.param("uploads_grid", "attachment", True, id="grid-keeps-file"),
-    ],
-)
-def test_media_columns_only_for_card_displays(
-    appspec, region_name: str, media_key: str, expected: bool
-) -> None:
-    """U5: image/file columns are auto-derived only for card-like displays."""
-    keys = [c["key"] for c in _region_columns(appspec, region_name)]
-    assert (media_key in keys) is expected
-    if region_name.startswith("pupils"):
-        # The author's repr projection is untouched either way.
-        assert {"surname", "forename", "year_group"} <= set(keys)
-
-
-@pytest.mark.parametrize(
-    ("region_name", "expected"),
-    [
-        pytest.param("pupils_list", False, id="list"),
-        pytest.param("pupils_grid", True, id="grid"),
-    ],
-)
-def test_region_render_shows_thumb_only_for_cards(
-    appspec, region_name: str, expected: bool
-) -> None:
-    """U5 end to end: the rendered list has no photo column; the grid card has its thumb."""
-    region = _region(appspec, region_name)
-    ctx = {
-        "items": [
-            {
-                "id": "p1",
-                "surname": "Lovelace",
-                "forename": "Ada",
-                "year_group": "y10",
-                "photo_url": _PHOTO,
-            },
-        ],
-        "columns": _region_columns(appspec, region_name),
-    }
-    html = FragmentRenderer().render(WorkspaceRegionAdapter().build(region, ctx))
-    assert "Lovelace" in html
-    assert ("dz-media-thumb" in html) is expected
+    # `truncate: false` → the title renders whole instead of clipped to 50 chars.
+    assert long_title in rows
+    assert '<span class="dz-tr-cell-truncate">AQA GCSE' not in rows

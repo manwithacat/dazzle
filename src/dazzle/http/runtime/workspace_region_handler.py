@@ -153,7 +153,7 @@ async def render_region_body_html(
     ctx: WorkspaceRegionContext,
     *,
     page: int = 1,
-    page_size: int = 20,
+    page_size: int | None = None,
     sort: str | None = None,
     dir: str = "asc",
 ) -> str:
@@ -203,7 +203,7 @@ async def ssr_fold_bodies(request: Any, ctxs: list[WorkspaceRegionContext]) -> d
 async def _workspace_region_handler(
     request: Any,
     page: int,
-    page_size: int,
+    page_size: int | None,
     sort: str | None,
     dir: str,
     *,

@@ -777,6 +777,8 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         display_html = _render_cell_display(
             display_col,
             cell_value,
+            # #1792: `truncate: false` on the column lets text / ref cells wrap.
+            truncate=col.get("truncate") is not False,
             entity_name=entity_name,
             record_id=item_id,
             ref_display=item.get(f"{col_key}_display") if col_type == "ref" else None,

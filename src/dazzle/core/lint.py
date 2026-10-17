@@ -19,6 +19,7 @@ from .validator import (
     validate_island_render_fields,
     validate_legal_entity_money_span,
     validate_lifecycles,
+    validate_list_columns,
     validate_list_without_read_scope,
     validate_llm_subject_surface,
     validate_money_fields,
@@ -165,6 +166,11 @@ def lint_appspec(
 
     # rag_on fixed-band decorator validation (#1470)
     errors, warnings = validate_rag_decorators(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # #1792: region columns:/page_size: and surface column hints
+    errors, warnings = validate_list_columns(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

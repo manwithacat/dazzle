@@ -74,6 +74,9 @@ class RegionRenderInputs:
     items: list[dict[str, Any]] = field(default_factory=list)
     columns: list[dict[str, Any]] = field(default_factory=list)
     total: int = 0
+    # #1792: page window of a region that declares `page_size:` (None = unpaged).
+    page: int = 1
+    page_size: int | None = None
     metrics: list[dict[str, Any]] = field(default_factory=list)
     bucketed_metrics: list[dict[str, Any]] = field(default_factory=list)
     kanban_columns: list[str] = field(default_factory=list)
@@ -504,6 +507,9 @@ def _build_list_adapter_ctx(
         adapter_ctx["items"] = inputs.items
         adapter_ctx["columns"] = inputs.columns
         adapter_ctx["total"] = inputs.total
+        # #1792: declared `page_size:` → the list renders a pager.
+        adapter_ctx["page"] = inputs.page
+        adapter_ctx["page_size"] = inputs.page_size
         adapter_ctx["endpoint"] = ctx_region.endpoint
         adapter_ctx["region_name"] = getattr(ctx_region, "name", "")
         adapter_ctx["filter_columns"] = inputs.filter_columns

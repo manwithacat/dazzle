@@ -323,29 +323,36 @@ surface task_list "Tasks":
 
 ## Pagination
 
-Automatic pagination on list surfaces. Renders page navigation buttons below the table. Preserves sort/filter/search state across page transitions. Default 20 items per page.
+Automatic pagination on list surfaces: page buttons below the table whenever the matched total exceeds the page size, with sort/filter/search state kept across pages. The framework default is 20 rows per page (one constant, DEFAULT_PAGE_SIZE); `page_size: <1-100>` overrides it on a list surface or a workspace region (#1792). A region with `page_size:` fetches that many rows and renders a pager; `limit:` stays a row cap with no pager, and a region cannot set both.
 
 ### Syntax
 
 ```dsl
-# Pagination is automatic on list surfaces - no DSL configuration needed.
-# The runtime renders Previous/Next buttons and page numbers.
-# Query parameters: ?page=2&per_page=20
-# Sort/filter/search state is preserved across page transitions.
+# List surface — automatic pages; page_size overrides the default 20.
+surface <name> "<Title>":
+  uses entity <EntityName>
+  mode: list
+  page_size: <1-100>
+  section main:
+    field <field>
 
-# In workspace regions, use limit: to cap results instead:
+# Workspace region — page_size pages with a pager; limit caps with none.
 <region_name>:
   source: <EntityName>
-  limit: <number>       # Max records to show (1-1000)
+  page_size: <1-100>    # rows per page + pager
+  limit: <1-1000>       # OR: row cap, no pager (not both)
+
+# Query parameters: ?page=2&page_size=25
 ```
 
 ### Example
 
 ```dsl
-# List surface - pagination is automatic (20 per page)
+# List surface - 25 rows per page
 surface contact_list "Contacts":
   uses entity Contact
   mode: list
+  page_size: 25
   section main:
     field name
     field email
@@ -355,7 +362,7 @@ surface contact_list "Contacts":
     filter: status
     search: name, email
 
-# Workspace region - use limit to cap results
+# Workspace region - limit caps a short list; page_size pages a long one
 workspace dashboard "Dashboard":
   purpose: "Overview"
 
@@ -364,9 +371,15 @@ workspace dashboard "Dashboard":
     sort: created_at desc
     limit: 5
     display: list
+
+  all_tasks:
+    source: Task
+    sort: title asc
+    page_size: 25
+    display: list
 ```
 
-**Related:** [Datatable](surfaces.md#datatable), [Surface](surfaces.md#surface)
+**Related:** [Datatable](surfaces.md#datatable), [Surface](surfaces.md#surface), [List Columns](workspaces.md#list-columns), [Regions](workspaces.md#regions)
 
 ---
 

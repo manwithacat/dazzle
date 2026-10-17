@@ -346,6 +346,9 @@ surface ticket_list "Tickets":
   # Hyperpart) instead of the default inline expand — the queue keeps
   # its scan position while an agent glances at a ticket.
   peek: slide_over
+  # #1792: a triage page holds a full shift's intake at 25 rows; the title
+  # column keeps a third of the nine-column table instead of an equal ninth.
+  page_size: 25
 
   ux:
     purpose: "Triage and resolve incoming support tickets — open a row for the ticket, assignee, or creator hub"
@@ -356,7 +359,7 @@ surface ticket_list "Tickets":
 
   section main "Support Tickets":
     field ticket_number "Ticket #"
-    field title "Title"
+    field title "Title" width: 30%
     field status "Status"
     field priority "Priority"
     field sla_state "SLA"

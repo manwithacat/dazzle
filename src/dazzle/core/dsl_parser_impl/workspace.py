@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
+from ._columns import kw_page_size, parse_columns_list
 from ._refresh import kw_refresh
 from .dispatch import (
     KeywordParser,
@@ -2334,6 +2335,8 @@ class _WorkspaceRegionState:
     filter_expr: ir.ConditionExpr | None = None
     sort: list[ir.SortSpec] = field(default_factory=list)
     limit: int | None = None
+    page_size: int | None = None  # #1792 — rows per page with a pager
+    columns: list[ir.ColumnSpec] = field(default_factory=list)  # #1792
     display: ir.DisplayMode = ir.DisplayMode.LIST
     # #1492 default-flip: True until a `display:` keyword is parsed. Carried to
     # ir.WorkspaceRegion.display_unset so the renderer can infer the form for a
@@ -2425,6 +2428,14 @@ def _kw_filter(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
     state.filter_expr = parser.parse_condition_expr()
+    parser.skip_newlines()
+
+
+def _kw_columns(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``columns: title(width: 34%), status, …`` — authored column projection (#1792)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.columns = parse_columns_list(parser)
     parser.skip_newlines()
 
 
@@ -2973,6 +2984,7 @@ _WORKSPACE_REGION_KEYWORDS: dict[TokenType, KeywordParser[_WorkspaceRegionState]
     TokenType.FILTER: _kw_filter,
     TokenType.SORT: kw_sort,
     TokenType.LIMIT: kw_limit,
+    TokenType.COLUMNS: _kw_columns,  # #1792
     TokenType.DISPLAY: _kw_display,
     TokenType.RENDER: _kw_render,
     TokenType.ACTION: _kw_action,
@@ -3017,6 +3029,7 @@ _WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]
     "order": _kw_order,  # #1470
     "outlier_method": _kw_outlier_method,  # #1470
     "when_empty": _kw_when_empty,  # #1494
+    "page_size": kw_page_size,  # #1792
 }
 
 
@@ -3072,6 +3085,8 @@ def _build_workspace_region(
         filter=state.filter_expr,
         sort=state.sort,
         limit=state.limit,
+        page_size=state.page_size,  # #1792
+        columns=state.columns,  # #1792
         display=display,
         display_unset=state.display_unset,
         action=state.action,

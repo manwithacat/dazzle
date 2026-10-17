@@ -25,12 +25,14 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any
 
+from dazzle.render.breadcrumbs import clerk_pagination_rows_label
 from dazzle.render.cell_chrome import (
     related_card_media_and_text,
     related_file_name_and_meta,
     related_queue_title_and_meta,
 )
 from dazzle.render.filters import (
+    _pagination_pages,
     clerk_pivot_measure_display,
     clerk_pivot_measure_keys,
     clerk_stage_label,
@@ -43,6 +45,7 @@ from dazzle.render.fragment.ingest import BarTrackRow as BarTrackRowSeam
 from dazzle.render.fragment.ingest import GridRegion as GridRegionSeam
 from dazzle.render.fragment.ingest import ListRegion as ListRegionSeam
 from dazzle.render.fragment.ingest import MetricTile as MetricTileSeam
+from dazzle.render.fragment.ingest import Pagination as PaginationSeam
 from dazzle.render.fragment.ingest import PivotTable as PivotTableSeam
 from dazzle.render.fragment.ingest import QueueRow as QueueRowSeam
 from dazzle.render.fragment.ingest import StatusListEntry as StatusListEntrySeam
@@ -54,6 +57,7 @@ from dazzle.render.fragment.ingest import (
     render_grid_region,
     render_list_region,
     render_metric_tile,
+    render_pagination,
     render_pivot_table,
     render_queue_row,
     render_status_list_entry,
@@ -98,6 +102,7 @@ from dazzle.render.fragment.renderer._related_conversation import (
 )
 from dazzle.render.fragment.renderer._render_interactive import (
     _list_csv_button_html,
+    _with_leftover_honest_temporal,
     leftover_honest_catalog_id,
 )
 from dazzle.render.open_discovery import create_cta_open_attr_suffix
@@ -183,11 +188,23 @@ class _RenderTablesMixin:
         # body cells (which already carry data-dz-col via render_data_row).
         keys = t.column_keys if (t.column_keys and len(t.column_keys) == len(t.columns)) else None
         sortable = set(t.sortable_keys)
+        # #1792: per-column width hints (`field title "Title" width: 34%`) —
+        # on the `<col>` (the fixed-layout width source) and the `<th>` (so the
+        # HM per-key th widths can't override the author).
+        width_styles = tuple(
+            f' style="width: {ctx.escape_attr(w)}"' if w else ""
+            for w in (
+                t.column_widths
+                if keys and len(t.column_widths) == len(keys)
+                else ("",) * len(keys or ())
+            )
+        )
         for i, c in enumerate(t.columns):
             if keys:
                 # Canonical list header: data-dz-col (column-visibility) +
                 # dz-table-th; sortable columns are data-dz-grid-sort buttons.
                 ck = ctx.escape_attr(keys[i])
+                wstyle = width_styles[i]
                 label = ctx.escape(str(c))
                 if keys[i] in sortable:
                     # Convergence C1.1: sort is owned by the HM grid controller
@@ -202,7 +219,7 @@ class _RenderTablesMixin:
                     else:
                         aria = "none"
                     head_cells_parts.append(
-                        f'<th data-dz-col="{ck}" aria-sort="{aria}" '
+                        f'<th data-dz-col="{ck}"{wstyle} aria-sort="{aria}" '
                         'scope="col" class="dz-table-th">'
                         # C2.2: the pointer-drag resize handle (decorative for
                         # SR; dz-grid-resize.js drives col[data-dz-col] widths).
@@ -221,7 +238,7 @@ class _RenderTablesMixin:
                     )
                 else:
                     head_cells_parts.append(
-                        f'<th data-dz-col="{ck}" scope="col" class="dz-table-th">'
+                        f'<th data-dz-col="{ck}"{wstyle} scope="col" class="dz-table-th">'
                         f'<span class="dz-table-resize-handle" '
                         f'data-dz-grid-resize="{ck}" aria-hidden="true"></span>'
                         f"{label}</th>"
@@ -284,8 +301,8 @@ class _RenderTablesMixin:
             col_parts: list[str] = []
             if t.bulk_select:
                 col_parts.append('<col class="dz-table-col-select">')
-            for k in keys or ():
-                col_parts.append(f'<col data-dz-col="{ctx.escape_attr(k)}">')
+            for i, k in enumerate(keys or ()):
+                col_parts.append(f'<col data-dz-col="{ctx.escape_attr(k)}"{width_styles[i]}>')
             if t.has_actions:
                 col_parts.append('<col class="dz-table-col-actions">')
             colgroup_html = f"<colgroup>{''.join(col_parts)}</colgroup>" if keys else ""
@@ -417,6 +434,13 @@ class _RenderTablesMixin:
             if s.paginated
             else ""
         )
+        # #1792: the declared page size rides every grid query (state in the
+        # DOM — dz-grid.js reads `[data-dz-grid-page-size]` into `page_size=`).
+        page_size_carrier = (
+            f'<input type="hidden" data-dz-grid-page-size value="{int(s.page_size_param)}">'
+            if s.page_size_param > 0
+            else ""
+        )
 
         return (
             '<div class="dz-table">'
@@ -426,6 +450,7 @@ class _RenderTablesMixin:
             f"{table_html}{empty_html}"
             "</div></div>"
             f"{loading_sr}"
+            f"{page_size_carrier}"
             f"{pagination_footer}"
             "</div>"
         )
@@ -1200,13 +1225,19 @@ class _RenderTablesMixin:
         pane = bool(getattr(lst, "master_detail_pane", False))
         pane_target = ctx.escape_attr(str(getattr(lst, "master_detail_target", "") or ""))
         first_pane_link_done = False
+        # #1792: `truncate` hint → the one-line ellipsis span (needs the fixed
+        # layout below so the column has a width to clip against).
+        truncate_cols = tuple(c.truncate is True for c in lst.columns)
         for i, row in enumerate(lst.rows):
-            cells_html = "".join(
-                f"<td>{ctx.escape(cell)}</td>"
-                if isinstance(cell, str)
-                else f"<td>{self._emit(cell, ctx)}</td>"  # type: ignore[arg-type]
-                for cell in row
-            )
+            cell_parts: list[str] = []
+            for j, cell in enumerate(row):
+                inner = (
+                    ctx.escape(cell) if isinstance(cell, str) else self._emit(cell, ctx)  # type: ignore[arg-type]
+                )
+                if truncate_cols[j]:
+                    inner = f'<span class="dz-tr-cell-truncate">{inner}</span>'
+                cell_parts.append(f"<td>{inner}</td>")
+            cells_html = "".join(cell_parts)
             # #1148: per-row action button HTML is pre-rendered by the data
             # builder (already-escaped attributes, hx-post URL, JSON-encoded
             # bound args). Trust contract: builder owns escape for the values it
@@ -1252,17 +1283,79 @@ class _RenderTablesMixin:
             )
         tbody = f"<tbody>{''.join(tbody_rows)}</tbody>"
 
+        # #1792: column hints (`columns: title(width: 34%)`). Any hint switches
+        # the table to a fixed layout: a width lands on the column's `<col>`,
+        # unsized columns share the remainder equally, and a truncated cell has
+        # a real width to clip against. Unhinted lists stay byte-identical.
+        hinted = any(c.width or c.truncate is True for c in lst.columns)
+        colgroup = ""
+        table_attrs = ' class="dz-list-table"'
+        if hinted:
+            cols_html = "".join(
+                f'<col data-dz-col="{ctx.escape_attr(c.key)}"'
+                + (f' style="width: {ctx.escape_attr(c.width)}"' if c.width else "")
+                + ">"
+                for c in lst.columns
+            )
+            if has_actions:
+                cols_html += "<col>"
+            colgroup = f"<colgroup>{cols_html}</colgroup>"
+            table_attrs += ' style="table-layout: fixed"'
         table = (
-            f'<div class="dz-list-scroll"><table class="dz-list-table">{thead}{tbody}</table></div>'
+            f'<div class="dz-list-scroll"><table{table_attrs}>{colgroup}{thead}{tbody}'
+            "</table></div>"
         )
 
         overflow_html = ""
-        if lst.total > len(lst.rows):
+        if lst.page_size and lst.total > lst.page_size:
+            overflow_html = self._list_region_pager_html(lst, ctx)
+        elif lst.total > len(lst.rows):
             overflow_html = (
                 f'<p class="dz-list-overflow">Showing {len(lst.rows)} of {lst.total}</p>'
             )
 
         return render_list_region(ListRegionSeam(body_html=f"{actions_row}{table}{overflow_html}"))
+
+    def _list_region_pager_html(self, lst: ListRegion, ctx: RenderContext) -> str:
+        """Pager for a region that declares `page_size:` (#1792).
+
+        Each page button re-fetches the region endpoint with `page=` /
+        `page_size=` (+ leftover-honest temporal) and swaps the result into the
+        enclosing region — the same target the region's search box uses.
+        """
+        total_pages = (lst.total + lst.page_size - 1) // lst.page_size
+        endpoint = ctx.escape_attr(str(lst.csv_endpoint or ""))
+        sep = "&amp;" if "?" in endpoint else "?"
+        buttons: list[str] = []
+        for entry in _pagination_pages(lst.page, total_pages):
+            if entry is None:
+                buttons.append('<span class="dz-pagination-ellipsis" aria-hidden="true">…</span>')
+                continue
+            is_current = entry == lst.page
+            cls = "dz-pagination-page is-current" if is_current else "dz-pagination-page"
+            current_attr = ' aria-current="page"' if is_current else ""
+            href = _with_leftover_honest_temporal(
+                f"{endpoint}{sep}page={entry}&amp;page_size={lst.page_size}",
+                lst.include_closed,
+                lst.as_of,
+                escape_attr=ctx.escape_attr,
+                leading="&amp;",
+            )
+            buttons.append(
+                f'<button type="button" class="{cls}"{current_attr} '
+                f'hx-get="{href}" hx-target="closest [data-dz-region]" hx-swap="innerHTML">'
+                f"{entry}</button>"
+            )
+        catalog = (
+            {lst.entity_name: lst.entity_title} if lst.entity_name and lst.entity_title else None
+        )
+        return render_pagination(
+            PaginationSeam(
+                total=lst.total,
+                pages_html="".join(buttons),
+                rows_label=clerk_pagination_rows_label(lst.entity_name, catalog, total=lst.total),
+            )
+        )
 
     def _emit_grid_region(self, g: GridRegion, ctx: RenderContext) -> str:
         """Render valid grid cards, including fields with their own links.

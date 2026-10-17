@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 275 BaseModels, 103 Enums, 18 other (functions / typealiases / constants)
+# Counts: 276 BaseModels, 103 Enums, 22 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -336,6 +336,13 @@ ir_class: ColumnCheck
     - value: ValueRef
   optional:
     - kind: Literal[column_check] = 'column_check'
+
+ir_class: ColumnSpec
+  required:
+    - field: str
+  optional:
+    - truncate: bool | None = None
+    - width: str | None = None
 
 ir_class: CompanionEntrySpec
   required:
@@ -2107,8 +2114,10 @@ ir_class: SurfaceElement
     - help: str | None = None
     - label: str | None = None
     - options: dict[str, Any] = {}
+    - truncate: bool | None = None
     - visible: ConditionExpr | None = None
     - when_expr: Literal | FieldRef | DurationLiteral | BinaryExpr | UnaryExpr | FuncCall | InExpr | IfExpr | None = None
+    - width: str | None = None
 
 ir_class: SurfaceFidelityScore
   required:
@@ -2157,6 +2166,7 @@ ir_class: SurfaceSpec
     - open_entity: str | None = None
     - open_via: str | None = None
     - open_via_targets: list[OpenViaTarget] = []
+    - page_size: int | None = None
     - peek: PeekMode | None = None
     - priority: BusinessPriority = <BusinessPriority.MEDIUM: 'medium'>
     - refresh_interval: int | None = None
@@ -2449,6 +2459,7 @@ ir_class: WorkspaceRegion
     - after: str | None = None
     - aggregates: dict[str, AggregateRef | DerivedMetric] = {}
     - cohort_strip_config: CohortStripConfig | None = None
+    - columns: list[ColumnSpec] = []
     - confirmations: list[ConfirmationItemSpec] = []
     - css_class: str | None = None
     - date_field: str | None = None
@@ -2470,6 +2481,7 @@ ir_class: WorkspaceRegion
     - outlier: ComparisonOutlierSpec | None = None
     - outlier_on: str | None = None
     - overlay_series: list[OverlaySeriesSpec] = []
+    - page_size: int | None = None
     - pipeline_stages: list[PipelineStageSpec] = []
     - primary_action: str | None = None
     - rag_on: str | None = None
@@ -3404,9 +3416,12 @@ enum: WorkspaceAccessLevel
 category: constant
   - AI_JOB_FIELDS: list (len=12)
   - CALENDAR_PERIODS: tuple (len=4)
+  - COLUMN_WIDTH_UNITS: tuple (len=3)
   - CURRENCY_SCALES: dict (len=29)
   - DEFAULT_CURRENCY_SCALE: int = 2
+  - DEFAULT_PAGE_SIZE: int = 20
   - FEEDBACK_REPORT_FIELDS: tuple (len=27)
+  - MAX_PAGE_SIZE: int = 100
   - MONEY_FIELD_PATTERNS: frozenset (len=24)
 
 category: function
@@ -3414,6 +3429,7 @@ category: function
   - AggregateWindowKind (callable, type=_LiteralGenericAlias)
   - DateExpr (callable, type=_AnnotatedAlias)
   - ScopePredicate (callable, type=_AnnotatedAlias)
+  - column_width_error (callable, type=function)
   - create_default_sitespec (callable, type=function)
   - from_money (callable, type=function)
   - get_currency_scale (callable, type=function)

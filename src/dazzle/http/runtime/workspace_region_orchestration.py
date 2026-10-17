@@ -528,6 +528,8 @@ async def compute_region_render_inputs(
         items=items,
         columns=columns,
         total=total,
+        page=fetched.page,  # #1792
+        page_size=fetched.page_size,  # #1792
         metrics=metrics,
         bucketed_metrics=bucketed_metrics,
         kanban_columns=kanban_columns,

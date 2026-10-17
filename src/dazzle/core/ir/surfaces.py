@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .columns import MAX_PAGE_SIZE, ColumnSpec
 from .conditions import ConditionExpr
 from .location import SourceLocation
 from .ux import UXSpec
@@ -169,8 +170,16 @@ class SurfaceElement(BaseModel):
     help: str | None = None
     # #1470 Phase 2: explicit cell-format override (None = type-inferred).
     format: FieldFormatSpec | None = None
+    # #1792: list-column sizing hints (`width: 34%`, `truncate`). Same
+    # vocabulary as a region `columns:` entry — read via `column_spec()`.
+    width: str | None = None
+    truncate: bool | None = None
 
     model_config = ConfigDict(frozen=True)
+
+    def column_spec(self) -> ColumnSpec:
+        """This field as a list column — the shape region `columns:` produce (#1792)."""
+        return ColumnSpec(field=self.field_name, width=self.width, truncate=self.truncate)
 
 
 class SubtypePanelBranch(BaseModel):
@@ -465,8 +474,16 @@ class SurfaceSpec(BaseModel):
     # on a poll. Seconds; `None` = no polling. Parallels WorkspaceRegion.
     # refresh_interval (#1391); shares the same parser + 5s floor.
     refresh_interval: int | None = None
+    # #1792: rows per page for a list surface (`page_size: 25`). None = the
+    # framework default (`DEFAULT_PAGE_SIZE`). The pager shows when the
+    # matched total exceeds it.
+    page_size: int | None = Field(default=None, ge=1, le=MAX_PAGE_SIZE)
 
     model_config = ConfigDict(frozen=True)
+
+    def list_columns(self) -> list[ColumnSpec]:
+        """The surface's field lines as list columns, in author order (#1792)."""
+        return [el.column_spec() for sec in self.sections for el in sec.elements]
 
 
 def _rebuild_surface_element() -> None:

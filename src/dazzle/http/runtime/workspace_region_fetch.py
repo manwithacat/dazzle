@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from datetime import date as _date
 from typing import Any
 
+from dazzle.core.ir import DEFAULT_PAGE_SIZE
 from dazzle.http.runtime.page_routes import (
     _parse_list_as_of,
     _parse_list_include_closed,
@@ -82,6 +83,11 @@ class RegionItemsResult:
     total: int = 0
     scope_only_filters: dict[str, Any] | None = None
     region_filters: dict[str, Any] | None = None  # #1773
+    # #1792: the page window when the region declares `page_size:` (the list
+    # renders a pager and `total` is the matched count); `page_size` is None
+    # for an unpaged region (`total` is the fetched row count, #573).
+    page: int = 1
+    page_size: int | None = None
     # Default-deny: any failure path that skips scope evaluation
     # MUST surface as a denial — initialised True here to match the
     # original handler's #887 semantics.
@@ -198,7 +204,7 @@ async def fetch_region_items(
     sort: str | None,
     sort_dir: str,
     page: int,
-    page_size: int,
+    page_size: int | None,
 ) -> RegionItemsResult:
     """Phase 2: build filters/sort + apply scope + query repo.
 
@@ -297,12 +303,16 @@ async def fetch_region_items(
         if scope_only_filters:
             filters = {**(filters or {}), **scope_only_filters}
 
-        # Step 5: page-size for grouped displays (#889).
+        # Step 5: page-size for grouped displays (#889). An explicit
+        # `?page_size=` wins, then the region's declared `page_size:` (#1792),
+        # then the one framework default.
         include_rels = ctx.auto_include
+        declared_page_size = getattr(ctx.ir_region, "page_size", None)
+        requested = page_size or declared_page_size or DEFAULT_PAGE_SIZE
         if ctx.ctx_region.display in ("KANBAN", "BAR_CHART") and not ctx.ctx_region.limit:
-            limit = min(page_size, 200) if page_size > 20 else 50
+            limit = min(requested, 200) if requested > DEFAULT_PAGE_SIZE else 50
         else:
-            limit = ctx.ctx_region.limit or page_size
+            limit = ctx.ctx_region.limit or requested
 
         # Step 6: default-deny — empty result without firing the query.
         if scope_denied:
@@ -335,10 +345,16 @@ async def fetch_region_items(
             items = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items]
             items = [_inject_display_names(item) for item in items]
             total = len(items)
+            if declared_page_size:
+                # #1792: a paged region reports the matched count so the
+                # list can render its pager.
+                total = int(result.get("total") or total)
 
         return RegionItemsResult(
             items=items,
             total=total,
+            page=page if declared_page_size else 1,
+            page_size=limit if declared_page_size else None,
             scope_only_filters=scope_only_filters,
             region_filters=region_filters,
             scope_denied=scope_denied,

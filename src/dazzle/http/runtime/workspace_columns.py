@@ -14,6 +14,9 @@ Public API:
   columns from a LIST surface's section elements, preserving the
   author's field order and threading per-element ``visible:``
   predicates through to the column metadata.
+- ``build_region_columns(entity_spec, column_specs)`` — a region's authored
+  ``columns:`` (#1792). Both this and ``build_surface_columns`` resolve through
+  ``build_projected_columns``, which carries the ``width`` / ``truncate`` hints.
 - ``build_entity_columns(entity_spec, *, media_thumbs=False)`` — fallback
   column derivation from the entity's full field list when a surface doesn't
   pin its own projection. Applies the 2d field-economy default-flip (#1491):
@@ -25,6 +28,7 @@ Public API:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from dazzle.core.ir.money import is_money_field_name
@@ -271,6 +275,25 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     return "text"
 
 
+@dataclass(frozen=True)
+class ProjectedField:
+    """One author-named list column, before it is resolved against the entity (#1792).
+
+    Both projections feed :func:`build_projected_columns`: a list surface's
+    ``field`` lines (:func:`build_surface_columns`) and a region's
+    ``columns:`` (:func:`build_region_columns`). ``width`` / ``truncate`` are the
+    shared :class:`dazzle.core.ir.ColumnSpec` hints.
+    """
+
+    name: str
+    label: str | None = None
+    visible_condition: dict[str, Any] | None = None
+    format: Any = None
+    widget: str = ""
+    width: str | None = None
+    truncate: bool | None = None
+
+
 def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str, Any]]:
     """Build column metadata from a list surface's field projection.
 
@@ -283,116 +306,143 @@ def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str,
     # Collect field names from surface sections (preserving order). Carry the
     # element-level (or fallback section-level) visible: predicate so the
     # request handler can hide columns the persona shouldn't see (#872).
-    surface_fields: list[str] = []
-    field_visible_conditions: dict[str, dict[str, Any] | None] = {}
     # #1470 Phase 2: per-field explicit format: override (None when unannotated).
-    field_formats: dict[str, Any] = {}
     # oral #132: author ``field photo_url "Photo"`` must win over schema titles.
-    field_labels: dict[str, str | None] = {}
     # #1626 R5 / P0-8: surface ``widget=color`` → list/queue type ``color`` (swatch).
-    field_widgets: dict[str, str] = {}
+    entries: list[ProjectedField] = []
+    seen: set[str] = set()
     for section in surface_spec.sections:
         _sec_vis = getattr(section, "visible", None)
         _section_vis_cond = _sec_vis.model_dump() if _sec_vis is not None else None
         for element in section.elements:
             fn = element.field_name
-            if fn and fn != "id" and fn not in surface_fields:
-                surface_fields.append(fn)
-                _el_vis = getattr(element, "visible", None)
-                field_visible_conditions[fn] = (
-                    _el_vis.model_dump() if _el_vis else _section_vis_cond
+            if not fn or fn == "id" or fn in seen:
+                continue
+            seen.add(fn)
+            _el_vis = getattr(element, "visible", None)
+            opts = getattr(element, "options", None) or {}
+            entries.append(
+                ProjectedField(
+                    name=fn,
+                    label=getattr(element, "label", None),
+                    visible_condition=_el_vis.model_dump() if _el_vis else _section_vis_cond,
+                    format=getattr(element, "format", None),
+                    widget=str(opts["widget"])
+                    if isinstance(opts, dict) and opts.get("widget")
+                    else "",
+                    width=getattr(element, "width", None),
+                    truncate=getattr(element, "truncate", None),
                 )
-                field_formats[fn] = getattr(element, "format", None)
-                field_labels[fn] = getattr(element, "label", None)
-                opts = getattr(element, "options", None) or {}
-                if isinstance(opts, dict) and opts.get("widget"):
-                    field_widgets[fn] = str(opts["widget"])
+            )
 
-    if not surface_fields:
+    if not entries:
         return build_entity_columns(entity_spec)
+    return build_projected_columns(entity_spec, entries)
 
-    # Build a lookup from entity fields
+
+def build_region_columns(
+    entity_spec: Any, column_specs: Any, label_surface: Any = None
+) -> list[dict[str, Any]]:
+    """Column metadata for a region's authored ``columns:`` (#1792).
+
+    Order is authoritative and only the named fields render — naming an
+    image/file field shows it on any display (the U5 media opt-in). Labels come
+    from ``label_surface`` (the entity's list surface) when it labels the field,
+    else the title-cased field name.
+    """
+    if not entity_spec or not hasattr(entity_spec, "fields"):
+        return []
+    labels: dict[str, str | None] = {}
+    if label_surface is not None:
+        for section in getattr(label_surface, "sections", None) or []:
+            for element in section.elements:
+                labels.setdefault(element.field_name, getattr(element, "label", None))
+    entries = [
+        ProjectedField(
+            name=spec.field,
+            label=labels.get(spec.field),
+            width=spec.width,
+            truncate=spec.truncate,
+        )
+        for spec in column_specs
+    ]
+    return build_projected_columns(entity_spec, entries)
+
+
+def _apply_entry_meta(col: dict[str, Any], entry: ProjectedField) -> None:
+    """Author metadata every projected column carries: visibility, format, ColumnSpec hints."""
+    if entry.visible_condition:
+        col["visible_condition"] = entry.visible_condition
+    if entry.format is not None:
+        col["format_kind"] = entry.format.kind
+        col["format_arg"] = entry.format.arg or ""
+    if entry.width is not None:
+        col["width"] = entry.width
+    if entry.truncate is not None:
+        col["truncate"] = entry.truncate
+
+
+def _projected_col_type(f: Any, kind_val: str, entity_spec: Any, entry: ProjectedField) -> str:
+    """Column type for a projected scalar field (widget / money overrides win)."""
+    if kind_val == "money":
+        return "currency"
+    # #1626 R5: color picker fields must not render as raw hex text on desks.
+    if entry.widget in ("color", "tags"):
+        return entry.widget
+    return field_kind_to_col_type(f, entity_spec)
+
+
+def _projected_column(
+    field_map: dict[str, Any], entity_spec: Any, entry: ProjectedField
+) -> dict[str, Any] | None:
+    """One author-named field as a column dict, or None when it can't render."""
+    fn = entry.name
+    f, kind_val = _resolve_surface_field(field_map, fn)
+    if f is None or kind_val in ("uuid", "has_many", "has_one", "embeds"):
+        return None
+    ft = f.type
+    if kind_val in ("ref", "belongs_to"):
+        # ref_entity / filter_ref_entity: Avatar default (user_chip) + hyperpart
+        # opportunity scan need the target entity, not just ref_route.
+        col = _ref_entity_column(f, ft)
+        col["label"] = _column_label(col["key"], entry.label)
+        _apply_entry_meta(col, entry)
+        return col
+    col_type = _projected_col_type(f, kind_val, entity_spec, entry)
+    col = {
+        "key": f"{fn}_minor" if kind_val == "money" else f.name,
+        "label": _column_label(fn, entry.label),
+        "type": col_type,
+        "sortable": True,
+    }
+    _apply_entry_meta(col, entry)
+    if kind_val == "money":
+        col["currency_code"] = _money_currency_code(field_map, fn, f)
+    elif col_type == "currency":
+        col["currency_code"] = "GBP"
+    if col_type == "badge":
+        # #1493 slice 2: declared `semantic:` binding + SM-terminal inference.
+        _apply_badge_column_meta(col, ft, kind_val, entity_spec)
+    if col_type == "bool":
+        col["filterable"] = True
+        col["filter_options"] = bool_filter_options()
+    return col
+
+
+def build_projected_columns(
+    entity_spec: Any, entries: list[ProjectedField]
+) -> list[dict[str, Any]]:
+    """Resolve author-named fields to column dicts, in the author's order.
+
+    The one path both list-surface field lines and region ``columns:`` take
+    (#1792), so a column renders the same whichever DSL named it.
+    """
     field_map: dict[str, Any] = {f.name: f for f in entity_spec.fields}
-
     columns: list[dict[str, Any]] = []
-    for fn in surface_fields:
-        f, kind_val = _resolve_surface_field(field_map, fn)
-        if f is None:
-            continue
-        _vis_cond = field_visible_conditions.get(fn)
-        _fmt = field_formats.get(fn)
-        ft = f.type
-        # Ref and belongs_to fields
-        if kind_val in ("ref", "belongs_to"):
-            rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
-            ref_entity = getattr(ft, "ref_entity", None)
-            ref_route = ref_detail_route(ref_entity)
-            # ref_entity / filter_ref_entity: Avatar default (user_chip) + hyperpart
-            # opportunity scan need the target entity, not just ref_route.
-            ref_col: dict[str, Any] = {
-                "key": rel_name,
-                "label": _column_label(rel_name, field_labels.get(fn)),
-                "type": "ref",
-                "sortable": False,
-                "ref_route": ref_route,
-                "ref_entity": ref_entity or "",
-                "filter_ref_entity": ref_entity or "",
-            }
-            if _vis_cond:
-                ref_col["visible_condition"] = _vis_cond
-            if _fmt is not None:
-                ref_col["format_kind"] = _fmt.kind
-                ref_col["format_arg"] = _fmt.arg or ""
-            columns.append(ref_col)
-            continue
-        # Skip non-displayable types
-        if kind_val in ("uuid", "has_many", "has_one", "embeds"):
-            continue
-        col_type = field_kind_to_col_type(f, entity_spec)
-        # #1626 R5: color picker fields must not render as raw hex text on desks.
-        if field_widgets.get(fn) == "color":
-            col_type = "color"
-        if field_widgets.get(fn) == "tags":
-            col_type = "tags"
-        if kind_val == "money":
-            col_type = "currency"
-        col_key = f"{fn}_minor" if kind_val == "money" else f.name
-        col: dict[str, Any] = {
-            "key": col_key,
-            "label": _column_label(fn, field_labels.get(fn)),
-            "type": col_type,
-            "sortable": True,
-        }
-        if _vis_cond:
-            col["visible_condition"] = _vis_cond
-        if _fmt is not None:
-            col["format_kind"] = _fmt.kind
-            col["format_arg"] = _fmt.arg or ""
-        if kind_val == "money":
-            col["currency_code"] = _money_currency_code(field_map, fn, f)
-        elif col_type == "currency":
-            col["currency_code"] = "GBP"
-        if col_type == "badge":
-            # #1493 slice 2: declared `semantic:` binding + SM-terminal inference.
-            _sem = status_tone_map(ft, entity_spec.state_machine)
-            if _sem:
-                col["semantic_map"] = _sem
-            if kind_val == "enum":
-                ev = getattr(ft, "enum_values", None)
-                if ev:
-                    col["filterable"] = True
-                    col["filter_options"] = enum_filter_options(ev)
-            else:
-                sm = entity_spec.state_machine
-                if sm:
-                    states = sm.states
-                    if states:
-                        col["filterable"] = True
-                        col["filter_options"] = enum_filter_options(states)
-        if col_type == "bool":
-            col["filterable"] = True
-            col["filter_options"] = bool_filter_options()
-        columns.append(col)
+    for entry in entries:
+        col = _projected_column(field_map, entity_spec, entry)
+        if col is not None:
+            columns.append(col)
     return columns
 
 

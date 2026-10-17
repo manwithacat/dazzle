@@ -1,7 +1,7 @@
 {
-  "src_lines": 325753,
-  "test_lines": 317960,
-  "docs_lines": 49214,
+  "src_lines": 326431,
+  "test_lines": 318170,
+  "docs_lines": 49307,
   "construct_count": 31,
   "written": "2026-10-17",
   "exceptions": [
@@ -503,6 +503,22 @@
         "docs_lines"
       ],
       "reason": "#1793 project asset fingerprinting + renderer asset mount + HM body font (consumer-forced)"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1792 consumer-forced column grammar (region columns:, page_size:, width/truncate hints)"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "test_lines"
+      ],
+      "reason": "#1792 consumer-forced column grammar (region columns:, page_size:, width/truncate hints)"
     }
   ]
 }

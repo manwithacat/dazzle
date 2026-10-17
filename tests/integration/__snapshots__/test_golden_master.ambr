@@ -1157,6 +1157,7 @@
         'open_via': None,
         'open_via_targets': list([
         ]),
+        'page_size': None,
         'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
@@ -1175,8 +1176,10 @@
                 'label': 'Title',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
               dict({
                 'field_name': 'status',
@@ -1185,8 +1188,10 @@
                 'label': 'Status',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
             ]),
             'layout': None,
@@ -1225,6 +1230,7 @@
         'open_via': None,
         'open_via_targets': list([
         ]),
+        'page_size': None,
         'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
@@ -1243,8 +1249,10 @@
                 'label': 'Title',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
               dict({
                 'field_name': 'description',
@@ -1253,8 +1261,10 @@
                 'label': 'Description',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
               dict({
                 'field_name': 'status',
@@ -1263,8 +1273,10 @@
                 'label': 'Status',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
             ]),
             'layout': None,
@@ -1303,6 +1315,7 @@
         'open_via': None,
         'open_via_targets': list([
         ]),
+        'page_size': None,
         'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
@@ -1321,8 +1334,10 @@
                 'label': 'Title',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
               dict({
                 'field_name': 'description',
@@ -1331,8 +1346,10 @@
                 'label': 'Description',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
             ]),
             'layout': None,
@@ -1371,6 +1388,7 @@
         'open_via': None,
         'open_via_targets': list([
         ]),
+        'page_size': None,
         'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
@@ -1389,8 +1407,10 @@
                 'label': 'Title',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
               dict({
                 'field_name': 'description',
@@ -1399,8 +1419,10 @@
                 'label': 'Description',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
               dict({
                 'field_name': 'status',
@@ -1409,8 +1431,10 @@
                 'label': 'Status',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
             ]),
             'layout': None,
@@ -1458,6 +1482,7 @@
         'open_via': None,
         'open_via_targets': list([
         ]),
+        'page_size': None,
         'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
@@ -1476,8 +1501,10 @@
                 'label': 'Component',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
               dict({
                 'field_name': 'status',
@@ -1486,8 +1513,10 @@
                 'label': 'Status',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
               dict({
                 'field_name': 'message',
@@ -1496,8 +1525,10 @@
                 'label': 'Message',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
               dict({
                 'field_name': 'checked_at',
@@ -1506,8 +1537,10 @@
                 'label': 'Checked',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
             ]),
             'layout': None,
@@ -1578,6 +1611,7 @@
         'open_via': None,
         'open_via_targets': list([
         ]),
+        'page_size': None,
         'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
@@ -1596,8 +1630,10 @@
                 'label': 'Version',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
               dict({
                 'field_name': 'status',
@@ -1606,8 +1642,10 @@
                 'label': 'Status',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
               dict({
                 'field_name': 'deployed_by',
@@ -1616,8 +1654,10 @@
                 'label': 'Deployed By',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
               dict({
                 'field_name': 'deployed_at',
@@ -1626,8 +1666,10 @@
                 'label': 'Deployed At',
                 'options': dict({
                 }),
+                'truncate': None,
                 'visible': None,
                 'when_expr': None,
+                'width': None,
               }),
             ]),
             'layout': None,
@@ -1731,6 +1773,8 @@
             'aggregates': dict({
             }),
             'cohort_strip_config': None,
+            'columns': list([
+            ]),
             'confirmations': list([
             ]),
             'css_class': None,
@@ -1754,6 +1798,7 @@
             'outlier_on': None,
             'overlay_series': list([
             ]),
+            'page_size': None,
             'pipeline_stages': list([
             ]),
             'primary_action': None,
@@ -1793,6 +1838,8 @@
             'aggregates': dict({
             }),
             'cohort_strip_config': None,
+            'columns': list([
+            ]),
             'confirmations': list([
             ]),
             'css_class': None,
@@ -1816,6 +1863,7 @@
             'outlier_on': None,
             'overlay_series': list([
             ]),
+            'page_size': None,
             'pipeline_stages': list([
             ]),
             'primary_action': None,
@@ -1855,6 +1903,8 @@
             'aggregates': dict({
             }),
             'cohort_strip_config': None,
+            'columns': list([
+            ]),
             'confirmations': list([
             ]),
             'css_class': None,
@@ -1878,6 +1928,7 @@
             'outlier_on': None,
             'overlay_series': list([
             ]),
+            'page_size': None,
             'pipeline_stages': list([
             ]),
             'primary_action': None,

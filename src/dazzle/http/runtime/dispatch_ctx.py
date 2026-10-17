@@ -45,6 +45,8 @@ def _dispatch_ctx_from_table(
                     (str(o.get("value", "")), str(o.get("label", o.get("value", ""))))
                     for o in (getattr(col, "filter_options", []) or [])
                 ],
+                # #1792: ColumnSpec width hint → the skeleton `<col>` / `<th>`.
+                "width": getattr(col, "width", "") or "",
             }
         )
     _peek = getattr(surface, "peek", None)
@@ -56,7 +58,7 @@ def _dispatch_ctx_from_table(
         "endpoint": getattr(table, "api_endpoint", "") or "",
         "total": int(getattr(table, "total", 0) or 0),
         "page": int(getattr(table, "page", 1) or 1),
-        "page_size": int(getattr(table, "page_size", 20) or 20),
+        "page_size": int(getattr(table, "page_size", 0) or ir.DEFAULT_PAGE_SIZE),
         "region_name": getattr(surface, "name", "") or getattr(table, "table_id", "") or "",
         "empty_message": getattr(table, "empty_message", "") or "No items found.",
         "empty_collection": getattr(table, "empty_collection", "") or "",
