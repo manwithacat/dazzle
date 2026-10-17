@@ -3283,6 +3283,7 @@ async def _workspace_handler(
     # PageContext → ``build_app_chrome_page`` topbar trailing.
 
     from dazzle.page.runtime.workspace_renderer import (
+        region_is_eager,
         render_workspace_content_typed,
     )
     from dazzle.render.context import PageContext
@@ -3298,7 +3299,11 @@ async def _workspace_handler(
         try:
             from dazzle.http.runtime.workspace_region_handler import ssr_fold_bodies
 
-            fold_names = [r.name for r in render_ws_ctx.regions[:fold_count]]
+            fold_names = [
+                r.name
+                for i, r in enumerate(render_ws_ctx.regions)
+                if region_is_eager(r, i, fold_count)
+            ]
             app = getattr(request, "app", None)
             ctxs = region_ctxs_for_names(app, render_ws_ctx.name, fold_names)
             if ctxs:

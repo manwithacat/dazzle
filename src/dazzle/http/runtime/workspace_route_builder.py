@@ -542,6 +542,13 @@ class WorkspaceRouteBuilder:
                         tags=["Workspaces"],
                     )(_make_region_route(_region_ctx))
 
+                # #1809: let `exclude:` reach the sibling regions' first-page queries.
+                _regions_by_name = {
+                    str(getattr(c.ctx_region, "name", "")): c for c in _ws_region_ctxs
+                }
+                for _c in _ws_region_ctxs:
+                    _c.workspace_regions = _regions_by_name
+
                 register_workspace_region_ctxs(app, ws_name, _ws_region_ctxs)
 
                 # dual_pane_flow → master-detail: list rows target the DETAIL

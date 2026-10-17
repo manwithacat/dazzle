@@ -316,6 +316,7 @@ def build_aggregate_sql(
     limit: int = 200,
     measure_expressions: dict[str, tuple[str, list[Any]]] | None = None,
     measure_windows: dict[str, MeasureWindow] | None = None,
+    rank_by: tuple[str, str] | None = None,
 ) -> tuple[str, list[Any]]:
     """Compose the multi-dimension GROUP BY SELECT statement.
 
@@ -346,6 +347,11 @@ def build_aggregate_sql(
     can be picked up by key. Parameters for the inner expression are
     placed in the SELECT-clause position of the final param list, ahead
     of the WHERE-clause parameters.
+
+    Top-N (#1814): ``rank_by=(measure_name, "asc" | "desc")`` orders the
+    buckets by that measure (NULLs last, the dimension order breaks ties) and
+    drops NULL buckets in SQL, so ``limit`` keeps the N best-ranked buckets
+    instead of the first N by label.
     """
     from dazzle.perf.tracer import dazzle_span
 
@@ -364,6 +370,7 @@ def build_aggregate_sql(
             limit=limit,
             measure_expressions=measure_expressions,
             measure_windows=measure_windows,
+            rank_by=rank_by,
         )
 
 
@@ -377,6 +384,7 @@ def _build_aggregate_sql_impl(
     limit: int = 200,
     measure_expressions: dict[str, tuple[str, list[Any]]] | None = None,
     measure_windows: dict[str, MeasureWindow] | None = None,
+    rank_by: tuple[str, str] | None = None,
 ) -> tuple[str, list[Any]]:
     src = quote_identifier(table_name)
 
@@ -402,6 +410,13 @@ def _build_aggregate_sql_impl(
     if filters:
         builder.add_filters(filters)
     where_sql, where_params = builder.build_where_clause()
+    if rank_by is not None and dimensions:
+        # Top-N must rank real buckets only: a NULL bucket is dropped by the
+        # caller, so it must not take a LIMIT slot here (#1814).
+        not_null = " AND ".join(
+            f"{src}.{quote_identifier(dim.name)} IS NOT NULL" for dim in dimensions
+        )
+        where_sql = f"{where_sql} AND {not_null}" if where_sql else f"WHERE {not_null}"
 
     # Measure SELECT clauses. Skip unsupported measures silently
     # (caller will see a missing key in AggregateBucket.measures).
@@ -503,6 +518,10 @@ def _build_aggregate_sql_impl(
             select_parts.append(f"{src}.{col_q} AS {id_alias}")
             group_parts.append(f"{src}.{col_q}")
             order_parts.append(f"{src}.{col_q} NULLS LAST")
+
+    if rank_by is not None and rank_by[0] in measures:
+        direction = "ASC" if rank_by[1] == "asc" else "DESC"
+        order_parts.insert(0, f"{quote_identifier(rank_by[0])} {direction} NULLS LAST")
 
     select_parts.extend(measure_sql_parts)
 

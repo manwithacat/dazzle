@@ -82,6 +82,16 @@ and aggregation. Three types of regions:
 - Multi-source region: has sources: [Entity1, Entity2] (renders tabbed list)
 
 Regions support date-range filtering (v0.34.0) with date_field + date_range flag.
+
+Presentation options (#1809, #1814): `filters: none` hides a list region's filter and
+find-by-title bar (explicit only, never implied by a small page_size). `exclude: <region>`
+omits the rows the named region on the SAME workspace and source entity renders on its first
+page — one scope-safe `id NOT IN (<that region's first-page id query>)`; a "Resume" row is
+not repeated as the first "Recent" row. `eager: true|false` overrides the default fold (the
+first three regions load on page load, the rest on `intersect once`) for one region, so the
+persona's key region is promoted without reordering; there is no workspace-wide `fold_count:`.
+On `display: comparison`, `limit: N` keeps the N best-ranked rows — cut after ranking, in the
+one grouped aggregate query (ORDER BY the ranking measure, LIMIT N).
 """
 syntax = '''
 <region_name>:
@@ -94,6 +104,9 @@ syntax = '''
   [limit: <1-1000>]                          # Row cap, no pager
   [page_size: <1-100>]                       # Rows per page + pager (not with limit:)
   [columns: <field>[(<modifiers>)], ...]     # Authored columns (see list_columns)
+  [filters: none]                            # Hide a list region's filter/search bar
+  [exclude: <region>]                        # Omit rows <region> (same workspace + entity) shows on its first page
+  [eager: <true|false>]                      # Override the default fold (first three regions load eagerly)
   [display: <list|grid|timeline|summary|metrics|kanban|bar_chart|queue|tabbed_list>]
   [action: <surface_name|workspace_name>]    # Click-through (metrics: whole tile)
   [empty: "<message>"]                       # Empty state message

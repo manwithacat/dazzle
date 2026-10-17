@@ -197,6 +197,121 @@ def _apply_leftover_honest_item_id(
     return out
 
 
+def _region_condition_filters(
+    ctx: WorkspaceRegionContext, user_ctx: RequestUserContext
+) -> dict[str, Any] | None:
+    """Compile the region's ``filter:`` (current_user, has_grant, current_context...).
+
+    Multi-source regions store a per-source filter on ``_source_filter``.
+    """
+    filters: dict[str, Any] | None = None
+    ir_filter = getattr(ctx, "_source_filter", None) or ctx.ir_region.filter
+    if ir_filter is not None:
+        try:
+            from dazzle.http.runtime.scope_filters import _extract_condition_filters
+
+            filters = {}
+            _extract_condition_filters(
+                ir_filter,
+                user_ctx.user_id or "",
+                filters,
+                logger,
+                user_ctx.auth_ctx_for_filters,
+                # #1304: thread the source entity's FK→target map so a
+                # multi-hop dotted `current_context` filter (e.g.
+                # `assessment_event.teaching_group = current_context`)
+                # resolves to an FK-path subquery instead of a raw dotted
+                # key the repo can't map (which silently matched all rows).
+                ref_targets=ctx.entity_ref_targets.get(ctx.source) or {},
+                context_id=user_ctx.filter_context.get("current_context"),
+                # #1304: the global entity→FK-map so a 2-hop dotted path
+                # resolves the *target* entity's FK column correctly
+                # (`teaching_group` → `teaching_group_id`) rather than
+                # blindly suffixing `_id` (which broke bare-named FKs).
+                all_ref_targets=ctx.entity_ref_targets,
+            )
+            if not filters:
+                filters = None
+        except Exception:
+            logger.warning("Failed to evaluate condition filter", exc_info=True)
+    return filters
+
+
+def _default_sort_list(ctx: WorkspaceRegionContext) -> list[str] | None:
+    """The region's own order: IR ``sort:``, a ranked comparison, else the surface default (#362)."""
+    ir_sort = ctx.ir_region.sort
+    if ir_sort:
+        return [f"-{s.field}" if s.direction == "desc" else s.field for s in ir_sort]
+    # #1814: a row-mode comparison ranks `items` by `rank_by`; the page window
+    # (`limit:`) must be cut after that ranking, so order the query by it.
+    rank_by = getattr(ctx.ir_region, "rank_by", None)
+    if (
+        ctx.ctx_region.display == "COMPARISON"
+        and rank_by
+        and not getattr(ctx.ir_region, "group_by", None)
+        and ctx.entity_spec is not None
+        and any(f.name == rank_by for f in ctx.entity_spec.fields)
+    ):
+        return [rank_by if getattr(ctx.ir_region, "order", "desc") == "asc" else f"-{rank_by}"]
+    if ctx.surface_default_sort:
+        return [
+            f"-{s.field}" if s.direction == "desc" else s.field for s in ctx.surface_default_sort
+        ]
+    return None
+
+
+def _region_row_limit(ctx: WorkspaceRegionContext, page_size: int | None) -> int:
+    """Rows to fetch: explicit ``?page_size=``, then the region's ``page_size:`` (#1792), then the default.
+
+    Grouped displays (#889) cap at 50/200 unless the region sets ``limit:``.
+    """
+    declared_page_size = getattr(ctx.ir_region, "page_size", None)
+    requested = page_size or declared_page_size or DEFAULT_PAGE_SIZE
+    if ctx.ctx_region.display in ("KANBAN", "BAR_CHART") and not ctx.ctx_region.limit:
+        return min(requested, 200) if requested > DEFAULT_PAGE_SIZE else 50
+    return int(ctx.ctx_region.limit or requested)
+
+
+def _exclusion_filter(
+    ctx: WorkspaceRegionContext,
+    user_ctx: RequestUserContext,
+    _visiting: tuple[str, ...] = (),
+) -> tuple[str, list[Any]] | None:
+    """``(sql, params)`` selecting the ids ``exclude: <region>`` removes (#1809).
+
+    The named sibling's FIRST page, built from the sibling's own ``filter:``,
+    scope, sort, ``limit:`` / ``page_size:`` (and its own exclusion), never the
+    current request's query params. ``None`` when nothing is excluded: no
+    ``exclude:``, an unresolved sibling, or a sibling whose scope is denied
+    (it renders no rows, so there is nothing to omit).
+    """
+    name = getattr(ctx.ir_region, "exclude", None)
+    sibling = ctx.workspace_regions.get(name) if name else None
+    own = getattr(ctx.ir_region, "name", "")
+    if sibling is None or name in _visiting or own in _visiting:
+        return None
+    repo = ctx.repositories.get(sibling.source) if ctx.repositories else None
+    if repo is None:
+        return None
+    sib_filters, denied = _apply_workspace_scope_filters(
+        sibling,
+        user_ctx.auth_ctx_for_filters,
+        user_ctx.user_id,
+        _region_condition_filters(sibling, user_ctx),
+    )
+    if denied:
+        return None
+    nested = _exclusion_filter(sibling, user_ctx, (*_visiting, own))
+    if nested is not None:
+        sib_filters = {**(sib_filters or {}), "id__not_in_subquery": nested}
+    sql, params = repo.list_id_subquery(
+        page_size=_region_row_limit(sibling, None),
+        filters=sib_filters,
+        sort=_default_sort_list(sibling),
+    )
+    return sql, list(params)
+
+
 async def fetch_region_items(
     request: Any,
     ctx: WorkspaceRegionContext,
@@ -220,37 +335,7 @@ async def fetch_region_items(
 
     try:
         # Step 1: filters from IR ConditionExpr (current_user, has_grant, etc.).
-        # Multi-source regions store a per-source filter on `_source_filter`.
-        filters: dict[str, Any] | None = None
-        ir_filter = getattr(ctx, "_source_filter", None) or ctx.ir_region.filter
-        if ir_filter is not None:
-            try:
-                from dazzle.http.runtime.scope_filters import _extract_condition_filters
-
-                filters = {}
-                _extract_condition_filters(
-                    ir_filter,
-                    user_ctx.user_id or "",
-                    filters,
-                    logger,
-                    user_ctx.auth_ctx_for_filters,
-                    # #1304: thread the source entity's FK→target map so a
-                    # multi-hop dotted `current_context` filter (e.g.
-                    # `assessment_event.teaching_group = current_context`)
-                    # resolves to an FK-path subquery instead of a raw dotted
-                    # key the repo can't map (which silently matched all rows).
-                    ref_targets=ctx.entity_ref_targets.get(ctx.source) or {},
-                    context_id=user_ctx.filter_context.get("current_context"),
-                    # #1304: the global entity→FK-map so a 2-hop dotted path
-                    # resolves the *target* entity's FK column correctly
-                    # (`teaching_group` → `teaching_group_id`) rather than
-                    # blindly suffixing `_id` (which broke bare-named FKs).
-                    all_ref_targets=ctx.entity_ref_targets,
-                )
-                if not filters:
-                    filters = None
-            except Exception:
-                logger.warning("Failed to evaluate condition filter", exc_info=True)
+        filters = _region_condition_filters(ctx, user_ctx)
         # #1773: the compiled region `filter:` alone (incl. the resolved
         # `current_context` slice, #1305) — captured before query-param /
         # scope keys are layered on so the aggregate paths can compose it.
@@ -269,14 +354,7 @@ async def fetch_region_items(
         if sort:
             sort_list = [f"-{sort}" if sort_dir == "desc" else sort]
         else:
-            ir_sort = ctx.ir_region.sort
-            if ir_sort:
-                sort_list = [f"-{s.field}" if s.direction == "desc" else s.field for s in ir_sort]
-            elif ctx.surface_default_sort:
-                sort_list = [
-                    f"-{s.field}" if s.direction == "desc" else s.field
-                    for s in ctx.surface_default_sort
-                ]
+            sort_list = _default_sort_list(ctx)
 
         # Step 3: leftover-honest query-param filters + date-range (#566).
         # Leftover ``filter_<enum>=junk`` must not invent empty (oral #72).
@@ -308,11 +386,13 @@ async def fetch_region_items(
         # then the one framework default.
         include_rels = ctx.auto_include
         declared_page_size = getattr(ctx.ir_region, "page_size", None)
-        requested = page_size or declared_page_size or DEFAULT_PAGE_SIZE
-        if ctx.ctx_region.display in ("KANBAN", "BAR_CHART") and not ctx.ctx_region.limit:
-            limit = min(requested, 200) if requested > DEFAULT_PAGE_SIZE else 50
-        else:
-            limit = ctx.ctx_region.limit or requested
+        limit = _region_row_limit(ctx, page_size)
+
+        # #1809: `exclude: <region>` — drop the rows the named sibling region
+        # renders on its first page, as one scope-safe NOT IN over its id query.
+        exclusion = _exclusion_filter(ctx, user_ctx)
+        if exclusion is not None and not scope_denied:
+            filters = {**(filters or {}), "id__not_in_subquery": exclusion}
 
         # Step 6: default-deny — empty result without firing the query.
         if scope_denied:

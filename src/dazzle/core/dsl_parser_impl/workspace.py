@@ -2353,6 +2353,9 @@ class _WorkspaceRegionState:
     limit: int | None = None
     page_size: int | None = None  # #1792 — rows per page with a pager
     columns: list[ir.ColumnSpec] = field(default_factory=list)  # #1792
+    filters_hidden: bool = False  # #1809 — `filters: none`
+    exclude: str | None = None  # #1809 — `exclude: <region>`
+    eager: bool | None = None  # #1814 — `eager: true|false`
     display: ir.DisplayMode = ir.DisplayMode.LIST
     # #1492 default-flip: True until a `display:` keyword is parsed. Carried to
     # ir.WorkspaceRegion.display_unset so the renderer can infer the form for a
@@ -2452,6 +2455,47 @@ def _kw_columns(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
     state.columns = parse_columns_list(parser)
+    parser.skip_newlines()
+
+
+def _kw_filters(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``filters: none`` — hide the list region's filter/search bar (#1809)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    value_tok = parser.expect_identifier_or_keyword()
+    if str(value_tok.value) != "none":
+        raise make_parse_error(
+            f"Unknown filters value {value_tok.value!r}. Expected 'none'.",
+            parser.file,
+            value_tok.line,
+            value_tok.column,
+        )
+    state.filters_hidden = True
+    parser.skip_newlines()
+
+
+def _kw_exclude(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``exclude: <region>`` — omit rows another region on this workspace shows (#1809)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    state.exclude = str(parser.expect_identifier_or_keyword().value)
+    parser.skip_newlines()
+
+
+def _kw_eager(parser: Any, state: _WorkspaceRegionState) -> None:
+    """``eager: true | false`` — override the default fold for this region (#1814)."""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    value_tok = parser.expect_identifier_or_keyword()
+    value = str(value_tok.value).lower()
+    if value not in ("true", "false"):
+        raise make_parse_error(
+            f"eager must be 'true' or 'false'; got {value_tok.value!r}.",
+            parser.file,
+            value_tok.line,
+            value_tok.column,
+        )
+    state.eager = value == "true"
     parser.skip_newlines()
 
 
@@ -3046,6 +3090,9 @@ _WORKSPACE_REGION_IDENT_KEYWORDS: dict[str, KeywordParser[_WorkspaceRegionState]
     "outlier_method": _kw_outlier_method,  # #1470
     "when_empty": _kw_when_empty,  # #1494
     "page_size": kw_page_size,  # #1792
+    "filters": _kw_filters,  # #1809
+    "exclude": _kw_exclude,  # #1809
+    "eager": _kw_eager,  # #1814
 }
 
 
@@ -3103,6 +3150,9 @@ def _build_workspace_region(
         limit=state.limit,
         page_size=state.page_size,  # #1792
         columns=state.columns,  # #1792
+        filters_hidden=state.filters_hidden,  # #1809
+        exclude=state.exclude,  # #1809
+        eager=state.eager,  # #1814
         display=display,
         display_unset=state.display_unset,
         action=state.action,

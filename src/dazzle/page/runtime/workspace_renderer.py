@@ -132,6 +132,9 @@ class RegionContext(BaseModel):
     # no polling. Threaded to the DashboardCard so its HTMX trigger appends
     # `, every Ns`.
     refresh_interval: int | None = None
+    # #1814: per-region eager override from the DSL `eager: true|false`.
+    # None = the workspace's default fold (first `fold_count` regions eager).
+    eager: bool | None = None
     # v0.61.56 (#890): pipeline_steps stages — each entry is a plain
     # dict (label/caption/value). Runtime branch fires one count query
     # per aggregate-shaped value, and renders literal-string values
@@ -171,6 +174,17 @@ class RegionContext(BaseModel):
     primary_action_url: str = ""
     secondary_action_url: str = ""
     audit_enabled: bool = False
+
+
+def region_is_eager(region: RegionContext, index: int, fold_count: int | None) -> bool:
+    """Whether a region's card fetches on load (#1814).
+
+    A region's own ``eager: true|false`` wins; otherwise it is eager while its
+    position is inside the workspace's fold (the first ``fold_count`` regions).
+    """
+    if region.eager is not None:
+        return region.eager
+    return index < (fold_count or 0)
 
 
 class WorkspaceContext(BaseModel):
@@ -531,6 +545,7 @@ def build_workspace_context(
                 css_class=getattr(region, "css_class", None) or "",  # #894
                 eyebrow=getattr(region, "eyebrow", None) or "",  # v0.61.60
                 refresh_interval=getattr(region, "refresh_interval", None),  # #1391
+                eager=getattr(region, "eager", None),  # #1814
                 pipeline_stages=[
                     {
                         "label": s.label,
@@ -833,7 +848,7 @@ def render_workspace_content_typed(
             # Emitted inside the master-detail shell, not as free cards.
             continue
         card_id = f"card-{index}"
-        eager = index < (fold_count or 0)
+        eager = region_is_eager(r, index, fold_count)
         notice_dict = r.notice or {}
         notice = (
             DashboardNotice(

@@ -693,6 +693,7 @@ async def _aggregate_via_groupby(
     filters: dict[str, Any] | None,
     source_entity_spec: Any,
     fk_target_spec: Any | None,
+    top_n: tuple[str, str, int] | None = None,
 ) -> list[dict[str, Any]]:
     """Run the bar-chart distribution as a single GROUP BY query.
 
@@ -713,9 +714,16 @@ async def _aggregate_via_groupby(
 
     ``filters`` is the already-composed scope + where filter dict (built by
     the caller via ``_build_aggregate_filters``).
+
+    ``top_n=(measure_name, "asc" | "desc", n)`` (#1814) keeps the ``n``
+    best-ranked buckets: the same one query, ordered by that measure with
+    ``LIMIT n``.
     """
     if not measures:
         return []
+    rank_kwargs: dict[str, Any] = {}
+    if top_n is not None and top_n[0] in measures:
+        rank_kwargs = {"rank_by": (top_n[0], top_n[1]), "limit": top_n[2]}
 
     first_metric_name = next(iter(measures))
 
@@ -733,6 +741,7 @@ async def _aggregate_via_groupby(
             dimensions=[bucket_dim],
             measures=measures,
             filters=filters or None,
+            **rank_kwargs,
         )
         out: list[dict[str, Any]] = []
         for b in buckets:
@@ -762,6 +771,7 @@ async def _aggregate_via_groupby(
         dimensions=[dim],
         measures=measures,
         filters=filters or None,
+        **rank_kwargs,
     )
 
     out = []
@@ -863,6 +873,7 @@ async def _compute_bucketed_aggregates(
     scope_filters: dict[str, Any] | None = None,
     source_entity: str | None = None,
     region_filters: dict[str, Any] | None = None,
+    top_n: tuple[str, str, int] | None = None,
 ) -> list[dict[str, Any]]:
     """Evaluate aggregate expressions once per bucket — for bar_chart distributions.
 
@@ -899,6 +910,10 @@ async def _compute_bucketed_aggregates(
             bucket enumeration and every aggregate over ``source_entity``;
             cross-entity aggregates skip it (see
             ``_scope_filters_for_aggregate``).
+        top_n: ``(measure_name, "asc" | "desc", n)`` — a ranked region's
+            ``limit:`` (#1814). The fast GROUP BY path orders by the measure
+            and ``LIMIT n``s in SQL; the per-bucket slow path has no single
+            query to cut, so its caller truncates after ranking.
     """
     if not aggregates:
         return []
@@ -977,6 +992,7 @@ async def _compute_bucketed_aggregates(
                     ),
                     source_entity_spec=getattr(agg_repo, "entity_spec", None),
                     fk_target_spec=fk_target,
+                    top_n=top_n,
                 )
                 _apply_derived_to_bucket_rows(aggregates, rows)
                 return rows

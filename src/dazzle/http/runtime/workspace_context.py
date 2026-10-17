@@ -85,6 +85,10 @@ class WorkspaceRegionContext:
     # oral #166 — precomputed Mermaid ER for ``display: diagram``. Empty
     # dumps "No entity relationships" even when Device/Tester refs exist.
     diagram_data: str = ""
+    # #1809 — every region ctx of this workspace by region name, so `exclude:`
+    # can build the named sibling's first-page id query. Wired once after the
+    # workspace's contexts are built (an explicit field, not a registry lookup).
+    workspace_regions: dict[str, "WorkspaceRegionContext"] = field(default_factory=dict)
 
 
 def register_workspace_region_ctxs(

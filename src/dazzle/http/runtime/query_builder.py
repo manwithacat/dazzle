@@ -65,6 +65,7 @@ class FilterOperator(StrEnum):
     ISNULL = "isnull"  # Is null / is not null
     BETWEEN = "between"  # Between two values
     IN_SUBQUERY = "in_subquery"  # IN subquery (for via-check scope rules)
+    NOT_IN_SUBQUERY = "not_in_subquery"  # NOT IN subquery (region `exclude:`, #1809)
 
 
 # Operator mapping to SQL
@@ -216,6 +217,12 @@ class FilterCondition:
             # Value is (subquery_sql, params) tuple
             subquery_sql, subquery_params = self.value
             sql = f"{field_ref} IN ({subquery_sql})"
+            return sql, list(subquery_params)
+
+        elif self.operator == FilterOperator.NOT_IN_SUBQUERY:
+            # Value is (subquery_sql, params) tuple (#1809)
+            subquery_sql, subquery_params = self.value
+            sql = f"{field_ref} NOT IN ({subquery_sql})"
             return sql, list(subquery_params)
 
         else:
@@ -448,7 +455,10 @@ class QueryBuilder:
             select = f"SELECT COUNT(*) FROM {table}"
         else:
             if self.select_fields:
-                base_cols = [quote_identifier(f) for f in self.select_fields]
+                base_cols = [
+                    f"{table}.{quote_identifier(f)}" if self.joins else quote_identifier(f)
+                    for f in self.select_fields
+                ]
             else:
                 base_cols = [f"{table}.*"] if self.joins else ["*"]
             all_cols = base_cols + list(self.extra_select_cols)

@@ -42,6 +42,7 @@ from dazzle.http.runtime.workspace_region_computes import (
     build_insight_inputs,
     build_outlier_flags,
     build_rag_tones,
+    comparison_top_n,
     compute_confirm_action_state,
     compute_filter_columns_and_active,
     compute_kanban_columns,
@@ -259,6 +260,7 @@ async def compute_region_render_inputs(
             bucket_values=kanban_columns or None,
             scope_filters=scope_only_filters,
             source_entity=ctx.source,
+            top_n=comparison_top_n(ctx.ir_region, ctx_region.aggregates, display),  # #1814
             region_filters=region_filters,  # #1773
         )
 
@@ -305,6 +307,7 @@ async def compute_region_render_inputs(
             rank_by=getattr(ctx.ir_region, "rank_by", None) or "",
             order=getattr(ctx.ir_region, "order", "desc"),
             outlier_spec=getattr(ctx.ir_region, "outlier", None) or ComparisonOutlierSpec(),
+            limit=ctx_region.limit,  # #1814
         )
     else:
         comparison_rows = []

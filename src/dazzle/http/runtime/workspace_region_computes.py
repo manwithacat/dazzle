@@ -97,6 +97,22 @@ def build_comparison_rows(
     return rows, max_value
 
 
+def comparison_top_n(
+    region: Any, aggregates: dict[str, Any], display: str
+) -> tuple[str, str, int] | None:
+    """``(measure, order, n)`` for a grouped comparison's ``limit:`` (#1814).
+
+    The ranking measure is ``rank_by`` or, unset, the first aggregate (the one
+    ``build_comparison_inputs`` ranks by). ``None`` when the display is not a
+    comparison, ``limit:`` is unset, or there is no measure to rank by.
+    """
+    limit = getattr(region, "limit", None)
+    if display != "COMPARISON" or not limit or not aggregates:
+        return None
+    measure = getattr(region, "rank_by", None) or next(iter(aggregates))
+    return str(measure), str(getattr(region, "order", "desc")), int(limit)
+
+
 def build_comparison_inputs(
     *,
     group_by: Any,
@@ -106,6 +122,7 @@ def build_comparison_inputs(
     rank_by: str,
     order: str,
     outlier_spec: ComparisonOutlierSpec,
+    limit: int | None = None,
 ) -> tuple[list[dict[str, Any]], float]:
     """Select the comparison data source by mode, then rank (#1470).
 
@@ -117,7 +134,36 @@ def build_comparison_inputs(
     under the grouped title (#1791). Entity-row mode (no ``group_by``): rank
     the scoped list ``items`` by the numeric ``rank_by`` field, labelling by the
     first non-metric column and surfacing the remaining columns as ``columns``.
+
+    ``limit`` (#1814) is top-N *after* ranking: the league keeps the ``limit``
+    best-ranked rows. Group mode already arrives cut in SQL when the ranking
+    measure is a plain aggregate; this cut covers the per-bucket and derived
+    measures, and the entity-row source (whose query is ordered by ``rank_by``).
     """
+    rows, max_value = _rank_comparison(
+        group_by=group_by,
+        bucketed_metrics=bucketed_metrics,
+        items=items,
+        columns=columns,
+        rank_by=rank_by,
+        order=order,
+        outlier_spec=outlier_spec,
+    )
+    if limit and len(rows) > limit:
+        rows = rows[:limit]
+    return rows, max_value
+
+
+def _rank_comparison(
+    *,
+    group_by: Any,
+    bucketed_metrics: list[dict[str, Any]],
+    items: list[dict[str, Any]],
+    columns: list[dict[str, Any]],
+    rank_by: str,
+    order: str,
+    outlier_spec: ComparisonOutlierSpec,
+) -> tuple[list[dict[str, Any]], float]:
     if group_by:
         records = [
             {

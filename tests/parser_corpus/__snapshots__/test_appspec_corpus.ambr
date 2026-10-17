@@ -392,6 +392,7 @@
             dict({
               'date_range': False,
               'display': 'list',
+              'filters_hidden': False,
               'name': 'sidebar',
               'order': 'desc',
               'source': 'Task',
@@ -409,6 +410,7 @@
                   }),
                 }),
               }),
+              'filters_hidden': False,
               'name': 'main',
               'order': 'desc',
               'source': 'Task',
@@ -438,6 +440,7 @@
                   }),
                 }),
               }),
+              'filters_hidden': False,
               'name': 'main',
               'order': 'desc',
               'source': 'Task',

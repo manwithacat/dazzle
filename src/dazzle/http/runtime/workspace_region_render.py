@@ -496,6 +496,10 @@ def _build_list_adapter_ctx(
         adapter_ctx["filter_columns"] = inputs.filter_columns
         adapter_ctx["active_filters"] = inputs.active_filters
         _apply_list_search_chrome(adapter_ctx, ctx, env.request)
+        if getattr(ctx.ir_region, "filters_hidden", False):
+            # #1809: `filters: none` — no filter bar, no find-by-title box.
+            adapter_ctx["filter_columns"] = []
+            adapter_ctx["search_fields"] = []
         adapter_ctx["date_range"] = getattr(ctx_region, "date_range", False)
         adapter_ctx["date_field"] = getattr(ctx_region, "date_field", "")
         adapter_ctx["date_from"] = leftover_honest_iso_date(

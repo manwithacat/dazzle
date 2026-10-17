@@ -1139,6 +1139,32 @@ class Repository[T: BaseModel]:
 
         return bool(rowcount and rowcount > 0)
 
+    def list_id_subquery(
+        self,
+        *,
+        page_size: int,
+        filters: dict[str, Any] | None = None,
+        sort: str | list[str] | None = None,
+    ) -> tuple[str, list[Any]]:
+        """``SELECT id`` for the first ``page_size`` rows ``list`` would return (#1809).
+
+        Same row-lifecycle filters, filters, sort and subtype JOIN as ``list``,
+        returned as ``(sql, params)`` for an ``id__in_subquery`` /
+        ``id__not_in_subquery`` filter on another query — so a region's
+        ``exclude:`` is one statement, never a fetch-then-filter round trip.
+        """
+        builder = QueryBuilder(table_name=self.table_name, placeholder_style=self.db.placeholder)
+        builder.select_fields = ["id"]
+        builder.set_pagination(1, page_size)
+        effective_filters, _as_of = self._row_lifecycle_filters(filters)
+        if effective_filters:
+            builder.add_filters(effective_filters)
+        if sort:
+            builder.add_sorts(sort)
+        if self._subtype_join_sql is not None:
+            builder.joins.append(self._subtype_join_sql)
+        return builder.build_select()
+
     def _row_lifecycle_filters(self, filters: dict[str, Any] | None) -> tuple[dict[str, Any], Any]:
         """Add the row-lifecycle filters every multi-row read applies.
 
@@ -1400,6 +1426,7 @@ class Repository[T: BaseModel]:
         limit: int = 200,
         measure_expressions: dict[str, tuple[str, _list[Any]]] | None = None,
         measure_windows: dict[str, Any] | None = None,
+        rank_by: tuple[str, str] | None = None,
     ) -> _list[Any]:
         """Run a single multi-dimension GROUP BY aggregation against this entity.
 
@@ -1428,6 +1455,8 @@ class Repository[T: BaseModel]:
                 ``QueryBuilder.add_filters`` so the scope predicate
                 applies pre-GROUP BY.
             limit: Cap the number of buckets returned. Default 200.
+            rank_by: ``(measure_name, "asc" | "desc")`` — order buckets by that
+                measure before ``limit`` cuts, i.e. top-N (#1814).
 
         Returns:
             List of :class:`AggregateBucket` records with ``dimensions``
@@ -1456,6 +1485,7 @@ class Repository[T: BaseModel]:
                 limit=limit,
                 measure_expressions=measure_expressions,
                 measure_windows=measure_windows,
+                rank_by=rank_by,
             )
             if not sql:
                 return []

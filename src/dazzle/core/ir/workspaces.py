@@ -865,6 +865,16 @@ class WorkspaceRegion(BaseModel):
     # Order is authoritative and only the named fields render; empty = the
     # framework's column heuristic (fitness.repr_fields / list surface / entity).
     columns: list[ColumnSpec] = Field(default_factory=list)
+    # #1809: `filters: none` hides a list region's filter/search bar. Explicit
+    # only — never implied by `page_size:`. False = the framework's bar.
+    filters_hidden: bool = False
+    # #1809: `exclude: <region>` — omit the rows the named SAME-workspace region
+    # (same source entity) renders on its first page. One scope-safe
+    # `id NOT IN (<that region's first-page id query>)`.
+    exclude: str | None = None
+    # #1814: per-region eager override. None = the default fold (first three
+    # regions eager, the rest `intersect once`); True/False force it.
+    eager: bool | None = None
     display: DisplayMode = DisplayMode.LIST
     # #1492 default-flip: render-time discriminator for "the author did not
     # choose a display mode" vs "the author explicitly wrote `display: list`".

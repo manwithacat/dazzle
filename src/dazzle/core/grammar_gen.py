@@ -764,6 +764,9 @@ region_directive
                 | "limit" ":" NUMBER NEWLINE             (* row cap, no pager *)
                 | "page_size" ":" NUMBER NEWLINE         (* #1792: rows per page + pager, 1..100 *)
                 | "columns" ":" region_column ("," region_column)* NEWLINE   (* #1792 *)
+                | "filters" ":" "none" NEWLINE           (* #1809: hide the list filter/search bar *)
+                | "exclude" ":" IDENT NEWLINE            (* #1809: omit rows that region shows on its first page *)
+                | "eager" ":" ("true" | "false") NEWLINE (* #1814: override the default fold *)
                 | "display" ":" ("list" | "grid" | "timeline" | "map" | "detail") NEWLINE
                 | "action" ":" IDENT NEWLINE
                 | "empty" ":" STRING NEWLINE

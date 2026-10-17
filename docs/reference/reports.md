@@ -240,6 +240,8 @@ Then:
 
 **Every column next to the FK label JOIN is qualified (#1791).** A `group_by: <fk>` region LEFT JOINs the target to label its buckets, so the target's columns are in scope too. Measure columns (`avg(score)` → `AVG("Source"."score")`) and region `filter:` columns (`department = current_context` → `"Source"."department" = %s`) are always qualified with the source table, so a target that shares a column name with the source never makes the grouped query ambiguous. A grouped `comparison` whose query returns no buckets renders its `empty:` state, never the raw source rows.
 
+**`limit:` on a `comparison` is top-N after ranking (#1814).** A grouped league's `limit: 5` keeps the five best-ranked buckets: the one `GROUP BY` query is `ORDER BY` the ranking measure (`rank_by:`, else the first aggregate; `order:` sets the direction, NULL buckets are dropped in SQL) with `LIMIT 5` — never an N+1. A derived or per-bucket ranking measure is cut after ranking instead. A row-mode league (no `group_by:`) orders its list query by `rank_by:` so the cut keeps the best rows.
+
 Every scope shape `_resolve_predicate_filters` emits is aggregate-safe: direct field equality, FK-path subqueries, EXISTS / NOT EXISTS junctions, boolean compositions. Predicates that reference the GROUP BY relation itself (post-join) would need a separate code path — not supported today.
 
 ## Debugging: `dazzle db explain-aggregate`
