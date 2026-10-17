@@ -190,8 +190,25 @@ def resolve_fk_display_field(target_entity_spec: Any) -> str | None:
     return None
 
 
-def measure_to_sql(measure: str) -> str | None:
+def _measure_column(column: str, src: str | None) -> str:
+    """Quote a measure column, qualified with the source table when given.
+
+    FK dimensions LEFT JOIN their target table; when the target shares a
+    column name with the source (``Klass.score`` next to
+    ``CohortAnalysis.score``) a bare ``AVG("score")`` is ambiguous and the
+    whole grouped query fails (#1791).
+    """
+    quoted = quote_identifier(column)
+    return f"{src}.{quoted}" if src else quoted
+
+
+def measure_to_sql(measure: str, *, src: str | None = None) -> str | None:
     """Convert a measure spec to its SQL aggregate, or None when unsupported.
+
+    ``src`` is the already-quoted source table; when given, column
+    measures are qualified with it (``AVG("Task"."score")``). The
+    grouped-aggregate builder always passes it (#1791); callers that only
+    need the supported/unsupported answer may omit it.
 
     Examples:
         ``"count"`` → ``"COUNT(*)"``
@@ -207,9 +224,11 @@ def measure_to_sql(measure: str) -> str | None:
         if op == "ratio":
             num, _, den = rest.partition(":")
             if num and den and ":" not in num and ":" not in den:
-                return f"(SUM({quote_identifier(num)}) / NULLIF(SUM({quote_identifier(den)}), 0))"
+                n = _measure_column(num, src)
+                d = _measure_column(den, src)
+                return f"(SUM({n}) / NULLIF(SUM({d}), 0))"
         if op in _UNARY_MEASURES and rest:
-            return f"{op.upper()}({quote_identifier(rest)})"
+            return f"{op.upper()}({_measure_column(rest, src)})"
     return None
 
 
@@ -234,19 +253,22 @@ def _window_predicate_sql(src: str, window: MeasureWindow) -> str:
     )
 
 
-def _windowed_measure_sql(expr: str, pred: str) -> str | None:
-    """Wrap a measure spec so it only counts rows matching ``pred``."""
+def _windowed_measure_sql(expr: str, pred: str, *, src: str | None = None) -> str | None:
+    """Wrap a measure spec so it only counts rows matching ``pred``.
+
+    ``src`` qualifies the measure columns exactly as in :func:`measure_to_sql`.
+    """
     if expr.startswith("ratio:"):
         _, _, rest = expr.partition(":")
         num, _, den = rest.partition(":")
         if not (num and den) or ":" in num or ":" in den:
             return None
-        n = quote_identifier(num)
-        d = quote_identifier(den)
+        n = _measure_column(num, src)
+        d = _measure_column(den, src)
         return (
             f"(SUM(CASE WHEN {pred} THEN {n} END) / NULLIF(SUM(CASE WHEN {pred} THEN {d} END), 0))"
         )
-    sql = measure_to_sql(expr)
+    sql = measure_to_sql(expr, src=src)
     if sql is None:
         return None
     func, _, rest = sql.partition("(")
@@ -358,9 +380,25 @@ def _build_aggregate_sql_impl(
 ) -> tuple[str, list[Any]]:
     src = quote_identifier(table_name)
 
+    # FK dimensions LEFT JOIN their target to label the buckets. Indexed
+    # aliases (``fk_0``, ``fk_1``, ...) guard against two dimensions that
+    # reference the same target table. Built before the WHERE because the
+    # joins depend only on ``dimensions`` and ``src``.
+    fk_joins: list[str] = [
+        f"LEFT JOIN {quote_identifier(dim.fk_table or '')} fk_{i} "
+        f"ON {src}.{quote_identifier(dim.name)} = fk_{i}.{quote_identifier('id')}"
+        for i, dim in enumerate(dimensions)
+        if dim.has_fk_join
+    ]
+
     # WHERE via QueryBuilder so __scope_predicate + standard filters
-    # parse the same way the repository.list path uses them.
+    # parse the same way the repository.list path uses them. Registering
+    # the FK joins on the builder engages its #871 qualification: bare
+    # filter columns (a region ``filter: department = current_context``)
+    # become ``<src>.<col>`` so they stay unambiguous when the joined
+    # target has a column of the same name (#1791).
     builder = QueryBuilder(table_name=table_name, placeholder_style=placeholder_style)
+    builder.joins.extend(fk_joins)
     if filters:
         builder.add_filters(filters)
     where_sql, where_params = builder.build_where_clause()
@@ -394,7 +432,11 @@ def _build_aggregate_sql_impl(
             # Fall through — unrecognised L3 outer func is silently dropped,
             # mirroring the legacy measure_to_sql behaviour.
             continue
-        sql = _windowed_measure_sql(expr, pred) if pred is not None else measure_to_sql(expr)
+        sql = (
+            _windowed_measure_sql(expr, pred, src=src)
+            if pred is not None
+            else measure_to_sql(expr, src=src)
+        )
         if sql is None:
             continue
         measure_sql_parts.append(f"{sql} AS {quote_identifier(metric_name)}")
@@ -428,10 +470,9 @@ def _build_aggregate_sql_impl(
             sql = f"{cte_sql} {sql}"
         return sql, leading_params + trailing_where_params
 
-    # Per-dimension SELECT + GROUP BY + ORDER BY parts. Indexed aliases
-    # for FK joins guard against duplicate-target collisions.
+    # Per-dimension SELECT + GROUP BY + ORDER BY parts; FK dimensions read
+    # their label through the ``fk_<i>`` join registered above.
     select_parts: list[str] = []
-    join_parts: list[str] = []
     group_parts: list[str] = []
     order_parts: list[str] = []
     for i, dim in enumerate(dimensions):
@@ -452,14 +493,9 @@ def _build_aggregate_sql_impl(
             select_parts.append(f"{src}.{col_q} AS {id_alias}")
             group_parts.append(f"{src}.{col_q}")
             fk_alias = f"fk_{i}"
-            fk_t = quote_identifier(dim.fk_table or "")
             fk_disp_q = quote_identifier(dim.fk_display_field or "")
             label_alias = quote_identifier(f"dim_{i}_label")
             select_parts.append(f"{fk_alias}.{fk_disp_q} AS {label_alias}")
-            join_parts.append(
-                f"LEFT JOIN {fk_t} {fk_alias} "
-                f"ON {src}.{col_q} = {fk_alias}.{quote_identifier('id')}"
-            )
             group_parts.append(f"{fk_alias}.{fk_disp_q}")
             # Order by label when joined — easier to read in chart/table.
             order_parts.append(f"{fk_alias}.{fk_disp_q} NULLS LAST")
@@ -471,8 +507,8 @@ def _build_aggregate_sql_impl(
     select_parts.extend(measure_sql_parts)
 
     from_clause = f"FROM {from_src}"
-    if join_parts:
-        from_clause += " " + " ".join(join_parts)
+    if fk_joins:
+        from_clause += " " + " ".join(fk_joins)
 
     sql_parts = [f"SELECT {', '.join(select_parts)}", from_clause]
     if where_sql:

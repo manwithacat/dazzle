@@ -108,8 +108,8 @@ def test_monday_window_and_ratio_sql_contract() -> None:
     )
     assert "date_trunc('week', _anchor.last_at)" in sql
     assert "MAX(" in sql
-    assert 'THEN "value_delta"' in sql
-    assert 'THEN "elapsed_hours"' in sql
+    assert 'THEN "Reading"."value_delta"' in sql
+    assert 'THEN "Reading"."elapsed_hours"' in sql
     assert "NULLIF" in sql
     assert sql.count("WITH _anchor") == 1
 

@@ -111,6 +111,45 @@ def test_inputs_entity_row_mode() -> None:
     assert rows[0]["columns"] == {"owner": "Lee"}  # label=name, value=score, extra=owner
 
 
+def test_inputs_group_mode_empty_buckets_never_fall_back_to_rows() -> None:
+    # #1791: a failed / scope-denied / empty grouped query yields no buckets.
+    # Group mode stays authoritative → [] so the region renders its `empty:`
+    # state, never the raw source rows (FK dicts) ranked under the grouped title.
+    items = [
+        {"klass": {"id": "k1", "__display__": "7A"}, "score": 10},
+        {"klass": {"id": "k2", "__display__": "7B"}, "score": 30},
+    ]
+    rows, mx = build_comparison_inputs(
+        group_by="klass",
+        bucketed_metrics=[],
+        items=items,
+        columns=[{"key": "klass"}, {"key": "score"}],
+        rank_by="mean_score",
+        order="desc",
+        outlier_spec=ComparisonOutlierSpec(method="none"),
+    )
+    assert rows == [] and mx == 0.0
+
+
+def test_inputs_entity_row_mode_fk_label_uses_display_name() -> None:
+    # #1791: an FK label column is the hydrated relation dict — label it by
+    # its display name, never `str(dict)` ("{'id': UUID(...), ...}").
+    items = [
+        {"klass": {"id": "k1", "__display__": "7A"}, "score": 10},
+        {"klass": {"id": "k2", "__display__": "7B"}, "score": 30},
+    ]
+    rows, _ = build_comparison_inputs(
+        group_by=None,
+        bucketed_metrics=[],
+        items=items,
+        columns=[{"key": "klass"}, {"key": "score"}],
+        rank_by="score",
+        order="desc",
+        outlier_spec=ComparisonOutlierSpec(method="none"),
+    )
+    assert [r["label"] for r in rows] == ["7B", "7A"]
+
+
 def test_empty_records() -> None:
     rows, mx = build_comparison_rows(
         [],

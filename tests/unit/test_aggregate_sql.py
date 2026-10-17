@@ -43,6 +43,7 @@ def test_measure_to_sql_combined() -> None:
     - quoted column for unary aggregators (sum/avg/min/max)
     - None for unsupported / malformed inputs
     - quote_identifier doubles up embedded quotes (injection-safe)
+    - ``src=`` qualifies every measure column with the source table (#1791)
     """
     # Aggregators
     assert measure_to_sql("count") == "COUNT(*)"
@@ -53,6 +54,14 @@ def test_measure_to_sql_combined() -> None:
     assert measure_to_sql("ratio:value_delta:elapsed_hours") == (
         '(SUM("value_delta") / NULLIF(SUM("elapsed_hours"), 0))'
     )
+    # Qualified with the source table (#1791) — ``src`` is pre-quoted.
+    src = '"CohortAnalysis"'
+    assert measure_to_sql("count", src=src) == "COUNT(*)"
+    assert measure_to_sql("avg:score", src=src) == 'AVG("CohortAnalysis"."score")'
+    assert measure_to_sql("ratio:value_delta:elapsed_hours", src=src) == (
+        '(SUM("CohortAnalysis"."value_delta") / NULLIF(SUM("CohortAnalysis"."elapsed_hours"), 0))'
+    )
+    assert measure_to_sql("median:score", src=src) is None
     # Unsupported/malformed
     assert measure_to_sql("median:score") is None
     assert measure_to_sql("count:score") is None  # count takes no arg
@@ -207,6 +216,24 @@ class TestBuildAggregateSQLSingleDim:
         assert 'GROUP BY "MarkingResult"."assessment_objective", fk_0."label"' in sql
         assert 'ORDER BY fk_0."label" NULLS LAST' in sql
 
+    def test_fk_join_qualifies_measure_and_filter_columns(self) -> None:
+        """#1791: the FK target may share column names with the source
+        (``Klass.department`` / ``Klass.mean_raw_score``). Measures and region
+        filter columns must be qualified with the source table, else Postgres
+        raises ``column reference ... is ambiguous`` and the region falls back."""
+        sql, params = build_aggregate_sql(
+            table_name="CohortAnalysis",
+            placeholder_style="%s",
+            dimensions=[Dimension(name="klass", fk_table="Klass", fk_display_field="name")],
+            measures={"mean": "avg:mean_raw_score"},
+            filters={"department": "dept-1"},
+        )
+        assert 'AVG("CohortAnalysis"."mean_raw_score") AS "mean"' in sql
+        assert 'WHERE "CohortAnalysis"."department" = %s' in sql
+        assert 'LEFT JOIN "Klass" fk_0 ON "CohortAnalysis"."klass" = fk_0."id"' in sql
+        assert sql.count("LEFT JOIN") == 1
+        assert params == ["dept-1"]
+
     def test_filters_threaded_through_query_builder(self) -> None:
         sql, params = build_aggregate_sql(
             table_name="Manuscript",
@@ -245,7 +272,7 @@ class TestBuildAggregateSQLSingleDim:
             filters=None,
         )
         assert 'COUNT(*) AS "count"' in sql
-        assert 'AVG("score") AS "avg_score"' in sql
+        assert 'AVG("Manuscript"."score") AS "avg_score"' in sql
 
     def test_no_supported_measures_returns_empty(self) -> None:
         sql, params = build_aggregate_sql(
@@ -282,7 +309,7 @@ class TestBuildAggregateSQLSingleDim:
 
     def test_no_dimensions_avg_field_emits_correct_sql(self) -> None:
         """#904 canonical repro — `avg(score)` over a column with no
-        dimensions must produce `SELECT AVG("score") FROM "MarkingResult"`."""
+        dimensions must produce `SELECT AVG("MarkingResult"."score") FROM "MarkingResult"`."""
         sql, params = build_aggregate_sql(
             table_name="MarkingResult",
             placeholder_style="%s",
@@ -723,7 +750,7 @@ class TestWindowedMeasures1674:
         assert '"Reading"."taken_at"::timestamptz >= date_trunc(\'week\', _anchor.last_at)' in sql
         assert '"Reading"."taken_at"::timestamptz <= _anchor.last_at' in sql
         assert "SUM(CASE WHEN" in sql
-        assert 'THEN "value_delta" END) AS "kwh"' in sql
+        assert 'THEN "Reading"."value_delta" END) AS "kwh"' in sql
         # CTE WHERE + outer WHERE share the same scope bind.
         assert params == ["t-1", "t-1"]
         assert '"Reading"."tenant_id" = %s' in sql
@@ -764,7 +791,9 @@ class TestWindowedMeasures1674:
             measures={"avg_kw": "ratio:value_delta:elapsed_hours"},
             filters=None,
         )
-        assert ('(SUM("value_delta") / NULLIF(SUM("elapsed_hours"), 0)) AS "avg_kw"') in sql
+        assert (
+            '(SUM("Reading"."value_delta") / NULLIF(SUM("Reading"."elapsed_hours"), 0)) AS "avg_kw"'
+        ) in sql
         assert "WITH _anchor" not in sql
 
     def test_windowed_ratio_wraps_both_sums(self) -> None:
@@ -779,8 +808,8 @@ class TestWindowedMeasures1674:
             },
         )
         assert "SUM(CASE WHEN" in sql
-        assert 'THEN "value_delta" END)' in sql
-        assert 'THEN "elapsed_hours" END)' in sql
+        assert 'THEN "Reading"."value_delta" END)' in sql
+        assert 'THEN "Reading"."elapsed_hours" END)' in sql
         assert "NULLIF" in sql
         assert "date_trunc('week'" in sql
 

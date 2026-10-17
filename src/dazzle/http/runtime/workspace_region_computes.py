@@ -23,6 +23,7 @@ from dazzle.http.runtime.workspace_card_data import (
     _resolve_path,
 )
 from dazzle.render.diagram_mermaid import compute_diagram_data as compute_diagram_data
+from dazzle.render.display_names import _resolve_display_name
 from dazzle.render.filters import clerk_stage_label
 from dazzle.render.fragment.insight import (
     InsightNarrative,
@@ -84,7 +85,9 @@ def build_comparison_rows(
         rows.append(
             {
                 "rank": rank,
-                "label": str(rec.get(label_key, "") or ""),
+                # An FK label column holds the hydrated relation dict
+                # ``{"id": …, "__display__": …}`` — never ``str()`` it (#1791).
+                "label": _resolve_display_name(rec.get(label_key)),
                 "value": value,
                 "bar_fraction": fraction,
                 "columns": {k: rec.get(k) for k in extra_keys},
@@ -106,13 +109,16 @@ def build_comparison_inputs(
 ) -> tuple[list[dict[str, Any]], float]:
     """Select the comparison data source by mode, then rank (#1470).
 
-    Group mode (``group_by`` + buckets): rank by the named aggregate, pulling it
+    Group mode (``group_by`` set): rank by the named aggregate, pulling it
     from each bucket's ``metrics`` (falling back to the primary ``value``).
-    Entity-row mode: rank the scoped list ``items`` by the numeric ``rank_by``
-    field, labelling by the first non-metric column and surfacing the remaining
-    columns as ``columns``.
+    Group mode is authoritative — an empty bucket list (no rows, scope-denied,
+    or a failed grouped query, which the aggregation layer logs) yields no
+    rows so the region renders its ``empty:`` state, never the raw source rows
+    under the grouped title (#1791). Entity-row mode (no ``group_by``): rank
+    the scoped list ``items`` by the numeric ``rank_by`` field, labelling by the
+    first non-metric column and surfacing the remaining columns as ``columns``.
     """
-    if group_by and bucketed_metrics:
+    if group_by:
         records = [
             {
                 "label": b.get("label"),

@@ -200,6 +200,8 @@ Then:
 
 **The region `filter:` applies too (#1773).** Every aggregate over the region's own `source:` entity — metric tiles, `bar_chart` / `comparison` buckets, `pivot_table` cells — is ANDed with the compiled region `filter:` on top of scope, so the numbers count the rows the region lists. Scope is never replaced by the filter. An aggregate over a *different* entity (`count(Note)` on an `Invoice` region) can't take the filter (its columns live on the source); `dazzle lint` warns (`W_REGION_FILTER_NOT_ON_AGGREGATE`) — give it its own `where`. Aggregate `where` clauses compile to typed SQL, so `x != null` is `IS NOT NULL` (#1774).
 
+**Every column next to the FK label JOIN is qualified (#1791).** A `group_by: <fk>` region LEFT JOINs the target to label its buckets, so the target's columns are in scope too. Measure columns (`avg(score)` → `AVG("Source"."score")`) and region `filter:` columns (`department = current_context` → `"Source"."department" = %s`) are always qualified with the source table, so a target that shares a column name with the source never makes the grouped query ambiguous. A grouped `comparison` whose query returns no buckets renders its `empty:` state, never the raw source rows.
+
 Every scope shape `_resolve_predicate_filters` emits is aggregate-safe: direct field equality, FK-path subqueries, EXISTS / NOT EXISTS junctions, boolean compositions. Predicates that reference the GROUP BY relation itself (post-join) would need a separate code path — not supported today.
 
 ## Debugging: `dazzle db explain-aggregate`

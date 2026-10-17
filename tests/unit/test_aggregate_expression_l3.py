@@ -340,5 +340,5 @@ def test_build_aggregate_sql_legacy_path_still_works() -> None:
         measures={"primary": "avg:score"},
         filters=None,
     )
-    assert 'AVG("score")' in sql
+    assert 'AVG("task"."score")' in sql
     assert params == []
