@@ -907,6 +907,18 @@ select.dz-filter-select {
   text-overflow: ellipsis;
 }
 
+/* Ref cells reuse the truncate wrapper (#1792). A person chip ellipsizes its
+   own name (.dz-user-chip__name); its hover-card panel is absolutely placed
+   inside the wrapper, so the wrapper must not clip it — the chip and the
+   hover-card root are held to the column width instead. */
+.dz-tr-cell-truncate:has(.dz-hover-card) {
+  overflow: visible;
+}
+
+.dz-tr-cell-truncate > .dz-hover-card {
+  max-width: 100%;
+}
+
 /* Date/datetime (and common temporal col keys): never ellipsize calendar days
    (fleet/humanqa: "21 Jul 20…"). Covers display wrapper AND truncate child. */
 .dz-tr-cell[data-dz-kind="date"] .dz-tr-cell-truncate,

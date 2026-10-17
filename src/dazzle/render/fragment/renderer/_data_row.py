@@ -224,6 +224,55 @@ def _json_summary(value: Any, *, max_pairs: int = 4, length: int = 80) -> str:
     return text[:length] + "…" if len(text) > length else text
 
 
+def _render_ref_cell(
+    col: dict[str, Any],
+    value: Any,
+    *,
+    ref_display: Any = None,
+    truncate: bool = True,
+) -> str:
+    """The one ``ref`` cell builder for list rows and the detail seam (#1792 U18).
+
+    Person-like refs (User, ``assigned_to``, …) emit the Avatar hyperpart chip
+    (``dazzle.render.user_chip``; opt out with ``avatar: false``); every other
+    ref emits its display name — the relation loader's ``<key>_display`` when
+    supplied (*ref_display*), else the hydrated dict's name, else the raw value.
+
+    ``truncate`` (list cells) wraps the result in ``dz-tr-cell-truncate`` like
+    a text cell so a long display name ellipsizes against the fixed-layout
+    column instead of wrapping the row to many lines. A plain name carries the
+    full value in ``title=``; a chip already carries it on ``.dz-user-chip``
+    and its hover card (if any) must not be clipped, so the chip wrapper is a
+    ``div`` HM lets overflow (``.dz-tr-cell-truncate:has(.dz-hover-card)``).
+    """
+    chip_probe = value if isinstance(value, dict) else {"name": str(ref_display or value or "")}
+    if looks_like_person_ref(chip_probe, col):
+        if isinstance(value, dict):
+            chip_val: Any = value
+        elif ref_display not in (None, ""):
+            chip_val = {"name": str(ref_display), "id": value}
+        else:
+            chip_val = value
+        chip = render_user_chip_linked_html(chip_val, col)
+        if chip:
+            if truncate and chip != "—":
+                return f'<div class="dz-tr-cell-truncate">{chip}</div>'
+            return chip
+    if ref_display not in (None, ""):
+        name = str(ref_display)
+    elif isinstance(value, dict):
+        name = _ref_display_name(value)
+    else:
+        name = str(value or "")
+    name_html = _html_mod.escape(name, quote=False)
+    if not truncate or not name:
+        return name_html
+    return (
+        f'<span class="dz-tr-cell-truncate" title="{_html_mod.escape(name, quote=True)}">'
+        f"{name_html}</span>"
+    )
+
+
 def _render_cell_display(
     col: dict[str, Any],
     value: Any,
@@ -231,6 +280,7 @@ def _render_cell_display(
     truncate: bool = True,
     entity_name: str = "",
     record_id: str = "",
+    ref_display: Any = None,
 ) -> str:
     """Render the display-mode value for one table cell.
 
@@ -241,7 +291,11 @@ def _render_cell_display(
     form-typed values) stop leaking raw ISO / `True` / full-precision
     floats / mangled JSON.
 
-    ``truncate`` is consulted ONLY by the default text branch (#1533):
+    ``ref_display`` is the relation loader's ``<key>_display`` companion for a
+    ``ref`` column (#1792 U18 — consumed only by :func:`_render_ref_cell`).
+
+    ``truncate`` is consulted by the default text branch (#1533) and the
+    ``ref`` branch (#1792 U18):
     list cells clip prose to a scannable width; a detail page's whole
     job is the full record, so its seam passes ``truncate=False`` and
     the value renders whole in a ``dz-detail-text`` wrapper
@@ -314,20 +368,7 @@ def _render_cell_display(
             return "****"
         return ""
     if col_type == "ref":
-        # Prefer explicit `_display` column; otherwise resolve the dict.
-        # Person-like refs (User, assigned_to, …) emit Avatar hyperpart chip
-        # by default (``dazzle.render.user_chip``); opt-out via avatar:false.
-        explicit = ""
-        # The caller supplies the row item; the column-level display
-        # column key is `<col.key>_display` per legacy convention. Look
-        # up the original `value` and the explicit pair.
-        if looks_like_person_ref(value if value is not None else {}, col):
-            chip = render_user_chip_linked_html(value, col)
-            if chip:
-                return chip
-        if isinstance(value, dict):
-            return _html_mod.escape(_ref_display_name(value), quote=False)
-        return _html_mod.escape(explicit or str(value or ""), quote=False)
+        return _render_ref_cell(col, value, ref_display=ref_display, truncate=truncate)
     if col_type in ("percentage", "percent_points"):
         if value is None:
             return "—"
@@ -728,41 +769,16 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         if col_type in ("currency", "percentage"):
             cell_classes += " is-numeric"
         cell_value = item.get(col_key)
-        # For ref columns, prefer an explicit `<key>_display` value the
-        # relation loader may have injected, else resolve via dict shape.
-        # Person-like refs still emit Avatar chips when only a display string
-        # is present (cycle 1363: do not short-circuit past user_chip).
-        if col_type == "ref":
-            explicit = item.get(f"{col_key}_display")
-            chip_probe = (
-                cell_value
-                if isinstance(cell_value, dict)
-                else {"name": str(explicit or cell_value or "")}
-            )
-            if looks_like_person_ref(chip_probe if chip_probe is not None else {}, col):
-                if isinstance(cell_value, dict):
-                    chip_val: Any = cell_value
-                elif explicit not in (None, ""):
-                    chip_val = {"name": str(explicit), "id": cell_value}
-                else:
-                    chip_val = cell_value
-                # Linked when ref_route present (parity with workspace region path).
-                chip = render_user_chip_linked_html(chip_val, col)
-                display_html = (
-                    chip
-                    if chip
-                    else _html_mod.escape(str(explicit or cell_value or ""), quote=False)
-                )
-            elif explicit not in (None, ""):
-                display_html = _html_mod.escape(str(explicit), quote=False)
-            else:
-                display_html = _render_cell_display(
-                    display_col, cell_value, entity_name=entity_name, record_id=item_id
-                )
-        else:
-            display_html = _render_cell_display(
-                display_col, cell_value, entity_name=entity_name, record_id=item_id
-            )
+        # #1792 U18: ref cells (chip or display name) go through the same
+        # `_render_cell_display` → `_render_ref_cell` core as every other type;
+        # the relation loader's `<key>_display` companion rides along.
+        display_html = _render_cell_display(
+            display_col,
+            cell_value,
+            entity_name=entity_name,
+            record_id=item_id,
+            ref_display=item.get(f"{col_key}_display") if col_type == "ref" else None,
+        )
 
         if col_key in inline_editable:
             # Convergence C2.3: the CELL owns its edit affordance — one seam

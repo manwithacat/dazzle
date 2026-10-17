@@ -17,6 +17,7 @@ from dazzle.http.runtime.auth import AuthMiddleware
 from dazzle.http.runtime.scope_filters import _extract_condition_filters
 from dazzle.http.runtime.workspace_columns import (
     _fitness_repr_field_names,
+    media_thumbs_for_display,
 )
 from dazzle.http.runtime.workspace_columns import (
     build_entity_columns as _build_entity_columns,
@@ -232,16 +233,18 @@ class WorkspaceRouteBuilder:
 
                 Authors must put identifying fields in repr (e.g. Ticket
                 ``ticket_number`` — #1304 / cycle 1926). LIST surface is used
-                only when fitness is unset. ``display`` is reserved for future
-                shape-specific overrides.
+                only when fitness is unset. ``display`` gates media (#1792
+                U5): image/file fields are auto-derived only for card-like
+                displays (``CARD_LIKE_DISPLAYS``); a list/queue region shows
+                them only when repr or the list surface names them.
                 """
-                del display  # reserved; fitness is authoritative when set
+                media_thumbs = media_thumbs_for_display(display)
                 if entity_spec and _fitness_repr_field_names(entity_spec):
-                    return _build_entity_columns(entity_spec)
+                    return _build_entity_columns(entity_spec, media_thumbs=media_thumbs)
                 _ls = _entity_list_surfaces.get(entity_name)
                 if _ls and entity_spec:
                     return _build_surface_columns(entity_spec, _ls)
-                return _build_entity_columns(entity_spec)
+                return _build_entity_columns(entity_spec, media_thumbs=media_thumbs)
 
             for workspace in workspaces:
                 ws_ctx = build_workspace_context(workspace, appspec)

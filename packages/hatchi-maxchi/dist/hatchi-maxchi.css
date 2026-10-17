@@ -4590,6 +4590,9 @@ input.switch:checked::before {
 }
 
 .user-chip__name {
+  /* flex item: without min-width 0 it never shrinks below the name, so the
+     ellipsis below never fires and the chip overflows its cell (#1792). */
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -7628,6 +7631,18 @@ select.filter-select {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Ref cells reuse the truncate wrapper (#1792). A person chip ellipsizes its
+   own name (.user-chip__name); its hover-card panel is absolutely placed
+   inside the wrapper, so the wrapper must not clip it — the chip and the
+   hover-card root are held to the column width instead. */
+.tr-cell-truncate:has(.hover-card) {
+  overflow: visible;
+}
+
+.tr-cell-truncate > .hover-card {
+  max-width: 100%;
 }
 
 /* Date/datetime (and common temporal col keys): never ellipsize calendar days

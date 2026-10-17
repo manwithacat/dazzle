@@ -14,11 +14,13 @@ Public API:
   columns from a LIST surface's section elements, preserving the
   author's field order and threading per-element ``visible:``
   predicates through to the column metadata.
-- ``build_entity_columns(entity_spec)`` — fallback column derivation
-  from the entity's full field list when a surface doesn't pin its
-  own projection. Applies the 2d field-economy default-flip (#1491):
+- ``build_entity_columns(entity_spec, *, media_thumbs=False)`` — fallback
+  column derivation from the entity's full field list when a surface doesn't
+  pin its own projection. Applies the 2d field-economy default-flip (#1491):
   keeps the top-6 most salient columns (``resolve_column_economy``) and
   sheds the low-signal tail, which the default row drill/peek recovers.
+  Image/file fields are auto-derived only for card-like displays
+  (``media_thumbs=True`` — see ``CARD_LIKE_DISPLAYS``, #1792 U5).
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ from __future__ import annotations
 from typing import Any
 
 from dazzle.core.ir.money import is_money_field_name
+from dazzle.core.ir.workspaces import DisplayMode
 from dazzle.page.app_paths import detail_path, entity_slug
 from dazzle.page.runtime.column_economy_resolver import resolve_column_economy
 from dazzle.render.channel_cell import email_field_name, phone_field_name
@@ -478,19 +481,28 @@ def _field_to_entity_column(f: Any, entity_spec: Any) -> dict[str, Any] | None:
     return col
 
 
-# Displays where fitness.repr_fields should win over LIST surface projection
-# (headshot shelves / card galleries — cycle 1925). Queue/list/timeline keep
-# list-surface identifiers (ticket_number) — cycle 1926.
-CARD_LIKE_DISPLAYS: frozenset[str] = frozenset(
-    {
-        "grid",
-        "media",
-        "gallery",
-        "card",
-        "cards",
-        "media_shelf",
-    }
-)
+# #1792 U5: region display modes whose rows render as cards — `grid`
+# (`GridCell` per row, image thumbs lead the card) and `kanban` (`KanbanCard`
+# per item). Only these get image/file fields auto-derived into their columns;
+# a `list` / `queue` / `status_list` / `timeline` / table row shows a media or
+# file field only when the author names it (list-surface field projection or
+# `fitness.repr_fields`).
+CARD_LIKE_DISPLAYS: frozenset[str] = frozenset({DisplayMode.GRID.value, DisplayMode.KANBAN.value})
+
+# Column types that are media/attachment chrome rather than scannable row data.
+_MEDIA_COL_TYPES = frozenset({"image", "file"})
+
+
+def media_thumbs_for_display(display: Any) -> bool:
+    """True when a region ``display`` renders card rows (#1792 U5).
+
+    Accepts a ``DisplayMode`` member, its string value, or ``None`` (an
+    entity table / unset display → ``False``).
+    """
+    if display is None:
+        return False
+    value = getattr(display, "value", display)
+    return str(value).lower() in CARD_LIKE_DISPLAYS
 
 
 def _fitness_repr_field_names(entity_spec: Any) -> list[str]:
@@ -515,7 +527,9 @@ def _fitness_repr_field_names(entity_spec: Any) -> list[str]:
     return out
 
 
-def build_entity_columns_full(entity_spec: Any) -> list[dict[str, Any]]:
+def build_entity_columns_full(
+    entity_spec: Any, *, media_thumbs: bool = False
+) -> list[dict[str, Any]]:
     """Pre-compute the **full** (untruncated) auto-derived column list from an entity.
 
     Same one-time IR-derived computation as ``build_entity_columns`` but WITHOUT the
@@ -528,8 +542,13 @@ def build_entity_columns_full(entity_spec: Any) -> list[dict[str, Any]]:
     When the entity declares ``fitness.repr_fields``, that list is the authoritative
     projection (order preserved) so workspace grid/queue cards do not dump raw
     admin schema (email / is_active / photo_url labels) — cycle 1925 agency_lead.
-    Image/media fields present on the entity but omitted from repr are still
-    injected so Goal B media shelves keep thumbs without schema theater.
+
+    ``media_thumbs`` (#1792 U5) is True only for card-like displays
+    (``CARD_LIKE_DISPLAYS``): there, image fields omitted from repr are injected
+    first so Goal B media cards lead with pixels. Otherwise nothing is
+    injected, and the no-repr derivation drops image/file columns — a table or
+    list row shows them only when the author names them (repr or a list
+    surface's field projection).
     """
     columns: list[dict[str, Any]] = []
     if not entity_spec or not hasattr(entity_spec, "fields"):
@@ -541,7 +560,7 @@ def build_entity_columns_full(entity_spec: Any) -> list[dict[str, Any]]:
     if preferred:
         seen: set[str] = set()
         # Media thumbs first when present so grid cards lead with pixels.
-        for f in entity_spec.fields:
+        for f in entity_spec.fields if media_thumbs else ():
             if f.name in preferred:
                 continue
             media = _media_col_type_for_field_name(f.name)
@@ -569,12 +588,15 @@ def build_entity_columns_full(entity_spec: Any) -> list[dict[str, Any]]:
 
     for f in entity_spec.fields:
         col = _field_to_entity_column(f, entity_spec)
-        if col is not None:
-            columns.append(col)
+        if col is None:
+            continue
+        if not media_thumbs and col.get("type") in _MEDIA_COL_TYPES:
+            continue
+        columns.append(col)
     return columns
 
 
-def build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
+def build_entity_columns(entity_spec: Any, *, media_thumbs: bool = False) -> list[dict[str, Any]]:
     """Auto-derived columns with the **build-time** 2d economy applied (the default).
 
     Keeps the top-6 most salient auto-columns (``resolve_column_economy``) and sheds
@@ -588,7 +610,7 @@ def build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
     ``ticket_number`` from support_tickets queues → #1304 AAA-* needles zero while
     row count stayed 3).
     """
-    full = build_entity_columns_full(entity_spec)
+    full = build_entity_columns_full(entity_spec, media_thumbs=media_thumbs)
     if _fitness_repr_field_names(entity_spec):
         return full
     return resolve_column_economy(full)

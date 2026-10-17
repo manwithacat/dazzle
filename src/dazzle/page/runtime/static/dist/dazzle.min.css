@@ -3172,6 +3172,7 @@ vertical-align: middle;
 line-height: 1.2;
 }
 .dz-user-chip__name {
+min-width: 0;
 overflow: hidden;
 text-overflow: ellipsis;
 white-space: nowrap;
@@ -5372,6 +5373,12 @@ min-width: 0;
 white-space: nowrap;
 overflow: hidden;
 text-overflow: ellipsis;
+}
+.dz-tr-cell-truncate:has(.dz-hover-card) {
+overflow: visible;
+}
+.dz-tr-cell-truncate > .dz-hover-card {
+max-width: 100%;
 }
 .dz-tr-cell[data-dz-kind="date"] .dz-tr-cell-truncate,
 .dz-tr-cell[data-dz-kind="datetime"] .dz-tr-cell-truncate,

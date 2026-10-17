@@ -148,8 +148,9 @@ def test_fitness_repr_fields_drive_entity_fallback_columns() -> None:
         state_machine=None,
         fitness=SimpleNamespace(repr_fields=["name", "role", "department"]),
     )
-    # photo_url is image by name heuristic even if kind is str
-    cols = build_entity_columns(user)
+    # photo_url is image by name heuristic even if kind is str; injected only
+    # for card-like displays (#1792 U5 — list displays: test_list_columns_1792).
+    cols = build_entity_columns(user, media_thumbs=True)
     keys = [c["key"] for c in cols]
     assert "photo_url" in keys  # media inject
     assert "name" in keys

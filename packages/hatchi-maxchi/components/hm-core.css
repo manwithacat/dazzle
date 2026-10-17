@@ -111,6 +111,9 @@
 }
 
 .dz-user-chip__name {
+  /* flex item: without min-width 0 it never shrinks below the name, so the
+     ellipsis below never fires and the chip overflows its cell (#1792). */
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -126,6 +126,20 @@ CAP_MATRIX: list[tuple[str, dict, dict]] = [
         _t(columns=[{"key": "attachment", "type": "file"}]),
         {"id": "rec-1", "attachment": "/files/some-uuid/download"},
     ),
+    (
+        "ref_display_companion",  # #1792 U18: `<key>_display` rides the truncate wrapper
+        _t(columns=[{"key": "mark_scheme", "type": "ref"}]),
+        {
+            "id": "rec-1",
+            "mark_scheme": "ms-1",
+            "mark_scheme_display": "AQA GCSE English Literature Paper 1 Section A — Macbeth",
+        },
+    ),
+    (
+        "ref_person_chip",  # #1792 U18: person chip inside the truncate wrapper
+        _t(columns=[{"key": "assigned_to", "type": "ref", "ref_entity": "User"}]),
+        {"id": "rec-1", "assigned_to": {"id": "u1", "name": "Ada Lovelace"}},
+    ),
 ]
 
 _IDS = [c[0] for c in CAP_MATRIX]
