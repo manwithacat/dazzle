@@ -18,6 +18,14 @@
  * stack (window.dz.toast). Detail mirrors ToastSlots:
  *   { message, type?, title?, actions?, actor?: {name, avatar?},
  *     duration?, sound? }
+ * Client actions (superset of server ToastSlots.actions (label, href)):
+ *   actions: [{ label, href?, onClick?: fn(event), dismiss?: bool }]
+ *   href → <a>; otherwise <button>. onClick is called on click (either
+ *   element). A button dismisses the toast unless dismiss === false.
+ *
+ * Install is idempotent: the document-level listeners and window.dz.toast
+ * install once per document (marker html[data-dz-toast-host]) even if the
+ * controller is bundled or loaded twice — one call, one toast (#1795).
  *
  * Sound: unit `data-dz-toast-sound=on` or detail.sound — page must also opt
  * in via meta dz-sound or data-dz-cue-sound (controllers/dz-cue.js).
@@ -28,6 +36,13 @@
 
 (function () {
   "use strict";
+
+  // Idempotent install (HM idiom: state in the DOM). A second copy of this
+  // controller must not add a second listener set — that rendered every
+  // client toast twice (#1795 U24).
+  var root = document.documentElement;
+  if (root.hasAttribute("data-dz-toast-host")) return;
+  root.setAttribute("data-dz-toast-host", "");
 
   var DEFAULT_CAP = 8;
   var DEFAULT_DELAY = "8s";
@@ -488,8 +503,12 @@
           node = document.createElement("button");
           node.type = "button";
           node.className = "dz-toast__action";
-          node.setAttribute("data-dz-toast-dismiss", "");
+          if (a.dismiss !== false) node.setAttribute("data-dz-toast-dismiss", "");
           node.textContent = String(label);
+        }
+        if (typeof a.onClick === "function") {
+          // a.onClick(ev) with `this` = the action object.
+          node.addEventListener("click", a.onClick.bind(a));
         }
         row.appendChild(node);
       }

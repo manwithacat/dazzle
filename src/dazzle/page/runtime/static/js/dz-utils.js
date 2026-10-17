@@ -86,21 +86,11 @@
 
 (function () {
   "use strict";
-  // ── Client toast dispatch + CSV download (window.dz utilities) ─────
-  // Global toast function (backward compat with dz.toast). Accepts either
-  // (message, type) or a single detail object { message, type?, title?, actions? }
-  // so callers can use structured slots without clobbering the dz-toast host.
+  // ── CSV download (window.dz utilities) ─────
+  // window.dz.toast is owned by the HM toast controller (controllers/
+  // dz-toast.js, bundled once via the HM dist — #1795 U24); downloadCsv
+  // resolves it lazily at call time.
   window.dz = window.dz || {};
-  window.dz.toast = (message, type = "info") => {
-    const detail =
-      message && typeof message === "object"
-        ? message
-        : { message, type };
-    const el = document.getElementById("dz-toast");
-    if (el) el.dispatchEvent(new CustomEvent("toast", { detail }));
-    else
-      document.dispatchEvent(new CustomEvent("showToast", { detail }));
-  };
 
   /**
    * Download a CSV export via fetch + Blob (v0.61.2, #862).

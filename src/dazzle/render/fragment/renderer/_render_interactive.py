@@ -330,6 +330,7 @@ class _RenderInteractiveMixin:
             hx_trigger=b.hx_trigger,
             hx_indicator=b.hx_indicator,
             hx_confirm=b.hx_confirm,
+            hx_confirm_variant=b.hx_confirm_variant,
             hx_vals=b.hx_vals,
             hx_ext=b.hx_ext,
         )
@@ -482,7 +483,10 @@ class _RenderInteractiveMixin:
                 'data-dz-grid-bulk-action="delete" data-dz-grid-bulk-refresh '
                 'hx-swap="none" '
                 f'hx-post="{endpoint}/bulk" '
-                f'hx-confirm="{delete_confirm}">'
+                f'hx-confirm="{delete_confirm}" '
+                # hx-post, not hx-delete: dz-confirm would default to a
+                # primary accept button — destructive must be explicit (#1795).
+                'data-dz-confirm-variant="destructive">'
                 f"{_BULK_DELETE_SVG}"
                 "<span>Delete <span data-dz-bulk-count-target>0</span> "
                 f'{stem_esc}<span class="dz-bulk-plural">s</span></span>'

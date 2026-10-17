@@ -742,6 +742,56 @@ def test_cohort_strip_emission_conforms_to_cohort_strip_contract() -> None:
     assert "dz-cohort-strip-lens" in html
 
 
+def test_cohort_strip_lens_swap_honours_swap_identity_contract() -> None:
+    """#1795 U9 / ADR-0054 rule 2: every lens ``hx-target`` in the strip,
+    resolved against the host slot it lands in, must accept the strip
+    itself as an inner-swap response.
+
+    The region endpoint answers an HTMX lens GET with the *whole* strip
+    root (lens bar included). The old ``#region-{name}-body`` target sat
+    inside the strip, so each click nested a second strip; the response
+    re-declared that id and ``validate_inner_swap_response`` flags it.
+    ``closest [data-dz-region]`` resolves to the dashboard card body
+    (``region-{name}-{card_id}``), which the strip must not re-own.
+    """
+    pytest.importorskip("fastapi")
+    import re
+
+    from dazzle.render.fragment.htmx import URL
+    from dazzle.render.fragment.primitives.data import (
+        CohortStripCell,
+        CohortStripLensTab,
+        CohortStripRegion,
+    )
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    swap = load_hm_module("contracts/swap_identity.py")
+    html = FragmentRenderer().render(
+        CohortStripRegion(
+            region_name="class_roll",
+            endpoint=URL("/api/region"),
+            lenses=(
+                CohortStripLensTab(id="grade", label="Grade", is_active=True),
+                CohortStripLensTab(id="attendance", label="Attendance"),
+            ),
+            cells=(CohortStripCell(member_id="m1", member_name="Ada", primary_value="A"),),
+        )
+    )
+    # The strip root names its region but must not *be* a region hook —
+    # otherwise ``closest [data-dz-region]`` resolves to the strip itself.
+    assert not re.search(r"\sdata-dz-region(?=[\s=>])", html), html
+    host_slot = "region-class_roll-card-0"  # dashboard card body id shape
+    targets = re.findall(r'hx-target="([^"]*)"', html)
+    assert len(targets) == 2, targets
+    for target in targets:
+        if target == "closest [data-dz-region]":
+            slot_id = host_slot
+        else:
+            assert target.startswith("#"), f"unresolvable lens hx-target {target!r}"
+            slot_id = target
+        assert swap.validate_inner_swap_response(html, slot_id) == [], target
+
+
 def test_day_timeline_emission_conforms_to_day_timeline_contract() -> None:
     """Real FragmentRenderer DayTimelineRegion path satisfies contracts/day_timeline.py."""
     pytest.importorskip("fastapi")

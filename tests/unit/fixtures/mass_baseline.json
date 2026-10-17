@@ -1,6 +1,6 @@
 {
-  "src_lines": 324718,
-  "test_lines": 315841,
+  "src_lines": 324751,
+  "test_lines": 316001,
   "docs_lines": 49019,
   "construct_count": 31,
   "written": "2026-10-17",
@@ -453,6 +453,14 @@
         "docs_lines"
       ],
       "reason": "#1790 + #1791 consumer-forced (AegisMark): delete landing by origin; qualified grouped aggregates"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "#1795 consumer-forced (AegisMark): lens swap target, single toast controller, confirm variant"
     }
   ]
 }

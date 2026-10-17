@@ -51,8 +51,23 @@ _T = TargetSelector("#t")
                 hx_confirm="Are you sure?",
             ),
             ('hx-post="/tasks/42/delete"', 'hx-confirm="Are you sure?"'),
-            (),
+            ("data-dz-confirm-variant",),
             id="button-hx-post-with-confirm",
+        ),
+        # #1795: a destructive hx-post says so — dz-confirm defaults only
+        # hx-delete to a destructive accept button.
+        pytest.param(
+            Button(
+                label="Remove",
+                variant="danger",
+                hx_post=URL("/members/remove"),
+                hx_target=TargetSelector("body"),
+                hx_confirm="Remove this member?",
+                hx_confirm_variant="destructive",
+            ),
+            ('hx-confirm="Remove this member?" data-dz-confirm-variant="destructive"',),
+            (),
+            id="button-hx-post-confirm-variant",
         ),
         # Phase 4B.1.d: hx_put / hx_vals / hx_ext. hx-vals is single-quoted so
         # the JSON's double quotes need no escaping; extensions comma-join.

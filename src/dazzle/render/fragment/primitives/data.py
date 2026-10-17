@@ -1981,8 +1981,10 @@ class CohortStripRegion:
     fire an HTMX swap to the region endpoint with `?lens=<id>`; the
     runtime re-resolves the data and the primitive re-renders.
 
-    `region_name` is the region's stable id used in the swap target
-    (`#region-{name}-body`). `endpoint` is the region data URL.
+    Lens buttons swap ``innerHTML`` of ``closest [data-dz-region]`` (the
+    host slot) with the re-rendered strip (#1795 U9, ADR-0054).
+    `region_name` names the region (`data-dz-region-name`). `endpoint`
+    is the region data URL.
     `cells` is the resolved row of members for the active lens.
 
     Leftover-honest ``include_closed`` / ``as_of`` (cycle 2182) ride

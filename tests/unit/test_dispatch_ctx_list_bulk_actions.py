@@ -80,6 +80,19 @@ def test_bulk_action_toolbar_emits_delete_button() -> None:
     assert '@click="bulkDelete()"' not in html
 
 
+def test_bulk_delete_confirm_is_explicitly_destructive() -> None:
+    """#1795 U25: bulk Delete is an hx-post, and dz-confirm defaults non-delete
+    verbs to a primary accept button — so the destructive variant must be
+    explicit. Named transitions keep the primary default."""
+    html = FragmentRenderer().render(
+        BulkActionToolbar(endpoint="/api/invoices", actions=(("approve", "Approve"),))
+    )
+    delete_btn = html[html.index('class="dz-bulk-delete"') :]
+    delete_btn = delete_btn[: delete_btn.index(">")]
+    assert 'data-dz-confirm-variant="destructive"' in delete_btn
+    assert html.count("data-dz-confirm-variant") == 1
+
+
 def test_bulk_action_toolbar_emits_clear_selection_button() -> None:
     """Convergence C1.1: Clear-selection is the grid controller's
     `data-dz-grid-clear` seam — no Alpine `@click` binding."""

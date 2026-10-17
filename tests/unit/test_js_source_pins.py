@@ -138,7 +138,7 @@ _PINS: dict[str, Pin] = {
     # Toast host (C3 orphan sweep): both event shapes, server-parity markup,
     # text-only message, pause/cap, delays, leave motion, icons, cues.
     "toast-host-renders-server-parity-markup": Pin(
-        f"{JS}/dz-toast.js",
+        f"{HM_CONTROLLERS}/dz-toast.js",
         (
             '"showToast"',
             '"toast"',
@@ -166,6 +166,30 @@ _PINS: dict[str, Pin] = {
             "dzCue",
         ),
         absent=("innerHTML",),
+    ),
+    # #1795 U24: one toast host per document even if bundled twice; client
+    # actions carry an onClick callback and an opt-out dismiss.
+    "toast-host-installs-once-actions-callback": Pin(
+        f"{HM_CONTROLLERS}/dz-toast.js",
+        (
+            'hasAttribute("data-dz-toast-host")',
+            'setAttribute("data-dz-toast-host", "")',
+            "a.dismiss !== false",
+            'typeof a.onClick === "function"',
+        ),
+        ordered=True,
+    ),
+    # #1795 U25: the accept button's variant/label come from the triggering
+    # element per open; destructive is the default only for hx-delete.
+    "confirm-accept-variant-per-element": Pin(
+        f"{HM_CONTROLLERS}/dz-confirm.js",
+        (
+            "data-dz-confirm-variant",
+            'hasAttribute("hx-delete")',
+            "data-dz-confirm-label",
+        ),
+        anchor='"htmx:confirm"',
+        window=4000,
     ),
     # Opt-in sound cues (stem chrome-cue-opt-in): silent by default, synthesised.
     "cue-opt-in-and-synthesised": Pin(
@@ -247,9 +271,3 @@ def test_source_pin(pin: Pin) -> None:
         assert text not in region, f"{pin.path}: {text!r} is back"
     if pin.pattern:
         assert re.match(pin.pattern, src, re.S), f"{pin.path} does not match {pin.pattern!r}"
-
-
-def test_dazzle_toast_host_is_the_hm_controller() -> None:
-    """Dual-lock: the Dazzle static copy must not drift from the HM controller."""
-    dazzle = (REPO / JS / "dz-toast.js").read_text(encoding="utf-8")
-    assert dazzle == (REPO / HM_CONTROLLERS / "dz-toast.js").read_text(encoding="utf-8")

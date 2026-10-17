@@ -254,22 +254,30 @@ class _RenderDashboardMixin:
     def _emit_cohort_strip_region(self, c: CohortStripRegion, ctx: RenderContext) -> str:
         """Render a CohortStripRegion (#1018).
 
-        Outer wrapper carries `data-dz-region-name` so the lens-toggle
-        HTMX swap can target it. Lens toggle is a `<div role="tablist">`
-        of buttons; each button fires an `hx-get` to the same region
-        endpoint with `?lens=<id>` and swaps the body. Cells row is a
-        horizontal-scroll flex strip on wide widths, wraps on narrow.
+        Lens toggle is an honest selection strip (HM stem
+        selection-strip-honest): a labelled group of `<button>`s, the
+        active one carrying `aria-current="true"` — no fake
+        `role="tablist"` / `role="tab"`. Each button fires an `hx-get`
+        to the same region endpoint with `?lens=<id>` and swaps
+        `innerHTML` of `closest [data-dz-region]` — the host slot (the
+        dashboard card body, or the non-HTMX region wrapper). The HTMX
+        region response is the whole strip root (lens bar included), so
+        targeting the slot replaces the strip rather than nesting a
+        second one inside it (#1795 U9, ADR-0054 rule 2). The endpoint
+        honours `?lens=` server-side, so the re-rendered lens bar
+        carries the active state — no OOB update is needed. Cells row
+        is a horizontal-scroll flex strip on wide widths, wraps on
+        narrow.
 
         Cells with non-empty `drill_url` wrap in an `<a>` for keyboard-
         navigable drill-down to the entity_card surface (#1017)."""
         endpoint_str = ctx.escape_attr(str(c.endpoint))
-        region_name_attr = ctx.escape_attr(c.region_name)
         lens_buttons: list[str] = []
         for lens in c.lenses:
             cls = "dz-cohort-strip-lens"
             if lens.is_active:
                 cls += " is-active"
-            active_attr = ' aria-pressed="true"' if lens.is_active else ' aria-pressed="false"'
+            active_attr = ' aria-current="true"' if lens.is_active else ""
             # Leftover-honest temporal (cycle 2182). Bare
             # hx-get="{endpoint}?lens=" used to drop include_closed /
             # as_of and invent open-only / current after a lens change.
@@ -283,16 +291,16 @@ class _RenderDashboardMixin:
                 escape_attr=ctx.escape_attr,
             )
             lens_buttons.append(
-                f'<button type="button" role="tab" class="{cls}"{active_attr} '
+                f'<button type="button" class="{cls}"{active_attr} '
                 f'data-lens-id="{ctx.escape_attr(lens.id)}" '
                 f'hx-get="{lens_href}" '
-                f'hx-target="#region-{region_name_attr}-body" '
+                f'hx-target="closest [data-dz-region]" '
                 f'hx-swap="innerHTML">'
                 f"{ctx.escape(lens.label)}"
                 f"</button>"
             )
         lens_bar = (
-            f'<div class="dz-cohort-strip-lenses" role="tablist" '
+            f'<div class="dz-cohort-strip-lenses" role="group" '
             f'aria-label="Lens toggle">'
             f"{''.join(lens_buttons)}"
             f"</div>"
@@ -351,12 +359,7 @@ class _RenderDashboardMixin:
                     )
             cells_html = f'<div class="dz-cohort-strip-cells">{"".join(cell_parts)}</div>'
 
-        body = (
-            f"{lens_bar}"
-            f'<div class="dz-cohort-strip-body" id="region-{region_name_attr}-body">'
-            f"{cells_html}"
-            f"</div>"
-        )
+        body = f'{lens_bar}<div class="dz-cohort-strip-body">{cells_html}</div>'
         return render_cohort_strip(CohortStripSeam(region_name=c.region_name, body_html=body))
 
     def _emit_day_timeline_region(self, t: DayTimelineRegion, ctx: RenderContext) -> str:

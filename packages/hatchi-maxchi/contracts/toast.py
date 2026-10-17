@@ -12,6 +12,11 @@ slots (ssr-client-slot-parity); host swipe-dismiss is pure behaviour.
 
 Server emit: ``dazzle.http.runtime.response_helpers.with_toast``.
 Client emit: ``showToast`` / stack ``toast`` events (``controllers/dz-toast.js``).
+Client ``actions`` are a superset of server ``ToastSlots.actions``
+(``(label, href)``): ``[{label, href?, onClick?, dismiss?}]`` — ``onClick(ev)``
+runs on click; a button action carries ``data-dz-toast-dismiss`` unless
+``dismiss: false`` (#1795). The controller installs once per document
+(``html[data-dz-toast-host]``), so a duplicated bundle cannot double-render.
 
 Contract selectors use ``[data-dz-*]`` only — the kit has no CSS class engine.
 """

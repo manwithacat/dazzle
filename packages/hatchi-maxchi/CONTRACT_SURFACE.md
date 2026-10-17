@@ -46,7 +46,7 @@ blast radius (who embeds / refuses this part).
 | `column_visibility_menu` | `column-visibility-menu` | `.dz-table-col-menu` | .dz-table-col-menu[] | — |
 | `combobox` | `combobox` | `[data-dz-combobox]` | [data-dz-combobox][name=present] | ComboboxField(field_id:str:req; label:str:req; name:str:req; options:list[ComboboxOption]:req; placeholder:str:opt; selected:str:opt); ComboboxOption(label:str:req; value:str:req) |
 | `command` | `command` | `[data-dz-command]` | [data-dz-command][] | — |
-| `confirm` | `confirm` | `[hx-confirm]` | [hx-confirm][hx-confirm=present] | — |
+| `confirm` | `confirm` | `[hx-confirm]` | [hx-confirm][hx-confirm=present]; [hx-confirm][data-dz-confirm-variant][data-dz-confirm-variant=one_of:primary\|destructive\|outline\|ghost]; [hx-confirm][data-dz-confirm-label][data-dz-confirm-label=present] | — |
 | `confirm_panel` | `confirm-panel` | `[data-dz-confirm-gate]` | [data-dz-confirm-gate][data-dz-required-count=present]; [data-dz-required="true"][data-dz-required=present] | — |
 | `controls` | `controls` | `.dz-checkbox, .dz-radio, .dz-switch` | .dz-checkbox, .dz-radio, .dz-switch[] | — |
 | `csv_export_button` | `csv-export-button` | `.dz-list-csv-button` | .dz-list-csv-button[] | — |

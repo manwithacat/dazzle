@@ -103,6 +103,20 @@ def test_button_defaults() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        pytest.param({"hx_confirm": "Sure?", "hx_confirm_variant": "danger"}, "invalid", id="bad"),
+        pytest.param({"hx_confirm_variant": "destructive"}, "requires hx_confirm", id="orphan"),
+    ],
+)
+def test_button_rejects_bad_confirm_variant(kwargs: dict[str, str], match: str) -> None:
+    """#1795: the dz-confirm accept variant is one of the HM confirm set and
+    only meaningful alongside hx-confirm."""
+    with pytest.raises(ValueError, match=match):
+        Button(label="X", hx_post=URL("/p"), hx_target=TargetSelector("body"), **kwargs)  # type: ignore[arg-type]
+
+
 def test_toolbar_first_action_cannot_be_hidden() -> None:
     """Replaces find_hidden_primary_actions scanner."""
     visible = Button(label="Save", variant="primary")

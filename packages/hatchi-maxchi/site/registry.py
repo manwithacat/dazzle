@@ -397,6 +397,11 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "person: data-dz-toast-composition=person + __avatar / __actor",
                     "data-dz-toast-dismiss removes the nearest .dz-toast",
                     "showToast CustomEvent or window.dz.toast for client path",
+                    "client actions: [{label, href?, onClick?(ev), dismiss?}] — "
+                    "onClick runs on click; buttons dismiss unless dismiss: false "
+                    "(server actions stay (label, href))",
+                    "controller installs once per document (html[data-dz-toast-host]) "
+                    "— never bundle a second copy",
                     "host injects .dz-toast__progress TTL bar (pauses with timer)",
                     "level icon .dz-toast__icon (inline SVG; host ensures if missing)",
                     "swipe toward stack edge dismisses (same leave path)",
@@ -630,7 +635,9 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             # request settles — the same GET path every other state change uses.
             '<button type="button" class="dz-bulk-delete" data-dz-grid-bulk-action="delete" '
             'data-dz-grid-bulk-refresh hx-swap="none" hx-post="/mock/grid/bulk" '
-            'hx-confirm="Delete the selected customers? This cannot be undone.">Delete</button>'
+            'hx-confirm="Delete the selected customers? This cannot be undone." '
+            # hx-post defaults dz-confirm's accept to primary — say destructive.
+            'data-dz-confirm-variant="destructive">Delete</button>'
             '<button type="button" class="dz-bulk-clear" data-dz-grid-clear>Clear</button>'
             "</div>"
             '<div class="dz-table-scroll">'
@@ -1062,7 +1069,10 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "Overlays",
             "Designed replacement for window.confirm — every hx-confirm upgrades automatically.",
             '<button class="dz-button" data-dz-variant="destructive" hx-delete="/mock/noop" '
-            'hx-confirm="Delete this invoice? This cannot be undone.">Delete invoice</button>',
+            'hx-confirm="Delete this invoice? This cannot be undone.">Delete invoice</button>'
+            '<button class="dz-button" data-dz-variant="primary" hx-post="/mock/noop" '
+            'hx-confirm="Release this class to pupils?" data-dz-confirm-label="Release">'
+            "Release class</button>",
             notes="**Pick:** request <strong>gating</strong> — yes/no before an existing "
             "<code>hx-*</code> runs (stem <code>chrome-vs-protocol</code>). Not a custom "
             "modal body (dialog = addressing). Protocol: <code>dz-confirm.js</code> "
@@ -1102,6 +1112,16 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                         '    return ""\n'
                     ),
                 ),
+                Exchange(
+                    method="POST",
+                    endpoint="/app/classes/{id}/release",
+                    trigger="a non-destructive action (accept button primary by default; "
+                    "data-dz-confirm-label names it), after the user approves",
+                    response="the action's own result fragment for the affected region — "
+                    "same rules as any hx-post; confirm adds no exchange of its own",
+                    swap="per the button's `hx-target`/`hx-swap`",
+                    envelope="host_owned",
+                ),
             ),
             controller="controllers/dz-confirm.js",
             contracts=("contracts/confirm.py",),
@@ -1110,6 +1130,9 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "protocol: any hx-confirm → htmx:confirm → designed singleton dialog",
                     "message text IS the hx-confirm attribute value (author the string, not a dialog partial)",
                     "on accept: issueRequest on the underlying action; cancel: dropRequest",
+                    "accept button per open: data-dz-confirm-variant "
+                    "(primary|destructive|outline|ghost; default destructive for hx-delete, "
+                    "primary otherwise) + data-dz-confirm-label (default Confirm)",
                     "pick-a-surface: request gating vs dialog addressing (chrome-vs-protocol)",
                 ),
                 pitfalls=(
@@ -1117,6 +1140,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "(and no FastAPI route for “confirm”)",
                     "do not re-implement confirm with window.confirm (loses the designed dialog)",
                     "do not use confirm when you need a custom modal body — that is dialog (addressing)",
+                    "a destructive hx-post (bulk delete, remove member) must carry "
+                    'data-dz-confirm-variant="destructive" — only hx-delete defaults to it',
                     "gallery toast 'Deleted (demo).' is MOCK_HTMX scaffolding in site/build_site.py — "
                     "not Hyperpart surface; production returns the DELETE fragment from the Exchange",
                 ),

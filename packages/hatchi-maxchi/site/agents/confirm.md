@@ -13,6 +13,7 @@ Designed replacement for window.confirm — every hx-confirm upgrades automatica
 
 ```html
 <button class="button" data-variant="destructive" hx-delete="/mock/noop" hx-confirm="Delete this invoice? This cannot be undone.">Delete invoice</button>
+<button class="button" data-variant="primary" hx-post="/mock/noop" hx-confirm="Release this class to pupils?" data-confirm-label="Release">Release class</button>
 ```
 
 ## Server exchange
@@ -24,6 +25,7 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 | Request | Trigger | Response fragment | Swap | Envelope | States |
 |---|---|---|---|---|---|
 | `DELETE /app/invoices/{id}` | the button, after the user approves the designed confirm dialog | the server deletes the resource and returns the replacement markup for the affected region (e.g. the row's removal, or an empty-state). Not a toast — the gallery's 'Deleted (demo).' toast is MOCK_HTMX only | per the button's `hx-target`/`hx-swap` (row removal by default) | `host_owned` | — |
+| `POST /app/classes/{id}/release` | a non-destructive action (accept button primary by default; data-dz-confirm-label names it), after the user approves | the action's own result fragment for the affected region — same rules as any hx-post; confirm adds no exchange of its own | per the button's `hx-target`/`hx-swap` | `host_owned` | — |
 
 ### `DELETE /app/invoices/{id}` — example handler
 
@@ -57,10 +59,12 @@ Gallery mocks may approximate morph with `innerHTML` — production follows the 
 ### Exchanges (swap · envelope)
 
 - `DELETE /app/invoices/{id}` → per the button's `hx-target`/`hx-swap` (row removal by default) · **envelope=`host_owned`**
+- `POST /app/classes/{id}/release` → per the button's `hx-target`/`hx-swap` · **envelope=`host_owned`**
 
 ### Replace / other HTML swap
 
 - `DELETE /app/invoices/{id}` → host_owned
+- `POST /app/classes/{id}/release` → host_owned
 
 ### Envelope rules
 
@@ -100,6 +104,31 @@ Correct responses for host_owned — follow the initiating control’s hx-target
 <div data-dz-region id="region-x">…</div>
 ```
 
+#### `POST /app/classes/{id}/release` · envelope=`host_owned`
+
+Correct responses for host_owned — follow the initiating control’s hx-target / hx-swap.
+
+**Do — correct response body**
+
+```html
+<!-- envelope=host_owned → match the *button's* hx-target / hx-swap -->
+<!-- Example A: button hx-swap=delete → empty body (row removed) -->
+
+<!-- Example B: button hx-target=#region-body hx-swap=innerHTML → body_only fragment -->
+<div class="dz-list-row">remaining rows…</div>
+
+<!-- Example C: button hx-swap=outerHTML on a card → full card root -->
+<div class="dz-card" id="invoice-42">…updated card…</div>
+```
+
+**Don’t — violates `host_owned`**
+
+```html
+<!-- WRONG: assuming a fixed envelope without reading the host affordance -->
+<!-- e.g. always returning outer chrome when the button asked for delete/none -->
+<div data-dz-region id="region-x">…</div>
+```
+
 ## How to use it
 
 ### Seams
@@ -107,6 +136,7 @@ Correct responses for host_owned — follow the initiating control’s hx-target
 - protocol: any hx-confirm → htmx:confirm → designed singleton dialog
 - message text IS the hx-confirm attribute value (author the string, not a dialog partial)
 - on accept: issueRequest on the underlying action; cancel: dropRequest
+- accept button per open: data-dz-confirm-variant (primary|destructive|outline|ghost; default destructive for hx-delete, primary otherwise) + data-dz-confirm-label (default Confirm)
 - pick-a-surface: request gating vs dialog addressing (chrome-vs-protocol)
 
 ### Do / Don't
@@ -121,6 +151,7 @@ Correct responses for host_owned — follow the initiating control’s hx-target
 - hx-confirm is a client affordance — it needs no Exchange of its own (and no FastAPI route for “confirm”)
 - do not re-implement confirm with window.confirm (loses the designed dialog)
 - do not use confirm when you need a custom modal body — that is dialog (addressing)
+- a destructive hx-post (bulk delete, remove member) must carry data-dz-confirm-variant="destructive" — only hx-delete defaults to it
 - gallery toast 'Deleted (demo).' is MOCK_HTMX scaffolding in site/build_site.py — not Hyperpart surface; production returns the DELETE fragment from the Exchange
 
 ### Keyboard / AT
@@ -144,6 +175,8 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 | Node | Attr | Constraint |
 |---|---|---|
 | `[hx-confirm]` | `hx-confirm` | present (any value) |
+| `[hx-confirm][data-dz-confirm-variant]` | `data-dz-confirm-variant` | one of ['primary', 'destructive', 'outline', 'ghost'] |
+| `[hx-confirm][data-dz-confirm-label]` | `data-dz-confirm-label` | present (any value) |
 
 #### Module source
 
@@ -160,14 +193,33 @@ element's existing ``hx-*`` request (see the part page Server exchange).
 
 In-contract: any element with ``hx-confirm``. Opt-out: ``data-dz-native-confirm``
 (source token; gallery demos may strip the ``dz-`` prefix).
+
+Accept button (#1795): optional ``data-dz-confirm-variant``
+(``primary|destructive|outline|ghost``) and ``data-dz-confirm-label`` on the
+triggering element set the accept button's variant and text per open.
+Defaults: ``destructive`` for ``hx-delete``, ``primary`` otherwise; label
+``Confirm``. Hosts emitting a destructive ``hx-post`` say so explicitly.
 """
 
-from contracts._kit import DomContract, Node, Present
+from contracts._kit import DomContract, Node, OneOf, Present
+
+VARIANTS = ("primary", "destructive", "outline", "ghost")
 
 DOM_CONTRACT = DomContract(
     part="confirm",
     root="[hx-confirm]",
-    nodes=(Node("[hx-confirm]", attrs={"hx-confirm": Present()}),),
+    nodes=(
+        Node("[hx-confirm]", attrs={"hx-confirm": Present()}),
+        # Optional: the node selector matches only when the attr is present.
+        Node(
+            "[hx-confirm][data-dz-confirm-variant]",
+            attrs={"data-dz-confirm-variant": OneOf(*VARIANTS)},
+        ),
+        Node(
+            "[hx-confirm][data-dz-confirm-label]",
+            attrs={"data-dz-confirm-label": Present()},
+        ),
+    ),
 )
 
 __all__ = ["DOM_CONTRACT"]

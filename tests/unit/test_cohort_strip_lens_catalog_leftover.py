@@ -85,7 +85,7 @@ def test_unknown_lens_restores_default_not_first() -> None:
         },
     )
     html = _render(surface)
-    match = re.search(r'aria-pressed="true"[^>]*>([^<]+)</button>', html)
+    match = re.search(r'aria-current="true"[^>]*>([^<]+)</button>', html)
     assert match is not None
     assert "Attendance" in match.group(1)
 
@@ -121,7 +121,7 @@ def test_valid_lens_still_rides() -> None:
         },
     )
     html = _render(surface)
-    match = re.search(r'aria-pressed="true"[^>]*>([^<]+)</button>', html)
+    match = re.search(r'aria-current="true"[^>]*>([^<]+)</button>', html)
     assert match is not None
     assert "Attainment" in match.group(1)
 

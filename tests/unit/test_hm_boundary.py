@@ -212,3 +212,47 @@ def test_icon_seam_is_comment_only() -> None:
             f"{rel} references the package in executable code (not just "
             "provenance comments) — runtime must use the vendored copy"
         )
+
+
+def _load_build_dist():  # type: ignore[no-untyped-def]
+    spec = importlib.util.spec_from_file_location("build_dist", REPO / "scripts" / "build_dist.py")
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_dist_bundle_ships_each_hm_controller_once() -> None:
+    """#1795 U24: page/ never ships a second copy of an HM controller.
+
+    build_dist used to list both the HM dist (which already carries
+    controllers/dz-toast.js + dz-cue.js) and page copies of the same files,
+    so the bundle installed two toast stacks + listener sets and one
+    ``window.dz.toast`` call rendered N toasts. Name overlap between the two
+    source lists is the structural smell; marker counts in the built bundle
+    are the behavioural proof."""
+    import re
+    from collections import Counter
+
+    build_dist = _load_build_dist()
+    hm_build = build_dist._hm_build()
+    page_names = {p.name for p in build_dist.JS_SOURCES if p != build_dist.HM_DIST_JS}
+    hm_names = {Path(r).name for r in hm_build.JS_SOURCES}
+    assert not page_names & hm_names, (
+        f"page JS_SOURCES duplicates HM controllers: {sorted(page_names & hm_names)}"
+    )
+
+    # Every HYPERPART marker in the bundle comes from the HM sources, exactly
+    # as often as they carry it — page host glue carries none of its own.
+    marker = re.compile(r"HYPERPART: [^*\n]*")
+    expected = Counter(
+        m.strip()
+        for r in hm_build.JS_SOURCES
+        for m in marker.findall((build_dist.HM / r).read_text(encoding="utf-8"))
+    )
+    bundle = build_dist.build_js_bundle()
+    actual = Counter(m.strip() for m in marker.findall(bundle))
+    assert actual == expected, {
+        k: (actual[k], expected[k]) for k in actual | expected if actual[k] != expected[k]
+    }
+    assert len(re.findall(r'document\.addEventListener\(\s*"toast"', bundle)) == 1

@@ -229,9 +229,9 @@ def test_cohort_strip_active_lens(
     if active_lens is not None:
         ctx["cohort_active_lens"] = active_lens
     html = _render(WorkspaceRegionAdapter().build(_cohort_region(default_lens=default_lens), ctx))
-    assert html.count('aria-pressed="true"') == 1
-    assert html.count('aria-pressed="false"') == 1
-    match = re.search(r'aria-pressed="true"[^>]*>([^<]+)</button>', html)
+    assert html.count('aria-current="true"') == 1
+    assert html.count("data-lens-id=") == 2
+    match = re.search(r'aria-current="true"[^>]*>([^<]+)</button>', html)
     assert match is not None
     assert expected_active in match.group(1)
 
@@ -1295,7 +1295,7 @@ _RENDER_CASES = [
         "cohort-strip-empty-cells-keep-lens-toggle",
         _cohort_region(empty_message="Nobody here yet."),
         {"cohort_endpoint": "/r/cohort"},
-        ("Nobody here yet.", 'class="dz-cohort-strip-empty"', 'role="tablist"'),
+        ("Nobody here yet.", 'class="dz-cohort-strip-empty"', 'class="dz-cohort-strip-lenses"'),
     ),
     _case(
         "cohort-strip-builds-cells-from-ctx-dicts",

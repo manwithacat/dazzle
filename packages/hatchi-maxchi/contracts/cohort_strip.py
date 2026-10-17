@@ -9,6 +9,13 @@ current on a lens change. Leftover junk (``zzz``, ``2abc``,
 ``maybe``, ``not-a-date``) must not invent. Valid ``true`` /
 YYYY-MM-DD still ride. Rest-state gallery is unchanged (oral #33).
 
+Lens swap target (#1795 U9): host lens buttons swap ``innerHTML`` of
+``closest [data-dz-region]`` — the host slot — because the region
+response is this whole root (lens bar included). Targeting an inner
+body nested a second strip inside the first (ADR-0054 rule 2). The
+lens bar is an honest selection strip: buttons + ``aria-current`` on
+the active lens, no ``role="tablist"`` / ``role="tab"``.
+
 Leftover-honest lens catalog (cycle 2184): valid ``?lens=<id>``
 rides. Leftover junk (``ghost``, ``zzz``) must not invent the
 first declared lens when ``default_lens`` is a later sibling.
@@ -52,10 +59,10 @@ EXEMPLARS: list[CohortStrip] = [
     CohortStrip(
         region_name="class_roll",
         body_html=(
-            '<div class="dz-cohort-strip-lenses" role="tablist" aria-label="Lens toggle">'
-            '<button type="button" role="tab" class="dz-cohort-strip-lens is-active" '
-            'aria-pressed="true" data-lens-id="grade">Grade</button></div>'
-            '<div class="dz-cohort-strip-body" id="region-class_roll-body">'
+            '<div class="dz-cohort-strip-lenses" role="group" aria-label="Lens toggle">'
+            '<button type="button" class="dz-cohort-strip-lens is-active" '
+            'aria-current="true" data-lens-id="grade">Grade</button></div>'
+            '<div class="dz-cohort-strip-body">'
             '<div class="dz-cohort-strip-cells">'
             '<div class="dz-cohort-strip-cell" data-member-id="m1">'
             '<div class="dz-cohort-strip-cell-name">Ada</div></div></div></div>'

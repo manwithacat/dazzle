@@ -77,6 +77,8 @@ def _member_block(
             hx_post=URL(f"/auth/members/remove?membership_id={membership_id}"),
             hx_target=TargetSelector("body"),
             hx_confirm="Remove this member from the organization?",
+            # hx-post: dz-confirm defaults non-delete verbs to primary (#1795).
+            hx_confirm_variant="destructive",
         )
     )
     return Stack(children=tuple(children))

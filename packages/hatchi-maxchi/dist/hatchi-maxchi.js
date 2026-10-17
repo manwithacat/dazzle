@@ -9,8 +9,14 @@
  *
  * Intercepts htmx's `htmx:confirm` event and replaces window.confirm with
  * a designed <dialog class="alert-dialog"> (icon + title + message +
- * destructive-styled confirm). Every existing `hx-confirm="…"` attribute
- * in the fleet upgrades automatically — no emitter changes.
+ * accept button). Every existing `hx-confirm="…"` attribute in the fleet
+ * upgrades automatically — no emitter changes.
+ *
+ * Accept button, resolved per open from the triggering element (#1795):
+ *   data-confirm-variant  primary|destructive|outline|ghost — default
+ *                            "destructive" for hx-delete, else "primary"
+ *   data-confirm-label    button text — default "Confirm"
+ * A destructive hx-post must say data-confirm-variant="destructive".
  *
  * Lifecycle-as-material (taste principle 9): the dialog is created lazily,
  * reused, and the htmx request is only issued via evt.detail.issueRequest()
@@ -41,7 +47,7 @@
       '<p class="alert-dialog__message"></p>' +
       '<div class="alert-dialog__actions">' +
       '<button type="button" class="button" data-variant="outline" data-confirm-cancel>Cancel</button>' +
-      '<button type="button" class="button" data-variant="destructive" data-confirm-accept>Confirm</button>' +
+      '<button type="button" class="button" data-variant="primary" data-confirm-accept>Confirm</button>' +
       "</div>";
     document.body.appendChild(dialog);
     return dialog;
@@ -72,6 +78,13 @@
 
     var accept = dlg.querySelector("[data-confirm-accept]");
     var cancel = dlg.querySelector("[data-confirm-cancel]");
+    // The dialog is a reused singleton: reset variant + label every open so
+    // one element's choice never leaks into the next confirm.
+    var variant =
+      elt.getAttribute("data-confirm-variant") ||
+      (elt.hasAttribute("hx-delete") ? "destructive" : "primary");
+    accept.setAttribute("data-variant", variant);
+    accept.textContent = elt.getAttribute("data-confirm-label") || "Confirm";
 
     function cleanup() {
       accept.removeEventListener("click", onAccept);
@@ -270,6 +283,14 @@
  * stack (window.dz.toast). Detail mirrors ToastSlots:
  *   { message, type?, title?, actions?, actor?: {name, avatar?},
  *     duration?, sound? }
+ * Client actions (superset of server ToastSlots.actions (label, href)):
+ *   actions: [{ label, href?, onClick?: fn(event), dismiss?: bool }]
+ *   href → <a>; otherwise <button>. onClick is called on click (either
+ *   element). A button dismisses the toast unless dismiss === false.
+ *
+ * Install is idempotent: the document-level listeners and window.dz.toast
+ * install once per document (marker html[data-toast-host]) even if the
+ * controller is bundled or loaded twice — one call, one toast (#1795).
  *
  * Sound: unit `data-toast-sound=on` or detail.sound — page must also opt
  * in via meta sound or data-cue-sound (controllers/cue.js).
@@ -280,6 +301,13 @@
 
 (function () {
   "use strict";
+
+  // Idempotent install (HM idiom: state in the DOM). A second copy of this
+  // controller must not add a second listener set — that rendered every
+  // client toast twice (#1795 U24).
+  var root = document.documentElement;
+  if (root.hasAttribute("data-toast-host")) return;
+  root.setAttribute("data-toast-host", "");
 
   var DEFAULT_CAP = 8;
   var DEFAULT_DELAY = "8s";
@@ -740,8 +768,12 @@
           node = document.createElement("button");
           node.type = "button";
           node.className = "toast__action";
-          node.setAttribute("data-toast-dismiss", "");
+          if (a.dismiss !== false) node.setAttribute("data-toast-dismiss", "");
           node.textContent = String(label);
+        }
+        if (typeof a.onClick === "function") {
+          // a.onClick(ev) with `this` = the action object.
+          node.addEventListener("click", a.onClick.bind(a));
         }
         row.appendChild(node);
       }

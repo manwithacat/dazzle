@@ -134,8 +134,13 @@ def _build_region_response(
 
     if hx_target and _region_polling_complete(ctx, fetched):
         display = str(getattr(ctx.ctx_region, "display", "") or "").lower()
+        region_name = str(getattr(ctx.ctx_region, "name", "") or "")
+        # The replacement keeps the slot's region hook (ADR-0054 rule 1): in-
+        # region affordances (cohort lenses, queue actions) target
+        # `closest [data-dz-region]` and must still resolve after poll-stop.
         replacement = (
             f'<div class="dz-card-body" id="{_html_mod.escape(hx_target, quote=True)}" '
+            f'data-dz-region data-dz-region-name="{_html_mod.escape(region_name, quote=True)}" '
             f'data-display="{_html_mod.escape(display, quote=True)}" '
             f'data-dz-poll-complete="true">{html_body}</div>'
         )

@@ -143,7 +143,7 @@ def test_cohort_lens_id_still_rides_with_temporal() -> None:
     assert "lens=attendance" in other
     assert "include_closed=true" in other
     assert "as_of=2026-01-15" in other
-    assert 'hx-target="#region-cohort-body"' in html
+    assert 'hx-target="closest [data-dz-region]"' in html
 
 
 def test_leftover_honest_query_helper() -> None:

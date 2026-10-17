@@ -491,12 +491,13 @@ mounted by any emitter).
 
 Toasts: server OOB via response_helpers.with_toast into the #dz-toast
 stack; client-initiated via window.dz.toast(message, type) — both handled
-by dz-toast.js (render + auto-dismiss). The file-upload widget's
+by the HM controller dz-toast.js (render + auto-dismiss), bundled once via
+the HM dist. The file-upload widget's
 controller is unimplemented (tracked follow-up).
 """
 implemented_by = [
     "dazzle_page.runtime.static.js.dz-utils.js",
-    "dazzle_page.runtime.static.js.dz-toast.js",
+    "packages.hatchi-maxchi.controllers.dz-toast.js",
     "packages.hatchi-maxchi.controllers (grid + extensions, via the HM dist)",
 ]
 

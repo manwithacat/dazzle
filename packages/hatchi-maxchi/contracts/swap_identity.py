@@ -168,7 +168,9 @@ def validate_inner_swap_response(response_html: str, target_id: str) -> list[str
         )
 
     stripped = response_html.lstrip()
-    if re.match(r"^<[^>]*\bdata-dz-region\b", stripped, re.I):
+    # ``(?![\w-])``: the bare hook only — a root that merely *names* its
+    # region (``data-dz-region-name``, e.g. the cohort strip) is not chrome.
+    if re.match(r"^<[^>]*\bdata-dz-region(?![\w-])", stripped, re.I):
         if tid.startswith("region-") or tid.endswith("-body") or "region" in tid:
             out.append(
                 "inner-swap response root carries data-dz-region chrome; "

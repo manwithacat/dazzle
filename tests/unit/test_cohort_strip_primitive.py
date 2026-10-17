@@ -194,31 +194,36 @@ def _strip(**overrides) -> CohortStripRegion:
     return CohortStripRegion(**base)
 
 
-def test_render_emits_lens_toggle_with_tablist_role() -> None:
-    """Lens toggle is a `<div role="tablist">` of buttons — a11y
-    contract that the cohort skim's primary nav is a set of tabs."""
+def test_render_emits_lens_toggle_as_honest_selection_strip() -> None:
+    """Lens toggle is a labelled group of buttons — an honest selection
+    strip (HM stem selection-strip-honest, #1795 U9): no fake
+    `role="tablist"` / `role="tab"` without the arrow-key contract."""
     html = _render(_strip())
-    assert 'class="dz-cohort-strip-lenses" role="tablist"' in html
+    assert 'class="dz-cohort-strip-lenses" role="group"' in html
     assert 'aria-label="Lens toggle"' in html
+    assert 'role="tablist"' not in html
+    assert 'role="tab"' not in html
 
 
-def test_render_active_lens_button_carries_aria_pressed_true() -> None:
-    """The active lens button gets `is-active` + `aria-pressed="true"`;
-    others get `aria-pressed="false"`. Drives the visual highlight + a11y."""
+def test_render_active_lens_button_carries_aria_current() -> None:
+    """The active lens button gets `is-active` + `aria-current="true"`;
+    others carry neither. No `aria-pressed` (selection, not toggle)."""
     html = _render(_strip())
     # The active lens (attainment).
     assert ">Attainment</button>" in html
-    assert html.count('aria-pressed="true"') == 1
-    assert html.count('aria-pressed="false"') == 1
+    assert html.count('aria-current="true"') == 1
+    assert "aria-pressed" not in html
 
 
 def test_render_lens_button_emits_hx_get_with_lens_id() -> None:
-    """Each lens button fires `hx-get="<endpoint>?lens=<id>"` +
-    `hx-target="#region-<name>-body"` — same-region swap."""
+    """Each lens button fires `hx-get="<endpoint>?lens=<id>"` and swaps
+    `innerHTML` of `closest [data-dz-region]` — the host slot. The
+    response is the whole strip, so an inner target nested it (#1795 U9)."""
     html = _render(_strip())
     assert 'hx-get="/api/regions/cohort?lens=attainment"' in html
     assert 'hx-get="/api/regions/cohort?lens=attendance"' in html
-    assert 'hx-target="#region-cohort-body"' in html
+    assert html.count('hx-target="closest [data-dz-region]"') == 2
+    assert "#region-cohort-body" not in html
     assert 'hx-swap="innerHTML"' in html
 
 
@@ -323,15 +328,15 @@ def test_render_empty_cells_emits_empty_message() -> None:
     assert 'class="dz-cohort-strip-empty"' in html
     assert "No members to show." in html
     # Lens toggle still present.
-    assert 'role="tablist"' in html
+    assert 'class="dz-cohort-strip-lenses"' in html
 
 
 def test_render_outer_carries_data_dz_region_name() -> None:
-    """`data-dz-region-name` lets the lens-toggle HTMX target find the
-    right region wrapper — same convention as DashboardCard."""
+    """The strip root names its region; it mints no slot id of its own —
+    the host slot (`data-dz-region`) owns identity (ADR-0054 rule 1)."""
     html = _render(_strip())
     assert 'data-dz-region-name="cohort"' in html
-    assert 'id="region-cohort-body"' in html
+    assert 'id="region-cohort-body"' not in html
 
 
 def test_render_escapes_member_name_and_lens_label() -> None:

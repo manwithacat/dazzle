@@ -136,12 +136,10 @@ JS_SOURCES = [
     # timestamp, component root listing). Bundle cost ~1KB; methods
     # only do work when called.
     STATIC / "js" / "dz-debug.js",
-    # Opt-in sound cues (stem chrome-cue-opt-in); toast and other hosts call
-    # window.dzCue — must load before dz-toast.js.
-    STATIC / "js" / "dz-cue.js",
-    # htmx 4 migration: auto-dismiss bridge for OOB toasts (replaces the
-    # dropped htmx-2 remove-me extension).
-    STATIC / "js" / "dz-toast.js",
+    # dz-cue.js / dz-toast.js are NOT listed here: they ship once, inside
+    # HM_DIST_JS (packages/hatchi-maxchi/build.py JS_SOURCES). A second page
+    # copy installed a second toast stack + listener set, so one toast
+    # rendered N times (#1795 U24). Gate: test_hm_boundary bundle uniqueness.
     # ADR-0050 Phase 5 / 1a: first-party form-field engagement beacon. Fires a
     # sendBeacon on a field's first focus so the 1a widget inferer can adapt to
     # real usage. Zero-dep, best-effort, same-origin.
@@ -161,8 +159,6 @@ FRAMEWORK_JS = {
     "dz-islands.js",
     "pdf-viewer.js",
     "dz-debug.js",
-    "dz-cue.js",
-    "dz-toast.js",
     "site.js",
 }
 
@@ -220,6 +216,23 @@ def process_js(path: Path) -> str:
     if path.name in FRAMEWORK_JS:
         content = strip_js_comments(content)
     return strip_sourcemap_text(content)
+
+
+def build_js_bundle() -> str:
+    """Concatenate JS_SOURCES into the dist JS body (no banner).
+
+    Factored out so tests can assert bundle shape (one copy per controller,
+    #1795 U24) without writing dist files."""
+    js_parts = []
+    for src in JS_SOURCES:
+        if src == HM_DIST_JS:
+            js_parts.append(_hm_build().build_js("dz-"))  # apply Dazzle's namespace at ingest
+            continue
+        if not src.exists():
+            print(f"WARNING: missing {src}", file=sys.stderr)
+            continue
+        js_parts.append(process_js(src))
+    return ";\n".join(js_parts)
 
 
 def gzip_size(data: bytes) -> int:
@@ -305,16 +318,7 @@ def build() -> None:
     results.append((css_out.name, raw, gzip_size(css_minified.encode())))
 
     # --- JS bundle ---
-    js_parts = []
-    for src in JS_SOURCES:
-        if src == HM_DIST_JS:
-            js_parts.append(_hm_build().build_js("dz-"))  # apply Dazzle's namespace at ingest
-            continue
-        if not src.exists():
-            print(f"WARNING: missing {src}", file=sys.stderr)
-            continue
-        js_parts.append(process_js(src))
-    js_combined = hdr + ";\n".join(js_parts)
+    js_combined = hdr + build_js_bundle()
     js_out = DIST_DIR / "dazzle.min.js"
     js_out.write_text(js_combined)
     raw = len(js_combined.encode())

@@ -37,6 +37,7 @@ def _hx_attrs(
     hx_trigger: object | None = None,
     hx_indicator: object | None = None,
     hx_confirm: object | None = None,
+    hx_confirm_variant: str | None = None,
     hx_put: object | None = None,
     hx_delete: object | None = None,
     hx_vals: str = "",
@@ -71,6 +72,10 @@ def _hx_attrs(
         parts.append(f'hx-indicator="{_escape(str(hx_indicator), quote=True)}"')
     if hx_confirm is not None:
         parts.append(f'hx-confirm="{_escape(str(hx_confirm), quote=True)}"')
+        if hx_confirm_variant is not None:
+            # HM dz-confirm accept-button variant (#1795); meaningless without
+            # hx-confirm, so only emitted alongside it.
+            parts.append(f'data-dz-confirm-variant="{_escape(hx_confirm_variant, quote=True)}"')
     if hx_vals:
         # Use single quotes around the JSON value so internal double
         # quotes (a JSON dict's quoted keys) don't need escaping.

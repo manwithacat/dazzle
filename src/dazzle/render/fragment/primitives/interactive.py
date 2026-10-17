@@ -20,6 +20,8 @@ from dazzle.render.fragment.tokens import ButtonTokens
 
 _BUTTON_VARIANTS = ("primary", "secondary", "danger", "ghost")
 _VISIBILITIES = ("visible", "hidden", "disabled")
+# HM confirm accept-button variants (contracts/confirm.py, #1795).
+_CONFIRM_VARIANTS = ("primary", "destructive", "outline", "ghost")
 _HX_SWAPS = ("innerHTML", "outerHTML", "beforebegin", "afterend", "delete", "none")
 
 
@@ -75,6 +77,10 @@ class Button:
     hx_trigger: HxTrigger | None = None
     hx_indicator: TargetSelector | None = None
     hx_confirm: str | None = None
+    # HM dz-confirm accept-button variant (`data-dz-confirm-variant`). The
+    # controller defaults to destructive only for hx-delete; a destructive
+    # hx-post must say so (#1795).
+    hx_confirm_variant: Literal["primary", "destructive", "outline", "ghost"] | None = None
     hx_vals: str = ""
     hx_ext: tuple[str, ...] = ()
     # ADR-0049 Phase 2: optional `data-dazzle-action="{entity}.{verb}"` anchor
@@ -90,6 +96,11 @@ class Button:
             raise ValueError(f"invalid visibility {self.visibility!r}")
         if self.hx_swap is not None and self.hx_swap not in _HX_SWAPS:
             raise ValueError(f"invalid hx_swap {self.hx_swap!r}")
+        if self.hx_confirm_variant is not None:
+            if self.hx_confirm_variant not in _CONFIRM_VARIANTS:
+                raise ValueError(f"invalid hx_confirm_variant {self.hx_confirm_variant!r}")
+            if self.hx_confirm is None:
+                raise ValueError("hx_confirm_variant requires hx_confirm")
         _validate_htmx_pair(
             hx_get=self.hx_get,
             hx_post=self.hx_post,

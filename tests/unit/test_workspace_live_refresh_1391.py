@@ -237,6 +237,7 @@ class TestRegionResponseBuild:
         assert 'id="region-jobs-card-2"' in body
         assert 'class="dz-card-body"' in body
         assert 'data-display="list"' in body
+        assert body.startswith('<div class="dz-card-body" id="region-jobs-card-2" data-dz-region ')
         assert 'data-dz-poll-complete="true"' in body
         assert "hx-trigger" not in body
         assert "every" not in body

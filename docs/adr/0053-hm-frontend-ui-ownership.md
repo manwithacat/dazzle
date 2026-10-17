@@ -63,7 +63,7 @@ promoted into a Hyperpart (or never will, because it is not chrome).
 
 | Class | Examples under `src/dazzle/page/runtime/static/` | Rule |
 |-------|--------------------------------------------------|------|
-| **True host glue** | `dz-csrf.js`, `dz-toast.js` (stack host), `dz-analytics.js`, `dz-consent.js`, `dz-usage.js`, `dz-debug.js`, `dz-qa.js`, `dz-utils.js` | Stay in page — not design-system parts |
+| **True host glue** | `dz-csrf.js`, `dz-analytics.js`, `dz-consent.js`, `dz-usage.js`, `dz-debug.js`, `dz-qa.js`, `dz-utils.js` | Stay in page — not design-system parts |
 | **Product flows (promote candidates)** | `dz-2fa-setup.js`, `dz-2fa-settings.js`, `dz-onboarding.js`, search-box Alpine residuals | Prefer **promote to Hyperpart** when the UX is user-facing chrome; do not grow new peers here |
 | **Islands / capabilities** | `islands/signing-pad.js`, PDF shell, richtext | Capability islands OK; if they grow design-system chrome, extract Hyperparts |
 | **Bridge / registry** | `dz-islands.js`, `dz-widget-registry.js`, `dz-component-bridge.js`, `dashboard-builder.js`, `feedback-widget.js` | Host wiring only |

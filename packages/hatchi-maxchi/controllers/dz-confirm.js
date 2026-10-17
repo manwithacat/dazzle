@@ -8,8 +8,14 @@
  *
  * Intercepts htmx's `htmx:confirm` event and replaces window.confirm with
  * a designed <dialog class="dz-alert-dialog"> (icon + title + message +
- * destructive-styled confirm). Every existing `hx-confirm="…"` attribute
- * in the fleet upgrades automatically — no emitter changes.
+ * accept button). Every existing `hx-confirm="…"` attribute in the fleet
+ * upgrades automatically — no emitter changes.
+ *
+ * Accept button, resolved per open from the triggering element (#1795):
+ *   data-dz-confirm-variant  primary|destructive|outline|ghost — default
+ *                            "destructive" for hx-delete, else "primary"
+ *   data-dz-confirm-label    button text — default "Confirm"
+ * A destructive hx-post must say data-dz-confirm-variant="destructive".
  *
  * Lifecycle-as-material (taste principle 9): the dialog is created lazily,
  * reused, and the htmx request is only issued via evt.detail.issueRequest()
@@ -40,7 +46,7 @@
       '<p class="dz-alert-dialog__message"></p>' +
       '<div class="dz-alert-dialog__actions">' +
       '<button type="button" class="dz-button" data-dz-variant="outline" data-dz-confirm-cancel>Cancel</button>' +
-      '<button type="button" class="dz-button" data-dz-variant="destructive" data-dz-confirm-accept>Confirm</button>' +
+      '<button type="button" class="dz-button" data-dz-variant="primary" data-dz-confirm-accept>Confirm</button>' +
       "</div>";
     document.body.appendChild(dialog);
     return dialog;
@@ -71,6 +77,13 @@
 
     var accept = dlg.querySelector("[data-dz-confirm-accept]");
     var cancel = dlg.querySelector("[data-dz-confirm-cancel]");
+    // The dialog is a reused singleton: reset variant + label every open so
+    // one element's choice never leaks into the next confirm.
+    var variant =
+      elt.getAttribute("data-dz-confirm-variant") ||
+      (elt.hasAttribute("hx-delete") ? "destructive" : "primary");
+    accept.setAttribute("data-dz-variant", variant);
+    accept.textContent = elt.getAttribute("data-dz-confirm-label") || "Confirm";
 
     function cleanup() {
       accept.removeEventListener("click", onAccept);

@@ -8,14 +8,33 @@ element's existing ``hx-*`` request (see the part page Server exchange).
 
 In-contract: any element with ``hx-confirm``. Opt-out: ``data-dz-native-confirm``
 (source token; gallery demos may strip the ``dz-`` prefix).
+
+Accept button (#1795): optional ``data-dz-confirm-variant``
+(``primary|destructive|outline|ghost``) and ``data-dz-confirm-label`` on the
+triggering element set the accept button's variant and text per open.
+Defaults: ``destructive`` for ``hx-delete``, ``primary`` otherwise; label
+``Confirm``. Hosts emitting a destructive ``hx-post`` say so explicitly.
 """
 
-from contracts._kit import DomContract, Node, Present
+from contracts._kit import DomContract, Node, OneOf, Present
+
+VARIANTS = ("primary", "destructive", "outline", "ghost")
 
 DOM_CONTRACT = DomContract(
     part="confirm",
     root="[hx-confirm]",
-    nodes=(Node("[hx-confirm]", attrs={"hx-confirm": Present()}),),
+    nodes=(
+        Node("[hx-confirm]", attrs={"hx-confirm": Present()}),
+        # Optional: the node selector matches only when the attr is present.
+        Node(
+            "[hx-confirm][data-dz-confirm-variant]",
+            attrs={"data-dz-confirm-variant": OneOf(*VARIANTS)},
+        ),
+        Node(
+            "[hx-confirm][data-dz-confirm-label]",
+            attrs={"data-dz-confirm-label": Present()},
+        ),
+    ),
 )
 
 __all__ = ["DOM_CONTRACT"]

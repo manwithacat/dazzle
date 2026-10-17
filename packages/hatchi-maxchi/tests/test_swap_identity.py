@@ -63,6 +63,15 @@ def test_inner_swap_accepts_body_only() -> None:
     assert validate_inner_swap_response(response, "region-device_attention-card-0") == []
 
 
+def test_inner_swap_accepts_root_that_only_names_its_region() -> None:
+    """``data-dz-region-name`` without the bare hook is not slot chrome."""
+    response = (
+        '<div class="dz-cohort-strip-region" data-dz-cohort-strip '
+        'data-dz-region-name="class_roll"><p>cells</p></div>'
+    )
+    assert validate_inner_swap_response(response, "region-class_roll-card-0") == []
+
+
 def test_inner_swap_rejects_redeclaring_target_id() -> None:
     response = '<div id="region-x-card-1">oops</div>'
     v = validate_inner_swap_response(response, "region-x-card-1")
