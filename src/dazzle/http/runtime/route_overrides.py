@@ -758,7 +758,10 @@ def _wrap_with_policy_gate(
     ``kwargs[via]`` BEFORE invoking the underlying handler. On reject
     the wrapped call raises ``HTTPException(403 or 404)`` and the
     handler body never runs — matching the framework's own CRUD-route
-    semantics.
+    semantics. Overrides run no auth dependency, so the gate resolves the
+    session itself and binds the RLS GUCs through the CRUD dependency's own
+    resolver (``auth.dependencies.authenticate_request``, #1801); the handler
+    body then runs with the caller's tenant fence bound, as a CRUD route does.
 
     Limitations of v1:
 

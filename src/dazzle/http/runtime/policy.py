@@ -61,6 +61,8 @@ from fastapi import HTTPException, Request
 
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
 from dazzle.core.strings import normalize_role
+from dazzle.http.runtime.auth.dependencies import authenticate_request
+from dazzle.http.runtime.auth.models import AuthContext, effective_roles_of
 
 if TYPE_CHECKING:
     from dazzle.core.ir.fk_graph import FKGraph
@@ -108,6 +110,22 @@ class PolicyRegistry:
 # =============================================================================
 
 
+def _authenticate(request: Request) -> AuthContext:
+    """Resolve the caller and bind their RLS fence, as the CRUD routes do (#1801).
+
+    Override routes don't run the CRUD auth dependency, and nothing else puts an
+    ``AuthContext`` on the request, so the gate resolves it itself through
+    ``authenticate_request`` — the dependency's own resolver. That also binds the
+    ``dazzle.tenant_id`` / ``dazzle.user_<attr>`` contextvars; without them the
+    scoped pre-read runs under FORCE RLS with no tenant and sees no rows. An app
+    with auth disabled has no ``auth_store`` → anonymous → the caller 401s.
+    """
+    auth_store = getattr(request.app.state, "auth_store", None)
+    if auth_store is None:
+        return AuthContext()
+    return authenticate_request(request, auth_store)
+
+
 async def check_entity_op(
     request: Request,
     entity_name: str,
@@ -119,10 +137,13 @@ async def check_entity_op(
     """Run permit + scope evaluation as the framework would for a CRUD route.
 
     Args:
-        request: the incoming FastAPI Request. The registry +
-            authenticated user are read off ``request.app.state`` /
-            ``request.state.auth_context`` (set by the auth middleware
-            upstream).
+        request: the incoming FastAPI Request. The registry is read off
+            ``request.app.state.policy_registry``; the caller is resolved
+            from the request's session cookie (else Bearer JWT) through
+            ``auth.dependencies.authenticate_request`` against
+            ``request.app.state.auth_store`` — the same path the CRUD
+            routes' auth dependency takes, which also binds the RLS GUCs
+            the scoped pre-read needs (#1801).
         entity_name: DSL entity name (e.g. ``"StudentProfile"``).
         op: one of ``"list"``, ``"read"``, ``"create"``, ``"update"``,
             ``"delete"``.
@@ -167,13 +188,12 @@ async def check_entity_op(
             "automatically. See #1126."
         )
 
-    # Auth check first — override use case assumes auth has run upstream.
-    # Even unprotected entities require an authenticated caller; we don't
-    # want to silently let anonymous traffic through just because the
-    # entity has no permit/scope rules.
-    auth_ctx = getattr(getattr(request, "state", None), "auth_context", None)
-    user = getattr(auth_ctx, "user", None) if auth_ctx is not None else None
-    if user is None or not getattr(auth_ctx, "is_authenticated", False):
+    # Auth check first. Even unprotected entities require an authenticated
+    # caller; we don't want to silently let anonymous traffic through just
+    # because the entity has no permit/scope rules.
+    auth_ctx = _authenticate(request)
+    user = auth_ctx.user
+    if user is None or not auth_ctx.is_authenticated:
         raise HTTPException(status_code=401, detail="authentication required")
 
     user_id = str(user.id) if getattr(user, "id", None) is not None else None
@@ -182,8 +202,6 @@ async def check_entity_op(
     # auth Plan 1b: the permit/scope gates read the active membership's roles
     # (effective_roles), falling back to global user roles only when no
     # membership is active (1a transition).
-    from dazzle.http.runtime.auth.models import effective_roles_of
-
     user_roles_raw = effective_roles_of(auth_ctx)
 
     info = registry.get(entity_name)
@@ -220,7 +238,7 @@ async def check_entity_op(
             entity_name=entity_name,
             user_id=user_id,
             user_roles=user_roles_raw,
-            request=request,
+            auth_context=auth_ctx,
             service=getattr(info, "service", None),
             fk_graph=getattr(info, "fk_graph", None),
         )
@@ -243,12 +261,8 @@ async def check_entity_op(
         )
 
     # For read/update/delete: scoped pre-read. Same shape as the
-    # cedar handler in route_generator. `auth_ctx` is narrowed to
-    # non-None by the early-return on `user is None` above; cast for
-    # the type-checker.
-    from typing import cast
-
-    from dazzle.http.runtime.auth.models import AuthContext
+    # cedar handler in route_generator; it reads through the RLS fence
+    # `_authenticate` bound above.
     from dazzle.http.runtime.scope_filters import _scoped_pre_read
 
     existing = await _scoped_pre_read(
@@ -256,7 +270,7 @@ async def check_entity_op(
         operation=op,
         id=row_id,
         cedar_access_spec=info.cedar_access_spec,
-        auth_context=cast(AuthContext, auth_ctx),
+        auth_context=auth_ctx,
         entity_name=entity_name,
         fk_graph=info.fk_graph,
         admin_personas=info.admin_personas,
@@ -343,7 +357,7 @@ def _check_scope_create(
     entity_name: str,
     user_id: str,
     user_roles: list[str],
-    request: Request,
+    auth_context: AuthContext,
     service: Any = None,
     fk_graph: Any = None,
 ) -> None:
@@ -398,8 +412,7 @@ def _check_scope_create(
     # silently over-denied any attribute not on a fixed list.
     from dazzle.http.runtime.scope_filters import _LazyUserAttrs
 
-    auth_ctx = getattr(request.state, "auth_context", None) if hasattr(request, "state") else None
-    user_attrs = _LazyUserAttrs(auth_ctx)
+    user_attrs = _LazyUserAttrs(auth_context)
 
     from dazzle.http.runtime.scope_create_eval import (
         ScopeCreateUnsupportedError,

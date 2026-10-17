@@ -182,7 +182,7 @@
   "src/dazzle/render/presentation.py": 2,
   "src/dazzle/mcp/server/handlers/demo_data.py": 1,
   "src/dazzle/http/runtime/workspace_region_orchestration.py": 1,
-  "src/dazzle/http/runtime/policy.py": 9,
+  "src/dazzle/http/runtime/policy.py": 7,
   "src/dazzle/mcp/server/handlers/feedback.py": 4,
   "src/dazzle/cli/ux_interactions.py": 3,
   "src/dazzle/testing/agent_e2e.py": 2,

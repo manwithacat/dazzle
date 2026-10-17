@@ -12,11 +12,10 @@ Two surfaces under test:
 
 import textwrap
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from dazzle.http.runtime.policy import (
@@ -107,22 +106,52 @@ class _TaskService:
         return {"id": kwargs.get("id"), "title": "t"}
 
 
+class _SessionStore:
+    """``AuthStore.validate_session`` for one session id: ``s-1`` → ``roles``, in tenant ``t-1``."""
+
+    def __init__(self, roles: list[str]) -> None:
+        self._roles = roles
+
+    def validate_session(self, session_id: str) -> Any:
+        from dazzle.http.runtime.auth.models import AuthContext, MembershipRecord, UserRecord
+
+        if session_id != "s-1":
+            return AuthContext()
+        return AuthContext(
+            user=UserRecord(email="u@test.local", password_hash="x", roles=self._roles),
+            is_authenticated=True,
+            roles=self._roles,
+            active_membership=MembershipRecord(
+                id="m-1", tenant_id="t-1", identity_id="u-1", roles=self._roles
+            ),
+        )
+
+
 def _override_client(tmp_path: Path, route: str, signature: str, roles: list[str]) -> TestClient:
     """Mount a discovered ``# dazzle:implements Task.update via task_id`` override.
 
-    The handler records every call on ``app.state.calls``; the request carries an
-    authenticated user holding ``roles``.
+    The handler records the RLS tenant bound when it runs on ``app.state.calls``.
+    Sign-in is a session cookie resolved against ``app.state.auth_store`` — the gate
+    must resolve it itself, as the CRUD routes' auth dependency does (#1801): a
+    test that handed the gate a ready-made ``request.state.auth_context`` passed
+    while every real signed-in request got 401.
     """
     from dazzle.core.ir.domain import AccessSpec, PermissionKind, PermissionRule, PolicyEffect
     from dazzle.core.ir.fk_graph import FKGraph
 
-    record = 'request.app.state.calls.append("ran")' if "request" in signature else "pass"
+    record = (
+        "request.app.state.calls.append(get_current_tenant_id())"
+        if "request" in signature
+        else "pass"
+    )
     routes_dir = _write_override(
         tmp_path,
         f"""
         # dazzle:route-override POST {route}
         # dazzle:implements Task.update via task_id
         from fastapi import Request
+
+        from dazzle.http.runtime.tenant_isolation import get_current_tenant_id
 
         async def handler({signature}):
             {record}
@@ -150,11 +179,7 @@ def _override_client(tmp_path: Path, route: str, signature: str, roles: list[str
         }
     )
 
-    @app.middleware("http")
-    async def _authenticate(request: Request, call_next: Any) -> Any:
-        user = SimpleNamespace(id="u-1", roles=roles)
-        request.state.auth_context = SimpleNamespace(is_authenticated=True, user=user)
-        return await call_next(request)
+    app.state.auth_store = _SessionStore(roles)
 
     router = build_override_router(routes_dir)
     assert router is not None
@@ -163,21 +188,23 @@ def _override_client(tmp_path: Path, route: str, signature: str, roles: list[str
 
 
 @pytest.mark.parametrize(
-    ("route", "signature", "roles", "status", "detail_error", "handler_ran"),
+    ("route", "signature", "roles", "session", "status", "detail_error", "handler_ran"),
     [
         pytest.param(
             "/api/task/{task_id}/touch",
             "request: Request, task_id: str",
             ["role_admin"],
+            "s-1",
             200,
             None,
             True,
-            id="permit-passes-handler-runs",
+            id="signed-in-permit-passes-handler-runs-in-tenant",
         ),
         pytest.param(
             "/api/task/{task_id}/touch",
             "request: Request, task_id: str",
             ["role_member"],
+            "s-1",
             403,
             None,
             False,
@@ -185,8 +212,29 @@ def _override_client(tmp_path: Path, route: str, signature: str, roles: list[str
         ),
         pytest.param(
             "/api/task/{task_id}/touch",
+            "request: Request, task_id: str",
+            ["role_admin"],
+            None,
+            401,
+            None,
+            False,
+            id="anonymous-is-401",
+        ),
+        pytest.param(
+            "/api/task/{task_id}/touch",
+            "request: Request, task_id: str",
+            ["role_admin"],
+            "expired",
+            401,
+            None,
+            False,
+            id="unknown-session-is-401",
+        ),
+        pytest.param(
+            "/api/task/{task_id}/touch",
             "task_id: str",
             ["role_admin"],
+            "s-1",
             500,
             "policy_gate_missing_request",
             False,
@@ -196,6 +244,7 @@ def _override_client(tmp_path: Path, route: str, signature: str, roles: list[str
             "/api/task/touch",
             "request: Request",
             ["role_admin"],
+            "s-1",
             500,
             "policy_gate_missing_path_param",
             False,
@@ -208,18 +257,22 @@ def test_implements_override_runs_the_policy_gate_first(
     route: str,
     signature: str,
     roles: list[str],
+    session: str | None,
     status: int,
     detail_error: str | None,
     handler_ran: bool,
 ) -> None:
     client = _override_client(tmp_path, route, signature, roles)
+    if session is not None:
+        client.cookies.set("dazzle_session", session)
 
     response = client.post(route.replace("{task_id}", "row-1"))
 
     assert response.status_code == status
     if detail_error is not None:
         assert response.json()["detail"]["error"] == detail_error
-    assert client.app.state.calls == (["ran"] if handler_ran else [])
+    # The handler ran with the session's tenant bound for RLS, as the CRUD routes bind it.
+    assert client.app.state.calls == (["t-1"] if handler_ran else [])
 
 
 def test_discover_populates_emits_paths(tmp_path: Path) -> None:

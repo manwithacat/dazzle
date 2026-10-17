@@ -69,9 +69,10 @@ def test_policy_check_entity_op_sources_membership_roles(monkeypatch) -> None:
     ctx = _ctx_with_membership(membership_roles=["admin"], user_roles=["legacy"])
     info = SimpleNamespace(cedar_access_spec=SimpleNamespace())
     registry = SimpleNamespace(get=lambda name: info)
+    store = SimpleNamespace(validate_session=lambda _sid: ctx)
     request = SimpleNamespace(
-        app=SimpleNamespace(state=SimpleNamespace(policy_registry=registry)),
-        state=SimpleNamespace(auth_context=ctx),
+        app=SimpleNamespace(state=SimpleNamespace(policy_registry=registry, auth_store=store)),
+        cookies={"dazzle_session": "s-1"},
     )
 
     from fastapi import HTTPException

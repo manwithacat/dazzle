@@ -108,6 +108,32 @@ def _resolve_auth_context(
     return bind_jwt_tenant_context(request, jwt_auth, auth_store)
 
 
+def authenticate_request(
+    request: FastAPIRequest,
+    auth_store: AuthStore,
+    cookie_name: str = "dazzle_session",
+) -> AuthContext:
+    """Resolve the request's ``AuthContext`` and bind its request-scoped tenancy.
+
+    The one resolution point every auth seam shares (#1801): the CRUD auth
+    dependencies below and the ``# dazzle:implements`` policy gate
+    (``policy.check_entity_op``). Resolves the session cookie (else a Bearer JWT),
+    runs the cross-tenant cookie guard (``HTTPException(403)`` on a cross-tenant
+    ``__Host-`` cookie), then binds the RLS GUC contextvars (``dazzle.tenant_id`` /
+    ``dazzle.user_<attr>``), the apex host lens and the membership schema, so any
+    framework repository / service call made afterwards in the same request task
+    reads through the caller's fence. Never raises for an anonymous or expired
+    session: the context comes back with ``is_authenticated=False`` and nothing
+    bound, and the caller decides whether that is a 401.
+    """
+    auth_context = _resolve_auth_context(request, auth_store, cookie_name)
+    _enforce_cross_tenant(request, auth_context)
+    bind_rls_context(auth_context)
+    _bind_apex_lens(request, auth_context)
+    _bind_schema_from_membership(request, auth_context)
+    return auth_context
+
+
 def create_auth_dependency(
     auth_store: AuthStore,
     cookie_name: str = "dazzle_session",
@@ -141,18 +167,15 @@ def create_auth_dependency(
         from dazzle.http.runtime.auth.cookie_name import read_session_id
 
         session_id = read_session_id(request, default=cookie_name)
-        auth_context = _resolve_auth_context(request, auth_store, cookie_name)
+        # #1289 slice 5 / #1519: the cross-tenant cookie guard runs inside the shared
+        # resolver; it and the RLS binding are no-ops for an unauthenticated context.
+        auth_context = authenticate_request(request, auth_store, cookie_name)
 
         if session_id:
             if not auth_context.is_authenticated:
                 raise HTTPException(status_code=401, detail="Session expired")
         elif not auth_context.is_authenticated:
             raise HTTPException(status_code=401, detail="Not authenticated")
-
-        # #1289 slice 5 wiring: enforce cross-tenant cookie binding (#1519: via the
-        # shared helper so deny/optional factories enforce it too). No-op on apps
-        # without a `tenant_host:` block.
-        _enforce_cross_tenant(request, auth_context)
 
         # Check roles if required.
         # Database roles use "role_" prefix; persona IDs don't — normalize.
@@ -170,9 +193,6 @@ def create_auth_dependency(
                     detail=f"Required roles: {require_roles}",
                 )
 
-        bind_rls_context(auth_context)
-        _bind_apex_lens(request, auth_context)
-        _bind_schema_from_membership(request, auth_context)
         return auth_context
 
     return get_current_user
@@ -199,14 +219,13 @@ def create_deny_dependency(
 
     async def check_deny_roles(request: FastAPIRequest) -> AuthContext:
         """Reject users with denied roles."""
-        auth_context = _resolve_auth_context(request, auth_store, cookie_name)
+        # #1519: the shared resolver 403s a cross-tenant `__Host-` cookie here too and
+        # binds the RLS tenant, so a deny-gate used standalone on a tenant-scoped
+        # route still reads through the fence.
+        auth_context = authenticate_request(request, auth_store, cookie_name)
 
         if not auth_context.is_authenticated:
             return auth_context
-
-        # #1519: a cross-tenant `__Host-` cookie must 403 here too, not just on
-        # full-auth routes. No-op for non-tenant apps / unauthenticated contexts.
-        _enforce_cross_tenant(request, auth_context)
 
         # Check deny roles (effective_roles — membership-aware; see get_current_user)
         if deny_roles:
@@ -223,13 +242,6 @@ def create_deny_dependency(
                     detail=f"Access denied for roles: {sorted(user_roles & denied)}",
                 )
 
-        # Bind the RLS tenant id here too: if this deny-gate is ever used
-        # standalone on a tenant-scoped route the GUC would otherwise be unset.
-        # The bind is guarded on is_authenticated and fail-closed, so the
-        # empty/unauthenticated early returns above need no equivalent call.
-        bind_rls_context(auth_context)
-        _bind_apex_lens(request, auth_context)
-        _bind_schema_from_membership(request, auth_context)
         return auth_context
 
     return check_deny_roles
@@ -254,15 +266,9 @@ def create_optional_auth_dependency(
 
     async def get_optional_user(request: FastAPIRequest) -> AuthContext:
         """Get current user if authenticated, or empty context."""
-        auth_context = _resolve_auth_context(request, auth_store, cookie_name)
-        # #1519: enforce the cross-tenant cookie guard on optional-auth routes too.
-        # An expired/invalid session stays anonymous (helper no-ops when
-        # unauthenticated); a valid cross-tenant cookie 403s.
-        _enforce_cross_tenant(request, auth_context)
-        bind_rls_context(auth_context)
-        _bind_apex_lens(request, auth_context)
-        _bind_schema_from_membership(request, auth_context)
-        return auth_context
+        # #1519: an expired/invalid session stays anonymous; a valid cross-tenant
+        # cookie 403s inside the shared resolver.
+        return authenticate_request(request, auth_store, cookie_name)
 
     return get_optional_user
 

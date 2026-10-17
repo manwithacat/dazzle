@@ -25,18 +25,24 @@ def _make_request(
     policy_registry: PolicyRegistry | None,
     auth_context: object | None = None,
 ) -> SimpleNamespace:
-    """Build a stand-in Request — `check_entity_op` only reads
-    `request.app.state.policy_registry` and `request.state.auth_context`."""
-    app_state = SimpleNamespace(policy_registry=policy_registry)
+    """Build a stand-in Request — `check_entity_op` reads
+    `request.app.state.policy_registry` and resolves the caller from the
+    session cookie against `request.app.state.auth_store` (#1801). The
+    real-cookie path is pinned in `test_policy_gate_session.py`."""
+    from dazzle.http.runtime.auth.models import AuthContext
+
+    ctx = auth_context if auth_context is not None else AuthContext()
+    store = SimpleNamespace(validate_session=lambda _sid: ctx)
+    app_state = SimpleNamespace(policy_registry=policy_registry, auth_store=store)
     return SimpleNamespace(
         app=SimpleNamespace(state=app_state),
-        state=SimpleNamespace(auth_context=auth_context),
+        cookies={"dazzle_session": "s-1"},
     )
 
 
 def _auth(user_id: str = "u-1", roles: list[str] | None = None, **attrs: object) -> object:
     user = SimpleNamespace(id=user_id, roles=roles or ["role_admin"], **attrs)
-    return SimpleNamespace(is_authenticated=True, user=user)
+    return SimpleNamespace(is_authenticated=True, user=user, active_membership=None, preferences={})
 
 
 # ---------------------------------------------------------------------------
