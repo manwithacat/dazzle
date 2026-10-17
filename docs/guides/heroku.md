@@ -184,12 +184,64 @@ The server refuses to start if the installed version doesn't match.
 
 ## Backups
 
-Heroku Postgres provides automatic daily backups. For manual backups:
+Without `tenancy: mode: shared_schema`, Heroku Postgres' own backups work
+(`heroku pg:backups:schedule`, `heroku pg:backups:capture`).
+
+With `shared_schema` tenancy they do not. `dazzle db apply-rls` (run by
+`dazzle db upgrade`) puts every tenant table under `FORCE ROW LEVEL SECURITY`,
+and Heroku's `pg_dump` connects as the app's single role with no tenant bound:
+
+- `pg:backups` / `pg:backups:capture` fail with
+  `query would be affected by row-level security policy for table "…"`;
+- `pg_dump --enable-row-security` with no tenant bound succeeds, but every
+  tenant table in it is empty.
+
+Back up with `dazzle db dump` instead. It writes one custom-format dump per
+tenant, each with `dazzle.tenant_id` bound, all from one snapshot, plus a
+`manifest.json` of per-tenant, per-table row counts:
 
 ```bash
-# Heroku's built-in backup
-heroku pg:backups:capture
+# Heroku Scheduler job, daily
+dazzle db dump --out /tmp/backups && <copy /tmp/backups/<label>/ to your storage>
 ```
+
+The dyno's filesystem is ephemeral, so the job must copy the directory
+somewhere durable (S3 or similar) before it exits. Copy `manifest.json` last:
+a directory with a manifest is a complete dump. The dyno's `pg_dump` must be
+at least the server's major version.
+
+Prove the dumps restore, weekly, into a scratch database (never the live one):
+
+```bash
+dazzle db restore-check --from ./<label> --target-url postgresql://…/restore_check --drop-first
+```
+
+It restores `pre-data` from the first dump, the tenant tables from every dump
+and the other tables from the first dump only, then `post-data`, and compares
+every count with the manifest. Exit 0 means every count matched. A real
+restore is the same command against the new database; ownership and grants are
+not in the dumps (`--no-owner --no-acl`), so re-run `dazzle db apply-rls` and
+your grants afterwards. `dazzle db apply-rls --check-dumpable` exits 1 when
+plain dumps of the database cannot work; `dazzle db verify` prints the same
+check as a warning.
+
+### Single-role Heroku (no `CREATE ROLE`)
+
+Heroku Postgres gives an app one role. It owns the tables, the release phase
+runs `dazzle db upgrade` as it, the app connects as it, and it has neither
+`SUPERUSER` nor `BYPASSRLS`. `FORCE ROW LEVEL SECURITY` is what makes RLS apply
+to that role, so dropping it would let the app bypass the fence. With one role,
+every session that binds no tenant sees the tenant tables as empty:
+
+- **Release phase (#1778).** `dazzle db upgrade` runs the upgrade with
+  `row_security = off`, so unbound DML on a tenant table errors instead of
+  matching zero rows. Data migrations on tenant tables go through
+  `for_each_tenant` (see [deployment](../reference/deployment.md#row-tenancy-rls-roles-tenancy-mode-shared_schema)
+  and [migrations](../reference/migrations.md#seam-dml-under-shared_schema-tenancy-1778)).
+- **Backups (#1788).** Use `dazzle db dump` as above. The single role is not a
+  superuser, so no `--role` is needed. `dazzle db snapshot` / `db restore` (the
+  e2e baselines) refuse on this database, because a plain dump would error or
+  carry no tenant rows.
 
 ## Custom Domains and SSL
 

@@ -231,6 +231,6 @@
   "src/dazzle/mcp/server/handlers/dsl/validate.py": 1,
   "src/dazzle/db/rls_apply.py": 1,
   "src/dazzle/http/runtime/htmx_render.py": 3,
-  "src/dazzle/cli/db.py": 35,
+  "src/dazzle/cli/db.py": 31,
   "src/dazzle/http/runtime/page_routes.py": 21
 }

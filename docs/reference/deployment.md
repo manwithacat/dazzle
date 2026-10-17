@@ -179,8 +179,19 @@ owner bypasses unless `FORCE ROW LEVEL SECURITY` (which Dazzle sets). So:
   logical dumps taken as that role. `pg:backups` / plain `pg_dump` set
   `row_security = off` and fail with `query would be affected by row-level
   security policy`; `pg_dump --enable-row-security` with no tenant bound
-  succeeds but writes every fenced table empty. #1788 tracks a tenant-aware
-  dump; until it ships, neither is a backup of tenant data.
+  succeeds but writes every fenced table empty. Neither is a backup of tenant
+  data.
+- **Backups under FORCE RLS (#1788).** `dazzle db dump --out DIR` takes one
+  custom-format dump per tenant with `dazzle.tenant_id` bound (`PGOPTIONS`,
+  `--enable-row-security`, one shared `--snapshot`) and writes a manifest of
+  per-tenant, per-table counts; `dazzle db restore-check --from DIR/<label>
+  --target-url URL` restores it into a scratch database and compares every
+  count. Tenant ids come from `organizations` (`iter_tenant_ids`). A superuser
+  or `BYPASSRLS` connection must pass `--role <a non-bypass role>`, or every
+  per-tenant dump would hold every tenant. `dazzle db apply-rls
+  --check-dumpable` exits 1 when FORCE RLS is on and the connected role cannot
+  bypass it (a plain `pg_dump` cannot work); `dazzle db verify` prints the same
+  check as a warning. `dazzle db snapshot` / `db restore` refuse in that state.
 - **Verifying RLS in CI/ops:** `dazzle db verify` now gates **RLS policy drift** (a
   tenant-scoped table with RLS disabled, or a missing/extra policy) and exits
   non-zero on drift. `dazzle inspect rls` shows the generated policy set per table

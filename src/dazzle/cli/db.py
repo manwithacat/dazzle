@@ -25,7 +25,18 @@ from dazzle.core.environment import DAZZLE_ENV_VAR
 from dazzle.core.ir import TenancyMode
 from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.ir.fk_graph import FKGraph
+from dazzle.db.rls_drift import detect_rls_drift
+from dazzle.db.tenant_dump import (
+    DumpError,
+    DumpPosture,
+    DumpRefusal,
+    default_label,
+    read_dump_posture,
+    run_dump,
+    run_restore_check,
+)
 from dazzle.http.alembic.tenant_dml import RLS_TRIPWIRE_ATTR
+from dazzle.http.converters.entity_converter import convert_entities
 
 if TYPE_CHECKING:
     from dazzle.db.connection import DbTarget
@@ -767,7 +778,6 @@ def _apply_rls_after_upgrade(resolved_url: str, appspec: Any, project_root: Path
     """
 
     from dazzle.db.rls_apply import apply_rls_policies
-    from dazzle.http.converters.entity_converter import convert_entities
 
     entities = convert_entities(appspec.domain.entities)
 
@@ -1645,7 +1655,6 @@ def verify_command(
     schema = _resolve_tenant_schema(tenant) if tenant else ""
 
     from dazzle.db.money_migration import repair_money_drifts
-    from dazzle.db.rls_drift import detect_rls_drift
     from dazzle.db.signable_drift import detect_signable_drift
     from dazzle.db.verify import db_verify_impl
 
@@ -1655,8 +1664,6 @@ def verify_command(
     # only needed when row-level tenancy is in play.
     rls_entities: list[Any] = []
     if _is_shared_schema(appspec):
-        from dazzle.http.converters.entity_converter import convert_entities
-
         rls_entities = convert_entities(appspec.domain.entities)
 
     async def _run(conn: Any) -> Any:
@@ -1664,12 +1671,16 @@ def verify_command(
         money_result = await repair_money_drifts(conn, list(entities), apply=fix_money)
         signable_result = await detect_signable_drift(conn, list(entities))
         rls_result = await detect_rls_drift(conn, appspec, rls_entities)
-        return {
+        out: dict[str, Any] = {
             "fk": fk_result,
             "money": money_result,
             "signable": signable_result,
             "rls": rls_result,
         }
+        if rls_entities:
+            # #1788: warn (never fail) when a plain pg_dump cannot back this DB up.
+            out["dumpable"] = (await read_dump_posture(conn)).model_dump()
+        return out
 
     result = asyncio.run(_run_with_connection(project_root, url, _run, schema=schema))
 
@@ -1815,6 +1826,10 @@ def verify_command(
     elif _is_shared_schema(appspec):
         console.print("\n[green]No RLS policy drift.[/green]")
 
+    if result.get("dumpable") is not None:
+        style, message = _dump_posture_line(DumpPosture(**result["dumpable"]))
+        console.print(f"\n[bold]Backup posture (#1788):[/bold]\n  [{style}]{message}[/{style}]")
+
     # #1035 (v0.67.21): exit non-zero when verify surfaced any FK
     # issues — orphans, column mismatches, or money-column drift. The
     # exit code lets `dazzle db verify` be wired into CI / nightly
@@ -1843,6 +1858,13 @@ def _is_shared_schema(appspec: Any) -> bool:
 def apply_rls_command(
     database_url: DatabaseUrlOption = "",
     as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+    check_dumpable: bool = typer.Option(
+        False,
+        "--check-dumpable",
+        help="Apply nothing; exit 1 when FORCE RLS is on and the connected role cannot "
+        "bypass it, i.e. a plain pg_dump / heroku pg:backups cannot back this database "
+        "up (use `dazzle db dump`, #1788).",
+    ),
 ) -> None:
     """Apply row-level-security policies to the database (production enforcement).
 
@@ -1873,8 +1895,11 @@ def apply_rls_command(
             console.print(f"[dim]{msg}[/dim]")
         return
 
+    if check_dumpable:
+        _check_dumpable(_resolve_url(database_url), project_root, as_json=as_json)
+        return
+
     from dazzle.db.rls_apply import apply_rls_policies
-    from dazzle.http.converters.entity_converter import convert_entities
 
     entities = convert_entities(appspec.domain.entities)
     url = _resolve_url(database_url)
@@ -1908,6 +1933,220 @@ def apply_rls_command(
         "[dim]Note: this must run as a role that owns the tables (the deploy/owner "
         "role) — the runtime dazzle_app role cannot run RLS DDL.[/dim]"
     )
+
+
+_DUMP_POINTER = (
+    "Use `dazzle db dump` (one tenant-bound dump per tenant + manifest) and "
+    "`dazzle db restore-check` (#1788)."
+)
+
+
+def _dump_posture_line(posture: Any) -> tuple[str, str]:
+    """(rich style, message) describing whether a plain pg_dump can work."""
+    if posture.plain_dump_blocked:
+        return (
+            "yellow",
+            f"FORCE ROW LEVEL SECURITY is on for {len(posture.forced_tables)} table(s) and "
+            "the connected role cannot bypass it: a plain pg_dump / `heroku pg:backups` "
+            "fails, and `pg_dump --enable-row-security` writes the fenced tables empty. "
+            + _DUMP_POINTER,
+        )
+    if posture.forced_tables:
+        return (
+            "green",
+            "The connected role bypasses RLS, so a plain pg_dump sees every row "
+            "(`dazzle db dump` needs --role <a non-bypass role> from this role).",
+        )
+    return ("green", "No FORCE ROW LEVEL SECURITY tables; a plain pg_dump sees every row.")
+
+
+def _check_dumpable(url: str, project_root: Path, *, as_json: bool) -> None:
+    """``apply-rls --check-dumpable``: exit 1 when a plain dump cannot work."""
+    import json as json_mod
+
+    posture = asyncio.run(_run_with_connection(project_root, url, read_dump_posture))
+    style, message = _dump_posture_line(posture)
+    if as_json:
+        payload = posture.model_dump()
+        payload["plain_dump_blocked"] = posture.plain_dump_blocked
+        console.print(json_mod.dumps(payload))
+    else:
+        console.print(f"[{style}]{message}[/{style}]")
+    if posture.plain_dump_blocked:
+        raise typer.Exit(1)
+
+
+def _refuse_plain_dump_if_blocked(url: str, project_root: Path, command: str) -> None:
+    """``db snapshot`` / ``db restore`` under FORCE RLS: refuse instead of a hollow baseline.
+
+    A plain ``pg_dump`` run by a role the fence filters either errors or (with
+    ``--enable-row-security``) writes every fenced table empty — a zero-row
+    baseline that restores "successfully" (#1788). A superuser / BYPASSRLS role
+    is not filtered, so the snapshot stays available to it.
+    """
+
+    try:
+        posture = asyncio.run(_run_with_connection(project_root, url, read_dump_posture))
+    except Exception:
+        # Unreachable DB: pg_dump / pg_restore report it themselves.
+        logger.debug("dump-posture probe failed; leaving it to pg_dump", exc_info=True)
+        return
+    if posture.plain_dump_blocked:
+        typer.echo(
+            f"[db {command}] refusing: FORCE ROW LEVEL SECURITY is on for "
+            f"{len(posture.forced_tables)} table(s) and the connected role cannot bypass "
+            "it, so a plain pg_dump/pg_restore would error or carry zero tenant rows. "
+            + _DUMP_POINTER,
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+
+@db_app.command(name="dump")
+def dump_command(
+    out: Path = typer.Option(
+        ..., "--out", help="Parent directory; the dump is written to OUT/<label>/"
+    ),
+    label: str = typer.Option("", "--label", help="Dump label (default: dump-<UTC timestamp>)"),
+    role: str = typer.Option(
+        "",
+        "--role",
+        help="SET ROLE for the dump session (required when the connected role is a "
+        "superuser or has BYPASSRLS; must itself be NOSUPERUSER NOBYPASSRLS)",
+    ),
+    pg_bin: str = typer.Option("", "--pg-bin", help="Directory holding pg_dump (default: PATH)"),
+    database_url: DatabaseUrlOption = "",
+) -> None:
+    """Tenant-aware backup of a shared_schema database (#1788).
+
+    One custom-format ``pg_dump`` per tenant with ``dazzle.tenant_id`` bound
+    through PGOPTIONS and ``--enable-row-security``, all reading one exported
+    snapshot, then ``manifest.json`` (written last) with per-tenant per-table
+    row counts. Works where FORCE ROW LEVEL SECURITY defeats a plain pg_dump
+    and ``heroku pg:backups`` (single-role hosts). Prove a dump restores with
+    ``dazzle db restore-check``.
+    """
+
+    project_root = Path.cwd().resolve()
+    appspec = load_project_appspec(project_root)
+    if not _is_shared_schema(appspec):
+        typer.echo(
+            "[db dump] refusing: no row-level tenancy (tenancy: mode: shared_schema). "
+            "A plain pg_dump backs this database up.",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    url = _resolve_url(database_url)
+    drift = _live_rls_drift(url, appspec, project_root)
+    if drift:
+        typer.echo(
+            "[db dump] refusing: live RLS policies have drifted from the DSL, so the "
+            "fenced/non-fenced split is suspect:",
+            err=True,
+        )
+        for entry in drift:
+            typer.echo(f"  {entry['entity']}: {'; '.join(entry['issues'])}", err=True)
+        typer.echo("Run `dazzle db apply-rls` as the table owner, then dump.", err=True)
+        raise typer.Exit(code=2)
+
+    resolved_label = label or default_label()
+    try:
+        manifest, classification = run_dump(
+            url=url,
+            appspec=appspec,
+            out_dir=out / resolved_label,
+            label=resolved_label,
+            role=role or None,
+            pg_bin=pg_bin or None,
+        )
+    except DumpRefusal as e:
+        typer.echo(f"[db dump] refusing: {e}", err=True)
+        raise typer.Exit(code=2)
+    except DumpError as e:
+        typer.echo(f"[db dump] failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    console.print(f"\n[bold]Dump {manifest.label}[/bold] → {out / manifest.label}")
+    for tenant in manifest.tenants:
+        rows = sum(manifest.counts[tenant.id].values())
+        name = tenant.slug or tenant.id
+        console.print(
+            f"  {name:<24} {tenant.file:<32} {manifest.files[tenant.file]:>12,} B  {rows} rows"
+        )
+    console.print(
+        f"  globals: {sum(manifest.globals.values())} rows in "
+        f"{len(manifest.non_rls_tables)} non-fenced table(s); "
+        f"{len(manifest.rls_tables)} fenced table(s)"
+    )
+    if classification.unaccounted:
+        console.print(
+            "[yellow]Non-fenced tables not declared by the DSL, the artifact registry or "
+            f"Alembic (restored once): {', '.join(classification.unaccounted)}[/yellow]"
+        )
+
+
+def _live_rls_drift(url: str, appspec: Any, project_root: Path) -> list[dict[str, Any]]:
+    """``detect_rls_drift`` against the live database (empty = no drift)."""
+
+    entities = convert_entities(appspec.domain.entities)
+
+    async def _run(conn: Any) -> list[dict[str, Any]]:
+        return await detect_rls_drift(conn, appspec, entities)
+
+    result: list[dict[str, Any]] = asyncio.run(_run_with_connection(project_root, url, _run))
+    return result
+
+
+@db_app.command(name="restore-check")
+def restore_check_command(
+    from_dir: Path = typer.Option(
+        ..., "--from", help="A `dazzle db dump` directory (the one holding manifest.json)"
+    ),
+    target_url: str = typer.Option(
+        ..., "--target-url", help="Scratch database to restore into (never the source)"
+    ),
+    drop_first: bool = typer.Option(
+        False,
+        "--drop-first",
+        help="Drop every user schema on the target first (scratch databases only)",
+    ),
+    pg_bin: str = typer.Option("", "--pg-bin", help="Directory holding pg_restore (default: PATH)"),
+) -> None:
+    """Restore a `dazzle db dump` into a scratch database and prove every count (#1788).
+
+    ``pre-data`` from the first dump, ``TABLE DATA`` from every dump (fenced
+    tables from each, non-fenced tables from the first only), ``post-data``
+    once; then every per-tenant and global row count is compared with the
+    manifest. Exit 0 only when all match; 1 on a mismatch or a failed step;
+    2 on a refusal (no manifest, target is the source, target not empty
+    without --drop-first).
+    """
+
+    try:
+        result = run_restore_check(
+            from_dir=from_dir,
+            target_url=target_url,
+            drop_first=drop_first,
+            pg_bin=pg_bin or None,
+        )
+    except DumpRefusal as e:
+        typer.echo(f"[db restore-check] refusing: {e}", err=True)
+        raise typer.Exit(code=2)
+    except DumpError as e:
+        typer.echo(f"[db restore-check] failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    console.print(f"\n[bold]Restore check {result.label}[/bold]")
+    for step in result.steps:
+        console.print(f"  {step}")
+    if result.mismatches:
+        console.print(f"\n[red]{len(result.mismatches)} of {result.checks} counts differ:[/red]")
+        console.print(f"  {'table':<32} {'tenant':<38} {'expected':>10} {'actual':>10}")
+        for m in result.mismatches:
+            console.print(f"  {m.table:<32} {m.tenant:<38} {m.expected!s:>10} {m.actual!s:>10}")
+        raise typer.Exit(code=1)
+    console.print(f"\n[green]All {result.checks} counts match ({result.rows} rows).[/green]")
 
 
 @db_app.command(name="reset")
@@ -2143,6 +2382,8 @@ def db_snapshot_command(
         typer.echo("DATABASE_URL not set. Export it or pass --database-url.", err=True)
         raise typer.Exit(code=2)
 
+    _refuse_plain_dump_if_blocked(url, project, "snapshot")
+
     if name == "baseline":
         mgr = BaselineManager(project, url)
         path = mgr.ensure(fresh=True)
@@ -2173,6 +2414,8 @@ def db_restore_command(
     if not url:
         typer.echo("DATABASE_URL not set. Export it or pass --database-url.", err=True)
         raise typer.Exit(code=2)
+
+    _refuse_plain_dump_if_blocked(url, project, "restore")
 
     if name == "baseline":
         mgr = BaselineManager(project, url)

@@ -83,6 +83,13 @@ def _init_db(self) -> None:
    **un-shippable** — it fails CI until registered, which forces the gating decision.
 3. **RLS posture** — the framework never RLS-fences its own internal tables (RLS is
    app-entity-only); any `fenced` framework row would fail.
+
+The posture also partitions a tenant-aware dump (`dazzle db dump`, #1788):
+`fenced` tables are restored from every per-tenant dump, `non_fenced` ones (and
+`alembic_version`, the tenant root and other unfenced app entities) from the
+first dump only. `dazzle.db.tenant_dump.classify_tables` reads the live
+`pg_class` flags and refuses the dump when they disagree with the DSL or with
+this registry.
 4. **Refs resolve** — every creator / boot_entry dotted-ref imports cleanly.
 
 ## Tracked debt (`known_ungated_issue`)

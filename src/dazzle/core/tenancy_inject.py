@@ -13,7 +13,12 @@ from __future__ import annotations
 from dazzle.core import ir
 
 
-def _find_tenant_entity(entities: list[ir.EntitySpec]) -> ir.EntitySpec | None:
+def find_tenant_entity(entities: list[ir.EntitySpec]) -> ir.EntitySpec | None:
+    """The tenant-root entity (``is_tenant_root`` or ``archetype: tenant``), or None.
+
+    The one definition of "tenant root" — partition-key injection, the archetype
+    expander, tenant excision and the tenant-aware dump all resolve it here.
+    """
     for entity in entities:
         if entity.is_tenant_root or entity.archetype_kind == ir.ArchetypeKind.TENANT:
             return entity
@@ -32,7 +37,7 @@ def inject_partition_key(
     if tenancy is None or tenancy.isolation.mode != ir.TenancyMode.SHARED_SCHEMA:
         return entities
 
-    tenant_entity = _find_tenant_entity(entities)
+    tenant_entity = find_tenant_entity(entities)
     if tenant_entity is None:
         return entities
 

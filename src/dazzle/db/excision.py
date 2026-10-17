@@ -17,6 +17,7 @@ from typing import Any
 from psycopg import sql
 
 from dazzle.core.ir.fk_graph import FKGraph
+from dazzle.core.tenancy_inject import find_tenant_entity
 from dazzle.db.tenant_ids import tenant_exists
 from dazzle.http.runtime.sa_schema import scoped_entity_names
 
@@ -31,15 +32,6 @@ class ExcisionResult:
     dry_run: bool
     deleted: dict[str, int] = field(default_factory=dict)
     root: str | None = None  # the domain tenant-root entity (None if app has none)
-
-
-def _tenant_root_name(appspec: Any) -> str | None:
-    for e in appspec.domain.entities:
-        if getattr(e, "is_tenant_root", False):
-            return str(e.name)
-        if getattr(getattr(e, "archetype_kind", None), "name", "") == "TENANT":
-            return str(e.name)
-    return None
 
 
 def _scalar(row: Any) -> Any:
@@ -98,7 +90,8 @@ def excise_tenant(
 
     entities = list(appspec.domain.entities)
     scoped = scoped_entity_names(entities, partition_key)
-    root = _tenant_root_name(appspec)
+    root_entity = find_tenant_entity(entities)
+    root = root_entity.name if root_entity is not None else None
 
     # Topo set = scoped entities + the root (if any, and not itself scoped).
     topo_set = sorted(scoped) + ([root] if root and root not in scoped else [])

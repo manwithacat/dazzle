@@ -288,6 +288,9 @@ dazzle db COMMAND [OPTIONS]
 | `downgrade` | Rollback migrations |
 | `current` | Show current revision |
 | `history` | Show migration history |
+| `apply-rls` | Apply the `shared_schema` RLS policies (`--check-dumpable`: check only) |
+| `dump` | Tenant-aware backup under `shared_schema` RLS (one bound dump per tenant + manifest) |
+| `restore-check` | Restore a `dump` into a scratch database and compare every row count |
 | `resanitize-rich-text` | Re-run the rich-text sanitiser over stored `widget=rich_text` values |
 
 #### dazzle db upgrade
@@ -310,6 +313,53 @@ seams run tenant DML through `for_each_tenant`
 ([migrations](migrations.md#seam-dml-under-shared_schema-tenancy-1778)).
 Superuser and `BYPASSRLS` connections are never filtered, so the tripwire does
 not affect them.
+
+#### dazzle db dump / restore-check
+
+Under `tenancy: mode: shared_schema`, tenant tables have `FORCE ROW LEVEL
+SECURITY`. A plain `pg_dump` (and `heroku pg:backups`) run by a role RLS filters
+fails, and `pg_dump --enable-row-security` with no tenant bound writes every
+tenant table empty (#1788). `dump` writes one custom-format dump per tenant,
+each with `dazzle.tenant_id` bound through `PGOPTIONS`, all from one exported
+snapshot, then `manifest.json`.
+
+```bash
+dazzle db dump --out backups/ [--label L] [--role R] [--pg-bin DIR]
+dazzle db restore-check --from backups/<label> --target-url URL [--drop-first] [--pg-bin DIR]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--out DIR` | Parent directory; the dump goes to `DIR/<label>/` (must be absent or empty) |
+| `--label L` | Dump label (default `dump-<UTC timestamp>`) |
+| `--role R` | `SET ROLE` for the dump session. Required when the connected role is a superuser or has `BYPASSRLS` |
+| `--pg-bin DIR` | Directory holding `pg_dump` / `pg_restore` (default: `PATH`) |
+| `--database-url URL` | Source database (`dump` only) |
+| `--from DIR` | The dump directory holding `manifest.json` (`restore-check`) |
+| `--target-url URL` | Scratch database to restore into (`restore-check`) |
+| `--drop-first` | Drop every user schema on the target first (`restore-check`) |
+
+`dump` exits 2 without `shared_schema`, on RLS policy drift (or a live RLS
+posture that disagrees with the DSL / artifact registry), when the role bypasses
+RLS and no `--role` is given, and when `organizations` has no tenants. The URL
+reaches `pg_dump` only through `PG*` environment variables.
+
+The manifest records the label, creation time, Dazzle version, Alembic
+version, source host and database, server and `pg_dump` versions, partition
+key, tenant entity, the tenants and their files, the fenced and non-fenced
+tables, per-tenant per-table counts, global counts and file sizes.
+
+`restore-check` restores `pre-data` from the first dump, the fenced tables from
+every dump and the non-fenced tables from the first dump only, then
+`post-data`, and recounts. It exits 0 when every count matches, 1 on a
+mismatch (printed per table and tenant) or a failed step, and 2 when there is
+no manifest, the target is the source database, or the target has tables and
+`--drop-first` was not given.
+
+`dazzle db apply-rls --check-dumpable` applies nothing and exits 1 when FORCE
+RLS is on and the connected role cannot bypass it; `dazzle db verify` prints
+the same check as a warning. `dazzle db snapshot` / `db restore` (e2e
+baselines) refuse in that state.
 
 #### dazzle db resanitize-rich-text
 

@@ -72,9 +72,29 @@ Total connections = `DAZZLE_DB_POOL_MAX * number_of_workers`. Ensure this stays 
 
 ## Backup and Recovery
 
-Use your Postgres provider's backups (`pg_dump` / `pg_restore`, or
-`heroku pg:backups:capture` on Heroku). Back up the uploads directory
-separately if the app stores files locally.
+Without `shared_schema` tenancy, use your Postgres provider's backups
+(`pg_dump` / `pg_restore`, or `heroku pg:backups:capture` on Heroku).
+
+With `tenancy: mode: shared_schema`, tenant tables are under `FORCE ROW LEVEL
+SECURITY`. A dump taken by a role that RLS filters (the app's only role on
+Heroku and similar hosts) either fails (`query would be affected by row-level
+security policy`) or, with `--enable-row-security`, writes every tenant table
+empty. Use the tenant-aware commands (#1788):
+
+```bash
+dazzle db dump --out backups/                   # one tenant-bound dump per tenant + manifest.json
+dazzle db restore-check --from backups/<label> \
+  --target-url postgresql://…/restore_check --drop-first   # restore and compare every count
+```
+
+Run `dump` on a schedule and `restore-check` against a scratch database at
+least weekly. When the connected role is a superuser or has `BYPASSRLS`, RLS
+would not filter the per-tenant dumps, so `dump` requires `--role <a
+NOSUPERUSER NOBYPASSRLS role that can read the tables>`. `dazzle db apply-rls
+--check-dumpable` exits 1 when a plain dump of the database cannot work. See
+[Heroku](heroku.md#backups).
+
+Back up the uploads directory separately if the app stores files locally.
 
 ## Multi-Worker Deployment
 

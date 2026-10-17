@@ -1,7 +1,7 @@
 {
-  "src_lines": 322779,
-  "test_lines": 314120,
-  "docs_lines": 48721,
+  "src_lines": 323810,
+  "test_lines": 314789,
+  "docs_lines": 48861,
   "construct_count": 31,
   "written": "2026-10-17",
   "exceptions": [
@@ -408,6 +408,15 @@
         "docs_lines"
       ],
       "reason": "#1778 consumer-forced (cyfuture): seam DML tripwire + for_each_tenant"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1788 consumer-forced (cyfuture): tenant-aware dump/restore-check"
     }
   ]
 }

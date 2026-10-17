@@ -11,6 +11,7 @@ v0.10.4: Added user and user_membership archetypes
 from . import ir
 from .linker_impl import SymbolTable
 from .strings import to_snake_case
+from .tenancy_inject import find_tenant_entity
 
 
 def expand_archetypes(
@@ -372,7 +373,7 @@ def _apply_semantic_archetype(
         return _expand_user_archetype(entity)
     elif entity.archetype_kind == ir.ArchetypeKind.USER_MEMBERSHIP:
         user_entity = _find_user_entity(all_entities)
-        tenant_entity = _find_tenant_entity(all_entities)
+        tenant_entity = find_tenant_entity(all_entities)
         return _expand_user_membership_archetype(entity, user_entity, tenant_entity)
     elif entity.archetype_kind == ir.ArchetypeKind.PROFILE:
         return _expand_profile_archetype(entity)
@@ -487,22 +488,6 @@ def _create_admin_only_access() -> ir.AccessSpec:
         visibility=visibility_rules,
         permissions=permission_rules,
     )
-
-
-def _find_tenant_entity(entities: list[ir.EntitySpec]) -> ir.EntitySpec | None:
-    """
-    Find the tenant root entity (if any).
-
-    Args:
-        entities: List of entities
-
-    Returns:
-        Tenant entity or None
-    """
-    for entity in entities:
-        if entity.is_tenant_root or entity.archetype_kind == ir.ArchetypeKind.TENANT:
-            return entity
-    return None
 
 
 # =============================================================================

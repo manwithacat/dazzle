@@ -32,7 +32,7 @@ _TENANT_IDS_SQL = "SELECT id FROM organizations ORDER BY id"
 _TENANT_EXISTS_SQL = "SELECT 1 FROM organizations WHERE id = %s"
 
 
-def _first(row: Any) -> Any:
+def first_column(row: Any) -> Any:
     """First column of a psycopg row (tuple or ``dict_row``)."""
     return next(iter(row.values())) if isinstance(row, dict) else row[0]
 
@@ -44,7 +44,7 @@ def iter_tenant_ids(conn: Any) -> list[str]:
     tenant GUC is bound or RLS is enforced for the current role.
     """
     rows = conn.execute(_TENANT_IDS_SQL).fetchall()
-    return [str(_first(r)) for r in rows]
+    return [str(first_column(r)) for r in rows]
 
 
 def tenant_exists(conn: Any, tenant_id: str) -> bool:
