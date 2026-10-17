@@ -224,7 +224,11 @@ class _RenderDashboardMixin:
             f'<div class="dz-card-body" '
             f'id="{body_id_attr}" '
             f'data-dz-region data-dz-region-name="{ctx.escape_attr(c.name)}" '
-            f'data-display="{ctx.escape_attr(c.display.lower())}">'
+            f'data-display="{ctx.escape_attr(c.display.lower())}" '
+            # The region's endpoint as an inert attribute: the context
+            # selector rewrites it and the fetch elements that target this
+            # body (an hx-get here would be inherited by the region, #1802).
+            f'data-dz-region-src="{hx_get}">'
             f"{inner}"
             f"</div>"
         )

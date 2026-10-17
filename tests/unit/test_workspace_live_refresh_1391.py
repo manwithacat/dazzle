@@ -17,6 +17,7 @@ This module pins three layers:
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -129,6 +130,18 @@ class TestLiveRefreshRenderer:
         html = _render(_make_card(refresh_interval=None))
         assert "every" not in html
         assert 'hx-trigger="load"' in html
+
+    @pytest.mark.parametrize("refresh_interval", [None, 30])
+    def test_context_selector_seam(self, refresh_interval: int | None) -> None:
+        # The workspace context selector rewrites a region body's inert
+        # `data-dz-region-src` and the hx-get of every element targeting the
+        # body by id (#1802 moved hx-get off the body; the INTERACTION_WALK
+        # context_select gesture went red when nothing carried the seam).
+        html = _render(_make_card(refresh_interval=refresh_interval))
+        body_id = re.search(r'class="dz-card-body" id="([^"]+)"', html).group(1)
+        assert 'data-dz-region-src="/api/workspaces/' in html
+        fetchers = re.findall(r'hx-get="[^"]+" hx-target="#([^"]+)"', html)
+        assert fetchers and set(fetchers) == {body_id}
 
     def test_default_is_none(self) -> None:
         assert _make_card().refresh_interval is None

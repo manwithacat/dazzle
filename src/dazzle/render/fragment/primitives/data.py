@@ -1791,8 +1791,9 @@ class WorkspaceContextSelector:
       2. Restores any `dzPrefs`-saved selection or defaults to the
          first real option (the legacy "All" landing-page-empty fix
          per #870).
-      3. Updates every `[id^="region-"][hx-get]` element's hx-get to
-         carry `context_id={selected}` and re-triggers the htmx fetch
+      3. Rewrites every region body's `data-dz-region-src` and the
+         `hx-get` of the fetch elements targeting it (skeleton loader,
+         poller; #1802) to carry `context_id={selected}`, then refetches
          (#980 round 2 guards against htmx not yet loaded).
 
     `workspace_name` keys the dzPrefs storage (`workspace.X.context`).
