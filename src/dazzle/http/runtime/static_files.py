@@ -12,6 +12,11 @@ Adds Cache-Control headers to all static responses:
 Fingerprinted paths (e.g. ``dazzle-bundle.a1b2c3d4.css``) are resolved
 back to the original filename before serving. No files are renamed on
 disk — the hash is a virtual path segment.
+
+With a fingerprinter wired (#1793), a stylesheet carrying absolute
+``/static/...`` ``@import``s is served with those imports rewritten to their
+hashed URLs, so every imported sheet is cached ``immutable`` under its own
+content hash.
 """
 
 import os
@@ -21,7 +26,11 @@ from typing import Any
 from starlette.responses import Response
 from starlette.staticfiles import StaticFiles
 
-from dazzle.page.runtime.asset_fingerprint import FINGERPRINT_RE, strip_fingerprint
+from dazzle.page.runtime.asset_fingerprint import (
+    FINGERPRINT_RE,
+    StaticFingerprinter,
+    strip_fingerprint,
+)
 
 # Extensions unlikely to change between deploys
 _IMMUTABLE_EXTENSIONS = frozenset({".woff2", ".woff", ".ttf", ".eot"})
@@ -31,6 +40,40 @@ _DEFAULT_MAX_AGE = 3600
 
 # Cache duration for fingerprinted/immutable assets (1 year)
 _IMMUTABLE_MAX_AGE = 31536000
+
+
+def static_cache_control(
+    request_path: str,
+    served_ext: str,
+    *,
+    active_development: bool = False,
+    default_max_age: int | None = None,
+) -> str:
+    """Cache-Control for a static file, decided by the *requested* path.
+
+    Un-hashed requests are never ``immutable`` (fonts aside) — only a URL
+    carrying the content hash may be cached forever.
+    """
+    if active_development:
+        # #1468: a site under active development serves everything
+        # no-cache so each rebuild is picked up on the next load. The
+        # content hash (when present) still guarantees byte-correctness;
+        # no-cache just forces ETag revalidation → 304 when unchanged.
+        # Checked first so even a stale fingerprinted URL from a prior
+        # deploy revalidates instead of staying immutable.
+        return "no-cache"
+    is_fingerprinted = bool(FINGERPRINT_RE.search(os.path.basename(request_path)))
+    if is_fingerprinted or served_ext.lower() in _IMMUTABLE_EXTENSIONS:
+        return f"public, max-age={_IMMUTABLE_MAX_AGE}, immutable"
+    if "/dist/" in request_path:
+        # #1468 safety net: the framework runtime bundle requested at its
+        # plain (non-fingerprinted) URL — i.e. from an HTML emission site
+        # that hardcodes `/static/dist/...` instead of reading the
+        # fingerprinted app-chrome URLs — must revalidate every load so a
+        # deploy's JS/CSS fix is never served stale for hours.
+        return "no-cache"
+    max_age = _DEFAULT_MAX_AGE if default_max_age is None else default_max_age
+    return f"public, max-age={max_age}"
 
 
 class CombinedStaticFiles(StaticFiles):
@@ -51,6 +94,7 @@ class CombinedStaticFiles(StaticFiles):
         *,
         default_max_age: int | None = None,
         active_development: bool = False,
+        fingerprinter: StaticFingerprinter | None = None,
         **kwargs: Any,
     ) -> None:
         self._extra_dirs = [d for d in directories[:-1] if d.is_dir()]
@@ -58,6 +102,8 @@ class CombinedStaticFiles(StaticFiles):
         # (content-hashed) assets are always immutable regardless of these.
         self._default_max_age = _DEFAULT_MAX_AGE if default_max_age is None else default_max_age
         self._active_development = active_development
+        # #1793: rewrites a served stylesheet's `/static/` @imports to hashed URLs.
+        self._fingerprinter = fingerprinter
         primary = directories[-1] if directories else Path(".")
         super().__init__(directory=str(primary), **kwargs)
 
@@ -99,36 +145,31 @@ class CombinedStaticFiles(StaticFiles):
         scope: Any,
         status_code: int = 200,
     ) -> Response:
-        """Add Cache-Control headers to static file responses."""
+        """Add Cache-Control headers; rewrite a stylesheet's ``/static/``
+        ``@import``s to their hashed URLs when fingerprinting is on (#1793)."""
         response = super().file_response(full_path, stat_result, scope, status_code)
         if "cache-control" not in response.headers:
-            # Check if the *requested* path (not the resolved path) is fingerprinted
-            request_path = scope.get("path", "") if scope else ""
-            is_fingerprinted = bool(FINGERPRINT_RE.search(os.path.basename(request_path)))
-
-            ext = os.path.splitext(str(full_path))[1].lower()
-            if self._active_development:
-                # #1468: a site under active development serves everything
-                # no-cache so each rebuild is picked up on the next load. The
-                # content hash (when present) still guarantees byte-correctness;
-                # no-cache just forces ETag revalidation → 304 when unchanged.
-                # Checked first so even a stale fingerprinted URL from a prior
-                # deploy revalidates instead of staying immutable.
-                response.headers["Cache-Control"] = "no-cache"
-            elif is_fingerprinted or ext in _IMMUTABLE_EXTENSIONS:
-                response.headers["Cache-Control"] = (
-                    f"public, max-age={_IMMUTABLE_MAX_AGE}, immutable"
-                )
-            elif "/dist/" in request_path:
-                # #1468 safety net: the framework runtime bundle requested at its
-                # plain (non-fingerprinted) URL — i.e. from an HTML emission site
-                # that hardcodes `/static/dist/...` instead of reading the
-                # fingerprinted app-chrome URLs — must revalidate every load so a
-                # deploy's JS/CSS fix is never served stale for hours. The
-                # fingerprinted emissions (the dominant app-page path) take the
-                # immutable branch above; this guarantees correctness for any
-                # emission site that isn't (yet) wired to fingerprint.
-                response.headers["Cache-Control"] = "no-cache"
-            else:
-                response.headers["Cache-Control"] = f"public, max-age={self._default_max_age}"
-        return response
+            response.headers["Cache-Control"] = static_cache_control(
+                scope.get("path", "") if scope else "",
+                os.path.splitext(str(full_path))[1],
+                active_development=self._active_development,
+                default_max_age=self._default_max_age,
+            )
+        fp = self._fingerprinter
+        if fp is None or not fp.enabled or response.status_code != 200:
+            return response
+        path = Path(full_path)
+        if path.suffix != ".css":
+            return response
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if "@import" not in text:
+            return response
+        return Response(
+            fp.rewrite_css_imports(text),
+            status_code=status_code,
+            media_type="text/css; charset=utf-8",
+            headers={
+                "Cache-Control": response.headers["cache-control"],
+                "ETag": f'"{fp.digest(path)}"',
+            },
+        )

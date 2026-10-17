@@ -18,8 +18,15 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.action_visibility import enforce_integration_action
 from dazzle.http.runtime.auth.dependencies import create_admin_dependency
+from dazzle.http.runtime.renderer_assets import renderer_asset_files
 from dazzle.http.runtime.service_map import entity_service_map
+from dazzle.http.runtime.static_files import CombinedStaticFiles
 from dazzle.http.runtime.subsystems import SubsystemContext
+from dazzle.page.runtime.asset_fingerprint import (
+    StaticFingerprinter,
+    framework_static_dir,
+    static_root_dirs,
+)
 
 if TYPE_CHECKING:
     pass
@@ -34,55 +41,64 @@ def _mount_static_files(
     extra_static_dirs: Any = None,
     active_development: bool = False,
     static_max_age: int | None = None,
+    fingerprinter: Any = None,
 ) -> None:
     """Mount the framework + project static file routes on ``app``.
 
     Registration order is load-bearing (#1330): Starlette matches mounts in
     registration order and stops at the first prefix match. The MORE-SPECIFIC
-    ``/static/themes`` mount (project-local ``<project>/themes/``) MUST be
+    mounts — ``/static/themes`` (project-local ``<project>/themes/``) and
+    ``/static/dazzle-renderers`` (renderer-declared assets, #1793) — MUST be
     registered BEFORE the catch-all ``/static`` mount — otherwise ``/static``
-    swallows ``/static/themes/*.css`` into ``CombinedStaticFiles`` (which looks
-    under ``<project>/static`` + framework_static, not ``<project>/themes/``) and
-    every project theme stylesheet 404s.
+    swallows them into ``CombinedStaticFiles`` (which looks under
+    ``<project>/static`` + framework_static) and every request 404s.
+
+    ``fingerprinter`` (a ``StaticFingerprinter``, #1793) lets the served
+    stylesheets rewrite their ``/static/`` ``@import``s to hashed URLs.
 
     Extracted from ``SystemRoutesSubsystem._setup_system_routes`` so the mount
     ordering is unit-testable in isolation.
     """
     from pathlib import Path
 
-    from dazzle import page as dazzle_page
-    from dazzle.http.runtime.static_files import CombinedStaticFiles
-
-    framework_static = Path(dazzle_page.__file__).parent / "runtime" / "static"
-    if not framework_static.is_dir():
+    if not framework_static_dir().is_dir():
         return
 
-    dirs: list[Path] = []
-    # Consumer-supplied static dirs win (issue #793). Keeps consumer assets from
-    # being shadowed by framework assets of the same name.
-    if extra_static_dirs:
-        dirs.extend(Path(d) for d in extra_static_dirs)
-    if project_root:
-        dirs.append(Path(project_root) / "static")
-    dirs.append(framework_static)
+    # Consumer-supplied static dirs win (issue #793), then <project>/static,
+    # then the framework's static dir.
+    dirs = static_root_dirs(project_root, extra_static_dirs)
 
     # v0.61.41 (Phase B Patch 5): mount project-local themes under /static/themes/
     # so `<project>/themes/<name>.css` is served without nesting under
     # `/static/css/themes/`. Theme authors get a clean discoverable location at
     # the project root; the URL split keeps framework + project themes distinct.
+    # #1793: CombinedStaticFiles so a hashed theme URL is stripped, served
+    # immutable and its @imports rewritten.
     #
     # #1330: register this specific mount BEFORE the catch-all /static below
     # (see the docstring) — order is the whole fix.
     if project_root:
         project_themes_dir = Path(project_root) / "themes"
         if project_themes_dir.is_dir():
-            from starlette.staticfiles import StaticFiles
-
             app.mount(
                 "/static/themes",
-                StaticFiles(directory=str(project_themes_dir)),
+                CombinedStaticFiles(
+                    directories=[project_themes_dir],
+                    default_max_age=static_max_age,
+                    active_development=active_development,
+                    fingerprinter=fingerprinter,
+                ),
                 name="project_themes",
             )
+
+    # #1793: renderer-declared assets (RendererAsset), served by declaration.
+    app.mount(
+        "/static/dazzle-renderers",
+        renderer_asset_files(
+            app, active_development=active_development, default_max_age=static_max_age
+        ),
+        name="renderer_assets",
+    )
 
     app.mount(
         "/static",
@@ -90,6 +106,7 @@ def _mount_static_files(
             directories=dirs,
             default_max_age=static_max_age,
             active_development=active_development,
+            fingerprinter=fingerprinter,
         ),
         name="static",
     )
@@ -669,6 +686,7 @@ class SystemRoutesSubsystem:
         # + framework default max-age for non-fingerprinted assets).
         static_active_development = False
         static_max_age: int | None = None
+        fingerprinter: Any = None
         try:
             from pathlib import Path
 
@@ -683,10 +701,26 @@ class SystemRoutesSubsystem:
                 static_active_development = bool(getattr(mf, "active_development", False))
                 static_max_age = getattr(mf, "static_max_age", None)
 
+            # #1793: one content-hash pass over everything the chrome links —
+            # shared by the chrome, the static mounts (@import rewriting) and
+            # the renderer registry (RendererRegistry.asset_url).
+            fingerprinter = StaticFingerprinter.for_project(
+                ctx.project_root,
+                active_development=static_active_development,
+                extra_static_dirs=ctx.extra_static_dirs,
+            )
+            ctx.app.state.static_fingerprinter = fingerprinter
+            renderer_registry = getattr(
+                getattr(ctx.app.state, "services", None), "renderer_registry", None
+            )
+            if renderer_registry is not None:
+                renderer_registry.fingerprinter = fingerprinter
+
             chrome = resolve_app_chrome(
                 appspec,
                 project_root=Path(ctx.project_root) if ctx.project_root else None,
                 manifest=mf,
+                fingerprinter=fingerprinter,
             )
             ctx.app.state.fragment_chrome = chrome
             # Back-compat slots — existing readers (page_routes,
@@ -710,6 +744,7 @@ class SystemRoutesSubsystem:
                 extra_static_dirs=ctx.extra_static_dirs,
                 active_development=static_active_development,
                 static_max_age=static_max_age,
+                fingerprinter=fingerprinter,
             )
         except ImportError:
             pass  # dazzle_page not installed — static files served externally

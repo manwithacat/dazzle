@@ -547,19 +547,12 @@ def create_site_page_routes(
             current_route=getattr(ctx, "current_route", "") or "/",
         )
         app_state = request.app.state
-        css_links_list = list(
+        # The project's custom.css rides in the chrome's css_links (#1796),
+        # content-hashed in production (#1793) — no second, plain link here.
+        css_links = tuple(
             getattr(app_state, "fragment_chrome_css_links", None)
             or ("/static/dist/dazzle.min.css",)
         )
-        # Phase 4 chrome-flag flip (v0.67.43): honour the project's
-        # custom.css override here too. The legacy `site/page.html` →
-        # `site_base.html` chain emitted `<link href="/static/css/custom.css">`
-        # in `<head>` when `ctx.custom_css=True`; the typed path now
-        # appends the same link to `css_links` so the override survives
-        # the migration.
-        if getattr(ctx, "custom_css", False) and "/static/css/custom.css" not in css_links_list:
-            css_links_list.append("/static/css/custom.css")
-        css_links = tuple(css_links_list)
         js_scripts = tuple(
             getattr(app_state, "fragment_chrome_js_scripts", None)
             or ("/static/dist/dazzle.min.js",)

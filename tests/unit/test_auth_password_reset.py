@@ -159,13 +159,20 @@ class TestCustomCssOverride:
         from fastapi import FastAPI
         from starlette.testclient import TestClient
 
+        from dazzle.page.runtime.app_chrome import resolve_app_chrome
+
         app = FastAPI()
         # Need dazzle.css route to exist
         app.include_router(router)
+        # The link rides in the boot-resolved chrome (#1796/#1793), as
+        # system_routes stashes it — the site route adds no second copy.
+        app.state.fragment_chrome_css_links = resolve_app_chrome(
+            None, project_root=tmp_path
+        ).css_links
         client = TestClient(app)
         resp = client.get("/")
         assert resp.status_code == 200
-        assert "/static/css/custom.css" in resp.text
+        assert resp.text.count("/static/css/custom.css") == 1
 
     def test_create_site_page_routes_no_custom_css_without_file(self, tmp_path: Path) -> None:
         """create_site_page_routes omits custom_css when file doesn't exist."""

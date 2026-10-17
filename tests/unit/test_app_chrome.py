@@ -192,3 +192,39 @@ class TestProjectCustomCss1796:
     def test_no_custom_css_no_link(self, tmp_path) -> None:
         chrome = resolve_app_chrome(None, project_root=tmp_path, manifest=None)
         assert all("custom.css" not in u for u in chrome.css_links)
+
+
+class TestProjectAssetFingerprint1793:
+    """In production every project URL the chrome links is content-hashed (#1793)."""
+
+    @pytest.fixture
+    def project(self, tmp_path, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("DAZZLE_ENV", "production")
+        monkeypatch.delenv("DAZZLE_OVERRIDE_THEME", raising=False)
+        (tmp_path / "static" / "css").mkdir(parents=True)
+        (tmp_path / "static" / "js").mkdir()
+        (tmp_path / "static" / "css" / "custom.css").write_text("body{}")
+        (tmp_path / "static" / "js" / "brand-chrome.js").write_text("brand();")
+        (tmp_path / "themes").mkdir()
+        (tmp_path / "themes" / "acme.css").write_text("@import url('/static/css/custom.css');")
+        return tmp_path
+
+    def _chrome(self, project, scripts: list[str]) -> AppChrome:
+        manifest = SimpleNamespace(favicon=None, cdn=False, app_theme="acme", app_scripts=scripts)
+        return resolve_app_chrome(None, project_root=project, manifest=manifest)
+
+    def test_project_urls_hashed_custom_css_last(self, project) -> None:
+        chrome = self._chrome(project, ["/static/js/brand-chrome.js"])
+        assert chrome.js_scripts[-1].startswith("/static/js/brand-chrome.")
+        assert chrome.js_scripts[-1] != "/static/js/brand-chrome.js"
+        theme = [u for u in chrome.css_links if u.startswith("/static/themes/acme.")]
+        assert theme and theme[0] != "/static/themes/acme.css"
+        assert chrome.theme_map["acme"][-1] == theme[0]
+        assert chrome.css_links[-1].startswith("/static/css/custom.")
+        assert chrome.css_links[-1] != "/static/css/custom.css"
+
+    def test_query_bumped_app_script_passes_through_with_warning(self, project, caplog) -> None:
+        with caplog.at_level("WARNING", logger="dazzle.page.runtime.app_chrome"):
+            chrome = self._chrome(project, ["/static/js/brand-chrome.js?v=8"])
+        assert chrome.js_scripts[-1] == "/static/js/brand-chrome.js?v=8"
+        assert "hand-bumped query string" in caplog.text

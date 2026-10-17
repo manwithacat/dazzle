@@ -1,7 +1,7 @@
 {
-  "src_lines": 325422,
-  "test_lines": 317595,
-  "docs_lines": 49212,
+  "src_lines": 325753,
+  "test_lines": 317960,
+  "docs_lines": 49214,
   "construct_count": 31,
   "written": "2026-10-17",
   "exceptions": [
@@ -469,7 +469,31 @@
         "test_lines",
         "docs_lines"
       ],
-      "reason": "#1798 app-shell drawer + metric tile drill + primary_actions replace (consumer-forced, AegisMark)"
+      "reason": "#1794 topbar_title setting, identity chip and renderer Principal (consumer-forced by AegisMark)"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "#1794 topbar_title, identity chip, renderer principal (consumer-forced)"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "docs_lines"
+      ],
+      "reason": "#1793 consumer-forced project-asset fingerprinting + renderer asset mount/injection (AegisMark deletes its three shims)"
+    },
+    {
+      "date": "2026-10-17",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "#1793 consumer-forced project-asset fingerprinting + renderer asset mount/injection (AegisMark deletes its three shims)"
     },
     {
       "date": "2026-10-17",
@@ -478,7 +502,7 @@
         "test_lines",
         "docs_lines"
       ],
-      "reason": "#1798 app-shell drawer, metric tile drill, primary_actions replaces inferred CTA (consumer-forced)"
+      "reason": "#1793 project asset fingerprinting + renderer asset mount + HM body font (consumer-forced)"
     }
   ]
 }

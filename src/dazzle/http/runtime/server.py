@@ -53,6 +53,7 @@ from dazzle.http.runtime.policy import EntityPolicyInfo, PolicyRegistry
 from dazzle.http.runtime.predicate_compiler import collect_user_attr_refs
 from dazzle.http.runtime.rate_limit import apply_rate_limiting
 from dazzle.http.runtime.relation_loader import RelationLoader, RelationRegistry
+from dazzle.http.runtime.renderer_assets import inject_renderer_assets
 from dazzle.http.runtime.renderers.init import register_default_renderers
 from dazzle.http.runtime.repository import RepositoryFactory
 from dazzle.http.runtime.richtext_field import rich_text_fields_by_entity
@@ -660,6 +661,12 @@ class DazzleBackendApp:
         # register_all via startup hooks/legacy events), warn on any custom
         # renderer declared in dazzle.toml that never got a runtime handler.
         self._warn_unregistered_renderers()
+        # #1793: same point — every renderer is registered, so link their
+        # declared css/js in the chrome. Advisory: never aborts boot.
+        try:
+            inject_renderer_assets(app)
+        except Exception:
+            logger.warning("Renderer asset injection failed", exc_info=True)
         try:
             yield
         finally:

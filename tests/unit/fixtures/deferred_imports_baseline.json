@@ -75,7 +75,7 @@
   "src/dazzle/http/runtime/tenant_middleware.py": 1,
   "src/dazzle/http/runtime/workspace_region_computes.py": 12,
   "src/dazzle/mcp/semantics_kb/__init__.py": 1,
-  "src/dazzle/http/runtime/subsystems/system_routes.py": 20,
+  "src/dazzle/http/runtime/subsystems/system_routes.py": 18,
   "src/dazzle/mcp/server/handlers/agent_loop.py": 1,
   "src/dazzle/mcp/server/handlers/policy.py": 1,
   "src/dazzle/mcp/server/handlers/sitespec.py": 21,

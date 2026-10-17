@@ -24,7 +24,7 @@ from typing import Any
 
 from dazzle.core import ir
 from dazzle.core.manifest import TopbarTitleMode
-from dazzle.page.runtime.asset_fingerprint import fingerprint_static_url
+from dazzle.page.runtime.asset_fingerprint import StaticFingerprinter
 
 logger = logging.getLogger(__name__)
 
@@ -122,11 +122,25 @@ def _dedup_preserving_order(items: list[str]) -> tuple[str, ...]:
     return tuple(out)
 
 
+def _hashed_urls(fingerprinter: StaticFingerprinter, urls: list[str]) -> list[str]:
+    """Content-hash each URL (#1793); warn on a hand-bumped ``?v=`` that blocks it."""
+    if fingerprinter.enabled:
+        for url in urls:
+            if url.startswith("/static/") and "?" in url:
+                logger.warning(
+                    "Chrome asset %r carries a hand-bumped query string — fingerprinting "
+                    "skipped; drop the ?v= and the URL is content-hashed (#1793)",
+                    url,
+                )
+    return [fingerprinter.hashed(u) for u in urls]
+
+
 def resolve_app_chrome(
     appspec: ir.AppSpec,
     *,
     project_root: Path | None = None,
     manifest: Any = None,
+    fingerprinter: StaticFingerprinter | None = None,
 ) -> AppChrome:
     """Compute the full ``AppChrome`` for an app.
 
@@ -144,6 +158,8 @@ def resolve_app_chrome(
             None, only framework themes are considered.
         manifest: Loaded dazzle.toml manifest. Optional — when None,
             CDN / favicon / theme fall back to defaults.
+        fingerprinter: The app's ``StaticFingerprinter`` (#1793). When None,
+            one is built for ``project_root`` (no ``extra_static_dirs``).
 
     Returns:
         Fully populated ``AppChrome``. Always emits the framework
@@ -244,16 +260,18 @@ def resolve_app_chrome(
     for _app_script in getattr(manifest, "app_scripts", None) or []:
         js_scripts.append(str(_app_script))
 
-    # #1468: content-hash the framework bundle URLs (prod/staging only) so a
-    # deploy's JS/CSS fixes reach returning visitors immediately instead of
-    # after the cached bundle's max-age. No-op in dev/test/active-development.
-    css_links = [
-        fingerprint_static_url(u, active_development=active_development) for u in css_links
-    ]
-    js_scripts = [
-        fingerprint_static_url(u, active_development=active_development) for u in js_scripts
-    ]
-    favicon = fingerprint_static_url(favicon, active_development=active_development)
+    # #1468/#1793: content-hash every linked /static/ URL — framework bundle,
+    # theme chain (entry + its @imports), custom.css, app_scripts — in
+    # prod/staging so a deploy's fixes reach returning visitors immediately.
+    # No-op in dev/test/active-development.
+    if fingerprinter is None:
+        fingerprinter = StaticFingerprinter.for_project(
+            project_root, active_development=active_development
+        )
+    css_links = _hashed_urls(fingerprinter, css_links)
+    js_scripts = _hashed_urls(fingerprinter, js_scripts)
+    theme_map = {name: _hashed_urls(fingerprinter, urls) for name, urls in theme_map.items()}
+    favicon = fingerprinter.hashed(favicon)
 
     return AppChrome(
         css_links=tuple(css_links),

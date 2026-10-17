@@ -11,14 +11,9 @@
  */
 
 body {
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial,
-    sans-serif;
+  /* The token, not a literal stack: @layer base beats @layer tokens, so a
+   * literal here would shadow a theme's --font-sans (#1793). */
+  font-family: var(--font-sans);
   font-size: var(--text-base);
   font-weight: var(--weight-regular);
   color: var(--colour-text);

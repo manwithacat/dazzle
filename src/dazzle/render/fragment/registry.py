@@ -7,8 +7,6 @@ up). The DSL `render: <name>` clause resolves through the registry.
 """
 
 import dataclasses
-import functools
-import hashlib
 import pathlib
 from collections.abc import Callable
 from typing import Any, Literal, Protocol, TypeVar, runtime_checkable
@@ -133,32 +131,38 @@ class RendererAsset:
     dependency.
 
     A ``Renderer`` implementation can declare ``assets() -> list[RendererAsset]``
-    to register file-backed dependencies with the framework. The
-    registry collects them at app boot via ``collect_assets``;
-    server-side mount + URL generation is the project's
-    responsibility for now (a future iteration can auto-mount under
-    ``/static/dazzle-renderers/<renderer>/<filename>`` and inject
-    the URLs into the page chrome).
+    to register file-backed dependencies with the framework (#1793):
+
+    - The framework serves every declared file under
+      ``/static/dazzle-renderers/<renderer>/<filename>`` (only declared
+      files — the mount never walks the filesystem).
+    - At boot, after all renderers are registered, ``css`` assets are
+      linked in the page chrome ``<head>`` (before the project's
+      ``custom.css``, so it can still override) and ``js`` assets are
+      appended to the chrome's deferred scripts. ``wasm`` / ``json`` are
+      renderer-fetched — reference them via ``RendererRegistry.asset_url``.
+    - In production/staging the URL carries the content hash in the
+      path (``<stem>.<sha8><ext>``) and is served ``immutable``; a file
+      that already lives under a served ``static/`` dir gets that dir's
+      hashed ``/static/`` URL instead. Never a ``?v=`` query string.
 
     Attributes:
-        path: Absolute or package-relative ``Path`` to the asset
-            file on disk. The bundler reads from this path.
+        path: Absolute ``Path`` to the asset file on disk.
         kind: Asset kind — drives where the URL is emitted in the
-            page chrome (``js`` → ``<script>`` deferred; ``css`` →
+            page chrome (``js`` → deferred ``<script>``; ``css`` →
             ``<link rel="stylesheet">`` in head; ``wasm`` / ``json``
             are renderer-fetched, no head injection).
-        cache: Caching strategy. ``fingerprint`` adds a content-hash
-            query string for cache-busting; ``immutable`` adds a
-            ``Cache-Control: immutable`` header at serve time;
-            ``no-store`` opts out of caching entirely (dev mode).
-        where: Whether the script/stylesheet URL lands in ``<head>``
-            or just before ``</body>`` when auto-injected by the
-            page chrome.
+        cache: ``fingerprint`` (default) — content-hashed URL, served
+            ``immutable``; ``no-store`` — plain URL served
+            ``Cache-Control: no-store`` (an asset regenerated at runtime).
+        where: Placement hint (``head`` / ``body-end``). The chrome
+            loads scripts deferred, so both execute after the document
+            is parsed.
     """
 
     path: pathlib.Path
     kind: Literal["js", "css", "wasm", "json"]
-    cache: Literal["fingerprint", "immutable", "no-store"] = "fingerprint"
+    cache: Literal["fingerprint", "no-store"] = "fingerprint"
     where: Literal["head", "body-end"] = "head"
 
     def __post_init__(self) -> None:
@@ -168,6 +172,20 @@ class RendererAsset:
             )
         if self.kind not in ("js", "css", "wasm", "json"):
             raise ValueError(f"RendererAsset.kind invalid: {self.kind!r}")
+        if self.cache not in ("fingerprint", "no-store"):
+            raise ValueError(f"RendererAsset.cache invalid: {self.cache!r}")
+
+
+@runtime_checkable
+class RendererAssetUrls(Protocol):
+    """#1793: what ``RendererRegistry`` needs to turn a declared asset into a URL.
+
+    Satisfied by ``dazzle.page.runtime.asset_fingerprint.StaticFingerprinter``
+    (wired at boot by ``system_routes``). A Protocol keeps ``render/`` from
+    importing the page layer above it (ADR-0038/0041).
+    """
+
+    def renderer_asset_url(self, renderer_name: str, asset: RendererAsset) -> str: ...
 
 
 class RendererRegistry:
@@ -184,6 +202,8 @@ class RendererRegistry:
 
     def __init__(self) -> None:
         self._handlers: dict[str, Renderer] = {}
+        # #1793: set at boot to the app's StaticFingerprinter; None → plain URLs.
+        self.fingerprinter: RendererAssetUrls | None = None
 
     def register(self, *, name: str, handler: Renderer) -> None:
         if name in self._handlers:
@@ -200,47 +220,25 @@ class RendererRegistry:
     def registered_names(self) -> list[str]:
         return list(self._handlers.keys())
 
-    def asset_url(
-        self,
-        renderer_name: str,
-        filename: str,
-        *,
-        cache: Literal["fingerprint", "immutable", "no-store"] = "fingerprint",
-    ) -> str:
-        """#1137: registry-aware asset URL with cache-strategy resolution.
+    def asset_url(self, renderer_name: str, filename: str) -> str:
+        """#1793: the served URL of a declared asset — what a renderer emits for
+        an asset it fetches itself (``wasm`` / ``json``, or a lazily-added tag).
 
-        When ``cache="fingerprint"`` (the default), looks up the
-        registered ``RendererAsset`` by ``(renderer_name, filename)``,
-        reads the file, hashes the contents to 8 hex chars, and
-        appends ``?v=<hash>``. The hash is memoised module-level
-        keyed by ``(renderer_name, filename)`` so request-time cost
-        is O(1) after first access.
-
-        When ``cache="immutable"`` or ``"no-store"``, returns the
-        bare URL. ``immutable``'s ``Cache-Control: immutable`` header
-        is the auto-mount's responsibility (future iteration).
-
-        Falls back to the bare URL when the asset isn't registered
-        (the caller may be referencing a manually-mounted file) or
-        when the file is missing — neither should hard-fail page
-        rendering. Missing files do trigger a stderr warning so the
-        operator sees it in dev.
+        Delegates to the boot-wired fingerprinter: content-hashed path in
+        production/staging (``/static/dazzle-renderers/<r>/<stem>.<sha8><ext>``,
+        or the asset's own hashed ``/static/`` URL when it lives under a served
+        static dir), plain URL in dev/test or for ``cache="no-store"``. Falls
+        back to the plain module-level ``asset_url`` when the asset isn't
+        declared or no fingerprinter is wired — never hard-fails a render.
         """
-        base = asset_url(renderer_name, filename)
-        if cache != "fingerprint":
-            return base
-        path = self._asset_path(renderer_name, filename)
-        if path is None or not path.exists():
-            # Unknown asset or missing file — return bare URL. A
-            # registered asset whose file vanishes is an operator
-            # error, but it shouldn't crash render.
-            return base
-        # `_content_hash` is `functools.cache`d (keyed by path) — first request
-        # hashes the file once; subsequent requests return the memoised digest.
-        return f"{base}?v={_content_hash(path)}"
+        asset = self.declared_asset(renderer_name, filename)
+        if asset is None or self.fingerprinter is None:
+            return asset_url(renderer_name, filename)
+        return self.fingerprinter.renderer_asset_url(renderer_name, asset)
 
-    def _asset_path(self, renderer_name: str, filename: str) -> pathlib.Path | None:
-        """Look up the on-disk path for a (renderer, filename) pair."""
+    def declared_asset(self, renderer_name: str, filename: str) -> RendererAsset | None:
+        """The ``RendererAsset`` a registered renderer declares under ``filename``
+        (first match), or None."""
         handler = self._handlers.get(renderer_name)
         if handler is None:
             return None
@@ -253,7 +251,7 @@ class RendererRegistry:
             return None
         for asset in declared:
             if isinstance(asset, RendererAsset) and asset.path.name == filename:
-                return asset.path
+                return asset
         return None
 
     def collect_assets(self) -> list[tuple[str, RendererAsset]]:
@@ -292,44 +290,15 @@ class RendererRegistry:
 
 
 def asset_url(renderer_name: str, filename: str) -> str:
-    """#1132: well-known URL for a renderer-declared asset.
+    """#1132: well-known plain URL for a renderer-declared asset.
 
-    Renderers reference their declared assets in the rendered output
-    via this helper, then either (a) project code mounts them under
-    ``/static/dazzle-renderers/`` matching this convention, or (b) a
-    future framework iteration auto-mounts them at boot.
+    ``/static/dazzle-renderers/<renderer>/<filename>`` — the framework mounts
+    this prefix and serves each renderer's declared files there (#1793).
+    Filename is interpolated raw — callers must not pass user-controllable
+    input here.
 
-    The path is deliberately lowercase / underscore-free / single-
-    segment-per-name so it composes cleanly with FastAPI's
-    ``StaticFiles`` mount points. Filename is interpolated raw —
-    callers must not pass user-controllable input here.
-
-    This is the registry-free shape (bare URL, no fingerprinting).
-    Renderers that want content-hash cache-busting per the asset's
-    declared ``cache="fingerprint"`` strategy should call
-    ``RendererRegistry.asset_url(...)`` instead (#1137) — it has the
-    registry context needed to look up the asset's on-disk path.
+    This is the registry-free shape (no fingerprinting). Renderers should
+    call ``RendererRegistry.asset_url(...)`` instead — it has the registry
+    context to content-hash the path in production (#1793).
     """
     return f"/static/dazzle-renderers/{renderer_name}/{filename}"
-
-
-# #1137/#1445: per-path memoisation via functools.cache (no module-level mutable
-# dict + reset helper). First request for a path hashes the file once; subsequent
-# requests return the memoised digest. Cache is process-lifetime — assets don't
-# change without a restart. A test that mutates a fixture file calls
-# `_content_hash.cache_clear()` to force a re-hash.
-@functools.cache
-def _content_hash(path: pathlib.Path) -> str:
-    """SHA-256 of file contents, truncated to 8 hex chars.
-
-    8 chars (32 bits) is enough collision resistance for cache-
-    busting query strings — the goal is "different file → different
-    URL", not cryptographic identity. Matches the
-    ``asset_fingerprint`` helper's truncation length used elsewhere
-    in the UI runtime.
-    """
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(65536), b""):
-            h.update(chunk)
-    return h.hexdigest()[:8]

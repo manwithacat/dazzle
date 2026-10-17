@@ -42,9 +42,10 @@ def test_themes_mount_registered_before_catchall_static(tmp_path: Path) -> None:
     mount_paths = [getattr(r, "path", None) for r in app.routes]
     assert "/static/themes" in mount_paths, "project_themes mount missing"
     assert "/static" in mount_paths, "catch-all static mount missing"
-    assert mount_paths.index("/static/themes") < mount_paths.index("/static"), (
-        "specific /static/themes mount must precede the catch-all /static"
-    )
+    for specific in ("/static/themes", "/static/dazzle-renderers"):  # #1793
+        assert mount_paths.index(specific) < mount_paths.index("/static"), (
+            f"specific {specific} mount must precede the catch-all /static"
+        )
 
 
 def test_project_theme_css_served_not_404(tmp_path: Path) -> None:

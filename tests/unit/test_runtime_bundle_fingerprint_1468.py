@@ -18,9 +18,16 @@ import pytest
 
 from dazzle.page.runtime.asset_fingerprint import (
     FINGERPRINT_RE,
-    fingerprint_static_url,
+    StaticFingerprinter,
     should_fingerprint,
 )
+
+
+def fingerprint_static_url(url: str, *, active_development: bool = False) -> str:
+    """The framework-only fingerprint pass (#1793: ``StaticFingerprinter``)."""
+    fp = StaticFingerprinter.for_project(None, active_development=active_development)
+    return fp.hashed(url)
+
 
 # --------------------------------------------------------------------------- #
 # should_fingerprint — the environment / active-development gate
@@ -43,7 +50,7 @@ def test_should_fingerprint_gate(env: str, active_dev: bool, expected: bool) -> 
 
 
 # --------------------------------------------------------------------------- #
-# fingerprint_static_url — URL rewriting (gated)
+# StaticFingerprinter.hashed — framework URL rewriting (gated)
 # --------------------------------------------------------------------------- #
 
 
@@ -70,7 +77,7 @@ def test_active_development_disables_fingerprint(monkeypatch: pytest.MonkeyPatch
 
 def test_unknown_and_nonstatic_urls_pass_through(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DAZZLE_ENV", "production")
-    # Not in the framework manifest → unchanged (served at the default max-age).
+    # No served file backs it → unchanged (served at the default max-age).
     assert (
         fingerprint_static_url("/static/dist/nope-not-real.js") == "/static/dist/nope-not-real.js"
     )

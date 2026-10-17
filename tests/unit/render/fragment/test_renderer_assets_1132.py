@@ -47,9 +47,17 @@ def test_renderer_asset_rejects_non_path() -> None:
         RendererAsset(path="/x.js", kind="js")  # type: ignore[arg-type]
 
 
-def test_renderer_asset_rejects_invalid_kind() -> None:
-    with pytest.raises(ValueError, match="RendererAsset.kind invalid"):
-        RendererAsset(path=pathlib.Path("/x"), kind="bogus")  # type: ignore[arg-type]
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"kind": "bogus"}, "RendererAsset.kind invalid"),
+        # #1793: "immutable" retired — a hashed URL is what makes an asset immutable.
+        ({"kind": "js", "cache": "immutable"}, "RendererAsset.cache invalid"),
+    ],
+)
+def test_renderer_asset_rejects_invalid_field(kwargs: dict[str, str], message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        RendererAsset(path=pathlib.Path("/x"), **kwargs)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------

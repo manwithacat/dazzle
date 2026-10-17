@@ -692,7 +692,9 @@ app_scripts = [
 ]
 ```
 
-The scripts are appended to the app-shell `<head>` **after** the framework bundle, in declared order (so they can depend on the framework runtime), and go through the same content-hash fingerprinting as framework assets in production. Point at any served path; an empty/absent list leaves the framework-only script set unchanged.
+The scripts are appended to the app-shell `<head>` **after** the framework bundle, in declared order (so they can depend on the framework runtime). Point at any served path; an empty/absent list leaves the framework-only script set unchanged.
+
+In production/staging everything the chrome links is content-hashed in the path (`/static/js/charts.<sha8>.js`, served `immutable`) — the framework bundle, these scripts, the project theme entry at `/static/themes/<name>.css`, `static/css/custom.css` and renderer `assets()` (#1793). Never hand-bump `?v=NN`: an entry with a query string is linked un-hashed with a boot warning. A theme entry's absolute `/static/...` `@import`s are hashed too (recursively; editing an imported sheet changes the entry's URL); relative `@import`s and `url()` sub-resources are not followed.
 
 **Related:** [Sitespec](frontend.md#sitespec), [Section Types](frontend.md#section-types)
 
