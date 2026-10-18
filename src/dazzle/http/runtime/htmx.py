@@ -14,6 +14,7 @@ from __future__ import annotations  # required: forward reference
 import json
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import unquote
 
 from fastapi.responses import HTMLResponse, JSONResponse
 
@@ -23,12 +24,30 @@ from dazzle.render.filters import clerk_form_error_field_label
 _ERROR_LOC_ENVELOPES = frozenset({"body", "query", "path", "header", "cookie"})
 
 
+def target_element_id(hx_target: str | None) -> str:
+    """The swap target named by an ``HX-Target`` request header.
+
+    htmx 4 sends ``tag#id`` (the id URI-encoded) — ``main#main-content``,
+    ``tbody#dt-tasks-body`` — and a bare tag for an element without an id
+    (``body`` for a boosted navigation). Returns the id when there is one, else
+    the value as sent (so a bare id from a test client or an older caller still
+    reads as that id). Empty when the header is absent.
+    """
+    if not hx_target:
+        return ""
+    _tag, sep, ident = hx_target.partition("#")
+    return unquote(ident) if sep else hx_target
+
+
 @dataclass(frozen=True, slots=True)
 class HtmxDetails:
     """Parsed HTMX request headers -- single source of truth.
 
     Parses all 8 HX-* request headers sent by htmx:
     https://htmx.org/reference/#request_headers
+
+    ``target`` is the swap target's element id (``main-content``), or the bare
+    tag when the target has no id (``body``) — see ``target_element_id``.
     """
 
     is_htmx: bool = False
@@ -52,15 +71,10 @@ class HtmxDetails:
             current_url=h.get("HX-Current-URL", ""),
             is_history_restore=h.get("HX-History-Restore-Request") == "true",
             prompt=h.get("HX-Prompt", ""),
-            target=h.get("HX-Target", ""),
+            target=target_element_id(h.get("HX-Target")),
             trigger_id=h.get("HX-Trigger", ""),
             trigger_name=h.get("HX-Trigger-Name", ""),
         )
-
-    @property
-    def wants_partial(self) -> bool:
-        """Boosted navigation that is NOT a history restore -> body-only."""
-        return self.is_boosted and not self.is_history_restore
 
     @property
     def wants_fragment(self) -> bool:

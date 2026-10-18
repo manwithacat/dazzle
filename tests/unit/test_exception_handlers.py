@@ -47,7 +47,7 @@ class TestValidationErrorHandler:
             _FakeModel(priority="medium")
             pytest.fail("Should have raised ValidationError")
         except ValidationError as exc:
-            response = await handler(MagicMock(), exc)
+            response = await handler(MagicMock(headers={}), exc)
 
         assert response.status_code == 422
         body = json.loads(response.body)
@@ -72,7 +72,7 @@ class TestValidationErrorHandler:
             _Required()  # type: ignore[call-arg]
             pytest.fail("Should have raised ValidationError")
         except ValidationError as exc:
-            response = await handler(MagicMock(), exc)
+            response = await handler(MagicMock(headers={}), exc)
 
         assert response.status_code == 422
         body = json.loads(response.body)

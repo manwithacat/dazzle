@@ -48,27 +48,22 @@ def test_is_peek_request_1494(request_obj: object, expected: bool) -> None:
     [
         pytest.param(
             _fake_request(),
-            {"is_htmx": False, "is_boosted": False, "wants_partial": False},
+            {"is_htmx": False, "is_boosted": False},
             id="non-htmx",
         ),
         pytest.param(
             _fake_request(**_HX),
-            {"is_htmx": True, "is_boosted": False, "wants_partial": False},
+            {"is_htmx": True, "is_boosted": False},
             id="plain-htmx",
         ),
         pytest.param(
             _fake_request(**_HX, **{"HX-Boosted": "true"}),
-            {"is_htmx": True, "is_boosted": True, "wants_partial": True},
+            {"is_htmx": True, "is_boosted": True},
             id="boosted",
         ),
         pytest.param(
             _fake_request(**_HX, **{"HX-Boosted": "true", "HX-History-Restore-Request": "true"}),
-            {
-                "is_htmx": True,
-                "is_boosted": True,
-                "is_history_restore": True,
-                "wants_partial": False,
-            },
+            {"is_htmx": True, "is_boosted": True, "is_history_restore": True},
             id="history-restore-overrides-boosted",
         ),
         pytest.param(
@@ -85,6 +80,28 @@ def test_is_peek_request_1494(request_obj: object, expected: bool) -> None:
             _fake_request(**_HX, **{"HX-Target": "task-table-body"}),
             {"target": "task-table-body"},
             id="target",
+        ),
+        # htmx 4 sends `tag#id` (id URI-encoded); `target` is the element id,
+        # or the bare tag when the element has none (a boosted `body` swap).
+        pytest.param(
+            _fake_request(**_HX, **{"HX-Target": "main#main-content"}),
+            {"target": "main-content", "wants_fragment": True},
+            id="target-htmx4-tag-id",
+        ),
+        pytest.param(
+            _fake_request(**_HX, **{"HX-Target": "div#dz-detail-drawer-content"}),
+            {"target": "dz-detail-drawer-content", "wants_drawer": True},
+            id="target-htmx4-drawer",
+        ),
+        pytest.param(
+            _fake_request(**_HX, **{"HX-Target": "tbody#dt%20tasks-body"}),
+            {"target": "dt tasks-body"},
+            id="target-htmx4-uri-encoded-id",
+        ),
+        pytest.param(
+            _fake_request(**_HX, **{"HX-Boosted": "true", "HX-Target": "body"}),
+            {"target": "body", "wants_fragment": False, "wants_drawer": False},
+            id="target-htmx4-boosted-body",
         ),
         pytest.param(
             _fake_request(**_HX, **{"HX-Trigger": "delete-btn", "HX-Trigger-Name": "delete"}),
@@ -109,17 +126,6 @@ def test_frozen() -> None:
 @pytest.mark.parametrize(
     ("kwargs", "prop", "expected"),
     [
-        # wants_partial — boosted navigation that is not a history restore
-        pytest.param(
-            {"is_htmx": True, "is_boosted": False}, "wants_partial", False, id="partial-not-boosted"
-        ),
-        pytest.param({"is_boosted": True}, "wants_partial", True, id="partial-boosted-no-restore"),
-        pytest.param(
-            {"is_boosted": True, "is_history_restore": True},
-            "wants_partial",
-            False,
-            id="partial-boosted-with-restore",
-        ),
         # wants_fragment — navigation targeting #main-content
         pytest.param(
             {"is_htmx": True, "target": "main-content"},
@@ -169,32 +175,6 @@ def test_frozen() -> None:
 )
 def test_derived_targeting_property(kwargs: dict[str, Any], prop: str, expected: bool) -> None:
     assert getattr(HtmxDetails(**kwargs), prop) is expected
-
-
-@pytest.mark.parametrize(
-    ("kwargs", "expected_partial"),
-    [
-        # hx-get to a page route (e.g. row click) should get partial.
-        pytest.param({"is_htmx": True, "is_boosted": False}, True, id="plain-htmx-partial"),
-        pytest.param({"is_htmx": True, "is_boosted": True}, True, id="boosted-partial"),
-        pytest.param(
-            {"is_htmx": True, "is_boosted": True, "is_history_restore": True},
-            False,
-            id="history-restore-full",
-        ),
-        pytest.param({"is_htmx": False}, False, id="non-htmx-full"),
-        # Row click targets body — still gets partial.
-        pytest.param({"is_htmx": True, "target": "body"}, True, id="target-body-partial"),
-    ],
-)
-def test_page_handler_partial_rendering(kwargs: dict[str, Any], expected_partial: bool) -> None:
-    """Page handlers use ``htmx.is_htmx and not htmx.is_history_restore``,
-    broader than ``wants_partial`` — any HTMX request (not just boosted)
-    skips the <head> wrapper when targeting a page route that always
-    renders a full document.
-    """
-    d = HtmxDetails(**kwargs)
-    assert (d.is_htmx and not d.is_history_restore) is expected_partial
 
 
 @pytest.mark.parametrize(

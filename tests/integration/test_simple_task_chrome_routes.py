@@ -113,9 +113,10 @@ def test_primary_surface_renders_through_fragment_chrome(
 
 
 def test_htmx_partial_request_serves_the_list(chrome_app: tuple[TestClient, FastAPI]) -> None:
-    """htmx requests take the P8 short-circuit (inner HTML, no page chrome)."""
+    """A content-slot request takes the P8 short-circuit (inner HTML, no page
+    chrome); htmx 4 sends the target as `tag#id` (#1818)."""
     client, _ = chrome_app
-    resp = client.get("/task", headers={"HX-Request": "true"})
+    resp = client.get("/task", headers={"HX-Request": "true", "HX-Target": "main#main-content"})
     assert resp.status_code == 200
     assert _FRAGMENT_BODY not in resp.text
 

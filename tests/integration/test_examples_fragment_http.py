@@ -315,16 +315,20 @@ def test_fragment_chrome_default_off_unchanged_behaviour() -> None:
     )
 
 
-# ─────────────────── Fragment chrome — htmx-partial mode (P17 P8) ───────────────
+# ─────────────────── Fragment chrome — content-slot mode (P17 P8, #1818) ───────────
+#
+# Only a request that targets the content slot gets content-only HTML (htmx 4
+# sends `HX-Target: tag#id`). Any other page GET — a boosted `body` swap
+# included — gets the full document; see tests/unit/test_boosted_full_page_1818.py.
+_HX_CONTENT_SLOT = {"HX-Request": "true", "HX-Target": "main#main-content"}
 
 
 def test_fragment_chrome_htmx_request_returns_body_only_no_doctype() -> None:
-    """htmx requests on chrome-on apps must NOT include the page chrome
-    (DOCTYPE, <html>, <head>) — htmx swaps the response into the
-    existing page DOM. Sending chrome would produce nested <html>
-    elements and break the swap."""
+    """A content-slot request on a chrome-on app must NOT include the page
+    chrome (DOCTYPE, <html>, <head>) — htmx swaps the response into
+    `#main-content`, so chrome there would nest the shell."""
     client = _client_with_fragment_chrome("simple_task")
-    resp = client.get("/task", headers={"HX-Request": "true"})
+    resp = client.get("/task", headers=_HX_CONTENT_SLOT)
     assert resp.status_code == 200
     body = resp.text
     assert not body.lstrip().startswith("<!DOCTYPE"), (
@@ -337,23 +341,23 @@ def test_fragment_chrome_htmx_request_returns_body_only_no_doctype() -> None:
 
 
 def test_fragment_chrome_htmx_request_returns_inner_surface_body() -> None:
-    """The htmx response IS the inner Fragment surface body — same
-    inner_html that would have been wrapped in chrome for a full
-    request, returned bare for htmx swap."""
+    """The content-slot response IS the inner Fragment surface body —
+    same inner_html that would have been wrapped in chrome for a full
+    request, returned bare for the swap."""
     client = _client_with_fragment_chrome("simple_task")
-    resp = client.get("/task", headers={"HX-Request": "true"})
+    resp = client.get("/task", headers=_HX_CONTENT_SLOT)
     body = resp.text
     assert "dz-surface" in body
     assert "dz-region--kind-list" in body
 
 
 def test_fragment_chrome_htmx_response_no_jinja_chrome_either() -> None:
-    """Specifically: the htmx response must NOT have rendered through
-    Jinja base.html either (no `dz-toast-stack`, `dz-modal-slot`,
+    """Specifically: the content-slot response must NOT have rendered
+    through Jinja base.html either (no `dz-toast-stack`, `dz-modal-slot`,
     `dz-page-announcer` from the Jinja layout). The Fragment path
-    short-circuits htmx requests to inner_html only."""
+    short-circuits content-slot requests to inner_html only."""
     client = _client_with_fragment_chrome("simple_task")
-    resp = client.get("/task", headers={"HX-Request": "true"})
+    resp = client.get("/task", headers=_HX_CONTENT_SLOT)
     body = resp.text
     # These markers come from base.html's body block in the legacy
     # render_page(partial=True) path — they should not appear in the
@@ -491,15 +495,15 @@ def test_fragment_chrome_sidebar_active_state_keys_off_current_route() -> None:
 
 def test_fragment_chrome_default_off_htmx_still_uses_jinja_partial() -> None:
     """Phase 4 app-shell migration (v0.67.44): chrome flag no longer
-    gates render. htmx requests now ALWAYS return the typed inner
+    gates render. Content-slot requests ALWAYS return the typed inner
     HTML directly (no Jinja layout markers, no DOCTYPE).
 
     Was: chrome=off htmx returned `render_page(partial=True)` output
     which carried `dz-toast-stack` / `dz-modal-slot` from the Jinja
-    base.html. Now: htmx returns the bare typed inner_html for swap.
+    base.html. Now: a content-slot request gets the bare typed inner_html.
     """
     client = _client_for("simple_task")  # flag value irrelevant now
-    resp = client.get("/task", headers={"HX-Request": "true"})
+    resp = client.get("/task", headers=_HX_CONTENT_SLOT)
     body = resp.text
     # Typed partial markers — DOCTYPE/<html>/<head>/<body> stripped.
     assert not body.lstrip().startswith("<!DOCTYPE"), (

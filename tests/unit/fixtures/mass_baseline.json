@@ -1,6 +1,6 @@
 {
-  "src_lines": 330115,
-  "test_lines": 320306,
+  "src_lines": 330089,
+  "test_lines": 320380,
   "docs_lines": 49484,
   "construct_count": 31,
   "written": "2026-10-18",
@@ -619,6 +619,13 @@
         "test_lines"
       ],
       "reason": "#1821 rows-only list region filter swap and clear control"
+    },
+    {
+      "date": "2026-10-18",
+      "rose": [
+        "test_lines"
+      ],
+      "reason": "#1818 boosted navigations get the full document; htmx 4 tag#id targets parsed"
     }
   ]
 }

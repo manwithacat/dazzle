@@ -26,9 +26,9 @@ import asyncio
 import html as _html_mod
 import logging
 from typing import Any
-from urllib.parse import unquote
 
 from dazzle.core.ir import WhenEmpty
+from dazzle.http.runtime.htmx import target_element_id
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_csv import _render_csv_response
 from dazzle.http.runtime.workspace_region_computes import compute_columns_for_persona
@@ -84,18 +84,6 @@ def _region_polling_complete(ctx: WorkspaceRegionContext, fetched: Any) -> bool:
     return all(_row_status(row, sm.status_field) in terminal for row in items)
 
 
-def _target_element_id(hx_target: str | None) -> str | None:
-    """The swap target's element id from the ``HX-Target`` request header.
-
-    htmx 4 sends ``tag#id`` (the id URI-encoded); a bare value is taken as the
-    id itself. ``None`` when the header is absent or names no id.
-    """
-    if not hx_target:
-        return None
-    _tag, sep, ident = hx_target.partition("#")
-    return (unquote(ident) if sep else hx_target) or None
-
-
 def _poller_oob_delete(body_id: str) -> str:
     """OOB-delete the card body's poller sibling (#1802) — it, not the body,
     carries the ``every Ns`` trigger, so removing it is what stops the poll."""
@@ -127,7 +115,7 @@ def _build_region_response(
     """
     from fastapi.responses import HTMLResponse
 
-    target_id = _target_element_id(hx_target)
+    target_id = target_element_id(hx_target)
     if rows_only:
         # #1821: a filter / pager fetch swaps the list's rows, not the card
         # body — neither `when_empty` (a filter matching nothing must show

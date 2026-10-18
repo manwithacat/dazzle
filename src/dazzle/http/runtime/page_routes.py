@@ -2699,14 +2699,15 @@ def _render_response(prc: _PageRequestContext) -> Response:
 
     # #1494 (2c): row-peek fetch (`?peek=1`) — the list-row chevron loads this
     # entity's detail *body* into an inline panel. Return content-only (no app
-    # chrome) and, unlike the generic htmx-partial path below, fire NO
+    # chrome) and, unlike the #main-content path below, fire NO
     # dz:titleUpdate trigger — expanding a row must not retitle the page.
     if is_peek_request(prc.request):
         html = render_page(render_ctx, content_only=True, inner_html=inner_html)
         return HTMLResponse(content=html)  # nosemgrep
 
-    # Fragment targeting: nav links target #main-content directly,
-    # so return only the content template (no layout wrapper).
+    # Content-slot targeting: list-row drills target #main-content (htmx 4
+    # sends `HX-Target: main#main-content`), so return only the content
+    # (no layout wrapper) and retitle the page via dz:titleUpdate.
     if htmx.wants_fragment:
         html = render_page(render_ctx, content_only=True, inner_html=inner_html)
         headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": render_ctx.page_title})}
@@ -2725,71 +2726,42 @@ def _render_response(prc: _PageRequestContext) -> Response:
             headers={"HX-Trigger-After-Swap": json.dumps(triggers)},
         )
 
-    # Any HTMX request can receive body-only HTML -- the client
-    # extracts <body> content anyway.  History-restore is the one
-    # exception: the browser needs a full document for cache misses.
-    is_partial = htmx.is_htmx and not htmx.is_history_restore
-
-    # Phase 4 app-shell migration (v0.67.44): typed-Fragment is the
-    # only path. The `app.state.fragment_chrome` flag is no longer
-    # consulted here — the typed AppShell primitive renders the
-    # sidebar / topbar / body chrome that the legacy
-    # `layouts/app_shell.html` template used to provide.
+    # Every other page GET gets the full document (#1818) — a plain load, a
+    # history restore, and a boosted navigation (`<a hx-boost>`, `HX-Target:
+    # body`) alike. Only the content-slot / drawer / peek requests above get
+    # content-only HTML. htmx 4 takes a full-document response apart itself:
+    # the <body> children replace the swap target's children and the <head>
+    # <title> becomes document.title, so this path needs no dz:titleUpdate
+    # trigger. Answering a boosted body swap with inner content only replaced
+    # the whole body with it and dropped the sidebar, topbar and breadcrumb.
     #
-    # Two render modes:
-    # - Full document: wrap inner_html in a typed Page primitive
-    #   (DOCTYPE / <html> / <head> / <body>) via dispatch_render_page.
-    # - htmx partial: return inner_html directly. The client extracts
-    #   <body> content; for an already-rendered Fragment surface body,
-    #   that's exactly what to send.
-    #
-    # The wants_fragment / wants_drawer paths above already short-
-    # circuit via render_page(content_only=True, inner_html=...) so
-    # they need no branching here.
+    # Phase 4 app-shell migration (v0.67.44): typed-Fragment is the only path —
+    # the typed AppShell primitive renders the sidebar / topbar / body chrome
+    # around the surface content.
     if inner_html is None:
-        # Pre-typed-migration fallback: surfaces that haven't been
-        # converted to the typed substrate still render through the
-        # Jinja content template inside the typed Page chrome. Such
-        # callers pass `inner_html=None` so render_page handles the
-        # content render in `content_only` mode, then we wrap the
-        # result in the typed Page.
+        # Surfaces without a typed `render:` dispatch render their content in
+        # `content_only` mode, then the typed Page wraps the result.
         rendered_inner = render_page(render_ctx, content_only=True)
     else:
         rendered_inner = inner_html
 
-    if is_partial:
-        html = rendered_inner
-    else:
-        from dazzle.render.dispatch import dispatch_render_page
+    from dazzle.render.dispatch import dispatch_render_page
 
-        # Assets and theme read from app.state. The `fragment_chrome_*`
-        # state-attribute names are kept for backward compat with
-        # downstream apps that already wire them — they're per-
-        # deployment branding overrides, not a "use Jinja vs. typed"
-        # toggle anymore.
-        _assets = _resolve_chrome_assets(prc.request.app.state)
-        html = dispatch_render_page(
-            render_ctx,
-            rendered_inner,
-            css_links=_assets.css_links,
-            js_scripts=_assets.js_scripts,
-            theme=_assets.theme,
-            font_preconnect=_assets.font_preconnect,
-            favicon=_assets.favicon,
-            topbar_title=_assets.topbar_title,
-            show_page_purpose=_assets.page_purpose,
-        )
-    response_headers: dict[str, str] = {}
-    # hx-boost strips <head> from the response, so the browser's
-    # <title> never updates from server content. Fire the dz:titleUpdate
-    # event used by dz-a11y.js on every HTMX-boosted page render so the
-    # tab title tracks the destination (#816). History-restore uses a
-    # full document, where the <title> element updates natively.
-    if is_partial and getattr(render_ctx, "page_title", None):
-        response_headers["HX-Trigger-After-Swap"] = json.dumps(
-            {"dz:titleUpdate": render_ctx.page_title}
-        )
-    return HTMLResponse(content=html, headers=response_headers or None)  # nosemgrep
+    # Assets and theme read from app.state (`fragment_chrome_*` attributes are
+    # per-deployment branding overrides).
+    _assets = _resolve_chrome_assets(prc.request.app.state)
+    html = dispatch_render_page(
+        render_ctx,
+        rendered_inner,
+        css_links=_assets.css_links,
+        js_scripts=_assets.js_scripts,
+        theme=_assets.theme,
+        font_preconnect=_assets.font_preconnect,
+        favicon=_assets.favicon,
+        topbar_title=_assets.topbar_title,
+        show_page_purpose=_assets.page_purpose,
+    )
+    return HTMLResponse(content=html)  # nosemgrep
 
 
 # =============================================================================
