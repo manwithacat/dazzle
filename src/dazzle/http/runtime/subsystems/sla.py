@@ -29,14 +29,14 @@ class SLASubsystem:
 
             self._manager = SLAManager(
                 sla_specs=sla_specs,
-                services=ctx.services,
+                services=ctx.entity_services,
             )
             ctx.sla_manager = self._manager
             sla_manager = self._manager
 
             # Wire entity lifecycle events
             wired_count = 0
-            for service in ctx.services.values():
+            for service in ctx.entity_services.values():
                 if isinstance(service, CRUDService):
 
                     async def _on_created(

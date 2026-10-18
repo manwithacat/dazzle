@@ -576,6 +576,7 @@ class TestAppIntegration:
             services={},
             repositories={},
             entities=[],
+            entity_services={},
         )
 
         subsystem = ProcessSubsystem()
@@ -619,6 +620,7 @@ class TestAppIntegration:
             services={},
             repositories={},
             entities=[],
+            entity_services={},
         )
 
         subsystem = ProcessSubsystem()

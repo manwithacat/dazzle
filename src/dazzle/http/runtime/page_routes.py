@@ -93,7 +93,7 @@ from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_iso_date,
 )
 from dazzle.render.fragment.state_affordance import gated_row_transitions
-from dazzle.render.text_template import record_page_chrome
+from dazzle.render.text_template import record_page_chrome, record_template_includes
 
 logger = logging.getLogger(__name__)
 
@@ -1813,7 +1813,12 @@ def _check_entity_cedar_access(prc: _PageRequestContext) -> Response | None:
 
 
 async def _read_entity_in_process(
-    prc: _PageRequestContext, entity_name: str, path_id: Any, *, as_of: Any = None
+    prc: _PageRequestContext,
+    entity_name: str,
+    path_id: Any,
+    *,
+    as_of: Any = None,
+    extra_include: list[str] | None = None,
 ) -> dict[str, Any]:
     """Read one entity row IN-PROCESS with scope + permit applied (#1422).
 
@@ -1831,6 +1836,10 @@ async def _read_entity_in_process(
     ``as_of`` (leftover-honest, cycle 2166) time-travels temporal entities.
     Callers parse via ``_detail_as_of`` so leftover junk restores current
     instead of inventing 404.
+
+    ``extra_include`` adds dotted second-level relations (``a.b``) the
+    surface's title / breadcrumb templates read (#1825) — loaded once,
+    batched, on this one-row path.
     """
     from fastapi.encoders import jsonable_encoder
 
@@ -1845,6 +1854,8 @@ async def _read_entity_in_process(
         return {"error": "not_found"}
     cedar = prc.deps.entity_cedar_specs.get(entity_name)
     auto_include = prc.deps.entity_auto_includes.get(entity_name)
+    if extra_include:
+        auto_include = [*(auto_include or []), *extra_include]
     # Leftover-honest as_of (cycle 2166). Must reach Repository.read;
     # dropping it invented the current row / 404 theater.
     _read_kw: dict[str, Any] = {"include": auto_include}
@@ -2102,11 +2113,14 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
     # serialized via `jsonable_encoder` to match the REST `response_model=None`
     # JSON shape the downstream FK-display / when_expr code expects.
     _as_of = _detail_as_of(prc, prc.ctx.detail.entity_name)
+    _surface = _surface_spec(prc.deps.appspec, prc.surface_name)
     req_detail.item = await _read_entity_in_process(
         prc,
         prc.ctx.detail.entity_name,
         prc.path_id,
         as_of=_as_of,
+        # #1825: two-hop title / crumb placeholders load their second level here.
+        extra_include=record_template_includes(_surface),
     )
     # Resolve FK dicts -> display strings so detail fields show names not UUIDs (#663)
     if req_detail.item and "error" not in req_detail.item:
@@ -2132,7 +2146,6 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
     # #1558 3c + #1787: gate transition affordances (current state, then the
     # SM's own role/expression guards), field/section/tab `visible:` against
     # the record and principal, and surface actions by their `visible:`.
-    _surface = _surface_spec(prc.deps.appspec, prc.surface_name)
     # #1815 / #1810: the record names the heading, <title>, URL-trail leaf
     # and any interpolating authored crumbs — from the row already loaded.
     _heading, _trail = record_page_chrome(

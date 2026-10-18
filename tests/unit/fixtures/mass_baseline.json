@@ -1,7 +1,7 @@
 {
-  "src_lines": 330758,
-  "test_lines": 320682,
-  "docs_lines": 49562,
+  "src_lines": 331032,
+  "test_lines": 320897,
+  "docs_lines": 49570,
   "construct_count": 31,
   "written": "2026-10-19",
   "exceptions": [
@@ -668,6 +668,15 @@
         "test_lines"
       ],
       "reason": "#1826 per-metric labels and tile floor"
+    },
+    {
+      "date": "2026-10-19",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1824 one CRUDService per entity; #1825 row-bound crumbs, two-hop templates, |label"
     }
   ]
 }

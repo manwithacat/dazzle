@@ -61,13 +61,19 @@ def test_service_for_entity_returns_none_for_unknown_entity() -> None:
     assert factory.service_for_entity("Nonexistent") is None
 
 
-def test_services_by_entity_covers_every_entity_once() -> None:
-    """Multiple CRUDServices per entity collapse to one entry — last wins."""
+def test_one_crud_service_per_entity_under_every_service_name() -> None:
+    """Every CRUD service name of an entity is the entity's one instance (#1824).
+
+    Per-name instances split callbacks: the transition runner landed on one, the
+    policy registry and the update route used others.
+    """
     factory = _factory_with_two_entities()
     by_entity = factory.services_by_entity()
     assert set(by_entity) == {"Invoice", "Customer"}
     for entity_name, service in by_entity.items():
         assert service.entity_name == entity_name
+    assert factory.get_service("list_invoices") is by_entity["Invoice"]
+    assert factory.get_service("read_invoices") is by_entity["Invoice"]
 
 
 def test_custom_services_have_no_entity_and_are_skipped() -> None:

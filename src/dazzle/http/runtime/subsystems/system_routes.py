@@ -19,7 +19,6 @@ from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.action_visibility import enforce_integration_action
 from dazzle.http.runtime.auth.dependencies import create_admin_dependency
 from dazzle.http.runtime.renderer_assets import renderer_asset_files
-from dazzle.http.runtime.service_map import entity_service_map
 from dazzle.http.runtime.static_files import CombinedStaticFiles
 from dazzle.http.runtime.subsystems import SubsystemContext
 from dazzle.page.runtime.asset_fingerprint import (
@@ -333,7 +332,7 @@ class SystemRoutesSubsystem:
             await bus.emit_deleted(entity_name, entity_id)
 
         wired = 0
-        for service in ctx.services.values():
+        for service in ctx.entity_services.values():
             if isinstance(service, CRUDService):
                 service.on_created(_on_created)
                 service.on_updated(_on_updated)
@@ -466,6 +465,11 @@ class SystemRoutesSubsystem:
         from dazzle.http.runtime.service_generator import CRUDService
 
         entity_transitions: dict[str, list[tuple[str, str, list[StepEffect]]]] = {}
+        # The status field comes from the state machine itself (#1824): the
+        # ``config.entity_status_fields`` copy is only filled on the
+        # ``build_server_config`` path, so ``create_app`` left it empty and the
+        # runner silently skipped every transition.
+        status_fields: dict[str, str] = {}
         for entity in ctx.appspec.domain.entities:
             if not entity.state_machine:
                 continue
@@ -474,6 +478,7 @@ class SystemRoutesSubsystem:
                     entity_transitions.setdefault(entity.name, []).append(
                         (t.from_state, t.to_state, list(t.effects))
                     )
+                    status_fields[entity.name] = entity.state_machine.status_field
 
         if not entity_transitions:
             return
@@ -481,17 +486,17 @@ class SystemRoutesSubsystem:
         from dazzle.http.runtime.side_effect_executor import SideEffectExecutor
         from dazzle.http.runtime.transition_effects import TransitionEffectRunner
 
-        by_entity = entity_service_map(ctx.services)
+        by_entity = ctx.entity_services
         executor = SideEffectExecutor(services=by_entity)
         runner = TransitionEffectRunner(
             executor=executor,
             entity_transitions=entity_transitions,
-            status_fields=ctx.config.entity_status_fields,
+            status_fields=status_fields,
         )
 
-        # #1797: ``ctx.services`` is keyed by service name, not entity name — the
-        # old ``ctx.services.get(entity_name)`` missed for every entity, so no
-        # ``on_transition`` block had ever run on this path, silently.
+        # #1797/#1824: look the entity up in the entity-keyed view. It holds the
+        # entity's one CRUDService — the same instance every route, page handler
+        # and the policy registry use — so the runner fires on every update path.
         wired = 0
         unwired: list[str] = []
         for entity_name in entity_transitions:

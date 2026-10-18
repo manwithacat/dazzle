@@ -73,7 +73,7 @@ from dazzle.http.runtime.sa_schema import (
 )
 from dazzle.http.runtime.search_schema import build_search_index_ddl
 from dazzle.http.runtime.security_middleware import apply_security_middleware
-from dazzle.http.runtime.service_generator import CRUDService, ServiceFactory
+from dazzle.http.runtime.service_generator import ServiceFactory
 from dazzle.http.runtime.service_loader import ServiceLoader
 from dazzle.http.runtime.services import RuntimeServices
 from dazzle.http.runtime.storage import StorageRegistry, build_entity_storage_bindings
@@ -548,6 +548,7 @@ class DazzleBackendApp:
             services=self._services,
             repositories=self._repositories,
             entities=self._entities,
+            entity_services=self.services_by_entity(),
             db_manager=self._db_manager,
             auth_middleware=self._auth_middleware,
             enable_auth=self._enable_auth,
@@ -1166,12 +1167,10 @@ class DazzleBackendApp:
         )
 
         if self._db_manager:
-            for _service_name, service in self._services.items():
-                if isinstance(service, CRUDService):
-                    entity_name = service.entity_name
-                    repo = self._repositories.get(entity_name)
-                    if repo:
-                        service.set_repository(repo)
+            for entity_name, service in factory.services_by_entity().items():
+                repo = self._repositories.get(entity_name)
+                if repo:
+                    service.set_repository(repo)
 
         # Wire project-level service hooks (v0.29.0)
         self._wire_service_hooks()
@@ -1273,12 +1272,10 @@ class DazzleBackendApp:
 
         logger.info("Registered %d service hook(s): %s", registry.count, registry.summary())
 
-        # Wire hooks to CRUD services
-        for _service_name, service in self._services.items():
-            if not isinstance(service, CRUDService):
-                continue
-            entity_name = service.entity_name
-
+        # Wire hooks once per entity — the CRUD service names of an entity share
+        # one instance (#1824), so a loop over ``_services`` would register twice.
+        entity_services = self.services_by_entity()
+        for entity_name, service in entity_services.items():
             for h in registry.get_hooks("entity.pre_create", entity_name):
                 service.add_pre_create_hook(h.function)
             for h in registry.get_hooks("entity.pre_update", entity_name):
@@ -1296,14 +1293,11 @@ class DazzleBackendApp:
         # services for every `audit on X:` block. Silent no-op when
         # the AppSpec has no audit declarations.
 
-        register_audit_callbacks(self._services, list(self._appspec.audits))
+        register_audit_callbacks(entity_services, list(self._appspec.audits))
 
         # Wire post_upload hooks to file upload callbacks (v0.39.0, #437)
         if hasattr(self, "_upload_callbacks"):
-            for _service_name, service in self._services.items():
-                if not isinstance(service, CRUDService):
-                    continue
-                _ename = service.entity_name
+            for _ename in entity_services:
                 for h in registry.get_hooks("entity.post_upload", _ename):
                     _hook_fn = h.function
 

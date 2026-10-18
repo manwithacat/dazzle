@@ -171,6 +171,8 @@ def get_keyword_groups() -> dict[str, list[str]]:
                 ")",
                 "[",
                 "]",
+                "{",
+                "}",
                 "=",
                 ".",
                 "/",
@@ -655,18 +657,20 @@ column_modifier
                 | "truncate" (":" BOOLEAN)? ;
 
 (* #1815: a STRING parsed once into literal text and placeholders. A placeholder
-   names a field of the surface's entity or one FK hop (ref_field.field), then
-   optional filters. "{{" / "}}" are literal braces. Fields resolve at validate
+   names a field of the surface's entity or up to two FK hops (ref_field.field,
+   ref_field.ref_field.field — #1825; every hop a ref), then optional filters.
+   `|label` (enum fields only) prints the value humanised in sentence case.
+   "{{" / "}}" are literal braces. Fields resolve at validate
    time (E_TEMPLATE_*); a null renders empty; output is HTML-escaped. On a
    view surface `title:` heads the page and names the document <title> and the
    breadcrumb leaf; the header STRING stays the static name (nav, links). *)
 text_template ::= STRING ;   (* e.g. "{agreement_type|upper} — {school.name}" *)
 
 template_placeholder
-              ::= "{" IDENT ("." IDENT)? ("|" template_filter)* "}" ;
+              ::= "{" IDENT ("." IDENT)? ("." IDENT)? ("|" template_filter)* "}" ;
 
 template_filter
-              ::= "upper" | "lower" | "title" | "date" ;
+              ::= "upper" | "lower" | "title" | "date" | "label" ;
 
 (* #1787: one "on" line (required) and an optional "visible:" line, either order. *)
 surface_action_decl
@@ -709,14 +713,19 @@ ux_directive  ::= "purpose" ":" STRING NEWLINE
 
 (* #1810: `off` hides the shell trail; a crumb list replaces it. Each label is a
    text_template (placeholders only on mode: view surfaces); `-> name` links a
-   declared surface (not view/edit) or workspace. The last crumb is the current
-   page and takes no target. *)
+   declared list surface or workspace. #1825: on a mode: view surface, a view /
+   edit target binds its row with `-> name({ref_field.ref_field})` — a path of
+   at most two refs ending in a ref to that surface's entity; a null ref
+   renders the crumb as plain text. The last crumb is the current page and
+   takes no target. *)
 breadcrumb_spec
               ::= "off"
                 | breadcrumb_crumb (">" breadcrumb_crumb)* ;
 
 breadcrumb_crumb
-              ::= text_template ("->" IDENT)? ;
+              ::= text_template ("->" IDENT crumb_row?)? ;
+
+crumb_row     ::= "(" "{" IDENT ("." IDENT)? "}" ")" ;
 
 field_list    ::= IDENT ("," IDENT)* ;
 

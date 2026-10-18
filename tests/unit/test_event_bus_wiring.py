@@ -38,7 +38,7 @@ def _make_mock_ctx(service_names: list[str] | None = None) -> Any:
         services[name] = svc
 
     ctx = MagicMock()
-    ctx.services = services
+    ctx.entity_services = services
     return ctx, services
 
 
@@ -168,7 +168,7 @@ class TestWireEntityEventsToBus:
         from dazzle.http.runtime.subsystems.system_routes import SystemRoutesSubsystem
 
         ctx = MagicMock()
-        ctx.services = {}
+        ctx.entity_services = {}
 
         subsystem = SystemRoutesSubsystem()
         bus = EntityEventBus()

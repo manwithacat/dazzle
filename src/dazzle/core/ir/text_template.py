@@ -5,9 +5,10 @@ of a surface's ``ux: breadcrumb:`` trail::
 
     title: "{agreement_type|upper} — {school.name}"
 
-A placeholder names a field of the surface's entity, or a one-hop FK path
-(``ref_field.field``), optionally followed by ``|filter`` steps from
-:data:`TEXT_TEMPLATE_FILTERS`. ``{{`` and ``}}`` are literal braces.
+A placeholder names a field of the surface's entity, or an FK path of at most
+:data:`MAX_TEMPLATE_HOPS` hops (``ref_field.field``,
+``ref_field.ref_field.field`` — #1825), optionally followed by ``|filter``
+steps from :data:`TEXT_TEMPLATE_FILTERS`. ``{{`` and ``}}`` are literal braces.
 
 The source string is parsed ONCE into segments at DSL parse time; nothing is
 evaluated as code at runtime. Field / path resolution against the entity is a
@@ -19,7 +20,10 @@ import re
 
 from pydantic import BaseModel, ConfigDict
 
-TEXT_TEMPLATE_FILTERS: frozenset[str] = frozenset({"upper", "lower", "title", "date"})
+TEXT_TEMPLATE_FILTERS: frozenset[str] = frozenset({"upper", "lower", "title", "date", "label"})
+
+#: FK hops a template path may follow (#1825): ``a.b.field`` is two.
+MAX_TEMPLATE_HOPS = 2
 
 _IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
@@ -32,7 +36,9 @@ class TemplatePlaceholder(BaseModel):
     """One ``{path|filter|…}`` slot.
 
     Attributes:
-        path: ``("field",)`` or ``("ref_field", "field")`` — at most one FK hop.
+        path: ``("field",)``, ``("ref_field", "field")`` or
+            ``("ref_field", "ref_field", "field")`` — at most
+            :data:`MAX_TEMPLATE_HOPS` FK hops (#1825).
         filters: Applied left to right; each is in :data:`TEXT_TEMPLATE_FILTERS`.
     """
 
@@ -73,22 +79,34 @@ class TextTemplate(BaseModel):
         return "".join(s.text for s in self.segments if s.placeholder is None)
 
 
+def parse_template_path(path_text: str, source: str) -> tuple[str, ...]:
+    """``a.b.c`` → ``("a", "b", "c")``; shared by placeholders and row-bound crumb links.
+
+    Raises :class:`TextTemplateError` (``E_TEMPLATE_BAD_PATH`` /
+    ``E_TEMPLATE_PATH_TOO_DEEP``) for a malformed or over-deep path. Whether
+    each hop is a ``ref`` is a ``dazzle validate`` concern.
+    """
+    path = tuple(p.strip() for p in path_text.split("."))
+    if any(not _IDENT_RE.fullmatch(p) for p in path):
+        raise TextTemplateError(
+            f"E_TEMPLATE_BAD_PATH: `{{{path_text}}}` in {source!r} is not a field name "
+            f"or a `ref_field.field` path."
+        )
+    if len(path) > MAX_TEMPLATE_HOPS + 1:
+        raise TextTemplateError(
+            f"E_TEMPLATE_PATH_TOO_DEEP: `{{{path_text}}}` in {source!r} hops more than "
+            f"{MAX_TEMPLATE_HOPS} times; a placeholder is a field or at most "
+            f"{MAX_TEMPLATE_HOPS} FK hops (`ref_field.ref_field.field`)."
+        )
+    return path
+
+
 def _parse_placeholder(body: str, source: str) -> TemplatePlaceholder:
     parts = [p.strip() for p in body.split("|")]
     path_text, filters = parts[0], tuple(parts[1:])
     if not path_text:
         raise TextTemplateError(f"E_TEMPLATE_EMPTY_PLACEHOLDER: empty `{{}}` in {source!r}.")
-    path = tuple(p.strip() for p in path_text.split("."))
-    if any(not _IDENT_RE.fullmatch(p) for p in path):
-        raise TextTemplateError(
-            f"E_TEMPLATE_BAD_PATH: `{{{body}}}` in {source!r} is not a field name "
-            f"or a `ref_field.field` path."
-        )
-    if len(path) > 2:
-        raise TextTemplateError(
-            f"E_TEMPLATE_PATH_TOO_DEEP: `{{{path_text}}}` in {source!r} hops more than "
-            f"once; a placeholder is a field or one FK hop (`ref_field.field`)."
-        )
+    path = parse_template_path(path_text, source)
     for f in filters:
         if f not in TEXT_TEMPLATE_FILTERS:
             raise TextTemplateError(

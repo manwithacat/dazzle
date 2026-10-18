@@ -12,7 +12,6 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from dazzle.core.ir.islands import IslandSpec
-from dazzle.http.runtime.service_map import entity_service_map
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ def create_island_routes(
 
     Args:
         islands: Island specs from the AppSpec.
-        services: Service registry keyed by service name.
+        services: ``{entity_name: CRUDService}`` (``services_by_entity()``).
         auth_dep: Required auth dependency (if auth is enabled).
         optional_auth_dep: Optional auth dependency.
 
@@ -35,10 +34,6 @@ def create_island_routes(
         FastAPI APIRouter mounted at ``/_dazzle/islands``.
     """
     router = APIRouter(prefix="/_dazzle/islands", tags=["Islands"])
-
-    # Services are keyed by service name (e.g. "list_tasks"), not entity
-    # name.  Build a reverse lookup from entity name → CRUDService.
-    entity_services = entity_service_map(services)
 
     for island in islands:
         if not island.entity:
@@ -62,7 +57,7 @@ def create_island_routes(
             _island: str = island_name,
         ) -> dict[str, Any]:
             """Fetch data for island from its bound entity."""
-            svc = entity_services.get(_entity)
+            svc = services.get(_entity)
             if not svc:
                 raise HTTPException(
                     status_code=404,

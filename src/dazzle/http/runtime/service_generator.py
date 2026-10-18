@@ -709,6 +709,12 @@ class ServiceFactory:
         self.state_machines = state_machines or {}
         self.entity_specs = entity_specs or {}
         self._services: dict[str, BaseService[Any]] = {}
+        # One CRUDService per entity (#1824). The DSL emits a service *name* per
+        # operation (list_x, create_x, get_x, update_x, delete_x) but every
+        # CRUDService input is keyed by entity, so all names share one instance —
+        # a callback registered on it (transition effects, audit, hooks, events)
+        # is seen by every path: routes, policy registry, page handlers.
+        self._crud_by_entity: dict[str, CRUDService[Any, Any, Any]] = {}
 
     def create_service(
         self,
@@ -729,6 +735,10 @@ class ServiceFactory:
         """
         if spec.is_crud and spec.target_entity:
             entity_name = spec.target_entity
+            existing = self._crud_by_entity.get(entity_name)
+            if existing is not None:
+                self._services[spec.name] = existing
+                return existing
             model = self.models.get(entity_name)
 
             if not model:
@@ -746,7 +756,7 @@ class ServiceFactory:
             # Get full entity spec for validation (v0.14.2)
             entity_spec = self.entity_specs.get(entity_name)
 
-            service: BaseService[Any] = CRUDService(
+            crud: CRUDService[Any, Any, Any] = CRUDService(
                 entity_name=entity_name,
                 model_class=model,
                 create_schema=create_schema,
@@ -754,6 +764,8 @@ class ServiceFactory:
                 state_machine=state_machine,
                 entity_spec=entity_spec,
             )
+            self._crud_by_entity[entity_name] = crud
+            service: BaseService[Any] = crud
         else:
             service = CustomService(service_name=spec.name)
 
@@ -764,20 +776,17 @@ class ServiceFactory:
         """Get a service by name."""
         return self._services.get(name)
 
-    def services_by_entity(self) -> dict[str, BaseService[Any]]:
-        """Map entity name -> a service wrapping that entity's repository.
+    def services_by_entity(self) -> dict[str, CRUDService[Any, Any, Any]]:
+        """Map entity name -> that entity's one CRUDService (#1181, #1824).
 
         `_services` is keyed by *service* name (`list_invoices`,
-        `read_invoices`, ...). Multiple `CRUDService`s can exist per entity
-        (one per surface mode) but all wrap the same repository, so
-        last-write-wins on a key collision is benign. `CustomService`
-        instances carry no `entity_name` and are skipped.
+        `update_invoice`, ...) and every CRUD name of an entity maps to the
+        same instance, so this view and the name-keyed dict can never disagree.
+        Wire per-entity callbacks through this view — iterating the name-keyed
+        dict registers them once per service name. `CustomService` instances
+        carry no entity and are absent.
         """
-        return {
-            entity_name: service
-            for service in self._services.values()
-            if (entity_name := getattr(service, "entity_name", None))
-        }
+        return dict(self._crud_by_entity)
 
     def service_for_entity(self, entity_name: str) -> BaseService[Any] | None:
         """Return a service wrapping `entity_name`'s repository, or None.

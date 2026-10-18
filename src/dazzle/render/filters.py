@@ -626,9 +626,12 @@ def clerk_related_tab_fk_label(field_key: Any) -> str:
     return clerk_entity_card_field_label(field_key)
 
 
-def sentence_case_words(snake: str) -> str:
-    """``for_moderation`` -> ``For moderation`` (house style, #1815, #1826)."""
-    words = snake.replace("_", " ").strip()
+def sentence_case_words(snake: Any) -> str:
+    """``for_moderation`` -> ``For moderation`` (house style, #1815, #1825, #1826).
+
+    Underscores to spaces, first letter up; acronyms are not recognised.
+    """
+    words = str(snake or "").replace("_", " ").strip()
     return words[:1].upper() + words[1:]
 
 

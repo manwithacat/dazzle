@@ -562,11 +562,13 @@ from .test_design import (
 
 # Row-interpolating text templates (#1815)
 from .text_template import (
+    MAX_TEMPLATE_HOPS,
     TEXT_TEMPLATE_FILTERS,
     TemplatePlaceholder,
     TemplateSegment,
     TextTemplate,
     TextTemplateError,
+    parse_template_path,
     parse_text_template,
 )
 
@@ -738,11 +740,13 @@ __all__ = [
     "UXSpec",
     "BreadcrumbCrumbSpec",
     "BreadcrumbSpec",
+    "MAX_TEMPLATE_HOPS",
     "TEXT_TEMPLATE_FILTERS",
     "TemplatePlaceholder",
     "TemplateSegment",
     "TextTemplate",
     "TextTemplateError",
+    "parse_template_path",
     "parse_text_template",
     # Surfaces
     "BusinessPriority",

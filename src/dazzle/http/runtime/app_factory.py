@@ -1075,7 +1075,7 @@ def assemble_post_build_routes(
 
             island_router = create_island_routes(
                 islands=appspec.islands,
-                services=builder.services,
+                services=builder.services_by_entity(),
                 auth_dep=_island_auth_dep,
                 optional_auth_dep=_island_opt_dep,
             )

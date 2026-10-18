@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 283 BaseModels, 105 Enums, 25 other (functions / typealiases / constants)
+# Counts: 283 BaseModels, 105 Enums, 27 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -282,6 +282,7 @@ ir_class: BreadcrumbCrumbSpec
     - label: TextTemplate
   optional:
     - target: str | None = None
+    - target_row: tuple[str, Ellipsis] | None = None
 
 ir_class: BreadcrumbSpec
   required: (none)
@@ -3492,8 +3493,9 @@ category: constant
   - DEFAULT_PAGE_SIZE: int = 20
   - FEEDBACK_REPORT_FIELDS: tuple (len=27)
   - MAX_PAGE_SIZE: int = 100
+  - MAX_TEMPLATE_HOPS: int = 2
   - MONEY_FIELD_PATTERNS: frozenset (len=22)
-  - TEXT_TEMPLATE_FILTERS: frozenset (len=4)
+  - TEXT_TEMPLATE_FILTERS: frozenset (len=5)
 
 category: function
   - AggregateFunc (callable, type=_LiteralGenericAlias)
@@ -3506,6 +3508,7 @@ category: function
   - get_currency_scale (callable, type=function)
   - is_money_field_name (callable, type=function)
   - money_from_dict (callable, type=function)
+  - parse_template_path (callable, type=function)
   - parse_text_template (callable, type=function)
   - to_money (callable, type=function)
 

@@ -211,17 +211,60 @@ class RelationLoader:
 
         result = [dict(row) for row in rows]
 
+        nested: list[tuple[str, str]] = []
+        loaded: set[str] = set()
         for relation_name in include:
+            if "." in relation_name:
+                head, _, tail = relation_name.partition(".")
+                nested.append((head, tail))
+                continue
             relation = self.registry.get_relation(entity_name, relation_name)
             if not relation:
                 continue
+            loaded.add(relation_name)
 
             if relation.is_to_one:
                 result = self._load_to_one(relation, result, conn)
             else:
                 result = self._load_to_many(relation, result, conn)
 
+        for head, tail in nested:
+            result = self._load_nested_to_one(entity_name, result, head, tail, loaded, conn)
+
         return result
+
+    def _load_nested_to_one(
+        self,
+        entity_name: str,
+        rows: list[dict[str, Any]],
+        head: str,
+        tail: str,
+        loaded: set[str],
+        conn: Any,
+    ) -> list[dict[str, Any]]:
+        """Load ``head.tail`` — a to-one relation of a to-one relation (#1825).
+
+        ``head`` loads first if the include list did not already name it; the
+        ``tail`` relation then loads ONCE, batched across every distinct
+        ``head`` dict (never per row). Deeper paths are not supported.
+        """
+        relation = self.registry.get_relation(entity_name, head)
+        if relation is None or not relation.is_to_one or "." in tail:
+            return rows
+        if head not in loaded:
+            rows = self._load_to_one(relation, rows, conn)
+            loaded.add(head)
+        second = self.registry.get_relation(relation.to_entity, tail)
+        if second is None or not second.is_to_one:
+            return rows
+        parents: dict[int, dict[str, Any]] = {}
+        for row in rows:
+            parent = row.get(head)
+            if isinstance(parent, dict) and not isinstance(parent.get(second.name), dict):
+                parents[id(parent)] = parent  # shared parent dicts load once
+        if parents:
+            self._load_to_one(second, list(parents.values()), conn)
+        return rows
 
     def _load_to_one(
         self,

@@ -472,11 +472,16 @@ class BreadcrumbCrumbContext(BaseModel):
 
     ``label_template`` is set only when the label interpolates the record
     (view surfaces); the detail handler renders it into ``label`` per request.
+    A row-bound link (#1825) carries ``row_url`` (the target page with a
+    literal ``{id}``) and ``row_path`` (the FK path whose id fills it);
+    ``url`` stays ``None`` until the record resolves the id.
     """
 
     label: str = ""
     url: str | None = None
     label_template: TextTemplate | None = None
+    row_url: str | None = None
+    row_path: tuple[str, ...] | None = None
 
 
 class PageContext(BaseModel):

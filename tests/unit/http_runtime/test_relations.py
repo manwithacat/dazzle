@@ -445,6 +445,23 @@ class TestRelationLoader:
         assert result[0]["owner"]["id"] == result[1]["owner"]["id"]
         assert result[0]["owner"]["name"] == "John Doe"
 
+    def test_two_hop_include_loads_each_level_in_one_query(
+        self, all_entities: Any, test_db: Any
+    ) -> None:
+        """``task.owner`` (#1825) loads Comment → Task → User, one batched query per hop."""
+        conn, ids = test_db
+        registry = RelationRegistry.from_entities(all_entities)
+        loader = RelationLoader(registry, all_entities, placeholder="?")
+        rows = [{"id": str(uuid4()), "text": f"c{i}", "task_id": ids["task_id"]} for i in range(3)]
+        selects: list[str] = []
+        conn.set_trace_callback(lambda sql: selects.append(sql) if "SELECT" in sql else None)
+
+        result = loader.load_relations("Comment", rows, ["task.owner"], conn)
+
+        conn.set_trace_callback(None)
+        assert len(selects) == 2
+        assert all(r["task"]["owner"]["name"] == "John Doe" for r in result)
+
 
 # =============================================================================
 # Foreign Key Tests

@@ -37,6 +37,11 @@ class SubsystemContext:
     services: dict[str, Any]
     repositories: dict[str, Any]
     entities: list[Any]
+    # ``{entity_name: CRUDService}`` — the one service per entity (#1824).
+    # ``services`` is keyed by service *name* and several names share one
+    # instance: look entities up and wire per-entity callbacks here, never by
+    # looping over ``services``.
+    entity_services: dict[str, Any]
     # Database manager — set by DazzleBackendApp after _setup_database()
     db_manager: Any | None = None
     # Mutable outputs — subsystems write these so other subsystems can read them

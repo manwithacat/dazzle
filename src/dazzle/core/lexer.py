@@ -515,6 +515,9 @@ class TokenType(Enum):
     RPAREN = ")"
     LBRACKET = "["
     RBRACKET = "]"
+    # #1825: `-> view_surface({ref.path})` row-bound breadcrumb links.
+    LBRACE = "{"
+    RBRACE = "}"
     EQUALS = "="
     DOT = "."
     SLASH = "/"
@@ -561,6 +564,8 @@ _NON_KEYWORD_TOKENS = frozenset(
         TokenType.RPAREN,
         TokenType.LBRACKET,
         TokenType.RBRACKET,
+        TokenType.LBRACE,
+        TokenType.RBRACE,
         TokenType.EQUALS,
         TokenType.DOT,
         TokenType.SLASH,
@@ -847,6 +852,8 @@ class Lexer:
             ")": TokenType.RPAREN,
             "[": TokenType.LBRACKET,
             "]": TokenType.RBRACKET,
+            "{": TokenType.LBRACE,
+            "}": TokenType.RBRACE,
             ".": TokenType.DOT,
             "?": TokenType.QUESTION,
             "/": TokenType.SLASH,

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
-from ._text_template import parse_text_template_token
+from ._text_template import parse_row_path_argument, parse_text_template_token
 from .dispatch import (
     KeywordParser,
     kw_as,
@@ -681,7 +681,9 @@ def _ux_kw_breadcrumb(parser: Any, state: _UXState) -> None:
     ``off`` suppresses the shell trail. Otherwise a ``>``-separated list of
     crumbs replaces it; each crumb is a STRING label (a row-interpolating
     text template on view surfaces) optionally followed by ``-> <surface or
-    workspace name>``. Targets and placeholders are checked at validate time.
+    workspace name>``; a row-taking target binds its record with
+    ``-> view_surface({ref.ref})`` (#1825). Targets, row paths and
+    placeholders are checked at validate time.
     """
     parser.advance()  # consume `breadcrumb`
     parser.expect(TokenType.COLON)
@@ -702,10 +704,13 @@ def _ux_kw_breadcrumb(parser: Any, state: _UXState) -> None:
     while True:
         label = parse_text_template_token(parser)
         target: str | None = None
+        target_row: tuple[str, ...] | None = None
         if parser.match(TokenType.ARROW):
             parser.advance()
             target = parser.expect_identifier_or_keyword().value
-        crumbs.append(ir.BreadcrumbCrumbSpec(label=label, target=target))
+            if parser.match(TokenType.LPAREN):
+                target_row = parse_row_path_argument(parser)
+        crumbs.append(ir.BreadcrumbCrumbSpec(label=label, target=target, target_row=target_row))
         if not parser.match(TokenType.GREATER_THAN):
             break
         parser.advance()

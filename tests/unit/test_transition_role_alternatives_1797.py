@@ -16,7 +16,6 @@ import pytest
 
 from dazzle.core import ir
 from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle.http.runtime.service_map import entity_service_map
 from dazzle.http.runtime.state_machine import TransitionValidator
 from dazzle.http.specs.entity import StateMachineSpec, StateTransitionSpec, TransitionGuardSpec
 
@@ -88,22 +87,6 @@ def test_any_of_role_guard_at_runtime(user_roles: list[str], ok: bool) -> None:
         assert "'Agent' or 'Manager'" in str(result.error)
 
 
-class _Svc:
-    def __init__(self, entity_name: str) -> None:
-        self.entity_name = entity_name
-        self.callbacks: list = []
-
-    def on_updated(self, cb) -> None:
-        self.callbacks.append(cb)
-
-
-def test_entity_service_map_is_keyed_by_entity_not_service_name() -> None:
-    services = {"list_docs": _Svc("Doc"), "create_docs": _Svc("Doc"), "list_users": _Svc("User")}
-    by_entity = entity_service_map(services)
-    assert set(by_entity) == {"Doc", "User"}
-    assert by_entity["Doc"] is services["list_docs"]
-
-
 def test_transition_effects_wire_by_entity_and_warn_when_none(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -120,21 +103,21 @@ def test_transition_effects_wire_by_entity_and_warn_when_none(
 
     effect = SimpleNamespace()
     t = SimpleNamespace(from_state="a", to_state="b", effects=[effect])
-    entity = SimpleNamespace(name="Doc", state_machine=SimpleNamespace(transitions=[t]))
+    sm = SimpleNamespace(transitions=[t], status_field="status")
+    entity = SimpleNamespace(name="Doc", state_machine=sm)
     svc = _Crud("Doc")
     ctx = SimpleNamespace(
         appspec=SimpleNamespace(domain=SimpleNamespace(entities=[entity])),
-        services={"list_docs": svc},
-        config=SimpleNamespace(entity_status_fields={}),
+        entity_services={"Doc": svc},
     )
     with caplog.at_level(logging.WARNING):
         SystemRoutesSubsystem._init_transition_effects(
             SystemRoutesSubsystem.__new__(SystemRoutesSubsystem), ctx
         )
-    assert len(svc.callbacks) == 1, "service-name-keyed registry must still wire by entity"
+    assert len(svc.callbacks) == 1
     assert not [r for r in caplog.records if "NOT wired" in r.getMessage()]
 
-    other = SimpleNamespace(name="Other", state_machine=SimpleNamespace(transitions=[t]))
+    other = SimpleNamespace(name="Other", state_machine=sm)
     ctx.appspec.domain.entities = [other]
     with caplog.at_level(logging.WARNING):
         SystemRoutesSubsystem._init_transition_effects(

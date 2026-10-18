@@ -1665,21 +1665,28 @@ def _compile_breadcrumb_trail(
     """``ux: breadcrumb:`` → the shell trail (#1810). ``None`` keeps the URL trail.
 
     Static labels resolve here; a label that interpolates the record keeps
-    its template for the detail handler to render per request.
+    its template for the detail handler to render per request. A row-bound
+    link (#1825) keeps its ``{id}`` URL and FK path for the same handler.
     """
     spec = surface.ux.breadcrumb if surface.ux is not None else None
     if spec is None:
         return None
     if spec.off:
         return []
-    return [
-        BreadcrumbCrumbContext(
-            label=crumb.label.static_text() if crumb.label.is_static else "",
-            url=_breadcrumb_target_url(crumb.target, appspec, app_prefix) if crumb.target else None,
-            label_template=None if crumb.label.is_static else crumb.label,
+    crumbs: list[BreadcrumbCrumbContext] = []
+    for crumb in spec.crumbs:
+        url = _breadcrumb_target_url(crumb.target, appspec, app_prefix) if crumb.target else None
+        bound = crumb.target_row is not None
+        crumbs.append(
+            BreadcrumbCrumbContext(
+                label=crumb.label.static_text() if crumb.label.is_static else "",
+                url=None if bound else url,
+                label_template=None if crumb.label.is_static else crumb.label,
+                row_url=url if bound else None,
+                row_path=crumb.target_row,
+            )
         )
-        for crumb in spec.crumbs
-    ]
+    return crumbs
 
 
 def compile_surface_to_context(

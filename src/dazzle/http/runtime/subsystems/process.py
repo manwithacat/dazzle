@@ -9,7 +9,6 @@ schedule-based triggers.
 import logging
 from typing import Any
 
-from dazzle.http.runtime.service_map import entity_service_map
 from dazzle.http.runtime.subsystems import SubsystemContext
 
 logger = logging.getLogger(__name__)
@@ -71,7 +70,7 @@ class ProcessSubsystem:
                 from dazzle.http.runtime.side_effect_executor import SideEffectExecutor
 
                 side_effect_executor = SideEffectExecutor(
-                    services=entity_service_map(ctx.services),
+                    services=ctx.entity_services,
                     repositories=ctx.repositories,
                 )
                 self._adapter.set_side_effect_executor(side_effect_executor)
@@ -134,7 +133,7 @@ class ProcessSubsystem:
             return await process_manager.on_entity_deleted(entity_name, entity_id, entity_data)
 
         wired_count = 0
-        for service in ctx.services.values():
+        for service in ctx.entity_services.values():
             if isinstance(service, CRUDService):
                 service.on_created(on_created_callback)
                 service.on_updated(on_updated_callback)

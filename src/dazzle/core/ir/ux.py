@@ -195,10 +195,15 @@ class BreadcrumbCrumbSpec(BaseModel):
         target: Surface or workspace name the crumb links to (``-> name``);
             ``None`` = plain text. The last crumb is the current page and
             never links.
+        target_row: Row-bound link (#1825): ``-> view_surface({ref.ref})``
+            names the FK path (ending in a ``ref`` to the target surface's
+            entity) whose id the target page shows. ``None`` for a list
+            surface or workspace target.
     """
 
     label: TextTemplate
     target: str | None = None
+    target_row: tuple[str, ...] | None = None
 
     model_config = ConfigDict(frozen=True)
 

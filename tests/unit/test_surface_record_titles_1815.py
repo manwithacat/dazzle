@@ -6,6 +6,9 @@ document ``<title>`` and the breadcrumb leaf; entity_card ``quick_actions``
 take ``id "Label"`` and never print raw snake_case.
 #1810 (AegisMark WP20): ``ux: breadcrumb: off`` suppresses the shell trail and
 ``ux: breadcrumb: "A" -> target > "{field}"`` replaces it.
+#1825 (AegisMark class record / manuscript / agreement pages): a crumb binds a
+row (``-> school_detail({school})``), templates follow two FK hops, and
+``|label`` prints an enum value humanised.
 
 All cases run the public path: DSL → AppSpec → validate / compile → render.
 """
@@ -26,18 +29,23 @@ from dazzle.http.runtime.workspace_card_fetchers import _build_entity_card_secti
 from dazzle.page.converters.template_compiler import compile_appspec_to_templates
 from dazzle.render.dispatch import dispatch_render_page
 from dazzle.render.fragment.renderer import FragmentRenderer
-from dazzle.render.text_template import record_page_chrome
+from dazzle.render.text_template import record_page_chrome, record_template_includes
 
 _ENTITIES = """module t
 app T "T"
 
-entity School "School":
+entity Trust "Trust":
   id: uuid pk
   name: str(200) required
 
+entity School "School":
+  id: uuid pk
+  name: str(200) required
+  trust: ref Trust
+
 entity Agreement "Agreement":
   id: uuid pk
-  agreement_type: enum[msa,dpa]=msa
+  agreement_type: enum[msa,dpa,mat_addendum]=msa
   signed_on: date
   note: str(50)
   school: ref School required
@@ -47,6 +55,18 @@ surface agreement_list "Agreements":
   mode: list
   section main:
     field agreement_type "Type"
+
+surface school_detail "School":
+  uses entity School
+  mode: view
+  section main:
+    field name "Name"
+
+surface trust_detail "Trust":
+  uses entity Trust
+  mode: view
+  section main:
+    field name "Name"
 
 workspace hub "Hub":
   purpose: "Home"
@@ -70,6 +90,11 @@ _ROW: dict[str, Any] = {
     "signed_on": "2026-09-01",
     "note": None,
     "school": {"id": "s1", "name": "Oakwood <Academy>"},
+}
+_TWO_HOP_ROW: dict[str, Any] = {
+    **_ROW,
+    "agreement_type": "mat_addendum",
+    "school": {"id": "s1", "name": "Oakwood", "trust": {"id": "t1", "name": "Northern"}},
 }
 
 
@@ -111,8 +136,15 @@ def _detail_page(appspec: Any, row: dict[str, Any]) -> str:
         ('"{school.name|lower} {signed_on|date}"', _ROW, "oakwood &lt;academy&gt; "),
         ('"{note}{school}"', _ROW, "Oakwood &lt;Academy&gt;"),
         ('"{{draft}} {agreement_type|title}"', _ROW, "{draft} Msa"),
+        ('"{agreement_type|label} — {school.trust.name}"', _TWO_HOP_ROW, "Mat addendum — Northern"),
     ],
-    ids=["filter-and-fk-hop", "lower-and-date", "null-empty-and-fk-display", "literal-braces"],
+    ids=[
+        "filter-and-fk-hop",
+        "lower-and-date",
+        "null-empty-and-fk-display",
+        "literal-braces",
+        "enum-label-and-two-hops",
+    ],
 )
 def test_view_title_names_heading_document_title_and_breadcrumb_leaf(
     tmp_path: Path, title: str, row: dict[str, Any], expected: str
@@ -149,6 +181,20 @@ def test_all_null_title_keeps_the_static_surface_title(tmp_path: Path) -> None:
         ),
         ('  ux:\n    breadcrumb: "A" > "B" -> agreement_list', "E_BREADCRUMB_LEAF_LINK"),
         ('  ux:\n    breadcrumb: "A" -> agreement_detail > "B"', "E_BREADCRUMB_TARGET_NEEDS_ROW"),
+        ('  title: "{school.name.x}"', "E_TEMPLATE_PATH_NOT_REF"),
+        ('  title: "{school.trust.nope}"', "E_TEMPLATE_UNKNOWN_FIELD"),
+        ('  title: "{note|label}"', "E_TEMPLATE_LABEL_NOT_ENUM"),
+        ('  ux:\n    breadcrumb: "A" -> school_detail({note}) > "B"', "E_BREADCRUMB_ROW_ENTITY"),
+        (
+            '  ux:\n    breadcrumb: "A" -> school_detail({school.trust}) > "B"',
+            "E_BREADCRUMB_ROW_ENTITY",
+        ),
+        (
+            '  ux:\n    breadcrumb: "A" -> agreement_list({school}) > "B"',
+            "E_BREADCRUMB_TARGET_TAKES_NO_ROW",
+        ),
+        ('  ux:\n    breadcrumb: "A" -> hub({school}) > "B"', "E_BREADCRUMB_TARGET_TAKES_NO_ROW"),
+        ('  ux:\n    breadcrumb: "A" > "B" -> school_detail({school})', "E_BREADCRUMB_LEAF_LINK"),
     ],
 )
 def test_validate_rejects_unresolvable_titles_and_trails(
@@ -171,6 +217,12 @@ def test_validate_rejects_unresolvable_titles_and_trails(
             '  section main:\n    field note "Note"\n  ux:\n    breadcrumb: "{note}"\n',
             "E_BREADCRUMB_PLACEHOLDER_MODE",
         ),
+        (
+            '\nsurface agreement_new "New":\n  uses entity Agreement\n  mode: create\n'
+            '  section main:\n    field note "Note"\n  ux:\n'
+            '    breadcrumb: "School" -> school_detail({school}) > "New"\n',
+            "E_BREADCRUMB_PLACEHOLDER_MODE",
+        ),
     ],
 )
 def test_validate_rejects_interpolation_off_view_surfaces(
@@ -181,16 +233,20 @@ def test_validate_rejects_interpolation_off_view_surfaces(
 
 
 @pytest.mark.parametrize(
-    ("title", "code"),
+    ("body", "code"),
     [
-        ('"{agreement_type|shout}"', "E_TEMPLATE_UNKNOWN_FILTER"),
-        ('"{a.b.c}"', "E_TEMPLATE_PATH_TOO_DEEP"),
-        ('"{school.name"', "E_TEMPLATE_UNCLOSED"),
+        ('  title: "{agreement_type|shout}"', "E_TEMPLATE_UNKNOWN_FILTER"),
+        ('  title: "{a.b.c.d}"', "E_TEMPLATE_PATH_TOO_DEEP"),
+        ('  title: "{school.name"', "E_TEMPLATE_UNCLOSED"),
+        (
+            '  ux:\n    breadcrumb: "A" -> trust_detail({school.trust.x}) > "B"',
+            "E_TEMPLATE_PATH_TOO_DEEP",
+        ),
     ],
 )
-def test_malformed_title_template_is_a_parse_error(tmp_path: Path, title: str, code: str) -> None:
+def test_malformed_template_is_a_parse_error(tmp_path: Path, body: str, code: str) -> None:
     with pytest.raises(ParseError, match=code):
-        _detail_appspec(tmp_path, f"  title: {title}")
+        _detail_appspec(tmp_path, body)
 
 
 # ───────────────────────── #1810 breadcrumbs ─────────────────────────
@@ -212,6 +268,41 @@ def test_authored_breadcrumb_replaces_the_url_trail(tmp_path: Path) -> None:
     assert '<a href="/app/agreement"' in html
     assert '<li aria-current="page">Oakwood &lt;Academy&gt;</li>' in html
     assert ">App<" not in html
+
+
+_ROW_BOUND_TRAIL = (
+    '  ux:\n    breadcrumb: "Trusts" -> hub > "{school.trust.name}" -> trust_detail({school.trust})'
+    ' > "School" -> school_detail({school}) > "{agreement_type|label}"'
+)
+
+
+@pytest.mark.parametrize(
+    ("school", "links"),
+    [
+        (
+            {"id": "s1", "name": "Oakwood", "trust": {"id": "t1", "name": "Northern"}},
+            {"Northern": "/app/trust/t1", "School": "/app/school/s1"},
+        ),
+        (None, {"School": None}),
+    ],
+    ids=["two-hop-row-links", "null-ref-plain-text"],
+)
+def test_row_bound_crumbs_link_the_record_or_fall_back_to_text(
+    tmp_path: Path, school: dict[str, Any] | None, links: dict[str, str | None]
+) -> None:
+    appspec = _detail_appspec(tmp_path, _ROW_BOUND_TRAIL)
+    assert validate_surface_titles_and_breadcrumbs(appspec) == ([], [])
+    assert record_template_includes(_surface(appspec, "agreement_detail")) == ["school.trust"]
+    html = _detail_page(appspec, {**_TWO_HOP_ROW, "school": school})
+    for label, href in links.items():
+        if href is None:
+            assert f">{label}<" in html
+            assert "/app/school/" not in html
+        else:
+            assert f'<a href="{href}"' in html
+            assert f">{label}</a>" in html
+    assert '<li aria-current="page">Mat addendum</li>' in html
+    assert "{id}" not in html
 
 
 def test_static_breadcrumb_on_a_list_surface(tmp_path: Path) -> None:

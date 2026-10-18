@@ -30,7 +30,7 @@ class LLMQueueSubsystem:
             from dazzle.http.runtime.llm_routes import create_llm_routes
             from dazzle.http.runtime.llm_trigger import LLMTriggerMatcher
 
-            ai_job_service = ctx.services.get("AIJob")
+            ai_job_service = ctx.entity_services.get("AIJob")
             executor = LLMIntentExecutor(ctx.appspec, ai_job_service=ai_job_service)
 
             llm_config = ctx.appspec.llm_config
@@ -47,7 +47,7 @@ class LLMQueueSubsystem:
             # Register entity event trigger matcher
             has_triggers = any(i.triggers for i in ctx.appspec.llm_intents)
             if has_triggers and ctx.event_framework is not None:
-                matcher = LLMTriggerMatcher(ctx.appspec, queue, services=ctx.services)
+                matcher = LLMTriggerMatcher(ctx.appspec, queue, services=ctx.entity_services)
                 if hasattr(ctx.event_framework, "add_handler"):
                     ctx.event_framework.add_handler(matcher.handle_event)
 
