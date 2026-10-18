@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.123.0] - 2026-10-18
+
 ### Added
 - **`[signing] storage` puts signed PDFs in a declared object store (#1816, consumer-forced by AegisMark).** Signed documents were written to the serving process's local disk (`.dazzle/uploads`), which on Heroku is gone at the next restart and invisible to other dynos, so the signed-copy link 404'd. `[signing] storage = "<name>"` now names a declared `[storage.<name>]` backend: the PDF is written there (key `<prefix>signing/<Entity>/<date>/<file_id>_<name>.pdf`), its `dazzle_files` row records the backend, and the signatory's signed-copy link and the `/_dazzle/documents` viewer read it back through the storage; `signed_document` holds the storage's `/api/storage/<name>/proxy?key=…` URL. An unknown name or a prefix with `{user_id}` / `{record_id}` placeholders fails manifest load; unset keeps local disk and, when `DYNO` is set, logs one boot warning. The FileService is now built in one place and routes every read by the file's recorded backend; `StorageProvider` gains `put_object` / `delete_object`. PDFs already on local disk are not migrated; AegisMark declares a literal-prefix `[storage.signed_documents]`, sets `[signing] storage`, and drops the `--files-path` caveat from its `sign_agreements` demo script.
 
