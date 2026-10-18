@@ -175,6 +175,11 @@ def test_list_surface_field_width_and_page_size_reach_the_list_page() -> None:
 
     assert '<col data-dz-col="title" style="width: 34%">' in html
     assert '<th data-dz-col="title" style="width: 34%"' in html
+    # #1822: partial hints — unhinted columns stay style-less (the HM
+    # `col:not([style])` floor targets them) and every header carries its full
+    # label in title= so a clipped header stays readable.
+    assert '<col data-dz-col="owner">' in html
+    assert 'scope="col" title="Owner" class="dz-table-th"' in html
     # The declared page size rides the first fetch and every grid refresh.
     assert "page_size=25" in html.split("data-dz-grid-src=", 1)[1].split('"')[1]
     assert '<input type="hidden" data-dz-grid-page-size value="25">' in html

@@ -3999,6 +3999,11 @@ input.switch:checked::before {
   }
 
   .nav-group__header {
+    /* Same row as .nav-link so a header's icon + label get the same
+       gap as a link's (#1820). The native marker is already hidden below. */
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
     cursor: pointer;
     padding: var(--space-xs) var(--space-sm);
     color: var(--colour-text-muted);
@@ -7271,6 +7276,20 @@ summary.table-col-menu-trigger::-webkit-details-marker {
   letter-spacing: 0.04em;
   color: var(--colour-text-muted);
   user-select: none;
+  /* Clip a header that does not fit (full label is in title=) instead of
+   * overprinting its neighbour (#1822). */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Partial width hints under table-layout: fixed (#1822): a th min-width is
+ * ignored by fixed layout, so the floor lives on the unhinted <col>s. Only
+ * when at least one column carries an author width (inline style); a fully
+ * unhinted table keeps its equal-share columns. Date-ish columns keep their
+ * own 8.5rem th width, select/actions keep their chrome widths. */
+.table-grid:has(> colgroup > col[data-col][style])
+  > colgroup > col[data-col]:not([style], [data-col$="_at"], [data-col$="_date"]) {
+  width: var(--dz-table-col-floor, 6rem);
 }
 
 .table-th-select {

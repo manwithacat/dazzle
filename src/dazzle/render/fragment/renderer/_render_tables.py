@@ -226,7 +226,7 @@ class _RenderTablesMixin:
                         aria = "none"
                     head_cells_parts.append(
                         f'<th data-dz-col="{ck}"{wstyle} aria-sort="{aria}" '
-                        'scope="col" class="dz-table-th">'
+                        f'scope="col" title="{label}" class="dz-table-th">'
                         # C2.2: the pointer-drag resize handle (decorative for
                         # SR; dz-grid-resize.js drives col[data-dz-col] widths).
                         f'<span class="dz-table-resize-handle" '
@@ -244,7 +244,7 @@ class _RenderTablesMixin:
                     )
                 else:
                     head_cells_parts.append(
-                        f'<th data-dz-col="{ck}"{wstyle} scope="col" class="dz-table-th">'
+                        f'<th data-dz-col="{ck}"{wstyle} scope="col" title="{label}" class="dz-table-th">'
                         f'<span class="dz-table-resize-handle" '
                         f'data-dz-grid-resize="{ck}" aria-hidden="true"></span>'
                         f"{label}</th>"

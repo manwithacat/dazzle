@@ -2783,6 +2783,9 @@ font-weight: var(--weight-medium);
 .dz-nav-group {
 }
 .dz-nav-group__header {
+display: flex;
+align-items: center;
+gap: var(--space-sm);
 cursor: pointer;
 padding: var(--space-xs) var(--space-sm);
 color: var(--colour-text-muted);
@@ -5138,6 +5141,12 @@ text-transform: uppercase;
 letter-spacing: 0.04em;
 color: var(--colour-text-muted);
 user-select: none;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+.dz-table-grid:has(> colgroup > col[data-dz-col][style])
+> colgroup > col[data-dz-col]:not([style], [data-dz-col$="_at"], [data-dz-col$="_date"]) {
+width: var(--dz-table-col-floor, 6rem);
 }
 .dz-table-th-select {
 width: 2.5rem;

@@ -226,6 +226,11 @@
   }
 
   .dz-nav-group__header {
+    /* Same row as .dz-nav-link so a header's icon + label get the same
+       gap as a link's (#1820). The native marker is already hidden below. */
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
     cursor: pointer;
     padding: var(--space-xs) var(--space-sm);
     color: var(--colour-text-muted);
