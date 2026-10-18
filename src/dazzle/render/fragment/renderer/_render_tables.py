@@ -88,6 +88,12 @@ from dazzle.render.fragment.primitives import (
     StatusList,
     Table,
 )
+from dazzle.render.fragment.primitives.data import (
+    LIST_FILTER_SYNC,
+    LIST_ROWS_TARGET_FROM_INSIDE,
+    list_filters_include,
+    list_rows_url,
+)
 from dazzle.render.fragment.renderer._data_row import (
     ARCHETYPE_EMBEDDED,
     ARCHETYPE_LIST_REGION,
@@ -1325,13 +1331,19 @@ class _RenderTablesMixin:
     def _list_region_pager_html(self, lst: ListRegion, ctx: RenderContext) -> str:
         """Pager for a region that declares `page_size:` (#1792).
 
-        Each page button re-fetches the region endpoint with `page=` /
-        `page_size=` (+ leftover-honest temporal) and swaps the result into the
-        enclosing region — the same target the region's search box uses.
+        Each page button re-fetches the region's rows (`part=rows`, #1821)
+        with `page=` / `page_size=` (+ leftover-honest temporal) and the
+        region's filter bars included, and swaps them over this list — the
+        same target the region's find-by box and filter selects use.
         """
         total_pages = (lst.total + lst.page_size - 1) // lst.page_size
-        endpoint = ctx.escape_attr(str(lst.csv_endpoint or ""))
-        sep = "&amp;" if "?" in endpoint else "?"
+        endpoint = list_rows_url(ctx.escape_attr(str(lst.csv_endpoint or "")))
+        sep = "&amp;"
+        include_attr = (
+            f' hx-include="{ctx.escape_attr(list_filters_include(lst.filter_region))}"'
+            if lst.filter_region
+            else ""
+        )
         buttons: list[str] = []
         for entry in _pagination_pages(lst.page, total_pages):
             if entry is None:
@@ -1349,7 +1361,8 @@ class _RenderTablesMixin:
             )
             buttons.append(
                 f'<button type="button" class="{cls}"{current_attr} '
-                f'hx-get="{href}" hx-target="closest [data-dz-region]" hx-swap="innerHTML">'
+                f'hx-get="{href}" hx-target="{LIST_ROWS_TARGET_FROM_INSIDE}" '
+                f'hx-swap="outerHTML" hx-sync="{LIST_FILTER_SYNC}"{include_attr}>'
                 f"{entry}</button>"
             )
         catalog = (

@@ -140,3 +140,13 @@ def test_role_the_list_permit_denies_gets_403_and_no_query() -> None:
     resp = client.get("/_dazzle/fts/Note", params={"q": "hello"})
     assert resp.status_code == 403
     assert repos["Note"].calls == []
+
+
+def test_cleared_search_box_gets_nothing_to_swap() -> None:
+    """#1821: a cleared box's late request (empty ``q``) must not land an error
+    body in the results panel — the html form answers 204 (htmx swaps nothing,
+    the box has restored its coaching line); the JSON API still rejects it."""
+    client, repos, _ = _client("member")
+    assert client.get("/_dazzle/fts/Note", params={"q": " ", "html": 1}).status_code == 204
+    assert client.get("/_dazzle/fts/Note", params={"q": ""}).status_code == 422
+    assert repos["Note"].calls == []

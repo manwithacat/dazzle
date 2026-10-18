@@ -1,6 +1,6 @@
 {
-  "src_lines": 329985,
-  "test_lines": 320154,
+  "src_lines": 330115,
+  "test_lines": 320306,
   "docs_lines": 49484,
   "construct_count": 31,
   "written": "2026-10-18",
@@ -611,6 +611,14 @@
         "docs_lines"
       ],
       "reason": "#1817 role-field lookahead in condition parser"
+    },
+    {
+      "date": "2026-10-18",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "#1821 rows-only list region filter swap and clear control"
     }
   ]
 }

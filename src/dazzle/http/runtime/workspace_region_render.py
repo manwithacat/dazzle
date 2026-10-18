@@ -51,6 +51,7 @@ from dazzle.http.runtime.workspace_card_fetchers import (
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.render.cell_chrome import is_sequence_title_key
+from dazzle.render.fragment.primitives.data import LIST_ROWS_PARAM, LIST_ROWS_VALUE
 from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_catalog_id,
     leftover_honest_iso_date,
@@ -448,6 +449,19 @@ def _set_detail_url_template(
     adapter_ctx["detail_url_template"] = tmpl
 
 
+def is_list_rows_request(ctx: Any, request: Any) -> bool:
+    """True for a list region's rows-only fetch (#1821).
+
+    The region's find-by box, filter selects and pager send ``part=rows``
+    and swap only the following ``[data-dz-list-region]``; the answer is the
+    ListRegion alone — no filter chrome, no region wrapper.
+    """
+    if getattr(getattr(ctx, "ctx_region", None), "display", "") != "LIST":
+        return False
+    qparams = getattr(request, "query_params", None)
+    return qparams is not None and qparams.get(LIST_ROWS_PARAM) == LIST_ROWS_VALUE
+
+
 def _active_list_search(request: Any) -> str:
     """``?q=`` / ``?search=`` free-text value for workspace list chrome."""
     return (request.query_params.get("q") or request.query_params.get("search") or "").strip()
@@ -496,6 +510,7 @@ def _build_list_adapter_ctx(
         adapter_ctx["filter_columns"] = inputs.filter_columns
         adapter_ctx["active_filters"] = inputs.active_filters
         _apply_list_search_chrome(adapter_ctx, ctx, env.request)
+        adapter_ctx["rows_only"] = is_list_rows_request(ctx, env.request)
         if getattr(ctx.ir_region, "filters_hidden", False):
             # #1809: `filters: none` — no filter bar, no find-by-title box.
             adapter_ctx["filter_columns"] = []
@@ -949,7 +964,7 @@ async def render_region_html(
         hx_flag = headers.get("hx-request") or headers.get("HX-Request") or ""
         is_htmx = str(hx_flag).lower() in ("true", "1")
     body = typed_primitive_html or ""
-    if is_htmx:
+    if is_htmx or is_list_rows_request(ctx, request):
         return body
     return (
         f'<div data-dz-region data-dz-region-name="{region_name_attr}" '

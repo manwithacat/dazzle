@@ -304,8 +304,8 @@ class PlaywrightExecutor:
                 # SearchBox input: networkidle often never settles under
                 # SSE/lazy regions, so a fixed 400ms race still mis-scores
                 # working FTS as broken (cycle 1332 panel).
-                # List free-text chrome (?q= / #dz-list-q-*) reloads the region
-                # so the A–Z list shrinks — same settle race (cycle 1555).
+                # List free-text chrome (?q= / #dz-list-q-*) reloads the region's
+                # rows (#1821) so the A–Z list shrinks — same settle race (cycle 1555).
                 results_summary = ""
                 list_search_settled = False
                 try:
@@ -338,9 +338,9 @@ class PlaywrightExecutor:
                     elif _is_list_search_input(target_sel):
                         await self._page.wait_for_timeout(300)  # HTMX debounce
                         try:
-                            # Region swap replaces the list; wait until the
-                            # input reflects the typed value (re-rendered) or
-                            # a short idle after debounce.
+                            # The rows swap under the box (#1821); wait until
+                            # the input reflects the typed value or a short
+                            # idle after debounce.
                             typed = action.value or ""
                             await self._page.wait_for_function(
                                 """([sel, val]) => {

@@ -7432,8 +7432,9 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  *   - results: `.search-box-results` / `.search-box-results`
  *
  *   input/search → if the trimmed query is empty, stop the event so the
- *            box does not hx-get. Restore the coaching empty line.
- *            Non-empty queries still exchange. Whitespace-only is empty.
+ *            box does not hx-get, abort a query still in flight, and
+ *            restore the coaching empty line. Non-empty queries still
+ *            exchange. Whitespace-only is empty.
  *
  * Contract already said "Empty queries aren't sent (min length 1)" but
  * the trigger had no filter — clearing after a hit swapped /mock/search
@@ -7516,6 +7517,9 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     // empty q. Restore coaching — do not leave stale hits or invent
     // a result list from /mock/search.
     evt.stopImmediatePropagation();
+    // A query still in flight would land its hits over the restored
+    // coaching (Dazzle #1821) — abort it (htmx 4 `htmx:abort`).
+    t.dispatchEvent(new Event("htmx:abort"));
     restoreCoaching(root);
   }
 

@@ -7783,6 +7783,50 @@ select.filter-select {
   box-shadow: 0 0 0 1px var(--colour-brand);
 }
 
+/* List-region find-by box + clear (×) (Dazzle #1821). The × shows only
+ * while the box holds text — `:placeholder-shown` is the state, no JS.
+ * The UA's own search cancel glyph is suppressed so there is one ×. */
+.list-search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.list-search-field .filter-input {
+  padding-inline-end: 1.75rem;
+}
+
+.list-search-field .filter-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.list-search-clear {
+  position: absolute;
+  inset-inline-end: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--colour-text-muted);
+  cursor: pointer;
+}
+
+.list-search-clear:hover,
+.list-search-clear:focus-visible {
+  color: var(--colour-text);
+  background: var(--colour-bg);
+}
+
+.list-search-field .filter-input:placeholder-shown + .list-search-clear {
+  display: none;
+}
+
 /* ─────────────────────────── table_rows fragment ────────────────
  * Inline-editable data table rows with bulk-select checkboxes,
  * per-cell display/edit modes, and hover-revealed action buttons.

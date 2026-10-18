@@ -35,7 +35,10 @@ from dazzle.http.runtime.workspace_region_computes import compute_columns_for_pe
 from dazzle.http.runtime.workspace_region_fetch import fetch_region_items
 from dazzle.http.runtime.workspace_region_orchestration import compute_region_render_inputs
 from dazzle.http.runtime.workspace_region_prelude import resolve_request_user_context
-from dazzle.http.runtime.workspace_region_render import render_region_html
+from dazzle.http.runtime.workspace_region_render import (
+    is_list_rows_request,
+    render_region_html,
+)
 from dazzle.page.runtime.when_empty_resolver import resolve_when_empty
 from dazzle.render.fragment.primitives.data import region_poll_id
 
@@ -106,6 +109,7 @@ def _build_region_response(
     html_body: str,
     hx_target: str | None,
     is_added_card: bool = False,
+    rows_only: bool = False,
 ) -> Any:
     """Build the region-fetch HTTP response, stopping the poll when complete.
 
@@ -124,6 +128,11 @@ def _build_region_response(
     from fastapi.responses import HTMLResponse
 
     target_id = _target_element_id(hx_target)
+    if rows_only:
+        # #1821: a filter / pager fetch swaps the list's rows, not the card
+        # body — neither `when_empty` (a filter matching nothing must show
+        # the empty state, not collapse the card) nor the poll-stop applies.
+        return HTMLResponse(content=html_body)
     # #1494 (UX-maturity 3d): an empty region self-demotes per its resolved
     # `when_empty` mode (declarative-over-htmx-4 — native OOB / HX-Reswap, no
     # bespoke JS). Only when the fetch produced no rows; `message` (the default
@@ -271,5 +280,10 @@ async def _workspace_region_handler(
     # #1494: `?added=1` marks a picker-added card → exempt from auto self-demote.
     is_added_card = request.query_params.get("added") == "1"
     return _build_region_response(
-        ctx, fetched, html_body, request.headers.get("hx-target"), is_added_card=is_added_card
+        ctx,
+        fetched,
+        html_body,
+        request.headers.get("hx-target"),
+        is_added_card=is_added_card,
+        rows_only=is_list_rows_request(ctx, request),
     )

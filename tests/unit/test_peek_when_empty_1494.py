@@ -263,13 +263,25 @@ class TestWhenEmptyRenderSeam:
     """`_build_region_response` turns the resolved mode into native htmx removal
     when the fetch produced no rows."""
 
-    def _resp(self, ir_region, items, hx_target="div#region-recent-recent", is_added_card=False):
+    def _resp(
+        self,
+        ir_region,
+        items,
+        hx_target="div#region-recent-recent",
+        is_added_card=False,
+        rows_only=False,
+    ):
         from dazzle.http.runtime.workspace_region_handler import _build_region_response
 
         ctx = SimpleNamespace(ir_region=ir_region, ctx_region=SimpleNamespace(display="list"))
         fetched = SimpleNamespace(items=items, total=len(items))
         return _build_region_response(
-            ctx, fetched, "<table>body</table>", hx_target, is_added_card=is_added_card
+            ctx,
+            fetched,
+            "<table>body</table>",
+            hx_target,
+            is_added_card=is_added_card,
+            rows_only=rows_only,
         )
 
     def _region(self, **kw):
@@ -321,6 +333,17 @@ class TestWhenEmptyRenderSeam:
         resp = self._resp(self._region(display="bar_chart"), items=[], is_added_card=True)
         assert "HX-Reswap" not in resp.headers
         assert "<table>body</table>" in bytes(resp.body).decode()
+
+    def test_rows_fetch_never_self_demotes(self):
+        # #1821: a filter matching nothing swaps the list's rows (htmx 4 sends
+        # a bare `div` HX-Target) — it shows the empty state, never collapses
+        # or removes the card.
+        for mode in (WhenEmpty.COLLAPSE, WhenEmpty.SUPPRESS):
+            resp = self._resp(
+                self._region(when_empty=mode), items=[], hx_target="div", rows_only=True
+            )
+            assert "HX-Reswap" not in resp.headers
+            assert bytes(resp.body).decode() == "<table>body</table>"
 
     def test_added_card_still_honours_explicit_when_empty(self):
         # An explicit author `when_empty:` wins even for an added card.

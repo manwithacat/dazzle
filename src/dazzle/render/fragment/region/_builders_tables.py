@@ -61,6 +61,12 @@ from dazzle.render.fragment import (
     Surface,
     Tabs,
 )
+from dazzle.render.fragment.primitives.data import (
+    LIST_FILTER_SYNC,
+    LIST_ROWS_TARGET,
+    list_filters_include,
+    list_rows_url,
+)
 from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
@@ -448,7 +454,11 @@ class _BuildersTablesMixin:
             # must not invent. Valid true / YYYY-MM-DD ride; leftover
             # junk (zzz / 2abc / maybe / not-a-date) omits.
             temporal = leftover_honest_temporal_query(include_closed, as_of)
-            hx_get = f"{ep}?{temporal}" if temporal else ep
+            # #1821: the box re-fetches the rows only (`part=rows`) — the
+            # bar is never inside the swap, so value/focus/caret survive.
+            hx_get = list_rows_url(ep)
+            if temporal:
+                hx_get = f"{hx_get}&amp;{temporal}"
             val = _html.escape(active_search, quote=True)
             # Pilot-facing copy from declared search fields (name/email/…) so
             # the single list filter is obvious.
@@ -470,26 +480,40 @@ class _BuildersTablesMixin:
                 label_text = f"Find {source_label.lower()}"
             rid = _html.escape(region_name, quote=True)
             label_esc = _html.escape(label_text)
+            include = _html.escape(list_filters_include(region_name), quote=True)
             # Visible filter-label (not only placeholder) — dual_pane pilots
             # and agent panels need a clear find-by-name affordance above the
-            # list. Same hx-include + filter-bar layout as FilterBar.
+            # list. #1821: the response swaps the following
+            # `[data-dz-list-region]` (rows + pager + empty state) — never this
+            # bar; every filter bar of the region rides along; `hx-sync` on
+            # the bar drops a stale response. The clear (×) shows only while
+            # the box has text (CSS `:placeholder-shown`); dz-utils.js empties
+            # the box and fires its `search` trigger.
             chrome_parts.append(
                 RawHTML(
-                    f'<div class="filter-bar dz-list-search-chrome" data-dz-list-search>'
+                    f'<div class="filter-bar dz-list-search-chrome" data-dz-list-search '
+                    f'data-dz-list-filters="{rid}" hx-sync="{LIST_FILTER_SYNC}">'
                     f'<div class="filter-cell dz-list-search-cell" style="width:min(24rem,100%)">'
                     f'<label class="filter-label dz-list-search-label" '
                     f'for="dz-list-q-{rid}">{label_esc}</label>'
+                    f'<div class="dz-list-search-field">'
                     f'<input id="dz-list-q-{rid}" '
                     f'type="search" name="q" '
                     f'class="dz-list-search-input filter-input dz-filter-input" '
                     f'placeholder="{placeholder}" value="{val}" autocomplete="off" '
                     f"data-dz-list-search-input "
                     f'hx-get="{hx_get}" '
-                    f'hx-target="closest [data-dz-region]" '
-                    f'hx-swap="innerHTML" '
+                    f'hx-target="{LIST_ROWS_TARGET}" '
+                    f'hx-swap="outerHTML" '
                     f'hx-trigger="input changed delay:250ms, search" '
-                    f'hx-include="closest .filter-bar">'
-                    f"</div></div>"
+                    f'hx-include="{include}">'
+                    f'<button type="button" class="dz-list-search-clear" '
+                    f'data-dz-list-search-clear aria-label="Clear search" title="Clear search">'
+                    f'<svg viewBox="0 0 16 16" width="12" height="12" fill="none" '
+                    f'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" '
+                    f'aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>'
+                    f"</button>"
+                    f"</div></div></div>"
                 )
             )
 
@@ -546,6 +570,9 @@ class _BuildersTablesMixin:
                         as_of=as_of,
                     )
                 )
+
+        # #1821: the pager includes the region's filter bars when any exist.
+        has_filter_bar = bool(chrome_parts)
 
         # DateRangePicker — when date_range flag is set
         if endpoint and ctx.get("date_range"):
@@ -719,7 +746,13 @@ class _BuildersTablesMixin:
             # #1792: a region that declares `page_size:` pages with a pager.
             page=int(str(ctx.get("page") or 1)),
             page_size=int(str(ctx.get("page_size") or 0)),
+            filter_region=region_name if has_filter_bar else "",
         )
+
+        # #1821: a filter / pager request (`part=rows`) gets the rows alone —
+        # the chrome above them stays in the page untouched.
+        if ctx.get("rows_only"):
+            return _wrap_surface(title, "list", body)
 
         # If we have chrome, wrap the body in a Stack that also contains
         # the chrome row(s). The legacy template injects chrome INSIDE

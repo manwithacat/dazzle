@@ -159,9 +159,10 @@ def test_region_list_renders_only_named_columns_in_order_with_widths() -> None:
         '<col data-dz-col="owner"></colgroup>'
     ) in html
     assert 'style="table-layout: fixed"' in html
-    # 40 matches at 25 per page → a pager whose buttons re-fetch the region.
+    # 40 matches at 25 per page → a pager whose buttons re-fetch the rows
+    # (#1821: `part=rows`, swapped over the list itself).
     assert "data-dz-pagination" in html
-    assert "/api/workspaces/desk/regions/stacks?page=2&amp;page_size=25" in html
+    assert "/api/workspaces/desk/regions/stacks?part=rows&amp;page=2&amp;page_size=25" in html
 
 
 def test_list_surface_field_width_and_page_size_reach_the_list_page() -> None:

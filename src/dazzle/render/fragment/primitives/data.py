@@ -562,6 +562,38 @@ class ListColumn:
     truncate: bool | None = None
 
 
+# #1821: a workspace list region's filter controls (find-by box, filter
+# selects, pager) swap only the rows — the `[data-dz-list-region]` element
+# that follows the filter bar — never the bar itself, so the find-by box keeps
+# its value, focus and caret by construction. The request carries
+# `part=rows`; the region handler answers it with the ListRegion alone.
+LIST_ROWS_PARAM = "part"
+LIST_ROWS_VALUE = "rows"
+# Swap target from a filter bar control (the list follows its bar) and from
+# a pager button (inside the list).
+LIST_ROWS_TARGET = "next [data-dz-list-region]"
+LIST_ROWS_TARGET_FROM_INSIDE = "closest [data-dz-list-region]"
+# One request queue per region: a newer filter request replaces (aborts) the
+# one in flight, so a stale response never lands over a newer one.
+LIST_FILTER_SYNC = "closest [data-dz-region]:replace"
+
+
+def list_rows_url(endpoint: str) -> str:
+    """``endpoint`` with the rows-only marker appended (attribute-escaped ``&``)."""
+    sep = "&amp;" if "?" in endpoint else "?"
+    return f"{endpoint}{sep}{LIST_ROWS_PARAM}={LIST_ROWS_VALUE}"
+
+
+def list_filters_include(region_name: str) -> str:
+    """``hx-include`` selector for every filter bar of one list region.
+
+    The find-by box and the filter selects live in separate bars, each tagged
+    ``data-dz-list-filters="<region>"``; every control (and the pager) includes
+    all of them so ``q`` and the selects always travel together.
+    """
+    return f"[data-dz-list-filters='{region_name}']"
+
+
 @dataclass(frozen=True, slots=True)
 class ListRegion:
     """Tabular list region — `<div class="dz-list-region">` with action
@@ -615,6 +647,10 @@ class ListRegion:
     # region endpoint) into the enclosing region.
     page: int = 1
     page_size: int = 0
+    # #1821: the region whose filter bars the pager includes (so paging keeps
+    # the active find-by text and selects). Empty = the region has no filter
+    # bar; the pager carries only page / page_size.
+    filter_region: str = ""
 
     def __post_init__(self) -> None:
         for i, row in enumerate(self.rows):
@@ -1186,13 +1222,14 @@ class FilterBar:
     """Row of filter dropdowns above a list/queue region.
 
     Each dropdown is a `FilterColumn`; the bar emits a `<form>`-less
-    flex row of `<select>` elements that re-fire the region endpoint
-    on change via HTMX `hx-include="closest .filter-bar"` so all
+    flex row of `<select>` elements that re-fetch the region's rows on
+    change (`part=rows`, swapped into the following
+    `[data-dz-list-region]`, #1821) with every filter bar of the region
+    included (`list_filters_include`) so the find-by text and all
     active filter values ride along.
 
-    `endpoint` is the region's data URL; `region_name` namespaces the
-    HTMX target id (`#region-<name>`) so the swap goes back into the
-    same region's body.
+    `endpoint` is the region's data URL; `region_name` tags the bar
+    (`data-dz-list-filters`) so the region's controls find each other.
 
     Leftover-honest ``include_closed`` / ``as_of`` (cycle 2179) ride
     each select ``hx-get``. Dropping them invented open-only / current

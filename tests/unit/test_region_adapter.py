@@ -478,7 +478,8 @@ _RENDER_CASES = [
     ),
     # Workspace list free-text search filters via ?q= (not the FTS results
     # panel): dual_pane directories scored find-by-name broken when the A–Z
-    # list never shrank. Swap target is the closest region chrome.
+    # list never shrank. #1821: the box swaps the rows only (`part=rows` →
+    # the following list region), never itself; a clear (×) sits beside it.
     _case(
         "list-search-fields-render-q-input",
         _r("list", name="contact_list"),
@@ -495,13 +496,17 @@ _RENDER_CASES = [
             "dz-list-q-contact_list",
             'value="Griff"',
             "data-dz-list-search",
-            'hx-get="/api/workspaces/contacts/regions/contact_list"',
+            'hx-get="/api/workspaces/contacts/regions/contact_list?part=rows"',
             "Find by First Name",
             "dz-list-search-label",
             "filter-label",
-            'hx-target="closest [data-dz-region]"',
+            'hx-target="next [data-dz-list-region]"',
+            'hx-swap="outerHTML"',
+            'hx-include="[data-dz-list-filters=&#x27;contact_list&#x27;]"',
+            'hx-sync="closest [data-dz-region]:replace"',
+            "data-dz-list-search-clear",
         ),
-        ("dz-search-results-contact_list",),
+        ("dz-search-results-contact_list", 'hx-target="closest [data-dz-region]"'),
     ),
     _case(
         "list-date-range-renders-picker",

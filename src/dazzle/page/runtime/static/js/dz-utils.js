@@ -360,3 +360,23 @@ document.addEventListener("click", function (evt) {
       btn.disabled = false;
     });
 });
+
+/* ------------------------------------------------------------------ */
+/**
+ * Clear (×) for a workspace list region's find-by box (#1821). The button
+ * sits beside `[data-dz-list-search-input]`; CSS hides it while the box
+ * shows its placeholder, so there is no JS visibility state. A click empties
+ * the box, fires its `search` trigger (the box's own hx-get re-fetches the
+ * unfiltered rows) and returns focus to the box.
+ */
+document.addEventListener("click", function (evt) {
+  const btn = evt.target.closest("[data-dz-list-search-clear]");
+  if (!btn) return;
+  const field = btn.closest(".dz-list-search-field");
+  const input = field && field.querySelector("[data-dz-list-search-input]");
+  if (!input) return;
+  evt.preventDefault();
+  input.value = "";
+  input.dispatchEvent(new Event("search"));
+  input.focus();
+});

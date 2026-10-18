@@ -122,7 +122,7 @@ def test_search_chrome_empty_temporal_omits() -> None:
     href = _search_hx_get(_render())
     assert "include_closed" not in href
     assert "as_of" not in href
-    assert href == "/app/x"
+    assert href == "/app/x?part=rows"
 
 
 def test_search_chrome_q_still_rides_with_temporal() -> None:
@@ -136,7 +136,7 @@ def test_search_chrome_q_still_rides_with_temporal() -> None:
     assert "as_of=2026-01-15" in href
     assert 'name="q"' in html
     assert 'value="ada"' in html
-    assert 'hx-include="closest .filter-bar"' in html
+    assert 'hx-include="[data-dz-list-filters=&#x27;tasks&#x27;]"' in html
 
 
 def test_leftover_honest_query_helper() -> None:

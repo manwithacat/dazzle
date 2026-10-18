@@ -70,6 +70,12 @@ from dazzle.render.fragment.primitives import (
     SortHeader,
     Toolbar,
 )
+from dazzle.render.fragment.primitives.data import (
+    LIST_FILTER_SYNC,
+    LIST_ROWS_TARGET,
+    list_filters_include,
+    list_rows_url,
+)
 from dazzle.render.fragment.renderer._helpers import _hx_attrs
 from dazzle.render.open_discovery import (
     confirm_action_open_attr_suffix,
@@ -733,17 +739,19 @@ class _RenderInteractiveMixin:
         `hx-include="closest .filter-bar"` so all active filter values
         ride along on each change.
         """
-        # Prefer closest region chrome over bare #region-{name}: card HTMX
-        # fragments omit the bare id (multi-card uniqueness). data-dz-region
-        # is always present on the chrome wrapper.
-        target = "closest [data-dz-region]"
+        # #1821: a select re-fetches the rows only (`part=rows`) into the
+        # following `[data-dz-list-region]` — the bar is never inside the
+        # swap — and includes every filter bar of the region so the find-by
+        # text rides along with the selects.
+        target = LIST_ROWS_TARGET
+        include = ctx.escape_attr(list_filters_include(f.region_name))
         # Leftover-honest temporal (cycle 2179). Bare hx-get="{endpoint}"
         # + hx-include="closest .filter-bar" used to drop include_closed
         # / as_of and invent open-only / current after a filter change.
         # Leftover junk must not invent. Valid true / YYYY-MM-DD ride;
         # leftover junk (zzz / 2abc / maybe / not-a-date) omits.
         endpoint = _with_leftover_honest_temporal(
-            ctx.escape_attr(str(f.endpoint)),
+            list_rows_url(ctx.escape_attr(str(f.endpoint))),
             getattr(f, "include_closed", ""),
             getattr(f, "as_of", ""),
             escape_attr=ctx.escape_attr,
@@ -761,21 +769,23 @@ class _RenderInteractiveMixin:
                 f'<select class="dz-queue-filter-select" '
                 f'hx-get="{endpoint}" '
                 f'hx-target="{target}" '
-                f'hx-swap="innerHTML" '
-                # htmx 4: the select sits inside its own swap target, so the
-                # default `change` trigger re-fires on every reprocess after a
-                # swap → infinite refetch loop (htmx 2 didn't re-fire change on
-                # reprocess). The `changed` modifier gates on an actual value
-                # change, so the reprocessed same-value select stays quiet.
+                f'hx-swap="outerHTML" '
+                # htmx 4: a reprocessed select re-fires a bare `change`
+                # trigger (htmx 2 didn't) → refetch loop. The `changed`
+                # modifier gates on an actual value change.
                 f'hx-trigger="change changed" '
-                f'hx-include="closest .filter-bar" '
+                f'hx-include="{include}" '
                 f'name="filter_{ctx.escape_attr(col.key)}">'
                 f"{options_html}"
                 f"</select>"
             )
 
         selects_html = "".join(_render_column(col) for col in f.columns)
-        return f'<div class="dz-queue-filters filter-bar">{selects_html}</div>'
+        return (
+            f'<div class="dz-queue-filters filter-bar" '
+            f'data-dz-list-filters="{ctx.escape_attr(f.region_name)}" '
+            f'hx-sync="{LIST_FILTER_SYNC}">{selects_html}</div>'
+        )
 
     def _emit_list_filter_bar(self, f: ListFilterBar, ctx: RenderContext) -> str:
         """Task 4d: list filter row that actually filters the list tbody.

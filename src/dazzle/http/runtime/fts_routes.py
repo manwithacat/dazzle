@@ -29,7 +29,7 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 from dazzle.core import ir
 from dazzle.http.runtime.access.gated import (
@@ -85,7 +85,7 @@ def create_fts_routes(
     async def fts_search(
         entity: str,
         request: Request,
-        q: str = Query(..., min_length=1, description="Search query"),
+        q: str = Query("", description="Search query (empty → 422 JSON / 204 html)"),
         page: int = Query(1, ge=1, description="1-indexed page number"),
         page_size: int = Query(20, ge=1, le=100, description="Per-page limit"),
         html: int = Query(
@@ -95,6 +95,14 @@ def create_fts_routes(
     ) -> Any:
         spec = require_found(spec_by_entity.get(entity), f"No search spec for entity {entity!r}")
         repo = require_found(repositories.get(entity), f"No repository for entity {entity!r}")
+        if not q.strip():
+            if html:
+                # #1821: a cleared search box's request (a delayed keystroke
+                # landing after the clear) is answered with "nothing to swap"
+                # — the box has already restored its coaching line; an error
+                # body here used to land in the results panel.
+                return Response(status_code=204)
+            raise HTTPException(status_code=422, detail="q must not be empty")
 
         # Same LIST enforcement as the entity's list endpoint: permit gate,
         # then `scope: list:` rules for this caller's roles.

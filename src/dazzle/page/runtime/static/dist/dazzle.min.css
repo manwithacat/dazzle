@@ -5490,6 +5490,41 @@ background-size: 0.75rem 0.75rem;
 .dz-filter-input:focus-visible {
 box-shadow: 0 0 0 1px var(--colour-brand);
 }
+.dz-list-search-field {
+position: relative;
+display: flex;
+align-items: center;
+}
+.dz-list-search-field .dz-filter-input {
+padding-inline-end: 1.75rem;
+}
+.dz-list-search-field .dz-filter-input::-webkit-search-cancel-button {
+-webkit-appearance: none;
+appearance: none;
+}
+.dz-list-search-clear {
+position: absolute;
+inset-inline-end: 0.25rem;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 1.25rem;
+height: 1.25rem;
+padding: 0;
+border: 0;
+border-radius: var(--radius-sm);
+background: transparent;
+color: var(--colour-text-muted);
+cursor: pointer;
+}
+.dz-list-search-clear:hover,
+.dz-list-search-clear:focus-visible {
+color: var(--colour-text);
+background: var(--colour-bg);
+}
+.dz-list-search-field .dz-filter-input:placeholder-shown + .dz-list-search-clear {
+display: none;
+}
 .dz-tr-row {
 height: 2.25rem;
 font-size: var(--text-sm);
