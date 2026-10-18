@@ -530,6 +530,11 @@ SHIP_TESTS: tuple[str, ...] = (
     # backslash continuations, so pip_audit.py received flags with a
     # leading space and exited 2. `--report-only` was still a substring.
     "tests/unit/test_pip_audit.py::test_the_monitor_reports_while_the_gate_still_gates",
+    # CI badge red 2026-10-18 (#1822): header cells gained `title=`; these
+    # exact-markup list-header pins sit outside the gate selection, so a
+    # header attribute change passed ci-fast and went red on GitHub.
+    "tests/unit/test_dispatch_ctx_list_sort_headers.py",
+    "tests/unit/test_list_chrome_parity_phase1.py",
 )
 
 REMEDIATION = """

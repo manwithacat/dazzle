@@ -306,13 +306,13 @@ class TestColumnVisibilityWiring:
         # cells need it too or the header/cell columns desync. Non-sortable
         # canonical headers carry the dz-table-th class.
         assert (
-            '<th data-dz-col="name" scope="col" class="dz-table-th">'
+            '<th data-dz-col="name" scope="col" title="Name" class="dz-table-th">'
             # C2.2: canonical headers carry the resize-handle span
             '<span class="dz-table-resize-handle" data-dz-grid-resize="name" '
             'aria-hidden="true"></span>Name</th>'
         ) in html
         assert (
-            '<th data-dz-col="status" scope="col" class="dz-table-th">'
+            '<th data-dz-col="status" scope="col" title="Status" class="dz-table-th">'
             '<span class="dz-table-resize-handle" data-dz-grid-resize="status" '
             'aria-hidden="true"></span>Status</th>'
         ) in html
@@ -331,7 +331,10 @@ class TestColumnVisibilityWiring:
         # Convergence C1.1: sortable headers drive the HM grid controller —
         # data-dz-grid-sort button, static aria-sort="none" (dz-grid.js cycles
         # it), CSS caret keyed off aria-sort (chevron-UP path). No Alpine.
-        assert '<th data-dz-col="name" aria-sort="none" scope="col" class="dz-table-th">' in html
+        assert (
+            '<th data-dz-col="name" aria-sort="none" scope="col" title="Name" class="dz-table-th">'
+            in html
+        )
         assert 'data-dz-grid-sort="name"' in html
         assert 'class="dz-table-sort-button"' in html
         assert 'class="dz-table-sort-icon"' in html

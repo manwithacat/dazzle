@@ -1,7 +1,7 @@
 {
   "src_lines": 330733,
-  "test_lines": 320627,
-  "docs_lines": 49547,
+  "test_lines": 320633,
+  "docs_lines": 49545,
   "construct_count": 31,
   "written": "2026-10-18",
   "exceptions": [
@@ -644,6 +644,13 @@
         "docs_lines"
       ],
       "reason": "#1823 invariant refs at link time; #1816 signing storage via named backends"
+    },
+    {
+      "date": "2026-10-18",
+      "rose": [
+        "test_lines"
+      ],
+      "reason": "cimonitor 2026-10-18: #1822 header pins promoted into ship-surface"
     }
   ]
 }
