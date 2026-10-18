@@ -1,9 +1,9 @@
 {
   "src_lines": 329985,
-  "test_lines": 320114,
-  "docs_lines": 49482,
+  "test_lines": 320154,
+  "docs_lines": 49484,
   "construct_count": 31,
-  "written": "2026-10-17",
+  "written": "2026-10-18",
   "exceptions": [
     {
       "date": "2026-10-11",
@@ -603,6 +603,14 @@
         "docs_lines"
       ],
       "reason": "#1809 #1814 region filters/exclude/eager + comparison top-N; consumer-forced"
+    },
+    {
+      "date": "2026-10-18",
+      "rose": [
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1817 role-field lookahead in condition parser"
     }
   ]
 }

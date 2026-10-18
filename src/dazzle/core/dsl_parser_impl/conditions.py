@@ -96,8 +96,10 @@ class ConditionParserMixin:
             self.expect(TokenType.RPAREN)
             return ir.ConditionExpr(operator=ir.LogicalOperator.NOT, left=inner)
 
-        # Handle role(name) - standalone role check (v0.7.0)
-        if self.match(TokenType.ROLE):
+        # Handle role(name) - standalone role check (v0.7.0). Only `role` directly
+        # followed by `(` is the persona guard; `role in [...]`, `role = x` and
+        # `role.x` are a field named `role` (#1817) and fall through to comparison.
+        if self.match(TokenType.ROLE) and self.peek_token().type == TokenType.LPAREN:
             self.advance()
             self.expect(TokenType.LPAREN)
             role_name = self.expect_identifier_or_keyword().value

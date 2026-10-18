@@ -896,6 +896,28 @@ REGION_CASES = (
             {"group_by": "severity"},
             id="group-by-bare-field",
         ),
+        pytest.param(
+            _region("    display: list\n    filter: role in [teacher, head_of_department]\n"),
+            {
+                "filter.comparison.field": "role",
+                "filter.comparison.operator.value": "in",
+                "filter.role_check": None,
+            },
+            id="filter-role-field-in-#1817",
+        ),
+        pytest.param(
+            _region("    display: list\n    filter: Alert.role != admin\n"),
+            {"filter.comparison.field": "Alert.role", "filter.role_check": None},
+            id="filter-qualified-role-field-#1817",
+        ),
+        pytest.param(
+            _region("    display: list\n    filter: role = admin and role(teacher)\n"),
+            {
+                "filter.left.comparison.field": "role",
+                "filter.right.role_check.role_name": "teacher",
+            },
+            id="filter-role-field-and-role-guard-#1817",
+        ),
     ]
 )
 

@@ -286,8 +286,6 @@ MONEY_FIELD_PATTERNS: frozenset[str] = frozenset(
         "amount",
         "price",
         "cost",
-        "total",
-        "subtotal",
         "tax",
         "vat",
         "discount",

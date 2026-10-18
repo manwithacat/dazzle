@@ -460,6 +460,8 @@ condition_term
 
 comparison    ::= field_path comp_op value
                 | aggregate_call comp_op value ;
+                  (* `role` is the persona guard only when directly followed by `(`;
+                     `role in [...]`, `role = x` and `User.role` are a field named `role` (#1817) *)
 
 value         ::= STRING | NUMBER | IDENT | date_expr | calendar_anchor
                 | "[" value ("," value)* "]" ;

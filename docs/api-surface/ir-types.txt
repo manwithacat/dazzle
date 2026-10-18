@@ -3490,7 +3490,7 @@ category: constant
   - DEFAULT_PAGE_SIZE: int = 20
   - FEEDBACK_REPORT_FIELDS: tuple (len=27)
   - MAX_PAGE_SIZE: int = 100
-  - MONEY_FIELD_PATTERNS: frozenset (len=24)
+  - MONEY_FIELD_PATTERNS: frozenset (len=22)
   - TEXT_TEMPLATE_FILTERS: frozenset (len=4)
 
 category: function

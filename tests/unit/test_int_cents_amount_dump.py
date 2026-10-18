@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.ir.money import is_money_field_name
 from dazzle.core.project import load_project
@@ -23,6 +25,22 @@ def test_generic_ints_are_not_cents_cells() -> None:
     assert not is_money_field_name("days_open")
     assert not is_money_field_name("rating")
     assert not is_money_field_name("temperature")
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("total_marks", False),
+        ("total_pupils", False),
+        ("total", False),
+        ("subtotal", False),
+        ("total_price", True),
+        ("total_amount", True),
+        ("unit_price", True),
+    ],
+)
+def test_total_is_not_money_but_currency_words_are(name: str, expected: bool) -> None:
+    assert is_money_field_name(name) is expected
 
 
 def test_decimal_major_amount_is_not_int_cents() -> None:

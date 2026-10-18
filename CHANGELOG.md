@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+### Changed
+- **`total` and `subtotal` no longer make an int field look like money (#1819, consumer-forced by AegisMark).** `is_money_field_name` treated `total*` / `*total` as a minor-unit currency name, so `total_marks` and `total_pupils` rendered as pounds and pence. The bare words `total` and `subtotal` are gone from `MONEY_FIELD_PATTERNS`; compound names still match through their currency word (`total_price`, `total_amount`) and an explicit `money(...)` type is always money. The consumer deletes `pipeline/serve/non_money_names.py`.
+
+### Fixed
+- **A field named `role` works in conditions (#1817, consumer-forced by AegisMark).** `filter: role in [teacher, head_of_department]` and `User.role in [...]` failed to parse because `role` was always the `role(<persona>)` guard. The condition parser now takes `role` as the guard only when it is directly followed by `(`; `role in`, `role =`, `role !=` and `.role` are a field reference. No quoting syntax. The consumer's renamed-field workaround goes away.
+
 ## [0.122.0] - 2026-10-17
 
 ### Added
