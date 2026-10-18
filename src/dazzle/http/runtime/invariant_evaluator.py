@@ -5,10 +5,12 @@ This module evaluates entity invariants at runtime during create/update operatio
 Invariants are cross-field constraints that must always hold true.
 """
 
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
+from dazzle.core.date_expr_eval import add_months
 from dazzle.http.runtime._comparison import eval_comparison_op
 from dazzle.http.specs.entity import (
     DurationUnitKind,
@@ -54,7 +56,7 @@ def render_invariant_expr(expr: Any) -> str:
             return "null"
         return f'"{value}"' if isinstance(value, str) else str(value)
     if kind == "field_ref":
-        return ".".join(getattr(expr, "path", None) or [])
+        return ".".join(_authored_path(expr))
     if kind == "duration":
         unit = getattr(getattr(expr, "duration_unit", None), "value", None) or "days"
         return f"{getattr(expr, 'duration_value', '?')} {unit}"
@@ -70,7 +72,15 @@ def render_invariant_expr(expr: Any) -> str:
         return f"{left} {op} {right}"
     if kind == "not":
         return f"not {render_invariant_expr(getattr(expr, 'not_operand', None))}"
+    if kind == "in":
+        return _render_in(expr)
     return str(expr)
+
+
+def _render_in(expr: Any) -> str:
+    op = "not in" if getattr(expr, "in_negated", False) else "in"
+    items = ", ".join(render_invariant_expr(i) for i in getattr(expr, "in_items", None) or [])
+    return f"{render_invariant_expr(getattr(expr, 'in_value', None))} {op} [{items}]"
 
 
 def _clerk_invariant_literal(expr: Any) -> str:
@@ -82,10 +92,16 @@ def _clerk_invariant_literal(expr: Any) -> str:
     return str(value)
 
 
+def _authored_path(expr: Any) -> list[str]:
+    """The field path as the author wrote it — a money ref names the field, not ``_minor``."""
+    path = list(getattr(expr, "path", None) or [])
+    if getattr(expr, "minor_scale", None) is not None and path:
+        path[-1] = path[-1].removesuffix("_minor")
+    return path
+
+
 def _clerk_invariant_field_ref(expr: Any) -> str:
-    parts = [
-        clerk_form_error_field_label(segment) for segment in (getattr(expr, "path", None) or [])
-    ]
+    parts = [clerk_form_error_field_label(segment) for segment in _authored_path(expr)]
     return " ".join(p for p in parts if p)
 
 
@@ -106,6 +122,12 @@ def _clerk_invariant_not(expr: Any) -> str:
     return f"not {inner}".strip() if inner else "not"
 
 
+def _clerk_invariant_in(expr: Any) -> str:
+    op = "not in" if getattr(expr, "in_negated", False) else "in"
+    items = ", ".join(clerk_invariant_expr(i) for i in getattr(expr, "in_items", None) or [])
+    return f"{clerk_invariant_expr(getattr(expr, 'in_value', None))} {op} {items}".strip()
+
+
 _CLERK_INVARIANT_KIND = {
     "literal": _clerk_invariant_literal,
     "field_ref": _clerk_invariant_field_ref,
@@ -113,6 +135,7 @@ _CLERK_INVARIANT_KIND = {
     "comparison": lambda expr: _clerk_invariant_binary(expr, "comparison"),
     "logical": lambda expr: _clerk_invariant_binary(expr, "logical"),
     "not": _clerk_invariant_not,
+    "in": _clerk_invariant_in,
 }
 
 
@@ -171,7 +194,11 @@ def evaluate_invariant_expr(
         return expr.value
 
     elif expr.kind == "field_ref":
-        return _evaluate_field_ref(expr.path or [], record)
+        value = _evaluate_field_ref(expr.path or [], record)
+        if expr.minor_scale is not None and value is not None:
+            # Money field (#1823): the _minor column, read in major units.
+            return Decimal(value).scaleb(-expr.minor_scale)
+        return value
 
     elif expr.kind == "duration":
         return _evaluate_duration(expr)
@@ -184,6 +211,9 @@ def evaluate_invariant_expr(
 
     elif expr.kind == "not":
         return _evaluate_not(expr, record)
+
+    elif expr.kind == "in":
+        return _evaluate_in(expr, record)
 
     else:
         return None
@@ -214,19 +244,38 @@ def _evaluate_field_ref(
     return value
 
 
-def _evaluate_duration(expr: InvariantExprSpec) -> timedelta:
-    """Evaluate a duration expression to a timedelta."""
-    value = expr.duration_value or 0
-    unit = expr.duration_unit
+@dataclass(frozen=True)
+class DurationOffset:
+    """An invariant duration (``14 days``, ``2 weeks``, ``3 months``).
 
-    if unit == DurationUnitKind.DAYS:
-        return timedelta(days=value)
-    elif unit == DurationUnitKind.HOURS:
-        return timedelta(hours=value)
-    elif unit == DurationUnitKind.MINUTES:
-        return timedelta(minutes=value)
-    else:
-        return timedelta(days=value)
+    Not a ``timedelta``: a month or a year has no fixed length, so the offset is
+    applied to an anchor date with calendar arithmetic (#1823 — weeks, months and
+    years used to fall through to days, so ``2 weeks`` meant two days).
+    """
+
+    value: int
+    unit: DurationUnitKind
+
+    def apply(self, anchor: date) -> date:
+        """``anchor`` moved by this offset (months/years clamp to the month's end)."""
+        if self.unit == DurationUnitKind.MONTHS:
+            return add_months(anchor, self.value)
+        if self.unit == DurationUnitKind.YEARS:
+            return add_months(anchor, 12 * self.value)
+        return anchor + _FIXED_UNITS[self.unit] * self.value
+
+
+_FIXED_UNITS = {
+    DurationUnitKind.MINUTES: timedelta(minutes=1),
+    DurationUnitKind.HOURS: timedelta(hours=1),
+    DurationUnitKind.DAYS: timedelta(days=1),
+    DurationUnitKind.WEEKS: timedelta(weeks=1),
+}
+
+
+def _evaluate_duration(expr: InvariantExprSpec) -> DurationOffset:
+    """Evaluate a duration expression to an offset applied to today when compared."""
+    return DurationOffset(expr.duration_value or 0, expr.duration_unit or DurationUnitKind.DAYS)
 
 
 def _evaluate_comparison(
@@ -258,7 +307,7 @@ def _evaluate_comparison(
     left = _normalize_for_comparison(left)
     right = _normalize_for_comparison(right)
 
-    # Handle date/datetime + timedelta arithmetic
+    # A duration compared with a date is anchored on today
     left, right = _handle_date_arithmetic(left, right)
 
     try:
@@ -290,17 +339,29 @@ def _normalize_for_comparison(value: Any) -> Any:
 
 
 def _handle_date_arithmetic(left: Any, right: Any) -> tuple[Any, Any]:
-    """Handle date + timedelta arithmetic in comparisons."""
-    # If comparing date to timedelta, interpret as date offset from today
-    # This handles cases like: due_date > 14 days (meaning due_date > today + 14 days)
-    if isinstance(left, date) and isinstance(right, timedelta):
-        # "field > 14 days" means "field > today + 14 days" (tenant TZ today)
-        right = _calendar_today() + right
-    elif isinstance(left, timedelta) and isinstance(right, date):
-        # "14 days < field" means "today + 14 days < field"
-        left = _calendar_today() + left
+    """Resolve a duration compared with a date to ``today + duration``.
 
+    ``due_date > 14 days`` means ``due_date > today + 14 days`` (tenant-TZ today);
+    ``3 months < due_date`` likewise on the left.
+    """
+    if isinstance(left, date) and isinstance(right, DurationOffset):
+        right = right.apply(_calendar_today())
+    elif isinstance(left, DurationOffset) and isinstance(right, date):
+        left = left.apply(_calendar_today())
     return left, right
+
+
+def _evaluate_in(expr: InvariantExprSpec, record: dict[str, Any]) -> bool:
+    """``value in [literals]`` / ``not in`` (#1823).
+
+    Plain membership after the same normalisation comparisons use, so a money
+    field (major-unit Decimal) matches ``100.50`` and a null value is in the list
+    only when ``null`` is listed.
+    """
+    value = evaluate_invariant_expr(expr.in_value, record) if expr.in_value else None
+    items = [evaluate_invariant_expr(i, record) for i in expr.in_items or []]
+    member = _normalize_for_comparison(value) in [_normalize_for_comparison(i) for i in items]
+    return not member if expr.in_negated else member
 
 
 def _evaluate_logical(

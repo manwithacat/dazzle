@@ -204,6 +204,12 @@ class _StubS3Client:
             raise err
         return self.objects[key]
 
+    def put_object(self, **kwargs):
+        self.calls.append(("put_object", kwargs))
+
+    def delete_object(self, **kwargs):
+        self.calls.append(("delete_object", kwargs))
+
 
 class TestS3ProviderWithStub:
     def test_render_prefix(self) -> None:
@@ -255,6 +261,27 @@ class TestS3ProviderWithStub:
         cfg = _config("x")
         prov = S3Provider(cfg, client=_StubS3Client())
         assert prov.head_object("missing") is None
+
+    def test_server_side_put_and_delete(self) -> None:
+        """#1816: signed documents are written server-side (no ticket)."""
+        from dazzle.http.runtime.storage.s3_provider import S3Provider
+
+        client = _StubS3Client()
+        prov = S3Provider(_config("x", bucket="my-bucket"), client=client)
+        prov.put_object("signed/a.pdf", b"%PDF", content_type="application/pdf")
+        assert prov.delete_object("signed/a.pdf") is True
+        assert client.calls == [
+            (
+                "put_object",
+                {
+                    "Bucket": "my-bucket",
+                    "Key": "signed/a.pdf",
+                    "Body": b"%PDF",
+                    "ContentType": "application/pdf",
+                },
+            ),
+            ("delete_object", {"Bucket": "my-bucket", "Key": "signed/a.pdf"}),
+        ]
 
     def test_no_client_raises_when_used(self) -> None:
         from dazzle.http.runtime.storage.s3_provider import S3Provider

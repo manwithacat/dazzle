@@ -527,11 +527,17 @@ class InvariantExprSpec(BaseModel):
     Represents a node in the expression tree for invariant conditions.
     """
 
-    kind: Literal["field_ref", "literal", "duration", "comparison", "logical", "not"] = Field(
+    kind: Literal["field_ref", "literal", "duration", "comparison", "logical", "not", "in"] = Field(
         description="Expression type"
     )
     # For field_ref: path to the field
     path: list[str] | None = Field(default=None, description="Field path for field_ref")
+    # For a field_ref to a money field (#1823): path names the ``<name>_minor``
+    # column and the evaluator divides by 10**minor_scale, so the invariant
+    # sees the amount in major units.
+    minor_scale: int | None = Field(
+        default=None, description="Currency exponent for a money field_ref (major units)"
+    )
     # For literal: value (string, number, or bool)
     value: int | float | str | bool | None = Field(default=None, description="Literal value")
     # For duration: value and unit
@@ -559,6 +565,13 @@ class InvariantExprSpec(BaseModel):
     not_operand: InvariantExprSpec | None = Field(
         default=None, description="Operand for NOT expression"
     )
+    # For in: ``in_value in [in_items]`` (``not in`` when in_negated) (#1823).
+    # The linker guarantees every item is a literal.
+    in_value: InvariantExprSpec | None = Field(default=None, description="Tested value for in")
+    in_items: list[InvariantExprSpec] | None = Field(
+        default=None, description="Literal list for in"
+    )
+    in_negated: bool = Field(default=False, description="True for 'not in'")
 
     model_config = ConfigDict(frozen=True)
 
@@ -577,6 +590,7 @@ class InvariantSpec(BaseModel):
 
     expression: InvariantExprSpec = Field(description="Invariant condition")
     message: str | None = Field(default=None, description="Custom error message")
+    code: str | None = Field(default=None, description="Error code surfaced in the 422 body")
 
     model_config = ConfigDict(frozen=True)
 

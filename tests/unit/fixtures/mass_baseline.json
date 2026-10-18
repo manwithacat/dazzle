@@ -1,7 +1,7 @@
 {
-  "src_lines": 330089,
-  "test_lines": 320380,
-  "docs_lines": 49484,
+  "src_lines": 330733,
+  "test_lines": 320627,
+  "docs_lines": 49547,
   "construct_count": 31,
   "written": "2026-10-18",
   "exceptions": [
@@ -626,6 +626,24 @@
         "test_lines"
       ],
       "reason": "#1818 boosted navigations get the full document; htmx 4 tag#id targets parsed"
+    },
+    {
+      "date": "2026-10-18",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1823 invariant refs resolved at link time, in-lists, calendar durations"
+    },
+    {
+      "date": "2026-10-18",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1823 invariant refs at link time; #1816 signing storage via named backends"
     }
   ]
 }

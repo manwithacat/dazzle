@@ -196,6 +196,12 @@ class _SatisfiesProtocol:
     def get_object(self, key: str) -> bytes | None:
         return None
 
+    def put_object(self, key: str, body: bytes, *, content_type: str | None = None) -> None:
+        return None
+
+    def delete_object(self, key: str) -> bool:
+        return True
+
 
 class TestStorageProviderProtocol:
     def test_runtime_check_accepts_full_impl(self) -> None:

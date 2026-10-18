@@ -101,3 +101,12 @@ class StorageProvider(Protocol):
         URLs are exposed to the browser. Implementations should buffer
         the full body in memory; streaming will be added in a
         subsequent cycle once a real-world streaming need surfaces."""
+
+    def put_object(self, key: str, body: bytes, *, content_type: str | None = None) -> None:
+        """Write ``body`` under ``key`` from the server side. Used when the
+        framework itself produces the bytes — signed documents written to
+        ``[signing] storage`` (#1816) — rather than a browser upload."""
+
+    def delete_object(self, key: str) -> bool:
+        """Delete ``key``. Returns True when the store accepted the delete
+        (S3 deletes are idempotent, so a missing key is not an error)."""

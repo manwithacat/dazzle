@@ -10,10 +10,11 @@ from __future__ import annotations
 import logging
 import re
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO
+from urllib.parse import quote
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -53,6 +54,18 @@ class FileMetadata(BaseModel):
     created_at: datetime = Field(description="Upload timestamp")
     url: str = Field(description="Public URL")
     thumbnail_url: str | None = Field(default=None, description="Thumbnail URL")
+
+
+def storage_proxy_path(storage_name: str) -> str:
+    """The proxy route path for one named storage."""
+    return f"/api/storage/{storage_name}/proxy"
+
+
+def storage_proxy_url(storage_name: str, key: str) -> str:
+    """The URL that reads ``key`` from ``storage_name`` through the proxy
+    route — the link a server-written object (a signed document under
+    ``[signing] storage``, #1816) records as its file URL."""
+    return f"{storage_proxy_path(storage_name)}?key={quote(key, safe='/')}"
 
 
 # =============================================================================
@@ -505,6 +518,9 @@ class FileMetadataStore:
 
         if storage_backend == "local":
             url = f"/files/{storage_key}"
+        elif storage_backend.startswith("storage:"):
+            # Registry-backed file (#1816): read through the storage proxy.
+            url = storage_proxy_url(storage_backend.removeprefix("storage:"), storage_key)
         else:
             url = storage_key  # S3 URLs stored directly
 
@@ -784,18 +800,47 @@ class FileService:
         storage: StorageBackend,
         metadata_store: FileMetadataStore,
         validator: FileValidator | None = None,
+        *,
+        backends: Mapping[str, StorageBackend] | None = None,
     ):
         """
         Initialize file service.
 
         Args:
-            storage: Storage backend (local or S3)
+            storage: Storage backend new uploads are written to
             metadata_store: File metadata store
             validator: Optional file validator
+            backends: Further backends keyed by ``StorageBackend.name``.
+                Reads route by the stored ``FileMetadata.storage_backend``,
+                so a file is fetched from the backend that wrote it (#1816).
         """
         self.storage = storage
         self.metadata_store = metadata_store
         self.validator = validator or FileValidator()
+        self.backends: dict[str, StorageBackend] = {**(backends or {}), storage.name: storage}
+
+    def writing_to(self, backend_name: str) -> FileService:
+        """This service, with new uploads written to ``backend_name``.
+
+        Shares the metadata store and every backend, so reads still route
+        by each file's recorded backend (#1816: signed documents written
+        to ``[signing] storage``, read by the same document routes).
+        """
+        if backend_name not in self.backends:
+            raise KeyError(
+                f"FileService has no storage backend {backend_name!r}; "
+                f"known: {sorted(self.backends)}"
+            )
+        return FileService(
+            self.backends[backend_name],
+            self.metadata_store,
+            self.validator,
+            backends=self.backends,
+        )
+
+    def _backend_for(self, metadata: FileMetadata) -> StorageBackend:
+        """The backend that holds ``metadata``'s bytes."""
+        return self.backends.get(metadata.storage_backend, self.storage)
 
     async def upload(
         self,
@@ -873,7 +918,7 @@ class FileService:
         if not metadata:
             raise FileNotFoundError(f"File not found: {file_id}")
 
-        content = await self.storage.retrieve(metadata.storage_key)
+        content = await self._backend_for(metadata).retrieve(metadata.storage_key)
         return content, metadata
 
     async def stream(self, file_id: UUID | str) -> tuple[AsyncIterator[bytes], FileMetadata]:
@@ -890,7 +935,7 @@ class FileService:
         if not metadata:
             raise FileNotFoundError(f"File not found: {file_id}")
 
-        stream = self.storage.stream(metadata.storage_key)
+        stream = self._backend_for(metadata).stream(metadata.storage_key)
         return stream, metadata
 
     async def read_range(
@@ -916,16 +961,17 @@ class FileService:
         # size-drift guard (LOCAL only — S3 HEAD would cost a round-trip; the
         # metadata size is authoritative for Content-Length, and a local
         # metadata/disk mismatch is a served-truncation hazard).
+        backend = self._backend_for(metadata)
         if metadata.storage_backend == "local":
             from pathlib import Path
 
-            disk = Path(self.storage.base_path) / metadata.storage_key  # type: ignore[attr-defined]
+            disk = Path(backend.base_path) / metadata.storage_key  # type: ignore[attr-defined]
             if disk.exists() and disk.stat().st_size != metadata.size:
                 raise RuntimeError(
                     f"size drift for {file_id}: metadata {metadata.size} != disk "
                     f"{disk.stat().st_size} — refusing to serve a wrong Content-Length"
                 )
-        return self.storage.read_range(metadata.storage_key, start, end), metadata
+        return backend.read_range(metadata.storage_key, start, end), metadata
 
     async def delete(self, file_id: UUID | str) -> bool:
         """
@@ -942,11 +988,12 @@ class FileService:
             return False
 
         # Delete from storage
-        await self.storage.delete(metadata.storage_key)
+        backend = self._backend_for(metadata)
+        await backend.delete(metadata.storage_key)
 
         # Delete thumbnail if exists
         if metadata.thumbnail_key:
-            await self.storage.delete(metadata.thumbnail_key)
+            await backend.delete(metadata.thumbnail_key)
 
         # Delete metadata
         return self.metadata_store.delete(file_id)

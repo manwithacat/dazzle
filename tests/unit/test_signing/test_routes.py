@@ -536,6 +536,51 @@ class TestFullSignFlow:
         assert f'filename="contract-{record_id}-signed.pdf"' in copy.headers["content-disposition"]
         assert copy.content.startswith(b"%PDF-")
 
+    def test_signing_storage_writes_to_named_backend(self, tmp_path: Any) -> None:
+        """#1816: ``[signing] storage`` puts the signed PDF in that object store,
+        not on local disk, and the signed-copy link reads it back from there."""
+        import asyncio
+
+        from dazzle.http.runtime.file_storage import FileService, LocalStorageBackend
+        from dazzle.http.runtime.storage import FakeStorageProvider, StorageRegistry
+        from dazzle.http.runtime.storage.file_backend import (
+            ProviderStorageBackend,
+            storage_backend_name,
+        )
+
+        fake = FakeStorageProvider(name="signed_docs", prefix_template="production/signed/")
+        registry = StorageRegistry()
+        registry.register_provider("signed_docs", fake)
+        named = ProviderStorageBackend(registry, "signed_docs")
+        metadata: dict[str, Any] = {}
+        store: Any = SimpleNamespace(
+            save=lambda m: metadata.__setitem__(str(m.id), m),
+            get=lambda file_id: metadata.get(str(file_id)),
+        )
+        shared = FileService(
+            LocalStorageBackend(tmp_path, "/files"), store, backends={named.name: named}
+        )
+        files = shared.writing_to(storage_backend_name("signed_docs"))
+
+        record_id = str(uuid4())
+        client, repo = _app({record_id: {"status": "viewed"}}, file_service=files)
+        token = _token("valid", record_id)
+        assert _sign(client, record_id, token).status_code == 200
+
+        [(key, body)] = fake.objects().items()
+        assert key.startswith("production/signed/signing/Contract/")
+        assert body.startswith(b"%PDF-")
+        assert not list(tmp_path.rglob("*.pdf"))  # nothing on local disk
+        url = repo.update_calls[0][1]["signed_document"]
+        assert url.startswith("/api/storage/signed_docs/proxy?key=production/signed/")
+
+        copy = client.get(f"/sign/Contract/{record_id}/signed-copy", params={"token": token})
+        assert copy.status_code == 200
+        assert copy.content == body
+        # The shared service (file + document routes) routes reads by backend too.
+        [meta] = metadata.values()
+        assert asyncio.run(shared.download(meta.id))[0] == body
+
     @pytest.mark.parametrize(
         ("template", "code", "check"),
         [

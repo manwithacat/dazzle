@@ -477,6 +477,15 @@ class SigningConfig:
     link" button. ``support_contact`` is shown on signing error pages
     as the human fallback. Both optional; with neither, the expired
     page still tells the signer to contact the sender.
+
+    Signed-document storage (#1816):
+
+        [signing]
+        storage = "signed_documents"   # a declared [storage.<name>] block
+
+    When set, signed PDFs are written to that object store (literal
+    prefix required) instead of the serving process's local disk, and
+    read back through it. Unset keeps local disk.
     """
 
     organisation: str = ""
@@ -485,6 +494,28 @@ class SigningConfig:
     location: str = "United Kingdom"
     support_contact: str = ""
     resend_hook: str = ""
+    storage: str = ""
+
+
+def _validate_signing_storage(name: str, storage_defs: dict[str, StorageConfig]) -> None:
+    """``[signing] storage`` must name a declared ``[storage.<name>]`` whose
+    prefix is literal (#1816) — a signed document has no uploading user or
+    upload-ticket record to fill ``{user_id}`` / ``{record_id}``."""
+    if not name:
+        return
+    config = storage_defs.get(name)
+    if config is None:
+        declared = ", ".join(sorted(storage_defs)) or "none"
+        raise ValueError(
+            f"[signing] storage = {name!r} names no [storage.{name}] block "
+            f"(declared storages: {declared})"
+        )
+    if "{" in config.prefix_template:
+        raise ValueError(
+            f"[signing] storage = {name!r}: [storage.{name}] prefix "
+            f"{config.prefix_template!r} has placeholders; signed documents need "
+            'a storage with a literal prefix (e.g. "production/signed_documents/")'
+        )
 
 
 @dataclass
@@ -1165,7 +1196,9 @@ def load_manifest(path: Path) -> ProjectManifest:
         location=str(signing_data.get("location", "United Kingdom")),
         support_contact=str(signing_data.get("support_contact", "")),
         resend_hook=str(signing_data.get("resend_hook", "")),
+        storage=str(signing_data.get("storage", "")),
     )
+    _validate_signing_storage(signing_config.storage, storage_defs)
 
     return ProjectManifest(
         name=project.get("name", "unnamed"),

@@ -20,7 +20,7 @@ from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
 from dazzle.core.environment import is_production
 from dazzle.core.ir import AppSpec, EntitySpec, TenancyMode
 from dazzle.core.ir.fields import FieldTypeKind
-from dazzle.core.manifest import load_manifest
+from dazzle.core.manifest import SigningConfig, load_manifest
 from dazzle.core.strings import entity_slug as _entity_slug
 from dazzle.core.validator import validate_storage_refs
 from dazzle.http.converters.entity_converter import convert_entities
@@ -38,7 +38,13 @@ from dazzle.http.runtime.csrf import apply_csrf_protection
 from dazzle.http.runtime.document_routes import create_document_routes
 from dazzle.http.runtime.exception_handlers import register_exception_handlers
 from dazzle.http.runtime.file_routes import create_file_routes, create_static_file_routes
-from dazzle.http.runtime.file_storage import FileService
+from dazzle.http.runtime.file_storage import (
+    FileMetadataStore,
+    FileService,
+    FileValidator,
+    LocalStorageBackend,
+    StorageBackend,
+)
 from dazzle.http.runtime.integration_manager import IntegrationManager
 from dazzle.http.runtime.lifespan_hooks import init_lifespan_registry
 from dazzle.http.runtime.migrations import MigrationPlan
@@ -70,7 +76,8 @@ from dazzle.http.runtime.security_middleware import apply_security_middleware
 from dazzle.http.runtime.service_generator import CRUDService, ServiceFactory
 from dazzle.http.runtime.service_loader import ServiceLoader
 from dazzle.http.runtime.services import RuntimeServices
-from dazzle.http.runtime.storage import build_entity_storage_bindings
+from dazzle.http.runtime.storage import StorageRegistry, build_entity_storage_bindings
+from dazzle.http.runtime.storage.file_backend import ProviderStorageBackend, storage_backend_name
 from dazzle.http.runtime.subsystems import SubsystemContext
 from dazzle.http.runtime.subsystems.auth import AuthSubsystem
 from dazzle.http.runtime.subsystems.events import EventsSubsystem
@@ -408,7 +415,7 @@ class DazzleBackendApp:
         # Prefer kwarg, fall back to config — matches every other field's precedence.
         _resolved_storage_defs = storage_defs if storage_defs is not None else config.storage_defs
         self._storage_defs: dict[str, StorageConfig] = dict(_resolved_storage_defs or {})
-        self._storage_registry: Any = None  # built in _wire_storage_routes()
+        self._storage_registry: Any = None  # built lazily by _get_storage_registry()
         self._app: FastAPI | None = None
         self._models: dict[str, type[BaseModel]] = {}
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
@@ -1222,25 +1229,30 @@ class DazzleBackendApp:
 
         return None
 
-    def _resolve_signing_recovery(self) -> tuple[str, str]:
-        """Read ``[signing] support_contact`` / ``resend_hook`` (TR-53).
+    def _load_signing_config(self) -> SigningConfig:
+        """The manifest's ``[signing]`` block (TR-53 recovery, #1816 storage).
 
-        Returns ``(support_contact, resend_hook)`` — both empty strings
-        when unconfigured or the manifest can't be read, so the signing
-        router degrades to a plain (but non-dead-end) expired page.
+        Defaults (every field empty) when there is no project manifest or it
+        can't be read, so the signing router degrades to a plain (but
+        non-dead-end) expired page and signed PDFs stay on local disk.
         """
         if not self._project_root:
-            return "", ""
+            return SigningConfig()
         manifest_path = self._project_root / "dazzle.toml"
         if not manifest_path.is_file():
-            return "", ""
+            return SigningConfig()
         try:
-            from dazzle.core.manifest import load_manifest
-
-            signing_cfg = load_manifest(manifest_path).signing
+            return load_manifest(manifest_path).signing
         except Exception:
-            return "", ""
-        return signing_cfg.support_contact, signing_cfg.resend_hook
+            return SigningConfig()
+
+    def _get_storage_registry(self) -> StorageRegistry:
+        """The one ``StorageRegistry`` over ``[storage.<name>]`` (built on
+        first use; providers inside it are themselves lazy)."""
+        if self._storage_registry is None:
+            self._storage_registry = StorageRegistry.from_manifest(self._storage_defs)
+        registry: StorageRegistry = self._storage_registry
+        return registry
 
     def _wire_service_hooks(self) -> None:
         """Discover and register project-level service hooks."""
@@ -1324,7 +1336,6 @@ class DazzleBackendApp:
         import logging
 
         from dazzle.http.runtime.storage import (
-            StorageRegistry,
             register_storage_proxy_routes,
             register_upload_ticket_routes,
         )
@@ -1350,8 +1361,7 @@ class DazzleBackendApp:
                 "or remove the `storage=<name>` binding from the DSL field."
             )
 
-        registry = StorageRegistry.from_manifest(self._storage_defs)
-        self._storage_registry = registry
+        registry = self._get_storage_registry()
 
         # #932 cycle 4: expose registry on app.state so:
         #   1. The auto-verifier in route_generator's create/update
@@ -1359,10 +1369,11 @@ class DazzleBackendApp:
         #   2. Project-side custom finalize handlers (the documented
         #      "30-line pattern") can call
         #      ``request.app.state.storage_registry.get(<name>)``.
-        if self._app is not None:
-            self._app.state.storage_registry = registry
+        if self._app is None:
+            return
+        self._app.state.storage_registry = registry
 
-        if has_field_refs and self._app is not None:
+        if has_field_refs:
             paths = register_upload_ticket_routes(
                 app=self._app, appspec=self._appspec, registry=registry
             )
@@ -1372,18 +1383,23 @@ class DazzleBackendApp:
                     len(paths),
                     paths,
                 )
-            # #942 cycle 1a: read-side proxy routes (one per storage
-            # referenced by any field). Streams the bytes through the
-            # server under cookie auth — no presigned download URLs.
-            proxy_paths = register_storage_proxy_routes(
-                app=self._app, appspec=self._appspec, registry=registry
+        # #942 cycle 1a: read-side proxy routes (one per storage
+        # referenced by any field, plus the [signing] storage — #1816,
+        # the link a signed document records). Streams the bytes through
+        # the server under cookie auth — no presigned download URLs.
+        signing_storage = self._load_signing_config().storage
+        proxy_paths = register_storage_proxy_routes(
+            app=self._app,
+            appspec=self._appspec,
+            registry=registry,
+            extra_storages=(signing_storage,) if signing_storage else (),
+        )
+        if proxy_paths:
+            log.info(
+                "storage_proxy_routes_registered count=%d paths=%s",
+                len(proxy_paths),
+                proxy_paths,
             )
-            if proxy_paths:
-                log.info(
-                    "storage_proxy_routes_registered count=%d paths=%s",
-                    len(proxy_paths),
-                    proxy_paths,
-                )
 
     def _setup_auth(self) -> tuple[Any, Any]:
         """Initialize auth store, middleware, and social auth.
@@ -1862,16 +1878,7 @@ class DazzleBackendApp:
         # factories capture file_service at construction time (closures).
         _entity_file_fields: dict[str, list[str]] = {}
         if self._enable_files and self._appspec:
-            from dazzle.http.runtime.file_storage import (
-                FileMetadataStore,
-                FileValidator,
-                LocalStorageBackend,
-            )
-
-            _storage = LocalStorageBackend(self._files_path, "/files")
-            _metadata_store = FileMetadataStore(database_url=self._database_url)
-            _validator = FileValidator()
-            self._file_service = FileService(_storage, _metadata_store, _validator)
+            self._ensure_file_service()
 
             for _ent in self._appspec.domain.entities:
                 _ff = [f.name for f in _ent.fields if f.type.kind == FieldTypeKind.FILE]
@@ -2220,23 +2227,50 @@ class DazzleBackendApp:
                 logger.warning("FTS routes mount failed", exc_info=True)
 
     def _ensure_file_service(self) -> None:
-        """Construct FileService if missing (local disk + dazzle_files metadata).
+        """Construct the one FileService if missing (#1816: the only site).
+
+        Uploads go to local disk; every declared ``[storage.<name>]`` is
+        also registered as a read/write backend so files written there
+        (signed documents under ``[signing] storage``) read back through
+        the same service. Metadata lives in ``dazzle_files``.
 
         Used by file routes and by signing (TR-49 durable signed_document). Signing
         must persist PDFs even when general ``enable_files`` upload UI is off.
         """
         if self._file_service is not None:
             return
-        from dazzle.http.runtime.file_storage import (
-            FileMetadataStore,
-            FileValidator,
-            LocalStorageBackend,
+        registry = self._get_storage_registry()
+        named: list[StorageBackend] = [
+            ProviderStorageBackend(registry, name) for name in registry.names()
+        ]
+        self._file_service = FileService(
+            LocalStorageBackend(self._files_path, "/files"),
+            FileMetadataStore(database_url=self._database_url),
+            FileValidator(),
+            backends={b.name: b for b in named},
         )
 
-        storage = LocalStorageBackend(self._files_path, "/files")
-        metadata_store = FileMetadataStore(database_url=self._database_url)
-        validator = FileValidator()
-        self._file_service = FileService(storage, metadata_store, validator)
+    def _signing_file_service(self, has_signable: bool) -> FileService | None:
+        """The FileService the signing routes write signed PDFs through.
+
+        ``[signing] storage = "<name>"`` (#1816) → the shared service, writing
+        to that storage. Unset → local disk; on an ephemeral host (``DYNO``
+        set — Heroku) that loses every signed PDF at the next restart, so
+        say so once at boot.
+        """
+        if self._file_service is None:
+            return None
+        storage = self._load_signing_config().storage
+        if storage:
+            return self._file_service.writing_to(storage_backend_name(storage))
+        if has_signable and os.environ.get("DYNO"):
+            logger.warning(
+                "Signing: signed PDFs are stored on this dyno's local disk (%s), which is "
+                "lost on restart and not shared between dynos. Set [signing] storage = "
+                '"<name>" to a declared [storage.<name>] block in dazzle.toml.',
+                self._files_path,
+            )
+        return self._file_service
 
     def _mount_signing_routes(self) -> None:
         assert self._app is not None
@@ -2263,22 +2297,23 @@ class DazzleBackendApp:
                             exc_info=True,
                         )
 
-                support_contact, resend_hook = self._resolve_signing_recovery()
+                signing_cfg = self._load_signing_config()
+                signing_files = self._signing_file_service(has_signable)
                 signing_router = create_signing_routes(
                     list(self._appspec.domain.entities),
                     repositories=self._repositories,
-                    file_service=self._file_service,
+                    file_service=signing_files,
                     branding=self._resolve_pdf_branding(),
                     project_root=self._project_root,
-                    support_contact=support_contact,
-                    resend_hook=resend_hook,
+                    support_contact=signing_cfg.support_contact,
+                    resend_hook=signing_cfg.resend_hook,
                 )
                 if signing_router is not None:
                     self._app.include_router(signing_router)
                     logger.info(
                         "  Signing: /sign/{entity}/{id} + /api/sign/{entity}/{id}"
                         " (file_service=%s)",
-                        "yes" if self._file_service else "no",
+                        signing_files.storage.name if signing_files else "no",
                     )
             except ImportError:
                 # dazzle.signing imports `cryptography` lazily but the

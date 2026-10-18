@@ -188,3 +188,26 @@ class S3Provider:
             return b""
         result: bytes = body.read()
         return result
+
+    def put_object(self, key: str, body: bytes, *, content_type: str | None = None) -> None:
+        """Write ``body`` under ``key`` (server-produced bytes, e.g. signed
+        documents under ``[signing] storage``, #1816)."""
+        client = self._require_client()
+        kwargs: dict[str, Any] = {"Bucket": self.bucket, "Key": key, "Body": body}
+        if content_type:
+            kwargs["ContentType"] = content_type
+        client.put_object(**kwargs)
+
+    def delete_object(self, key: str) -> bool:
+        """Delete ``key``. S3 deletes are idempotent — a missing key is
+        not an error — so success is True."""
+        self._require_client().delete_object(Bucket=self.bucket, Key=key)
+        return True
+
+    def _require_client(self) -> Any:
+        if self._client is None:
+            raise RuntimeError(
+                "S3Provider initialised without a client; "
+                "use S3Provider.from_config() in production"
+            )
+        return self._client

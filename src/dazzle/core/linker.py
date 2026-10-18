@@ -11,6 +11,7 @@ from .errors import (
     E_SUBTYPE_SOFT_DELETE_ON_CHILD,
     LinkError,
 )
+from .invariant_refs import resolve_invariant_refs
 from .ir.audit import AUDIT_ENTRY_FIELDS
 from .ir.feedback_widget import FEEDBACK_REPORT_FIELDS
 from .ir.fields import (
@@ -225,6 +226,17 @@ def build_appspec(
     # injection, but before the FK graph — so the injected `tenant_id` is seen by
     # the FK graph, scope-predicate compilation, converters, and schema gen.
     entities = inject_partition_key(list(entities), merged_fragment.tenancy)
+
+    # 9g. Resolve invariant references once (#1823): a bare enum value becomes a
+    # literal, and a ref naming no field is an error rather than a silent null
+    # that makes the invariant hold for every record. Runs after all field
+    # injection so injected columns (deleted_at, tenant_id, …) resolve.
+    entities, invariant_errors = resolve_invariant_refs(list(entities))
+    if invariant_errors:
+        raise LinkError(
+            "Invariant reference validation failed:\n"
+            + "\n".join(f"  - {e}" for e in invariant_errors)
+        )
 
     # 10. Build FK graph and compile scope predicates
     from .ir.predicate_builder import build_scope_predicate

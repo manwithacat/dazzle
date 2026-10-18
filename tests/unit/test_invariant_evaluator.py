@@ -101,26 +101,36 @@ class TestBasicExpressions:
 
 
 class TestDuration:
+    """A duration is an offset from today; months/years are calendar arithmetic (#1823).
+
+    ``2 weeks`` used to fall through to two days and ``1 month`` to one day.
+    The anchor is 31 Jan so month arithmetic must clamp to the month's end.
+    """
+
     @pytest.mark.parametrize(
         ("value", "unit", "expected"),
         [
-            (14, DurationUnitKind.DAYS, timedelta(days=14)),
-            (2, DurationUnitKind.HOURS, timedelta(hours=2)),
-            (30, DurationUnitKind.MINUTES, timedelta(minutes=30)),
-            (5, None, timedelta(days=5)),
-            (None, DurationUnitKind.DAYS, timedelta(days=0)),
+            (14, DurationUnitKind.DAYS, date(2025, 2, 14)),
+            (2, DurationUnitKind.WEEKS, date(2025, 2, 14)),
+            (1, DurationUnitKind.MONTHS, date(2025, 2, 28)),
+            (-2, DurationUnitKind.MONTHS, date(2024, 11, 30)),
+            (1, DurationUnitKind.YEARS, date(2026, 1, 31)),
+            (5, None, date(2025, 2, 5)),
+            (None, DurationUnitKind.DAYS, date(2025, 1, 31)),
         ],
-        ids=[
-            "test_days",
-            "test_hours",
-            "test_minutes",
-            "test_default_unit",
-            "test_none_value",
-        ],
+        ids=["days", "weeks", "months", "negative_months", "years", "default_unit", "none"],
     )
-    def test_duration(self, value, unit, expected) -> None:
-        expr = InvariantExprSpec(kind="duration", duration_value=value, duration_unit=unit)
-        assert evaluate_invariant_expr(expr, {}) == expected
+    def test_field_vs_duration_is_anchored_on_today(
+        self, monkeypatch, value, unit, expected
+    ) -> None:
+        import dazzle.http.runtime.invariant_evaluator as ev
+
+        monkeypatch.setattr(ev, "_calendar_today", lambda: date(2025, 1, 31))
+        dur = InvariantExprSpec(kind="duration", duration_value=value, duration_unit=unit)
+        expr = _comparison(_field_ref("due_date"), InvariantComparisonKind.GE, dur)
+        assert evaluate_invariant_expr(expr, {"due_date": expected.isoformat()}) is True
+        before = (expected - timedelta(days=1)).isoformat()
+        assert evaluate_invariant_expr(expr, {"due_date": before}) is False
 
 
 # ---------------------------------------------------------------------------
@@ -424,3 +434,120 @@ class TestViolationError:
         assert str(ei.value) == "Qty >= 0"
         assert "qty" not in str(ei.value)
         assert render_invariant_expr(ei.value.invariant.expression) == "qty >= 0"
+
+
+# ---------------------------------------------------------------------------
+# #1823 — through the public path: DSL → link → convert → evaluate
+# ---------------------------------------------------------------------------
+
+
+def _linked_entity(tmp_path, body: str, name: str):
+    from dazzle.core.linker import build_appspec
+    from dazzle.core.parser import parse_modules
+    from dazzle.http.converters.entity_converter import convert_entity
+
+    dsl = tmp_path / "app.dsl"
+    dsl.write_text(f'module t\n\napp t "T"\n\n{body}', encoding="utf-8")
+    spec = build_appspec(parse_modules([dsl]), "t")
+    return convert_entity(next(e for e in spec.domain.entities if e.name == name))
+
+
+_TASK_DSL = """
+entity Task "Task":
+  id: uuid pk
+  status: enum[open, blocked, complete]
+  blocking_reason: text
+  invariant: status != blocked or blocking_reason != null
+    message: "Say why it is blocked"
+    code: BLOCKED_NEEDS_REASON
+"""
+
+
+class TestIssue1823PublicPath:
+    @pytest.mark.parametrize(
+        ("record", "holds"),
+        [
+            ({"status": "blocked", "blocking_reason": None}, False),
+            ({"status": "blocked", "blocking_reason": "waiting on HMRC"}, True),
+            ({"status": "open", "blocking_reason": None}, True),
+        ],
+    )
+    def test_bare_enum_value_is_a_literal(self, tmp_path, record, holds) -> None:
+        entity = _linked_entity(tmp_path, _TASK_DSL, "Task")
+        assert (validate_invariants(entity.invariants, record) == []) is holds
+
+    @pytest.mark.parametrize(
+        ("minor", "holds"),
+        [(None, True), (0, True), (10050, True), (10051, False)],
+    )
+    def test_money_field_ref_reads_major_units(self, tmp_path, minor, holds) -> None:
+        body = """
+entity Bill "Bill":
+  id: uuid pk
+  tax_deducted: money(GBP)
+  invariant: tax_deducted = null or tax_deducted <= 100.50
+"""
+        entity = _linked_entity(tmp_path, body, "Bill")
+        record = {"tax_deducted_minor": minor, "tax_deducted_currency": "GBP"}
+        assert (validate_invariants(entity.invariants, record) == []) is holds
+        assert render_invariant_expr(entity.invariants[0].expression) == (
+            "tax_deducted == null or tax_deducted <= 100.5"
+        )
+
+    @pytest.mark.parametrize(
+        ("record", "holds"),
+        [
+            ({"role": "governor", "school": None, "fee_minor": None}, True),
+            ({"role": "teacher", "school": None, "fee_minor": None}, False),
+            ({"role": "teacher", "school": "s1", "fee_minor": None}, True),
+            ({"role": "governor", "school": None, "fee_minor": 10050}, False),
+            ({"role": "governor", "school": None, "fee_minor": 2500}, True),
+        ],
+    )
+    def test_in_and_not_in_literal_lists(self, tmp_path, record, holds) -> None:
+        body = """
+entity User "User":
+  id: uuid pk
+  role: enum[super_admin, trust_admin, governor, teacher]
+  school: str(50)
+  fee: money(GBP)
+  invariant: role in [super_admin, trust_admin, governor] or school != null
+  invariant: fee not in [100.50, 200]
+"""
+        entity = _linked_entity(tmp_path, body, "User")
+        assert (validate_invariants(entity.invariants, record) == []) is holds
+        assert render_invariant_expr(entity.invariants[0].expression) == (
+            'role in ["super_admin", "trust_admin", "governor"] or school != null'
+        )
+
+    def test_code_reaches_the_422_body(self, tmp_path) -> None:
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+
+        from dazzle.http.runtime.exception_handlers import register_exception_handlers
+
+        entity = _linked_entity(tmp_path, _TASK_DSL, "Task")
+        app = FastAPI()
+        register_exception_handlers(app)
+
+        @app.post("/tasks")
+        def create(payload: dict) -> dict:
+            check_invariants_for_create(entity.invariants, payload, entity="Task")
+            return payload
+
+        resp = TestClient(app).post("/tasks", json={"status": "blocked"})
+        assert resp.status_code == 422
+        body = resp.json()
+        assert body["code"] == "BLOCKED_NEEDS_REASON"
+        assert body["detail"] == "Say why it is blocked"
+        assert body["invariant"] == 'status != "blocked" or blocking_reason != null'
+
+    def test_unknown_identifier_fails_validation(self, tmp_path) -> None:
+        from dazzle.core.errors import LinkError
+
+        body = _TASK_DSL.replace("status != blocked", "status != blokced")
+        with pytest.raises(LinkError) as ei:
+            _linked_entity(tmp_path, body, "Task")
+        msg = str(ei.value)
+        assert "Entity 'Task' invariant" in msg
+        assert "'blokced' is not a field of Task" in msg

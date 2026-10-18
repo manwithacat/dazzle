@@ -14,10 +14,12 @@ from dazzle.core.ir.expressions import (
     DurationLiteral,
     FieldRef,
     FuncCall,
+    InExpr,
     Literal,
     UnaryExpr,
     UnaryOp,
 )
+from dazzle.core.ir.money import get_currency_scale
 from dazzle.http.specs import (
     AccessAuthContext,
     AccessComparisonKind,
@@ -544,13 +546,23 @@ def _convert_duration_unit(unit: ir.DurationUnit) -> DurationUnitKind:
     return mapping[unit]
 
 
-def _convert_invariant_expr(expr: ir.InvariantExpr) -> InvariantExprSpec:
-    """Convert IR InvariantExpr to BackendSpec InvariantExprSpec."""
-    if isinstance(expr, ir.InvariantFieldRef):
+def _invariant_field_ref(path: list[str], money_scales: dict[str, int]) -> InvariantExprSpec:
+    """A field_ref node; a money field reads its ``_minor`` column in major units (#1823)."""
+    if len(path) == 1 and path[0] in money_scales:
         return InvariantExprSpec(
             kind="field_ref",
-            path=expr.path,
+            path=[f"{path[0]}_minor"],
+            minor_scale=money_scales[path[0]],
         )
+    return InvariantExprSpec(kind="field_ref", path=path)
+
+
+def _convert_invariant_expr(
+    expr: ir.InvariantExpr, money_scales: dict[str, int]
+) -> InvariantExprSpec:
+    """Convert IR InvariantExpr to BackendSpec InvariantExprSpec."""
+    if isinstance(expr, ir.InvariantFieldRef):
+        return _invariant_field_ref(expr.path, money_scales)
     elif isinstance(expr, ir.InvariantLiteral):
         return InvariantExprSpec(
             kind="literal",
@@ -565,30 +577,32 @@ def _convert_invariant_expr(expr: ir.InvariantExpr) -> InvariantExprSpec:
     elif isinstance(expr, ir.ComparisonExpr):
         return InvariantExprSpec(
             kind="comparison",
-            comparison_left=_convert_invariant_expr(expr.left),
+            comparison_left=_convert_invariant_expr(expr.left, money_scales),
             comparison_op=_convert_comparison_operator(expr.operator),
-            comparison_right=_convert_invariant_expr(expr.right),
+            comparison_right=_convert_invariant_expr(expr.right, money_scales),
         )
     elif isinstance(expr, ir.LogicalExpr):
         return InvariantExprSpec(
             kind="logical",
-            logical_left=_convert_invariant_expr(expr.left),
+            logical_left=_convert_invariant_expr(expr.left, money_scales),
             logical_op=_convert_logical_operator(expr.operator),
-            logical_right=_convert_invariant_expr(expr.right),
+            logical_right=_convert_invariant_expr(expr.right, money_scales),
         )
     elif isinstance(expr, ir.NotExpr):
         return InvariantExprSpec(
             kind="not",
-            not_operand=_convert_invariant_expr(expr.operand),
+            not_operand=_convert_invariant_expr(expr.operand, money_scales),
         )
     else:
         raise ValueError(f"Unknown invariant expression type: {type(expr)}")
 
 
-def _convert_unified_expr_to_invariant(expr: Any) -> InvariantExprSpec:
+def _convert_unified_expr_to_invariant(
+    expr: Any, money_scales: dict[str, int]
+) -> InvariantExprSpec:
     """Convert unified Expr AST to BackendSpec InvariantExprSpec."""
     if isinstance(expr, FieldRef):
-        return InvariantExprSpec(kind="field_ref", path=expr.path)
+        return _invariant_field_ref(expr.path, money_scales)
     elif isinstance(expr, Literal):
         return InvariantExprSpec(kind="literal", value=expr.value)
     elif isinstance(expr, DurationLiteral):
@@ -610,9 +624,9 @@ def _convert_unified_expr_to_invariant(expr: Any) -> InvariantExprSpec:
             op = InvariantLogicalKind.AND if expr.op == BinaryOp.AND else InvariantLogicalKind.OR
             return InvariantExprSpec(
                 kind="logical",
-                logical_left=_convert_unified_expr_to_invariant(expr.left),
+                logical_left=_convert_unified_expr_to_invariant(expr.left, money_scales),
                 logical_op=op,
-                logical_right=_convert_unified_expr_to_invariant(expr.right),
+                logical_right=_convert_unified_expr_to_invariant(expr.right, money_scales),
             )
         else:
             op_map = {
@@ -625,31 +639,53 @@ def _convert_unified_expr_to_invariant(expr: Any) -> InvariantExprSpec:
             }
             return InvariantExprSpec(
                 kind="comparison",
-                comparison_left=_convert_unified_expr_to_invariant(expr.left),
+                comparison_left=_convert_unified_expr_to_invariant(expr.left, money_scales),
                 comparison_op=op_map.get(expr.op, InvariantComparisonKind.EQ),
-                comparison_right=_convert_unified_expr_to_invariant(expr.right),
+                comparison_right=_convert_unified_expr_to_invariant(expr.right, money_scales),
             )
     elif isinstance(expr, UnaryExpr) and expr.op == UnaryOp.NOT:
         return InvariantExprSpec(
             kind="not",
-            not_operand=_convert_unified_expr_to_invariant(expr.operand),
+            not_operand=_convert_unified_expr_to_invariant(expr.operand, money_scales),
+        )
+    elif isinstance(expr, InExpr):
+        return InvariantExprSpec(
+            kind="in",
+            in_value=_convert_unified_expr_to_invariant(expr.value, money_scales),
+            in_items=[_convert_unified_expr_to_invariant(i, money_scales) for i in expr.items],
+            in_negated=expr.negated,
         )
     else:
         return InvariantExprSpec(kind="literal", value=str(expr))
 
 
-def _convert_invariant(inv: ir.InvariantSpec) -> InvariantSpec:
-    """Convert IR InvariantSpec to BackendSpec InvariantSpec."""
+def _convert_invariant(inv: ir.InvariantSpec, money_scales: dict[str, int]) -> InvariantSpec:
+    """Convert IR InvariantSpec to BackendSpec InvariantSpec.
+
+    ``money_scales`` maps each money field to its currency exponent so a ref to
+    the field reads the ``_minor`` column in major units (#1823).
+    """
     if inv.invariant_expr is not None:
-        expr_spec = _convert_unified_expr_to_invariant(inv.invariant_expr)
+        expr_spec = _convert_unified_expr_to_invariant(inv.invariant_expr, money_scales)
     elif inv.expression is not None:
-        expr_spec = _convert_invariant_expr(inv.expression)
+        expr_spec = _convert_invariant_expr(inv.expression, money_scales)
     else:
         expr_spec = InvariantExprSpec(kind="literal", value=True)
     return InvariantSpec(
         expression=expr_spec,
         message=inv.message,
+        code=inv.code,
     )
+
+
+def _convert_invariants(entity: ir.EntitySpec) -> list[InvariantSpec]:
+    """Convert an entity's invariants, mapping money refs to major units (#1823)."""
+    money_scales = {
+        f.name: get_currency_scale(f.type.currency_code or "GBP")
+        for f in entity.fields
+        if f.type.kind == ir.FieldTypeKind.MONEY
+    }
+    return [_convert_invariant(inv, money_scales) for inv in entity.invariants]
 
 
 # =============================================================================
@@ -862,9 +898,7 @@ def convert_entity(dazzle_entity: ir.EntitySpec) -> EntitySpec:
         computed_fields = [_convert_computed_field(cf) for cf in dazzle_entity.computed_fields]
 
     # Convert invariants if present
-    invariants: list[InvariantSpec] = []
-    if dazzle_entity.invariants:
-        invariants = [_convert_invariant(inv) for inv in dazzle_entity.invariants]
+    invariants = _convert_invariants(dazzle_entity)
 
     return EntitySpec(
         name=dazzle_entity.name,

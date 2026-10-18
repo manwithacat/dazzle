@@ -472,11 +472,29 @@ invariant_expr ::= invariant_comparison
                  | "(" invariant_expr ")" ;
 
 invariant_comparison
-              ::= invariant_primary comp_op invariant_primary ;
+              ::= invariant_primary comp_op invariant_primary
+                | invariant_primary "not"? "in" "[" invariant_literal ("," invariant_literal)* "]" ;
+                  (* #1823: list items are literals or bare values of the compared
+                     enum field; null is in the list only when listed *)
+
+invariant_literal
+              ::= NUMBER | "-" NUMBER | STRING | BOOLEAN | "null" | IDENT ;
 
 invariant_primary
               ::= field_path | NUMBER | STRING | BOOLEAN
                 | date_expr | duration_expr | "(" invariant_expr ")" ;
+                  (* #1823, checked at link time (dazzle validate):
+                     - field_path must start with a field of the entity; anything
+                       else is an error, never a silent null;
+                     - a bare IDENT compared with an enum field that names one of
+                       its values is that value (status != blocked means
+                       status != "blocked"); a real field of that name wins;
+                     - a money(...) field reads in major units: amount > 100.50
+                       compares pounds, not pence; amount = null tests the
+                       stored amount;
+                     - a field compared with a duration is compared with
+                       today + duration; weeks are 7 days, months and years are
+                       calendar months clamped to the month's end *)
 
 date_expr     ::= "today" | "now" | date_expr ("+" | "-") duration_expr ;
 

@@ -43,9 +43,8 @@ class FakeStorageProvider:
     constructor. Object storage lives in a private dict keyed by S3
     key.
 
-    Attributes mirror the protocol surface; additional methods
-    `put_object` and `objects` let tests seed and inspect the
-    backing store directly.
+    Attributes mirror the protocol surface; `put_object` seeds the
+    store and the additional `objects` helper lets tests inspect it.
     """
 
     name: str = "test_storage"
@@ -97,8 +96,6 @@ class FakeStorageProvider:
         obj = self._objects.get(key)
         return obj.body if obj is not None else None
 
-    # ── Test-only helpers ─────────────────────────────────────────
-
     def put_object(
         self,
         key: str,
@@ -106,9 +103,16 @@ class FakeStorageProvider:
         *,
         content_type: str | None = None,
     ) -> None:
-        """Seed an object as if a client had finished uploading."""
+        """Store an object (server-side write, or a test seeding a
+        finished client upload)."""
         etag = hashlib.md5(body, usedforsecurity=False).hexdigest()
         self._objects[key] = _StoredObject(body=body, content_type=content_type, etag=etag)
+
+    def delete_object(self, key: str) -> bool:
+        self._objects.pop(key, None)
+        return True
+
+    # ── Test-only helpers ─────────────────────────────────────────
 
     def objects(self) -> dict[str, bytes]:
         """Snapshot of (key → body) for assertion convenience."""

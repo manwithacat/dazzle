@@ -55,9 +55,12 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, Request, Response
 
 from dazzle.http.runtime.auth import current_user_id
+from dazzle.http.runtime.file_storage import storage_proxy_path
 from dazzle.http.runtime.storage.verify import expected_prefix_pattern
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from fastapi import FastAPI
 
     from dazzle.core.ir import AppSpec
@@ -147,10 +150,13 @@ def register_storage_proxy_routes(
     app: FastAPI,
     appspec: AppSpec,
     registry: StorageRegistry,
+    extra_storages: Iterable[str] = (),
 ) -> list[str]:
     """Register one ``GET /api/storage/{storage_name}/proxy`` route per
     storage that is referenced by at least one ``file storage=...``
-    field in the AppSpec.
+    field in the AppSpec, plus each name in ``extra_storages`` — the
+    storages the framework itself writes to (``[signing] storage``,
+    #1816).
 
     Storages declared in dazzle.toml but not referenced from any
     field don't get a proxy route — there's nothing to read through
@@ -165,10 +171,11 @@ def register_storage_proxy_routes(
         for field in entity.fields:
             for storage_name in getattr(field, "storage", ()) or ():
                 referenced.add(storage_name)
+    referenced.update(extra_storages)
 
     registered: list[str] = []
     for storage_name in sorted(referenced):
-        path = f"/api/storage/{storage_name}/proxy"
+        path = storage_proxy_path(storage_name)
         handler = _build_proxy_handler(storage_name=storage_name, registry=registry)
         app.get(path, tags=["Storage"])(handler)
         registered.append(path)

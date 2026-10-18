@@ -97,10 +97,11 @@ When the signatory opens the link:
    `signing_validator:` hook, generates the PDF, applies the PKCS#7
    + RFC 3161 signature, transitions `status: viewed → signed`, and
    returns the signed PDF inline.
-5. The browser downloads the signed PDF automatically. If file
-   uploads are enabled, the PDF is also persisted via the project's
-   file backend and the row's `signed_document` field is patched
-   with the URL.
+5. The browser downloads the signed PDF automatically. The PDF is
+   also persisted through the framework's file service (a
+   `dazzle_files` row plus the bytes) and the row's `signed_document`
+   field is patched with its URL. Where the bytes live is set by
+   [`[signing] storage`](#signed-document-storage).
 
 ## Auto-injected fields
 
@@ -324,6 +325,50 @@ def deliver(*, entity_name, row, email, signing_url):
 new link sent to the original recipient — nothing more. The fresh token
 never returns to the browser, so a replayed stale link can only trigger
 a mail to the genuine signer, never extend access for the bearer.
+
+## Signed-document storage
+
+By default signed PDFs are written to the serving process's local disk
+(`.dazzle/uploads`, the `files_path`). That is fine for a single
+long-lived server and wrong for Heroku or any multi-instance host: the
+file is gone at the next restart and never visible to another dyno, so
+the signed-copy link 404s. On boot, when `signable` entities exist,
+signed PDFs go to local disk and the `DYNO` environment variable is set,
+the server logs one warning saying so.
+
+Point signing at an object store by naming a declared
+`[storage.<name>]` backend:
+
+```toml
+[storage.signed_documents]
+backend = "s3"
+bucket = "${S3_BUCKET}"
+region = "${AWS_REGION}"
+prefix = "production/signed_documents/"
+
+[signing]
+storage = "signed_documents"
+```
+
+- Signed PDFs are written to that backend under
+  `<prefix>signing/<Entity>/<yyyy/mm/dd>/<file_id>_<name>.pdf`, with
+  their `dazzle_files` row recording the backend (`storage:<name>`).
+- Reads route by that recorded backend: the signatory's
+  `/sign/{entity}/{id}/signed-copy` link and the scope-gated
+  `/_dazzle/documents/{entity}/{id}/signed_document/file` viewer fetch
+  the bytes back through the storage, in the server (no presigned URLs).
+- `signed_document` holds the storage's proxy URL,
+  `/api/storage/<name>/proxy?key=<key>` (cookie auth; the proxy route is
+  mounted for the signing storage even when no DSL field uses it).
+- The prefix must be literal: `{user_id}` / `{record_id}` placeholders
+  are a manifest error, because a signed document has no uploading user
+  or upload-ticket record. So is a name with no `[storage.<name>]`
+  block. `max_bytes` / `content_types` / `ticket_ttl_seconds` govern
+  browser upload tickets only and don't apply to these server-side
+  writes.
+- Switching the key on is not a migration: PDFs signed earlier stay
+  where they were written (local disk) and keep resolving only while
+  that disk does.
 
 ## Architecture
 

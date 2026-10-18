@@ -9,6 +9,7 @@ unresolved (caller does not invent ``IS NULL``).
 
 from __future__ import annotations
 
+from calendar import monthrange
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
@@ -121,3 +122,14 @@ def _duration_delta(value: int, unit: str) -> timedelta:
     if token in ("years", "y", "year"):
         return timedelta(days=value * 365)
     return timedelta(days=value)
+
+
+def add_months[D: date](value: D, months: int) -> D:
+    """``value`` shifted by whole calendar months, clamped to the month's last day.
+
+    31 Jan + 1 month is 28/29 Feb, not 3 Mar; works for ``date`` and ``datetime``.
+    """
+    index = value.year * 12 + (value.month - 1) + months
+    year, month = divmod(index, 12)
+    day = min(value.day, monthrange(year, month + 1)[1])
+    return value.replace(year=year, month=month + 1, day=day)

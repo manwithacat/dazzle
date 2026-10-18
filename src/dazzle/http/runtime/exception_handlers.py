@@ -112,6 +112,8 @@ def register_exception_handlers(app: FastAPI) -> None:
             rendered = render_invariant_expr(inv.expression)
             if rendered:
                 content["invariant"] = rendered
+            if getattr(inv, "code", None):
+                content["code"] = inv.code
         if exc.entity:
             content["entity"] = exc.entity
         if HtmxDetails.from_request(request).is_htmx:

@@ -8,6 +8,7 @@ built-in default).
 
 from __future__ import annotations
 
+import re
 import textwrap
 from pathlib import Path
 from types import SimpleNamespace
@@ -36,7 +37,16 @@ _DEFAULTS = {
     "location": "United Kingdom",
     "support_contact": "",
     "resend_hook": "",
+    "storage": "",
 }
+
+_STORAGE = """
+[storage.signed_docs]
+backend = "s3"
+bucket = "b"
+region = "eu-west-2"
+prefix = "{prefix}"
+"""
 
 
 @pytest.mark.parametrize(
@@ -76,12 +86,39 @@ _DEFAULTS = {
             {"support_contact": "help@acme.example", "resend_hook": "app.signing.resend.deliver"},
             id="recovery-keys-TR-53",
         ),
+        pytest.param(
+            _STORAGE.format(prefix="production/signed/") + '\n[signing]\nstorage = "signed_docs"\n',
+            {"storage": "signed_docs"},
+            id="storage-names-declared-backend-1816",
+        ),
     ],
 )
 def test_signing_block(block: str, overrides: dict[str, str], tmp_path: Path) -> None:
     signing = load_manifest(_write(tmp_path, block)).signing
     assert isinstance(signing, SigningConfig)
     assert {k: getattr(signing, k) for k in _DEFAULTS} == {**_DEFAULTS, **overrides}
+
+
+@pytest.mark.parametrize(
+    ("block", "message"),
+    [
+        pytest.param(
+            '\n[signing]\nstorage = "nowhere"\n',
+            "names no [storage.nowhere] block",
+            id="unknown-storage-name",
+        ),
+        pytest.param(
+            _STORAGE.format(prefix="production/{user_id}/{record_id}/")
+            + '\n[signing]\nstorage = "signed_docs"\n',
+            "literal prefix",
+            id="placeholder-prefix",
+        ),
+    ],
+)
+def test_signing_storage_rejected_at_load(block: str, message: str, tmp_path: Path) -> None:
+    """#1816: a bad ``[signing] storage`` fails manifest load, not the first signature."""
+    with pytest.raises(ValueError, match=re.escape(message)):
+        load_manifest(_write(tmp_path, block))
 
 
 def _resolve(project_root: Path | None) -> PdfBranding | None:

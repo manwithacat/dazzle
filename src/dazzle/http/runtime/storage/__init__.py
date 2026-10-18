@@ -13,7 +13,7 @@ Public API::
         interpolate_env_vars,
     )
 
-The protocol is intentionally tight — four methods + four config
+The protocol is intentionally tight — six methods + six config
 attributes — so a third-party backend (R2, MinIO, GCS) can drop in
 behind a 50-line subclass.
 """

@@ -122,7 +122,7 @@
   "src/dazzle/mcp/server/handlers/knowledge.py": 1,
   "src/dazzle/http/runtime/exception_handlers.py": 11,
   "src/dazzle/http/runtime/integration_manager.py": 1,
-  "src/dazzle/http/runtime/server.py": 42,
+  "src/dazzle/http/runtime/server.py": 39,
   "src/dazzle/mcp/server/handlers/viewport_testing.py": 3,
   "src/dazzle/http/events/tier.py": 2,
   "src/dazzle/cli/services/build_service.py": 5,
