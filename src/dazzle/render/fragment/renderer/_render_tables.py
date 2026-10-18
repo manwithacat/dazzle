@@ -928,7 +928,7 @@ class _RenderTablesMixin:
             )
         return (
             f'<div class="dz-metric-tile" {kpi_root_attrs()}>'
-            f'<div class="dz-metric-label">{ctx.escape(k.label)}</div>'
+            f'<div class="dz-metric-label" title="{ctx.escape_attr(k.label)}">{ctx.escape(k.label)}</div>'
             f'<div class="dz-metric-value">{ctx.escape(k.value)}</div>'
             f"{delta_html}"
             f"</div>"
@@ -966,7 +966,7 @@ class _RenderTablesMixin:
             MetricTileSeam(
                 label=m.label,
                 value=m.value,
-                metric_key=m.label.lower().replace(" ", "_"),
+                metric_key=m.metric_key or m.label.lower().replace(" ", "_"),
                 tone=m.tone,
                 delta_direction=m.delta_direction,
                 delta_sentiment=m.delta_sentiment,

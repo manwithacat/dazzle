@@ -25,7 +25,7 @@ cat_list:
 KPI tiles — scalar aggregates over the scoped set.
 
 <div class="dz-catalogue-preview" markdown="0">
-<div data-dz-region data-dz-region-name="cat_metrics" id="region-cat_metrics"><div class="dz-metrics-grid" data-dz-tile-count="3"><div class="dz-metric-tile" data-dz-metric-key="total"><div class="dz-metric-label">Total</div><div class="dz-metric-value">42</div></div><div class="dz-metric-tile" data-dz-metric-key="critical"><div class="dz-metric-label">Critical</div><div class="dz-metric-value">7</div></div><div class="dz-metric-tile" data-dz-metric-key="avg_latency"><div class="dz-metric-label">Avg Latency</div><div class="dz-metric-value">41</div></div></div></div>
+<div data-dz-region data-dz-region-name="cat_metrics" id="region-cat_metrics"><div class="dz-metrics-grid" data-dz-tile-count="3"><div class="dz-metric-tile" data-dz-metric-key="total"><div class="dz-metric-label" title="Total">Total</div><div class="dz-metric-value">42</div></div><div class="dz-metric-tile" data-dz-metric-key="critical"><div class="dz-metric-label" title="Critical">Critical</div><div class="dz-metric-value">7</div></div><div class="dz-metric-tile" data-dz-metric-key="avg_latency"><div class="dz-metric-label" title="Avg latency">Avg latency</div><div class="dz-metric-value">41</div></div></div></div>
 </div>
 
 ```dsl

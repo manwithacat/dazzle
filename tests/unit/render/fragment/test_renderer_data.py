@@ -38,7 +38,7 @@ from dazzle.render.fragment.renderer import FragmentRenderer
             # HM metric-tile skin + KPI dual-lock root (#1799).
             (
                 '<div class="dz-metric-tile" data-dz-kpi>',
-                '<div class="dz-metric-label">Revenue</div>',
+                '<div class="dz-metric-label" title="Revenue">Revenue</div>',
                 '<div class="dz-metric-value">$42k</div>',
                 'data-dz-delta-tone="positive" data-dz-delta-direction="up"',
                 '<span class="dz-metric-delta-value">+12%</span>',

@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+### Added
+- **Per-metric tile labels, a tile min-width and a one-line label (#1826, consumer-forced by AegisMark).** A summary tile could only be labelled by its aggregate key (`name.replace("_", " ").title()`, so `for_moderation` read "For Moderation") and the tile had no width floor, so labels wrapped to two or three lines. A region `aggregate:` line now takes a quoted label after the key: `for_moderation "For moderation": count(Manuscript where ...)` (`AggregateRef.label` / `DerivedMetric.label`, `str | None`); an unlabelled key falls back to sentence case via the shared `sentence_case_words`. The metrics grid is `repeat(auto-fill, minmax(var(--dz-metric-tile-min), 1fr))` with a 10rem floor, `.dz-metric-label` is `nowrap` + ellipsis, and every tile label carries its full escaped text in `title=`. `reports.md` now documents the label form and cross-entity counts. AegisMark deletes its region-scoped sentence-case CSS rule (`text-transform: lowercase` + `::first-letter`). Gallery visuals changed (metrics grid and label).
+
 ## [0.123.0] - 2026-10-18
 
 ### Added

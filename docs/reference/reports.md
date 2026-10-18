@@ -140,6 +140,21 @@ The runtime picks automatically:
 
 The fast path is scope-safe by construction — one `WHERE` clause, one `GROUP BY`, no possibility of the enumeration-vs-count divergence from #847.
 
+### Tile labels and cross-entity counts (#1826)
+
+A `metrics` / `summary` tile is labelled by its key, humanised in sentence case (`for_moderation` renders "For moderation"). Put a quoted label after the key to author it, for acronyms and punctuation the key cannot carry (a derived metric takes one too):
+
+```dsl
+aggregate:
+  for_moderation "For moderation": count(Manuscript where leftover_kind = second_eyes)
+  unread_ao1 "Unread (AO1)": count(Message where read = false)
+  sen_review "SEN review": count(CohortAssessment where sen = true)
+```
+
+The label stays on one line: a long one is ellipsised and the full text is in the tile's `title=`. Tiles pack into columns at least 10rem wide (`--dz-metric-tile-min`), so the strip no longer depends on label length.
+
+`count(<OtherEntity> where ...)` works inside a region whose `source:` is a different entity (above, `CohortAssessment` and `Message` in a `source: Manuscript` region); each count runs against its own entity under that entity's scope rules, which is what lets one strip show several unrelated numbers.
+
 ### Derived metrics (#1359)
 
 A metric line may be **arithmetic over metric names declared earlier in the same `aggregate:` block** instead of an aggregate call:

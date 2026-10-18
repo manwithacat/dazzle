@@ -4475,14 +4475,14 @@ def select(source: str, id: str) -> str:
             "toned. The server stamps the tile count for e2e anchors.",
             '<div class="dz-metrics-grid" data-dz-tile-count="3">'
             '<div class="dz-metric-tile" data-dz-metric-key="outstanding">'
-            '<div class="dz-metric-label">Outstanding</div>'
+            '<div class="dz-metric-label" title="Outstanding">Outstanding</div>'
             '<div class="dz-metric-value">£12,450</div></div>'
             '<div class="dz-metric-tile" data-dz-metric-key="paid" data-dz-tone="positive">'
-            '<div class="dz-metric-label">Paid this month</div>'
+            '<div class="dz-metric-label" title="Paid this month">Paid this month</div>'
             '<div class="dz-metric-value">£48,900</div></div>'
             '<a class="dz-metric-tile" data-dz-metric-key="overdue" data-dz-tone="warning" '
             'data-dz-metric-drill href="#metrics">'
-            '<div class="dz-metric-label">Overdue</div>'
+            '<div class="dz-metric-label" title="Overdue">Overdue</div>'
             '<div class="dz-metric-value">3</div></a>'
             "</div>",
             notes="Each tile carries <code>data-dz-metric-key</code> (dual-lock "

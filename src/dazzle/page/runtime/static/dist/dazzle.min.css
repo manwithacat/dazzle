@@ -7517,21 +7517,13 @@ flex-shrink: 0;
 }
 @layer components {
 .dz-metrics-grid {
+--dz-metric-tile-min: 10rem;
 display: grid;
-grid-template-columns: 1fr;
+grid-template-columns: repeat(auto-fill, minmax(var(--dz-metric-tile-min), 1fr));
 gap: var(--space-md);
 }
-@media (min-width: 40rem) {
-.dz-metrics-grid {
-grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-}
-@media (min-width: 64rem) {
-.dz-metrics-grid {
-grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-}
 .dz-metric-tile {
+min-width: 0;
 padding: var(--space-md);
 border-radius: var(--radius-sm);
 background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
@@ -7562,6 +7554,9 @@ outline: 2px solid var(--colour-brand);
 outline-offset: 2px;
 }
 .dz-metric-label {
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
 font-size: var(--text-xs);
 color: var(--colour-text-muted);
 letter-spacing: -0.01em;

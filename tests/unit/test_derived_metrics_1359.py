@@ -232,3 +232,36 @@ class TestPerBucketEvaluation:
         _apply_derived_to_bucket_rows(aggregates, rows)
         assert rows[0]["metrics"]["half"] == 50
         assert rows[0]["metrics"]["quarter"] == 25
+
+
+class TestMetricLabel1826:
+    """#1826: ``key "Label": ...`` authors the tile label; the fallback is sentence case."""
+
+    @pytest.mark.parametrize(
+        ("line", "expected"),
+        [
+            pytest.param(
+                'for_moderation "For moderation": count(Task where status = todo)',
+                "For moderation",
+                id="aggregate-label",
+            ),
+            pytest.param(
+                'rate "SEN review %": round(done / total * 100)', "SEN review %", id="derived"
+            ),
+            pytest.param("for_moderation: count(Task)", None, id="no-label"),
+        ],
+    )
+    def test_label_parses(self, tmp_path: Path, line: str, expected: str | None) -> None:
+        region = _parse_region(tmp_path, ["total: count(Task)", "done: count(Task)", line])
+        assert region.aggregates[line.split()[0].rstrip(":")].label == expected
+
+    @pytest.mark.asyncio
+    async def test_label_wins_and_fallback_is_sentence_case(self, tmp_path: Path) -> None:
+        from dazzle.http.runtime.workspace_aggregation import _compute_aggregate_metrics
+
+        region = _parse_region(
+            tmp_path,
+            ['mine "Unread (AO1)": count(Task)', "for_moderation: count(Task)"],
+        )
+        metrics = await _compute_aggregate_metrics(region.aggregates, None, 0, [])
+        assert [m["label"] for m in metrics] == ["Unread (AO1)", "For moderation"]

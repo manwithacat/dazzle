@@ -20,6 +20,7 @@ from dazzle.core.ir import AggregateRef, DerivedMetricExpr
 from dazzle.render.filters import (
     _metric_number_filter,
     clerk_pipeline_stage_value,
+    sentence_case_words,
 )
 from dazzle.render.fragment import (
     EmptyState,
@@ -104,6 +105,7 @@ def _metric_tile_from_dict(metric: dict[str, Any], drill_url: str = "") -> Metri
     return MetricTile(
         label=label,
         value=value_str,
+        metric_key=str(metric.get("key", "")),
         tone=tone,
         delta_direction=direction,
         delta_sentiment=sentiment,
@@ -260,7 +262,7 @@ class _BuildersMetricsMixin:
                 # the clean "No metrics" empty state instead, mirroring
                 # `compute_pipeline_steps`'s None-on-denied handling.
                 metrics_list = [
-                    {"label": str(name).replace("_", " ").title(), "value": val}
+                    {"label": sentence_case_words(str(name)), "key": str(name), "value": val}
                     for name, val in agg.items()
                     if not isinstance(val, (AggregateRef, DerivedMetricExpr))
                 ]

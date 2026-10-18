@@ -476,7 +476,7 @@ def render_metric_tile(tile: MetricTile) -> str:
     tag = "a" if tile.drill_url else "div"
     return (
         f'<{tag} class="dz-metric-tile" {root_attrs}>'
-        f'<div class="dz-metric-label">{label}</div>'
+        f'<div class="dz-metric-label" title="{_html.escape(tile.label, quote=True)}">{label}</div>'
         f'<div class="dz-metric-value">{value}</div>'
         f"{delta_html}"
         f"</{tag}>"

@@ -10512,31 +10512,23 @@ a.action-card:hover {
  * convergence). The Dazzle emitter contract is unchanged. */
 
 /* ─────────────────────────── metrics region ─────────────────────
- * Responsive 1/2/4-col grid of KPI tiles. Each tile is plain (no
+ * Auto-fill grid of KPI tiles (10rem floor). Each tile is plain (no
  * border — the dashboard slot owns card chrome) with a soft
  * background tint, label / value, and optional delta row.
  * Per-tile tone tinting travels with the component (moved verbatim
  * from Dazzle tones.css, keyed off data-tone). */
 
 .metrics-grid {
+  /* Tile floor (#1826): as many columns as fit at >= 10rem each, so the
+   * strip packs by available width, never by label length. */
+  --dz-metric-tile-min: 10rem;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(var(--dz-metric-tile-min), 1fr));
   gap: var(--space-md);
 }
 
-@media (min-width: 40rem) {
-  .metrics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 64rem) {
-  .metrics-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
 .metric-tile {
+  min-width: 0;
   padding: var(--space-md);
   border-radius: var(--radius-sm);
   background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
@@ -10577,7 +10569,12 @@ a.metric-tile:focus-visible {
   outline-offset: 2px;
 }
 
+/* One-line label (#1826): a long label ellipsises (full text in title=)
+ * instead of wrapping to a ragged 2-3 lines. */
 .metric-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: var(--text-xs);
   color: var(--colour-text-muted);
   letter-spacing: -0.01em;

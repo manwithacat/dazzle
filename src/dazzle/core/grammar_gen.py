@@ -800,7 +800,9 @@ region_column ::= IDENT ("(" column_modifier ("," column_modifier)* ")")? ;
 quick_action_entry
               ::= IDENT STRING? ;
 
-metric_line   ::= IDENT ":" (aggregate_call | derived_metric_expr) NEWLINE ;
+(* #1826: the optional STRING is the tile label (`for_moderation "For moderation":
+   count(...)`); without it the key is humanised in sentence case. *)
+metric_line   ::= IDENT STRING? ":" (aggregate_call | derived_metric_expr) NEWLINE ;
 
 derived_metric_expr
               ::= derived_term (("+" | "-" | "*" | "/") derived_term)* ;

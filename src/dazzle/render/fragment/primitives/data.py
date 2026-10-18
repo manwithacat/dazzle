@@ -519,6 +519,8 @@ class MetricTile:
 
     label: str
     value: str
+    # #1826: the DSL metric name (stable `data-dz-metric-key`); empty -> slug of label.
+    metric_key: str = ""
     tone: Literal["", "positive", "warning", "destructive", "accent", "neutral"] = ""
     delta_direction: Literal["", "up", "down", "flat"] = ""
     delta_sentiment: Literal["", "positive_up", "positive_down"] = ""

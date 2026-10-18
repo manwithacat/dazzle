@@ -70,6 +70,7 @@ ir_class: AggregateRef
     - column: str | None = None
     - entity: str | None = None
     - expression: AggregateExpr | None = None
+    - label: str | None = None
     - where: ConditionExpr | None = None
     - window: AggregateWindow | None = None
 
@@ -534,7 +535,8 @@ ir_class: DemoFixture
 ir_class: DerivedMetric
   required:
     - expression: DerivedMetricExpr
-  optional: (none)
+  optional:
+    - label: str | None = None
 
 ir_class: DerivedMetricExpr
   required: (none)

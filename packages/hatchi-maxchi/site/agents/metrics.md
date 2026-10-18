@@ -14,15 +14,15 @@ The KPI strip: label + value tiles in a packing grid, optionally toned. The serv
 ```html
 <div class="metrics-grid" data-tile-count="3">
   <div class="metric-tile" data-metric-key="outstanding">
-    <div class="metric-label">Outstanding</div>
+    <div class="metric-label" title="Outstanding">Outstanding</div>
     <div class="metric-value">£12,450</div>
   </div>
   <div class="metric-tile" data-metric-key="paid" data-tone="positive">
-    <div class="metric-label">Paid this month</div>
+    <div class="metric-label" title="Paid this month">Paid this month</div>
     <div class="metric-value">£48,900</div>
   </div>
   <a class="metric-tile" data-metric-key="overdue" data-tone="warning" data-metric-drill href="#metrics">
-    <div class="metric-label">Overdue</div>
+    <div class="metric-label" title="Overdue">Overdue</div>
     <div class="metric-value">3</div>
   </a>
 </div>
@@ -142,7 +142,7 @@ def render(tile: MetricTile) -> str:
         )
 
     inner = (
-        f'<div class="dz-metric-label">{label}</div>'
+        f'<div class="dz-metric-label" title="{html.escape(tile.label, quote=True)}">{label}</div>'
         f'<div class="dz-metric-value">{value}</div>'
         f"{delta_html}"
     )

@@ -268,6 +268,9 @@ class AggregateRef(BaseModel):
     expression: AggregateExpr | None = None
     where: ConditionExpr | None = None
     window: AggregateWindow | None = None
+    # #1826: authored tile label from ``key "Label": count(...)`` in a region
+    # ``aggregate:`` block; None -> the sentence-case humanised metric key.
+    label: str | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -421,6 +424,8 @@ class DerivedMetric(BaseModel):
     """
 
     expression: DerivedMetricExpr
+    # #1826: authored tile label (``key "Label": round(a / b)``); None -> humanised key.
+    label: str | None = None
 
     model_config = ConfigDict(frozen=True)
 

@@ -148,7 +148,7 @@ def render(tile: MetricTile) -> str:
         )
 
     inner = (
-        f'<div class="dz-metric-label">{label}</div>'
+        f'<div class="dz-metric-label" title="{html.escape(tile.label, quote=True)}">{label}</div>'
         f'<div class="dz-metric-value">{value}</div>'
         f"{delta_html}"
     )

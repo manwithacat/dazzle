@@ -2576,7 +2576,8 @@ def _kw_aggregate(parser: Any, state: _WorkspaceRegionState) -> None:
     """``aggregate:`` block — ``metric_name: <AggregateRef>`` per line.
 
     Per ADR-0024 each entry is parsed structurally via
-    :meth:`parse_aggregate_ref` into a typed :class:`AggregateRef`.
+    :meth:`parse_aggregate_ref` into a typed :class:`AggregateRef`. A quoted
+    label may follow the key (``for_moderation "For moderation": ...``, #1826).
     """
     parser.advance()
     parser.expect(TokenType.COLON)
@@ -2587,16 +2588,22 @@ def _kw_aggregate(parser: Any, state: _WorkspaceRegionState) -> None:
         if parser.match(TokenType.DEDENT):
             break
         metric_name = parser.expect_identifier_or_keyword().value
+        # #1826: optional authored tile label — ``key "For moderation": count(...)``.
+        metric_label: str | None = None
+        if parser.match(TokenType.STRING):
+            metric_label = str(parser.advance().value)
         parser.expect(TokenType.COLON)
         # #1359: a metric line is either an aggregate call
         # (count/sum/avg/min/max followed by '(') or a derived expression
         # over the names declared EARLIER in this block.
         if parser.peek_is_aggregate_call():
-            state.aggregates[metric_name] = parser.parse_aggregate_ref()
+            state.aggregates[metric_name] = parser.parse_aggregate_ref().model_copy(
+                update={"label": metric_label}
+            )
         else:
             state.aggregates[metric_name] = parser.parse_derived_metric(
                 set(state.aggregates.keys())
-            )
+            ).model_copy(update={"label": metric_label})
         parser.skip_newlines()
     parser.expect(TokenType.DEDENT)
 

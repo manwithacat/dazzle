@@ -626,6 +626,12 @@ def clerk_related_tab_fk_label(field_key: Any) -> str:
     return clerk_entity_card_field_label(field_key)
 
 
+def sentence_case_words(snake: str) -> str:
+    """``for_moderation`` -> ``For moderation`` (house style, #1815, #1826)."""
+    words = snake.replace("_", " ").strip()
+    return words[:1].upper() + words[1:]
+
+
 def clerk_quick_action_label(action_id: Any, titles: dict[str, str] | None = None) -> str:
     """Clerk-facing entity-card quick-action CTA (oral #158, #1815).
 
@@ -642,8 +648,7 @@ def clerk_quick_action_label(action_id: Any, titles: dict[str, str] | None = Non
     titled = str((titles or {}).get(text) or "").strip()
     if titled:
         return titled
-    words = text.replace("_", " ").strip()
-    return words[:1].upper() + words[1:]
+    return sentence_case_words(text)
 
 
 def _clerk_entity_card_iso_display(text: str) -> str | None:

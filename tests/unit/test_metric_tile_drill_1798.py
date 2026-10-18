@@ -129,3 +129,19 @@ def test_metric_tile_drill_markup(
         assert fragment in html, html
     for fragment in absent:
         assert fragment not in html, html
+
+
+def test_metric_tile_label_is_escaped_into_title(tmp_path: Path) -> None:
+    """#1826: the one-line (ellipsised) label carries its full text in title=."""
+    region, _ = _pulse(_appspec("", tmp_path))
+    html = FragmentRenderer().render(
+        WorkspaceRegionAdapter().build(
+            region, {"metrics": [{"label": 'Unread "AO1" <b>', "key": "unread_ao1", "value": 3}]}
+        )
+    )
+    assert (
+        '<div class="dz-metric-label" title="Unread &quot;AO1&quot; &lt;b&gt;">'
+        "Unread &quot;AO1&quot; &lt;b&gt;</div>"
+    ) in html, html
+    # The key is the DSL metric name, not the authored label.
+    assert 'data-dz-metric-key="unread_ao1"' in html, html

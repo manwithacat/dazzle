@@ -1,9 +1,9 @@
 {
-  "src_lines": 330733,
-  "test_lines": 320633,
-  "docs_lines": 49545,
+  "src_lines": 330758,
+  "test_lines": 320682,
+  "docs_lines": 49562,
   "construct_count": 31,
-  "written": "2026-10-18",
+  "written": "2026-10-19",
   "exceptions": [
     {
       "date": "2026-10-11",
@@ -651,6 +651,23 @@
         "test_lines"
       ],
       "reason": "cimonitor 2026-10-18: #1822 header pins promoted into ship-surface"
+    },
+    {
+      "date": "2026-10-19",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1826 per-metric tile label + sentence-case helper + tile CSS"
+    },
+    {
+      "date": "2026-10-19",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "#1826 per-metric labels and tile floor"
     }
   ]
 }

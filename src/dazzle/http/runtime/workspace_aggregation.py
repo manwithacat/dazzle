@@ -51,6 +51,7 @@ from dazzle.http.runtime.tenant_isolation import (
 )
 from dazzle.i18n.display_locale import get_display_locale
 from dazzle.page.runtime.comparison_resolver import resolve_comparison
+from dazzle.render.filters import sentence_case_words
 
 logger = logging.getLogger(__name__)
 
@@ -1492,7 +1493,8 @@ async def _compute_aggregate_metrics(
     _tones = tones or {}
     built_metrics = [
         {
-            "label": name.replace("_", " ").title(),
+            "label": getattr(aggregates.get(name), "label", None) or sentence_case_words(name),
+            "key": name,
             "value": sync_results.get(name, 0),
             **({"tone": _tones[name]} if name in _tones else {}),
         }
