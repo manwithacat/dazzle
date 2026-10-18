@@ -790,7 +790,7 @@ def _agg_ctx(name: str, label_key: str, entity: str, total: int) -> Any:
         pytest.param(lambda: [_region_ctx(region_name="tasks")], {}, id="no_aggregates"),
         pytest.param(
             lambda: [_agg_ctx("overview", "total_work", "Work", 42)],
-            {"overview": {"Total Work": 42}},
+            {"overview": {"Total work": 42}},
             id="count_entity_aggregate",
         ),
         pytest.param(
@@ -798,7 +798,7 @@ def _agg_ctx(name: str, label_key: str, entity: str, total: int) -> Any:
                 _agg_ctx("kpis", "active_works", "Work", 10),
                 _agg_ctx("campaigns", "running", "Campaign", 3),
             ],
-            {"kpis": {"Active Works": 10}, "campaigns": {"Running": 3}},
+            {"kpis": {"Active works": 10}, "campaigns": {"Running": 3}},
             id="namespaced_by_region",
         ),
         pytest.param(

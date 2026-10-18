@@ -651,7 +651,7 @@ _RENDER_CASES = [
         "metrics-falls-back-to-aggregates-dict",
         _r("metrics", name="kpis"),
         {"aggregates": {"total_open": 7, "total_closed": 3}},
-        ("Total Open", "7"),
+        ("Total open", "7"),
     ),
     # `display: summary` reuses the metrics adapter.
     _case(

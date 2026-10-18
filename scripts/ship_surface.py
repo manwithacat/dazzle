@@ -535,6 +535,10 @@ SHIP_TESTS: tuple[str, ...] = (
     # header attribute change passed ci-fast and went red on GitHub.
     "tests/unit/test_dispatch_ctx_list_sort_headers.py",
     "tests/unit/test_list_chrome_parity_phase1.py",
+    # 2026-10-19 (#1826): the metric-label fallback moved to sentence case;
+    # these label pins sit outside the gate selection.
+    "tests/unit/test_region_adapter.py",
+    "tests/unit/test_workspace_rendering.py",
 )
 
 REMEDIATION = """
