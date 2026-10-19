@@ -1,6 +1,6 @@
 {
-  "src_lines": 331022,
-  "test_lines": 320910,
+  "src_lines": 331020,
+  "test_lines": 320944,
   "docs_lines": 49569,
   "construct_count": 31,
   "written": "2026-10-19",
@@ -684,6 +684,13 @@
         "test_lines"
       ],
       "reason": "test_otlp_export fixture stops the OTLP exporter leaking into the OTel global"
+    },
+    {
+      "date": "2026-10-19",
+      "rose": [
+        "test_lines"
+      ],
+      "reason": "#1827 audit wiring regression test"
     }
   ]
 }
