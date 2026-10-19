@@ -32,7 +32,7 @@ from typing import Any
 import pytest
 
 from dazzle.perf.exporter import SQLiteSpanExporter
-from dazzle.perf.tracer import configure_tracer, reset_tracer
+from dazzle.perf.tracer import configure_tracer, current_provider, reset_tracer
 
 # Skip the whole module when ``opentelemetry`` (the ``perf`` extra) is
 # not installed; ``configure_tracer`` would raise ``RuntimeError`` and
@@ -62,9 +62,22 @@ def _exporters(provider: Any) -> tuple[Any, ...]:
 
 
 @pytest.fixture(autouse=True)
-def _reset_tracer_after_test() -> None:
-    """Tracer state is module-global; reset between tests."""
+def _reset_tracer_after_test(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tracer state is module-global; reset between tests.
+
+    OTel's global provider is one-shot per process, so a provider these
+    tests configure with a fake OTLP endpoint would stay global for every
+    later test on the worker, and its exporter would retry DNS lookups of
+    the fake host into the CI log. Keep the global untouched and shut the
+    provider down so its batch exporter thread stops.
+    """
+    from opentelemetry import trace
+
+    monkeypatch.setattr(trace, "set_tracer_provider", lambda provider: None)
     yield
+    provider = current_provider()
+    if provider is not None:
+        provider.shutdown()
     reset_tracer()
 
 
