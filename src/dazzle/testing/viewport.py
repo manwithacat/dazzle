@@ -235,7 +235,11 @@ GRID_PATTERN = ComponentPattern(
     ],
 )
 
-# METRICS / SUMMARY display → `.dz-metrics-grid`: 1 → 2 → 4 cols (40rem / 64rem).
+# METRICS / SUMMARY display → `.dz-metrics-grid`. Since #1826 the grid is
+# `repeat(auto-fill, minmax(var(--dz-metric-tile-min, 10rem), 1fr))`: the
+# track count follows the container width (a 4-wide region and a 12-wide one
+# differ at the same viewport), so only the phone case is breakpoint-stable.
+# Tablet/desktop column counts are deliberately not asserted.
 METRICS_PATTERN = ComponentPattern(
     name="metrics",
     skip_if_absent=True,  # region-body grid — absent when the region is empty/collapsed (#1494)
@@ -245,21 +249,7 @@ METRICS_PATTERN = ComponentPattern(
             property="grid-column-count",
             expected="1",
             viewport="mobile",
-            description="Metrics tiles single-column on mobile (<40rem)",
-        ),
-        ViewportAssertion(
-            selector=".dz-metrics-grid",
-            property="grid-column-count",
-            expected="2",
-            viewport="tablet",
-            description="Metrics tiles two-column on tablet (≥40rem, <64rem)",
-        ),
-        ViewportAssertion(
-            selector=".dz-metrics-grid",
-            property="grid-column-count",
-            expected="4",
-            viewport="desktop",
-            description="Metrics tiles four-column on desktop (≥64rem)",
+            description="Metrics tiles single-column on mobile",
         ),
     ],
 )

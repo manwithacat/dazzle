@@ -97,7 +97,7 @@ class _App:
 def _seed(app: _App, auth_store: Any) -> None:
     import psycopg
 
-    from dazzle.i18n.display_locale import calendar_today
+    from dazzle.i18n.display_locale import calendar_today, get_display_locale
 
     if auth_store.get_user_by_email(_ADMIN) is None:
         auth_store.create_user(_ADMIN, _PASSWORD, roles=["admin"])
@@ -111,8 +111,12 @@ def _seed(app: _App, auth_store: Any) -> None:
         "before_month": datetime.combine(month_start - timedelta(days=1), noon),
         "last_year": datetime.combine(today.replace(month=1, day=1) - timedelta(days=40), noon),
     }
-    app.expected_week = sum(1 for s in stamps.values() if s.date() >= week_start)
-    app.expected_month = sum(1 for s in stamps.values() if s.date() >= month_start)
+    # Calendar days in the tenant timezone, as `start_of(...)` reads them: in
+    # the hour after local midnight `now` is already Monday in London while
+    # its UTC date is still Sunday.
+    local_day = {k: get_display_locale().to_display_datetime(v).date() for k, v in stamps.items()}
+    app.expected_week = sum(1 for d in local_day.values() if d >= week_start)
+    app.expected_month = sum(1 for d in local_day.values() if d >= month_start)
     with psycopg.connect(app.db_url) as conn:
         for label, stamp in stamps.items():
             _insert(

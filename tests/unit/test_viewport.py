@@ -117,7 +117,9 @@ class TestComponentPatterns:
             return {a.viewport: a.expected for a in pattern.assertions}
 
         assert counts(GRID_PATTERN) == {"mobile": "1", "tablet": "2", "desktop": "3"}
-        assert counts(METRICS_PATTERN) == {"mobile": "1", "tablet": "2", "desktop": "4"}
+        # #1826: the metrics grid is auto-fill (container-width driven) — only
+        # the phone case is breakpoint-stable.
+        assert counts(METRICS_PATTERN) == {"mobile": "1"}
 
     def test_all_patterns_dict_complete(self) -> None:
         assert set(ALL_PATTERNS) == {"drawer", "grid", "metrics"}
@@ -427,14 +429,8 @@ class TestGridColumnCounts:
     assertion per viewport, matching the CSS breakpoints."""
 
     def test_grid_one_assertion_per_viewport(self) -> None:
-        for pattern in (GRID_PATTERN, METRICS_PATTERN):
-            viewports = [a.viewport for a in pattern.assertions]
-            assert viewports == ["mobile", "tablet", "desktop"]
-
-    def test_metrics_desktop_is_four_cols(self) -> None:
-        desktop = [a for a in METRICS_PATTERN.assertions if a.viewport == "desktop"]
-        assert len(desktop) == 1
-        assert desktop[0].expected == "4"
+        viewports = [a.viewport for a in GRID_PATTERN.assertions]
+        assert viewports == ["mobile", "tablet", "desktop"]
 
     def test_no_dashboard_grid_pattern(self) -> None:
         # #1295 — `.dz-dashboard-grid` is a uniform 12-track grid at every
