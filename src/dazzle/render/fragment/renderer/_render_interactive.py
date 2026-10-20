@@ -32,6 +32,7 @@ See issue #1064 for the full decomposition plan.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -767,6 +768,8 @@ class _RenderInteractiveMixin:
                 )
             return (
                 f'<select class="dz-queue-filter-select" '
+                # #1838: no visible label — the column label is the name.
+                f'aria-label="{ctx.escape_attr(col.label)}" '
                 f'hx-get="{endpoint}" '
                 f'hx-target="{target}" '
                 f'hx-swap="outerHTML" '
@@ -803,20 +806,28 @@ class _RenderInteractiveMixin:
         # per-control hx-get + hx-include never carried sort state). Text
         # filters apply on change (blur/Enter) for now — a debounced-input
         # filter seam is a tracked HM follow-up.
+        def _control_id(col: FilterColumn) -> str:
+            # #1838: the visible `<label>` is a sibling, so it names the
+            # control only through `for`/`id`. Keys are DSL field names;
+            # anything outside the id-safe set is folded to `-`.
+            safe_key = re.sub(r"[^A-Za-z0-9_-]", "-", col.key)
+            return ctx.escape_attr(f"{f.tbody_id}-filter-{safe_key}")
+
         def _control(col: FilterColumn) -> str:
             name = f"filter[{ctx.escape_attr(col.key)}]"
+            cid = _control_id(col)
             sel = ctx.escape_attr(col.selected)
             all_opt = f'<option value="">{ctx.escape(clerk_filter_all_label(col.label))}</option>'
             if col.filter_type == "text":
                 placeholder = ctx.escape_attr(f"Filter {col.label.lower()}…")
                 return (
-                    f'<input type="text" name="{name}" class="dz-filter-input" '
+                    f'<input type="text" name="{name}" id="{cid}" class="dz-filter-input" '
                     f'data-dz-grid-filter="{name}" '
                     f'placeholder="{placeholder}" value="{sel}">'
                 )
             if col.filter_type == "ref":
                 return (
-                    f'<select name="{name}" class="dz-filter-select" '
+                    f'<select name="{name}" id="{cid}" class="dz-filter-select" '
                     f'data-dz-grid-filter="{name}" '
                     f'data-ref-api="{ctx.escape_attr(col.ref_api)}" '
                     f'data-selected-value="{sel}" '
@@ -832,14 +843,15 @@ class _RenderInteractiveMixin:
                     f"{ctx.escape(display)}</option>"
                 )
             return (
-                f'<select name="{name}" class="dz-filter-select" '
+                f'<select name="{name}" id="{cid}" class="dz-filter-select" '
                 f'data-dz-grid-filter="{name}">'
                 f"{options_html}</select>"
             )
 
         cells = "".join(
             f'<div class="dz-filter-cell">'
-            f'<label class="dz-filter-label">{ctx.escape(col.label)}</label>'
+            f'<label class="dz-filter-label" for="{_control_id(col)}">'
+            f"{ctx.escape(col.label)}</label>"
             f"{_control(col)}</div>"
             for col in f.columns
         )

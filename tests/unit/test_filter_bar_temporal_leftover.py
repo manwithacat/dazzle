@@ -79,6 +79,13 @@ def _select_hx_get(html: str) -> str:
     return chunk.split("hx-get=", 1)[1].split(" ", 1)[0].strip("\"'")
 
 
+def test_queue_filter_select_is_named_by_its_column_label() -> None:
+    """#1838: the queue bar has no visible label, so the select carries
+    the column label as its accessible name (axe select-name)."""
+    html = _render()
+    assert '<select class="dz-queue-filter-select" aria-label="Status" ' in html
+
+
 def test_filter_bar_echoes_leftover_honest_include_closed() -> None:
     href = _select_hx_get(_render(include_closed="true"))
     assert "include_closed=true" in href

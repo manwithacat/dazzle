@@ -12,6 +12,8 @@ DataListScroll (scroll/loading/empty/loading-sr), 4c ColumnVisibilityMenu,
 
 from __future__ import annotations
 
+import pytest
+
 from dazzle.render.fragment import FragmentRenderer
 from dazzle.render.fragment.primitives import Table
 
@@ -283,9 +285,27 @@ class TestListFilterBar:
         assert 'data-ref-api="/client"' in html
         assert "x-init" not in html  # F4e: auto-mounted off data-ref-api
 
-    def test_labels_present(self) -> None:
-        html = _render(self._bar((self._select_col(),)))
-        assert '<label class="dz-filter-label">Status</label>' in html
+    @pytest.mark.parametrize(
+        ("over", "tag"),
+        [
+            ({}, "<select"),
+            ({"filter_type": "ref", "options": (), "ref_api": "/status"}, "<select"),
+            ({"filter_type": "text", "options": ()}, '<input type="text"'),
+        ],
+        ids=["select", "ref", "text"],
+    )
+    def test_label_is_associated_with_its_control(self, over, tag) -> None:
+        # #1838: the sibling <label> names the control only via for/id
+        # (axe select-name / label, WCAG 4.1.2).
+        html = _render(self._bar((self._select_col(**over),)))
+        assert '<label class="dz-filter-label" for="task-body-filter-status">Status</label>' in html
+        assert f'{tag} name="filter[status]" id="task-body-filter-status" ' in html
+
+    def test_label_id_folds_unsafe_key_chars(self) -> None:
+        html = _render(self._bar((self._select_col(key="company.name", label="Company"),)))
+        assert 'for="task-body-filter-company-name"' in html
+        assert 'id="task-body-filter-company-name"' in html
+        assert 'name="filter[company.name]"' in html
 
 
 # ── 4e support: data-dz-col on thead, pagination footer, live region ──
