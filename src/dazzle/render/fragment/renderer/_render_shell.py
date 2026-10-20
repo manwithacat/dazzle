@@ -550,9 +550,11 @@ class _RenderShellMixin:
 
         Cycle 1818 — stamp open-discovery on ``/app/<entity>…`` sidebar hops
         (create/edit/view classify via ``link_open_discovery_attr_suffix``)
-        so agents attr-read primary chrome without scraping labels. When
-        stamped, open-discovery owns ``aria-label`` (``Open {Entity}``);
-        product-label aria stays only for unstamped paths (home / non-app).
+        so agents attr-read primary chrome without scraping labels.
+
+        #1839 — the ``aria-label`` is always the product label (the visible
+        text), stamped or not; the open hop phrase lives only in
+        ``data-dz-open-label`` (WCAG 2.5.3 Label in Name).
         """
         raw_href = n.href.value
         href = ctx.escape_attr(raw_href)
@@ -564,8 +566,7 @@ class _RenderShellMixin:
         slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", slug).strip("-").lower()
         nav_attr = f' data-dz-nav="{ctx.escape_attr(slug)}"' if slug else ""
         open_extra = link_open_discovery_attr_suffix(str(raw_href))
-        # Avoid duplicate aria-label when open-discovery already stamps one.
-        aria_attr = "" if open_extra else f' aria-label="{ctx.escape_attr(n.label)}"'
+        aria_attr = f' aria-label="{ctx.escape_attr(n.label)}"'
         # HaTchi-MaXchi Phase 3 (TASTE-6): every nav item carries a
         # registry icon — authored names win, otherwise inferred from the
         # label. Inline SVG; inference is registry-closed so this seam

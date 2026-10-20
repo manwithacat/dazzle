@@ -21,8 +21,9 @@ def test_queue_drill_stamps_dual_open_discovery_attrs() -> None:
     assert 'data-dz-open-via="id"' in html
     assert 'data-dz-open-entity="Ticket"' in html
     assert 'data-dz-open-label="Open Ticket"' in html
-    assert 'aria-label="Open Ticket"' in html
-    assert 'title="Open Ticket"' in html
+    # #1839: the visible title is the link's name — no aria-label/title.
+    assert 'aria-label="Open Ticket"' not in html
+    assert 'title="Open Ticket"' not in html
     # Row-level single-hop chain (agent attr-first discovery)
     assert 'data-dz-open-chain="/app/ticket/t-42"' in html
     assert 'data-dz-open-chain-via="id"' in html

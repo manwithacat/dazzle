@@ -187,7 +187,9 @@ class TestColumnVisibilityMenu:
         assert 'class="dz-popover dz-table-col-menu"' in html
         assert "data-dz-popover" in html
         assert "dz-table-col-menu-trigger" in html
-        assert 'aria-label="Toggle column visibility"' in html
+        # #1839: the visible "Columns" is the name (WCAG 2.5.3)
+        assert "Toggle column visibility" not in html
+        assert "</svg>Columns</summary>" in html
         assert "colMenuOpen" not in html, "no Alpine open/close state"
 
     def test_panel_is_a_plain_disclosure(self) -> None:

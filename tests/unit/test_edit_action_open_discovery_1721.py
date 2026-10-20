@@ -64,7 +64,7 @@ def test_data_row_edit_non_app_path_skips_open() -> None:
     assert 'href="/tasks/abc-123/edit"' in html
     assert 'data-dazzle-action="Task.edit"' in html
     assert "data-dz-update-drill" not in html
-    assert 'aria-label="Edit Ada"' in html or "aria-label=" in html
+    assert 'aria-label="Edit Ada"' in html
 
 
 def test_data_row_no_edit_when_update_denied() -> None:

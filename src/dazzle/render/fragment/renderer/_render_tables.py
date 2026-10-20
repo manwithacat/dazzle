@@ -885,8 +885,9 @@ class _RenderTablesMixin:
             '<details class="dz-popover dz-table-col-menu" data-dz-popover '
             'data-dz-align="end">'
             '<summary class="dz-button dz-table-col-menu-trigger" '
-            'data-dz-variant="outline" '
-            'aria-label="Toggle column visibility">'
+            # #1839: no aria-label — the visible "Columns" is the name
+            # (WCAG 2.5.3 Label in Name).
+            'data-dz-variant="outline">'
             '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" '
             'aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'
             '<rect x="1" y="1" width="3" height="12" rx="0.5" stroke="currentColor" '

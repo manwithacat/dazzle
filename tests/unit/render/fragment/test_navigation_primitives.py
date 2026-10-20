@@ -60,17 +60,17 @@ _GROUP_ITEMS = (NavItem(label="A", href=URL("/a")),)
             id="item-label-escaped",
         ),
         # TR-20 / cycle 1818: stable agent hooks; /app/<entity> hops stamp
-        # open-discovery, which owns aria-label.
+        # open-discovery, but the product label stays the name (#1839).
         pytest.param(
             NavItem(label="Systems", href=URL("/app/system")),
             (
-                'aria-label="Open System"',
+                'aria-label="Systems"',
                 'data-dz-nav="system"',
                 'href="/app/system"',
                 "data-dz-ref-link-drill",
                 'data-dz-open-entity="System"',
             ),
-            (),
+            ('aria-label="Open System"', 'title="Open System"'),
             id="item-app-entity-hop-stamps-open-discovery",
         ),
         # Unstamped (home / non-app) paths keep the product-label aria.

@@ -3,8 +3,9 @@
 Agents attr-read ``/app/<entity>…`` primary chrome hops from Sidebar /
 NavGroup links without scraping labels. Marketing paths, bare ``/app``,
 and non-app hrefs stay unstamped — same path gate as menubar / nav-menu /
-workspace primary VIEW hops. Product-label ``aria-label`` is kept only
-when open-discovery does not stamp (avoids duplicate aria-label).
+workspace primary VIEW hops. The ``aria-label`` is always the product
+label (the visible text); the hop phrase stays in ``data-dz-open-label``
+(#1839, WCAG 2.5.3 Label in Name).
 """
 
 from __future__ import annotations
@@ -33,9 +34,10 @@ def test_sidebar_entity_item_stamps_open_discovery() -> None:
     assert 'data-dz-open-chain="/app/tasks"' in html
     assert 'data-dz-nav="tasks"' in html
     assert 'aria-current="page"' in html
-    # Open-discovery owns aria-label when stamped
-    assert 'aria-label="Open Tasks"' in html
-    assert 'aria-label="Open Projects"' in html
+    # #1839: the product label names the link, stamped or not
+    assert 'aria-label="Tasks"' in html
+    assert 'aria-label="Projects"' in html
+    assert 'aria-label="Open Tasks"' not in html
 
 
 def test_sidebar_group_item_stamps_open_discovery() -> None:

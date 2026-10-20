@@ -261,7 +261,13 @@ def search_open_attr_suffix(href: str) -> str:
 
 
 def hub_open_discovery_attrs(drill_url: str, *, via: str = "id") -> tuple[str, str]:
-    """Primary dual-open attrs (link attrs, host chain attrs) for one hop."""
+    """Primary dual-open attrs (link attrs, host chain attrs) for one hop.
+
+    #1839 — agent-facing ``data-dz-open-*`` only. No ``aria-label`` /
+    ``title``: on a link with visible text they replaced that text as the
+    accessible name (WCAG 2.5.3 Label in Name). An icon-only control names
+    itself at its own emitter (e.g. the row pencil's ``Edit {row}``).
+    """
     via_field = (via or "id").strip() or "id"
     via_attr = _html.escape(via_field, quote=True)
     href = _html.escape(drill_url, quote=True)
@@ -269,15 +275,12 @@ def hub_open_discovery_attrs(drill_url: str, *, via: str = "id") -> tuple[str, s
     ent_attr = _html.escape(ent, quote=True)
     phrase = open_hop_label(ent, via_field)
     phrase_attr = _html.escape(phrase, quote=True)
-    aria = _html.escape(phrase, quote=True)
     link_attrs = (
         f'data-dz-open-via="{via_attr}" '
         f'data-dz-open-entity="{ent_attr}" '
         f'data-dz-open-role="primary" '
         f'data-dz-open-hop="0" '
         f'data-dz-open-label="{phrase_attr}" '
-        f'aria-label="{aria}" '
-        f'title="{phrase_attr}" '
     )
     host_attrs = (
         f' data-dz-open-chain="{href}"'
