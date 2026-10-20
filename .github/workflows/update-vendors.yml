@@ -41,6 +41,15 @@ jobs:
       - name: Rebuild dist bundles
         if: steps.vendor_diff.outputs.changed == 'true'
         run: python scripts/build_dist.py
+      - name: Rebuild the HaTchi-MaXchi gallery
+        # The gallery pages print the vendored Lucide version, so a lucide
+        # bump left site/ stale and failed the HM contract gate on every
+        # vendor PR (#1836). build_site.py imports the contract models and
+        # the FastAPI preview app, hence the two installs.
+        if: steps.vendor_diff.outputs.changed == 'true'
+        run: |
+          pip install pydantic fastapi
+          python packages/hatchi-maxchi/site/build_site.py
       - name: Assert vendor bot App is configured
         # The PR author must equal the commit author, or branch protection's
         # `require_extra_approval_for_unattributed_changes` can never be
