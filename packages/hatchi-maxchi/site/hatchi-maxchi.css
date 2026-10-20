@@ -127,9 +127,12 @@
 
   /* ─────────────────────────── radii ───────────────────────────────
    * Use semantic names. Full = pill. */
-  /* Focus ring (HaTchi-MaXchi TASTE-1): accent at 40% alpha, 2px, offset
-     2px — one ring vocabulary for every interactive element. */
-  --focus-ring-color: color-mix(in oklab, var(--colour-brand) 40%, transparent);
+  /* Focus ring (HaTchi-MaXchi TASTE-1): solid accent, 2px, offset 2px —
+     one ring vocabulary for every interactive element. Solid, not
+     alpha-mixed: the ring is a non-text indicator and must hold 3:1
+     against the page (WCAG 1.4.11; #1840 measured the old 40% ring at
+     1.86:1 on white). */
+  --focus-ring-color: var(--colour-brand);
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
 
@@ -271,6 +274,11 @@
   --colour-text: light-dark(var(--neutral-900), var(--neutral-50));
   --colour-text-muted: light-dark(var(--neutral-600), var(--neutral-400));
   --colour-border: light-dark(var(--neutral-200), var(--neutral-700));
+  /* Form-control boundary (inputs, selects, textareas): a non-text
+     indicator that identifies the control, so it must hold 3:1 against
+     surface/bg (WCAG 1.4.11, #1840). --colour-border stays the quiet
+     divider/card edge; controls never use it for their boundary. */
+  --colour-border-control: light-dark(var(--neutral-500), var(--neutral-400));
   --colour-brand: var(--brand-600);
   /* Brand as TEXT (badges/avatars/tags on washes): scheme-aware, unlike
      --colour-brand which stays the vivid FILL accent in both schemes. */
@@ -330,6 +338,7 @@
       --colour-text: var(--neutral-50);
       --colour-text-muted: var(--neutral-400);
       --colour-border: var(--neutral-700);
+      --colour-border-control: var(--neutral-400);
       --colour-success: oklch(74% 0.13 142.50);
       --colour-warning: oklch(80% 0.13 70.08);
       --colour-danger: oklch(75% 0.15 25.33);
@@ -762,6 +771,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 @media (prefers-contrast: high) {
   :root {
     --colour-border: light-dark(var(--neutral-600), var(--neutral-400));
+    --colour-border-control: light-dark(var(--neutral-700), var(--neutral-300));
     --colour-text-muted: light-dark(var(--neutral-700), var(--neutral-300));
   }
   .btn {
@@ -1371,7 +1381,7 @@ select {
   box-sizing: border-box;
   background: var(--colour-surface);
   color: var(--colour-text);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
   padding: var(--space-sm) var(--space-md);
 }
@@ -2952,7 +2962,7 @@ dialog.drawer > form {
   font-size: var(--text-sm);
   color: var(--colour-text);
   background: var(--colour-surface);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
   transition:
     box-shadow var(--duration-base) var(--ease-out),
@@ -3043,7 +3053,7 @@ select.form-input {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   color: var(--colour-text-muted);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-inline-end: 0;
   border-start-start-radius: var(--radius-sm);
   border-end-start-radius: var(--radius-sm);
@@ -3069,7 +3079,7 @@ select.form-input {
   background-size: 0.75rem 0.75rem;
   color: var(--colour-text);
   font-size: var(--text-sm);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-inline-end: 0;
   border-start-start-radius: var(--radius-sm);
   border-end-start-radius: var(--radius-sm);
@@ -3103,6 +3113,7 @@ select.form-input {
 .file-upload-input {
   font-size: var(--text-sm);
   color: var(--colour-text);
+  max-width: 100%; /* the UA picker has an intrinsic width; never let it widen the page (WCAG 1.4.10, #1840) */
 }
 
 .file-upload-preview {
@@ -3220,7 +3231,7 @@ select.form-input {
   inline-size: 2rem;
   padding: 0;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   background: transparent;
   cursor: pointer;
   transition: filter var(--duration-fast) var(--ease-out);
@@ -3277,7 +3288,7 @@ select.form-input {
   inline-size: 11ch;
   min-inline-size: 8ch;
   padding: 0.25rem 0.4rem;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
   background: var(--colour-bg);
 }
@@ -3306,7 +3317,7 @@ select.form-input {
   inline-size: 12ch;
   min-inline-size: 10ch;
   padding: 0.25rem 0.4rem;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
   background: var(--colour-bg);
 }
@@ -3331,7 +3342,7 @@ select.form-input {
   min-inline-size: 6ch;
   text-align: end;
   padding: 0.25rem 0.4rem;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
   background: var(--colour-bg);
 }
@@ -3379,7 +3390,7 @@ select.form-input {
   min-inline-size: 4.5ch;
   text-align: end;
   padding: 0.25rem 0.4rem;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
   background: var(--colour-bg);
 }
@@ -3554,7 +3565,7 @@ input.radio {
   width: 1rem;
   height: 1rem;
   margin: 0;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   background: var(--colour-surface);
   cursor: pointer;
   flex-shrink: 0;
@@ -4211,7 +4222,7 @@ input.switch:checked::before {
     font-size: var(--text-base);
     color: var(--colour-text);
     background: var(--colour-surface);
-    border: 1px solid var(--colour-border);
+    border: 1px solid var(--colour-border-control);
     border-radius: var(--radius-sm);
   }
 
@@ -4246,7 +4257,7 @@ input.switch:checked::before {
     font-size: var(--text-base);
     color: var(--colour-text);
     background: var(--colour-surface);
-    border: 1px solid var(--colour-border);
+    border: 1px solid var(--colour-border-control);
     border-radius: var(--radius-sm);
   }
 
@@ -4922,6 +4933,7 @@ a.user-chip-link:hover .user-chip__name {
 
 .breadcrumb ol {
   display: flex;
+  flex-wrap: wrap; /* long trails wrap instead of widening the page at 320px (WCAG 1.4.10, #1840) */
   align-items: center;
   gap: var(--space-sm);
   list-style: none;
@@ -4934,6 +4946,8 @@ a.user-chip-link:hover .user-chip__name {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--colour-text-muted);
 }
 
@@ -5792,7 +5806,7 @@ body.cursor-col-resize * {
   flex: none;
   border-radius: var(--radius-full);
   background: var(--colour-surface-muted);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   transition:
     background var(--duration-fast) var(--ease-out),
     border-color var(--duration-fast) var(--ease-out);
@@ -7772,7 +7786,7 @@ summary.table-col-menu-trigger::-webkit-details-marker {
   min-height: 2rem;
   width: 100%;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   background-color: var(--colour-surface);
   padding-inline: var(--space-sm);
   padding-block: 0.25rem;
@@ -8204,14 +8218,13 @@ select.filter-select {
   color: var(--colour-text-muted);
 }
 
+/* Underlined at rest: the link sits inside the empty-state sentence, so
+ * colour alone must not be what marks it (WCAG 1.4.1, #1840). */
 .tr-empty-link {
   margin-inline-start: var(--space-sm);
   color: var(--colour-brand);
-  text-decoration: none;
-}
-
-.tr-empty-link:hover {
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 }
@@ -8564,6 +8577,18 @@ select.filter-select {
 
 .sidebar-toggle__icon::after {
   inset-block-start: 6px;
+}
+
+/* Forced colours (Windows contrast themes) drop author backgrounds, which
+ * would erase the background-drawn hamburger bars and leave an empty
+ * button (#1840). Opt the bars out and paint them in the system colour. */
+@media (forced-colors: active) {
+  .sidebar-toggle__icon,
+  .sidebar-toggle__icon::before,
+  .sidebar-toggle__icon::after {
+    forced-color-adjust: none;
+    background: ButtonText;
+  }
 }
 
 .topbar-title {
@@ -9026,7 +9051,7 @@ select.filter-select {
   background-repeat: no-repeat;
   background-position: right 0.4rem center;
   background-size: 0.75rem 0.75rem;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
 }
 
@@ -9542,7 +9567,7 @@ a.action-card:hover {
   background-repeat: no-repeat;
   background-position: right 0.4rem center;
   background-size: 0.75rem 0.75rem;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   font-size: var(--text-xs);
   color: var(--colour-text);
 }
@@ -12757,7 +12782,7 @@ onboarding-step {
   width: 1rem;
   height: 1rem;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   accent-color: var(--colour-brand);
 }
 
@@ -12905,7 +12930,7 @@ onboarding-step {
   padding-inline: var(--space-md);
   border-radius: var(--radius-sm);
   background: var(--colour-surface);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   font-size: var(--text-sm);
   color: var(--colour-text);
 }
@@ -13012,7 +13037,7 @@ onboarding-step {
   padding-inline: var(--space-md);
   border-radius: var(--radius-sm);
   background: var(--colour-surface);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   font-size: var(--text-sm);
   color: var(--colour-text);
 }
@@ -13393,7 +13418,7 @@ onboarding-step {
   width: 9rem;
   border-radius: var(--radius-sm);
   background: var(--colour-surface);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   font-size: var(--text-xs);
   color: var(--colour-text);
 }
@@ -13422,7 +13447,7 @@ onboarding-step {
   padding: 0.15rem 0.35rem;
   border-radius: var(--radius-sm);
   background: var(--colour-surface);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
 }
 
 .date-range-iso:invalid {
@@ -13463,7 +13488,7 @@ onboarding-step {
   padding-inline-end: 2rem; /* room for the spinner */
   border-radius: var(--radius-sm);
   background: var(--colour-surface);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   font-size: var(--text-sm);
   color: var(--colour-text);
   outline: none;
@@ -13583,7 +13608,7 @@ onboarding-step {
   padding-inline-end: 2rem; /* room for trailing chrome (if any) */
   border-radius: var(--radius-sm);
   background: var(--colour-surface);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   font-size: var(--text-sm);
   color: var(--colour-text);
   outline: none;
@@ -14290,7 +14315,7 @@ onboarding-step {
   padding-inline: var(--space-md);
   border-radius: var(--radius-sm);
   background: var(--colour-bg);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   color: var(--colour-text);
   font-size: 1.25rem;
   font-weight: var(--weight-semibold);
@@ -14468,7 +14493,7 @@ onboarding-step {
   width: 3.5rem;
   height: 1.75rem;
   text-align: center;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
   background: var(--colour-surface);
   color: var(--colour-text);
@@ -15820,7 +15845,7 @@ onboarding-step {
   padding-block: var(--space-sm);
   border-radius: var(--radius-sm);
   background: var(--colour-bg);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   color: var(--colour-text);
   font-size: var(--text-sm);
   transition: box-shadow var(--duration-base) var(--ease-out),

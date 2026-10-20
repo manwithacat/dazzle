@@ -125,7 +125,12 @@ Each rule states its motivating baseline evidence and its enforcement.
 Rules marked *advisory* become gated as Phases 2–3 land the machinery.
 
 - **TASTE-1** — Every interactive element gets a designed focus ring: 2px
-  accent at ~40% alpha, 2px offset, on `:focus-visible`. *(Principle 8;
+  solid accent (`--focus-ring-color: var(--colour-brand)`), 2px offset, on
+  `:focus-visible`. Solid, never alpha-mixed: the ring must hold WCAG 1.4.11
+  3:1 against surface and bg in both themes (#1840 measured the old 40%-alpha
+  ring at 1.86:1; gated by `tests/unit/test_token_contrast_wcag.py`). Form
+  controls draw their boundary with `--colour-border-control` (3:1), not the
+  quiet divider `--colour-border`. *(Principle 8;
   evidence: state_completeness gap 2.46 — judges saw browser-default
   focus/affordances. Enforcement: token + component CSS in Phase 2;
   panel dimension `state_completeness`.)*

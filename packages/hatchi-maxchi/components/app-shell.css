@@ -185,6 +185,18 @@
   inset-block-start: 6px;
 }
 
+/* Forced colours (Windows contrast themes) drop author backgrounds, which
+ * would erase the background-drawn hamburger bars and leave an empty
+ * button (#1840). Opt the bars out and paint them in the system colour. */
+@media (forced-colors: active) {
+  .dz-sidebar-toggle__icon,
+  .dz-sidebar-toggle__icon::before,
+  .dz-sidebar-toggle__icon::after {
+    forced-color-adjust: none;
+    background: ButtonText;
+  }
+}
+
 .dz-topbar-title {
   flex: 1 1 0;
   min-width: 0;

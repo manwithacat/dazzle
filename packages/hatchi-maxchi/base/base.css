@@ -88,7 +88,7 @@ select {
   box-sizing: border-box;
   background: var(--colour-surface);
   color: var(--colour-text);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
   padding: var(--space-sm) var(--space-md);
 }

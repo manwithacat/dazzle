@@ -20,8 +20,36 @@ TOKENS_CSS = Path(__file__).parents[2] / "packages" / "hatchi-maxchi" / "tokens"
 _DECL = re.compile(r"(--[a-z0-9-]+)\s*:\s*([^;]+);")
 
 
+def _root_block(css: str) -> str:
+    """The first top-level ``:root { … }`` block — the light-dark() source.
+
+    Later blocks (the ``@supports not (light-dark)`` dark fallback) redeclare
+    the semantic tokens with their DARK values; reading the whole file let
+    those overwrite the light-dark() pairs, so the "light" cases silently
+    measured dark values (#1840).
+    """
+    start = css.index(":root {")
+    depth = 0
+    for i in range(start, len(css)):
+        if css[i] == "{":
+            depth += 1
+        elif css[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return css[start : i + 1]
+    raise AssertionError(":root block not closed")
+
+
 def _parse_tokens() -> dict[str, str]:
-    return {m.group(1): m.group(2).strip() for m in _DECL.finditer(TOKENS_CSS.read_text())}
+    block = _root_block(TOKENS_CSS.read_text())
+    return {m.group(1): m.group(2).strip() for m in _DECL.finditer(block)}
+
+
+def _parse_dark_fallback() -> dict[str, str]:
+    css = TOKENS_CSS.read_text()
+    start = css.index("@supports not (color: light-dark(")
+    block = css[start : css.index("}", start)]
+    return {m.group(1): m.group(2).strip() for m in _DECL.finditer(block)}
 
 
 def _resolve(tokens: dict[str, str], value: str, theme: str) -> str:
@@ -121,8 +149,15 @@ PAIRS: list[tuple[str, str, float]] = [
     ("--colour-danger", "--colour-danger-soft", 4.5),
     ("--colour-success", "--colour-success-soft", 4.5),
     ("--colour-warning", "--colour-warning-soft", 4.5),
-    # borders only need non-text 3:1 against surface? Borders are decorative —
-    # skip. Focus ring is alpha-composited — covered by axe at e2e time.
+    # Non-text indicators (WCAG 1.4.11, 3:1; #1840). --colour-border stays
+    # a decorative divider and is deliberately NOT gated; form controls use
+    # --colour-border-control. The focus ring is solid --colour-brand.
+    ("--colour-border-control", "--colour-surface", 3.0),
+    ("--colour-border-control", "--colour-bg", 3.0),
+    ("--colour-brand", "--colour-surface", 3.0),
+    ("--colour-brand", "--colour-bg", 3.0),
+    ("--focus-ring-color", "--colour-surface", 3.0),
+    ("--focus-ring-color", "--colour-bg", 3.0),
 ]
 
 
@@ -135,3 +170,22 @@ def test_semantic_pair_meets_wcag(theme: str, fg: str, bg: str, minimum: float) 
         f"{fg} on {bg} [{theme}] = {ratio:.2f}:1, needs {minimum}:1 — "
         "recalibrate the ramp step in tokens.css (TASTE-7/11)"
     )
+
+
+def test_light_and_dark_resolve_differently() -> None:
+    """Guard against the #1840 parser bug: both themes measuring one value."""
+    tokens = _parse_tokens()
+    light = _oklch_components(tokens, tokens["--colour-surface"], "light")
+    dark = _oklch_components(tokens, tokens["--colour-surface"], "dark")
+    assert light != dark
+
+
+def test_dark_fallback_matches_light_dark_branch() -> None:
+    """The no-light-dark() fallback must carry the same dark values."""
+    tokens = _parse_tokens()
+    fallback = _parse_dark_fallback()
+    assert "--colour-border-control" in fallback
+    for name, value in fallback.items():
+        assert _oklch_components(tokens, value, "dark") == _oklch_components(
+            tokens, tokens[name], "dark"
+        ), f"{name}: @supports fallback disagrees with light-dark() dark branch"

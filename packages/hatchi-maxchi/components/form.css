@@ -86,7 +86,7 @@
   font-size: var(--text-sm);
   color: var(--colour-text);
   background: var(--colour-surface);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
   transition:
     box-shadow var(--duration-base) var(--ease-out),
@@ -177,7 +177,7 @@ select.dz-form-input {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   color: var(--colour-text-muted);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-inline-end: 0;
   border-start-start-radius: var(--radius-sm);
   border-end-start-radius: var(--radius-sm);
@@ -203,7 +203,7 @@ select.dz-form-input {
   background-size: 0.75rem 0.75rem;
   color: var(--colour-text);
   font-size: var(--text-sm);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-inline-end: 0;
   border-start-start-radius: var(--radius-sm);
   border-end-start-radius: var(--radius-sm);
@@ -237,6 +237,7 @@ select.dz-form-input {
 .dz-file-upload-input {
   font-size: var(--text-sm);
   color: var(--colour-text);
+  max-width: 100%; /* the UA picker has an intrinsic width; never let it widen the page (WCAG 1.4.10, #1840) */
 }
 
 .dz-file-upload-preview {
@@ -354,7 +355,7 @@ select.dz-form-input {
   inline-size: 2rem;
   padding: 0;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   background: transparent;
   cursor: pointer;
   transition: filter var(--duration-fast) var(--ease-out);
@@ -411,7 +412,7 @@ select.dz-form-input {
   inline-size: 11ch;
   min-inline-size: 8ch;
   padding: 0.25rem 0.4rem;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
   background: var(--colour-bg);
 }
@@ -440,7 +441,7 @@ select.dz-form-input {
   inline-size: 12ch;
   min-inline-size: 10ch;
   padding: 0.25rem 0.4rem;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
   background: var(--colour-bg);
 }
@@ -465,7 +466,7 @@ select.dz-form-input {
   min-inline-size: 6ch;
   text-align: end;
   padding: 0.25rem 0.4rem;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
   background: var(--colour-bg);
 }
@@ -513,7 +514,7 @@ select.dz-form-input {
   min-inline-size: 4.5ch;
   text-align: end;
   padding: 0.25rem 0.4rem;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   border-radius: var(--radius-sm);
   background: var(--colour-bg);
 }
@@ -688,7 +689,7 @@ input.dz-radio {
   width: 1rem;
   height: 1rem;
   margin: 0;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   background: var(--colour-surface);
   cursor: pointer;
   flex-shrink: 0;

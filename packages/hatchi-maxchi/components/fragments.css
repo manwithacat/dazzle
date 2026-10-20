@@ -657,7 +657,7 @@
   padding-block: var(--space-sm);
   border-radius: var(--radius-sm);
   background: var(--colour-bg);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   color: var(--colour-text);
   font-size: var(--text-sm);
   transition: box-shadow var(--duration-base) var(--ease-out),

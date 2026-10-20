@@ -351,6 +351,7 @@ a, button, .btn, input, select, textarea, .dz-card, .menu li a {
 @media (prefers-contrast: high) {
   :root {
     --colour-border: light-dark(var(--neutral-600), var(--neutral-400));
+    --colour-border-control: light-dark(var(--neutral-700), var(--neutral-300));
     --colour-text-muted: light-dark(var(--neutral-700), var(--neutral-300));
   }
   .btn {

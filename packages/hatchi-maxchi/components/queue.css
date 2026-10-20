@@ -81,7 +81,7 @@
   background-repeat: no-repeat;
   background-position: right 0.4rem center;
   background-size: 0.75rem 0.75rem;
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   font-size: var(--text-xs);
   color: var(--colour-text);
 }

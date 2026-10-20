@@ -145,6 +145,7 @@ a.dz-user-chip-link:hover .dz-user-chip__name {
 
 .dz-breadcrumb ol {
   display: flex;
+  flex-wrap: wrap; /* long trails wrap instead of widening the page at 320px (WCAG 1.4.10, #1840) */
   align-items: center;
   gap: var(--space-sm);
   list-style: none;
@@ -157,6 +158,8 @@ a.dz-user-chip-link:hover .dz-user-chip__name {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--colour-text-muted);
 }
 

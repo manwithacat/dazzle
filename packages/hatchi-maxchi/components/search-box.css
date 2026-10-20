@@ -28,7 +28,7 @@
   padding-inline: var(--space-md);
   border-radius: var(--radius-sm);
   background: var(--colour-surface);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   font-size: var(--text-sm);
   color: var(--colour-text);
 }
@@ -135,7 +135,7 @@
   padding-inline: var(--space-md);
   border-radius: var(--radius-sm);
   background: var(--colour-surface);
-  border: 1px solid var(--colour-border);
+  border: 1px solid var(--colour-border-control);
   font-size: var(--text-sm);
   color: var(--colour-text);
 }

@@ -94,9 +94,12 @@
 
   /* ─────────────────────────── radii ───────────────────────────────
    * Use semantic names. Full = pill. */
-  /* Focus ring (HaTchi-MaXchi TASTE-1): accent at 40% alpha, 2px, offset
-     2px — one ring vocabulary for every interactive element. */
-  --focus-ring-color: color-mix(in oklab, var(--colour-brand) 40%, transparent);
+  /* Focus ring (HaTchi-MaXchi TASTE-1): solid accent, 2px, offset 2px —
+     one ring vocabulary for every interactive element. Solid, not
+     alpha-mixed: the ring is a non-text indicator and must hold 3:1
+     against the page (WCAG 1.4.11; #1840 measured the old 40% ring at
+     1.86:1 on white). */
+  --focus-ring-color: var(--colour-brand);
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
 
@@ -238,6 +241,11 @@
   --colour-text: light-dark(var(--neutral-900), var(--neutral-50));
   --colour-text-muted: light-dark(var(--neutral-600), var(--neutral-400));
   --colour-border: light-dark(var(--neutral-200), var(--neutral-700));
+  /* Form-control boundary (inputs, selects, textareas): a non-text
+     indicator that identifies the control, so it must hold 3:1 against
+     surface/bg (WCAG 1.4.11, #1840). --colour-border stays the quiet
+     divider/card edge; controls never use it for their boundary. */
+  --colour-border-control: light-dark(var(--neutral-500), var(--neutral-400));
   --colour-brand: var(--brand-600);
   /* Brand as TEXT (badges/avatars/tags on washes): scheme-aware, unlike
      --colour-brand which stays the vivid FILL accent in both schemes. */
@@ -297,6 +305,7 @@
       --colour-text: var(--neutral-50);
       --colour-text-muted: var(--neutral-400);
       --colour-border: var(--neutral-700);
+      --colour-border-control: var(--neutral-400);
       --colour-success: oklch(74% 0.13 142.50);
       --colour-warning: oklch(80% 0.13 70.08);
       --colour-danger: oklch(75% 0.15 25.33);

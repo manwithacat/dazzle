@@ -438,7 +438,7 @@
     font-size: var(--text-base);
     color: var(--colour-text);
     background: var(--colour-surface);
-    border: 1px solid var(--colour-border);
+    border: 1px solid var(--colour-border-control);
     border-radius: var(--radius-sm);
   }
 
@@ -473,7 +473,7 @@
     font-size: var(--text-base);
     color: var(--colour-text);
     background: var(--colour-surface);
-    border: 1px solid var(--colour-border);
+    border: 1px solid var(--colour-border-control);
     border-radius: var(--radius-sm);
   }
 
