@@ -64,6 +64,20 @@ class TestSaveAndLoad:
 
         assert load_processes(tmp_path) == []
 
+    def test_load_skips_only_invalid_entries(self, tmp_path: Path, caplog):
+        """A removed trigger kind skips that entry, not the whole file (#1837)."""
+        save_processes(tmp_path, [_make_process(name="kept")])
+        processes_file = tmp_path / ".dazzle" / "processes" / "processes.json"
+        data = json.loads(processes_file.read_text())
+        stale = dict(data["processes"][0], name="stale", trigger={"kind": "schedule_cron"})
+        data["processes"].append(stale)
+        processes_file.write_text(json.dumps(data))
+
+        loaded = load_processes(tmp_path)
+
+        assert [p.name for p in loaded] == ["kept"]
+        assert "Skipping persisted process stale" in caplog.text
+
     def test_load_seeds_fallback(self, tmp_path: Path):
         seeds_dir = tmp_path / "dsl" / "seeds" / "processes"
         seeds_dir.mkdir(parents=True)

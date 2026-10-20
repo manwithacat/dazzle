@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Fixed
+- **A `json` field holding a list of scalars no longer 500s every read (#1835, consumer-forced by AegisMark).** `Repository._convert_row_dict` treated every `list` in a row as a to-many relation and recursed into its items, so `{"plan": ["…", "…"]}` raised `AttributeError: 'str' object has no attribute 'items'` on detail, list and REST reads. A `json` column's payload is now always a plain value; this also stops `{}` reading back as `None` and stops keys inside a JSON object being coerced by the entity's own field types. Outside json columns, only a list of dicts is treated as a relation. AegisMark deletes `pipeline/serve/json_list_rows.py`.
+- **One stale persisted process no longer drops the whole `processes.json` (#1837, consumer-forced by cyfuture).** `load_processes` validated the file as one `ProcessesContainer`, so the `schedule_cron` / `schedule_interval` trigger kinds removed in flense ship AU (v0.116–0.119) failed every entry and the app silently ran no persisted process. Entries are now validated one at a time; an invalid entry is skipped with an ERROR log naming the process and the reason. **Upgrade note:** a persisted process whose trigger kind is `schedule_cron` or `schedule_interval` is skipped; change it to `manual` (what the runtime did with it before the removal, since cron triggers never executed).
+
 ## [0.124.1] - 2026-10-20
 
 ### Security

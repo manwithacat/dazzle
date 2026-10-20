@@ -1517,19 +1517,25 @@ class Repository[T: BaseModel]:
         collected_relations: dict[str, _list[dict[str, Any]]] = {}
 
         for k, v in row.items():
-            if isinstance(v, dict):
+            field_type = self._field_types.get(k)
+            if (
+                field_type is not None
+                and field_type.kind == "scalar"
+                and field_type.scalar_type == ScalarType.JSON
+            ):
+                # A json column's payload is a value, never a relation (#1835)
+                result[k] = _db_to_python(v, field_type)
+            elif isinstance(v, dict):
                 # Nested relation - convert recursively
                 result[k] = self._convert_row_dict(v) if v else None
-            elif isinstance(v, list):
+            elif isinstance(v, list) and all(isinstance(item, dict) for item in v):
                 # To-many relation
                 result[k] = [self._convert_row_dict(item) for item in v]
                 # Store for computed field evaluation
-                collected_relations[k] = [
-                    dict(item) if isinstance(item, dict) else item for item in v
-                ]
+                collected_relations[k] = [dict(item) for item in v]
             else:
-                # Regular field
-                result[k] = _db_to_python(v, self._field_types.get(k))
+                # Regular field (including a list of scalars, #1835)
+                result[k] = _db_to_python(v, field_type)
 
         # Add computed fields
         if self._computed_fields:

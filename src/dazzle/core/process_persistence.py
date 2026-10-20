@@ -11,6 +11,8 @@ import logging
 import tempfile
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from dazzle.core.paths import project_processes_dir
 
 from .ir.process import ProcessesContainer, ProcessSpec
@@ -55,13 +57,32 @@ def load_processes(project_root: Path) -> list[ProcessSpec]:
         return []
 
     try:
-        content = processes_file.read_text(encoding="utf-8")
-        data = json.loads(content)
-        container = ProcessesContainer.model_validate(data)
-        return list(container.processes)
+        data = json.loads(processes_file.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, ValueError) as e:
         logger.warning("Failed to load processes from %s: %s", processes_file, e)
         return []
+    if not isinstance(data, dict) or not isinstance(data.get("processes", []), list):
+        logger.warning(
+            "Failed to load processes from %s: not a processes container", processes_file
+        )
+        return []
+
+    # Validate entry by entry so one stale entry (e.g. a trigger kind a newer
+    # IR removed) skips only itself, not the whole file (#1837).
+    processes: list[ProcessSpec] = []
+    for index, entry in enumerate(data.get("processes", [])):
+        try:
+            processes.append(ProcessSpec.model_validate(entry))
+        except ValidationError as e:
+            name = entry.get("name") if isinstance(entry, dict) else None
+            logger.error(
+                "Skipping persisted process %s (entry %d) in %s; it will not run: %s",
+                name or "<unnamed>",
+                index,
+                processes_file,
+                e,
+            )
+    return processes
 
 
 def save_processes(
