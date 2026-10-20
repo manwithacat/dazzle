@@ -111,7 +111,7 @@ def test_cli_commands_are_callable_in_process_without_typer_defaults() -> None:
     trap: `project / "dazzle.toml"` raised `TypeError` under a direct call until
     `_resolve_manifest` learned to treat "not a Path" as "no project".
     """
-    from typer._click import exceptions as click_exceptions
+    import typer
 
     from dazzle.cli.project import _resolve_manifest, lint_command, validate_command
 
@@ -122,7 +122,7 @@ def test_cli_commands_are_callable_in_process_without_typer_defaults() -> None:
     validate_command(manifest="dazzle.toml", project=REPO / EXAMPLE, format="human")
     try:
         lint_command(manifest=str(manifest), format="human")
-    except (SystemExit, click_exceptions.Exit):
+    except (SystemExit, typer.Exit):
         pass
 
     assert _resolve_manifest("dazzle.toml", None).name == "dazzle.toml"
