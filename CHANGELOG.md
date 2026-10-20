@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [0.124.1] - 2026-10-20
+
+### Security
+- **aiohttp 3.14.4 (Dependabot alerts 62–64).** aiohttp arrives transitively through pyhanko and aiobotocore; 3.14.4 patches unbounded memory/CPU use, a missing initial request/header timeout and an unenforced `Secure` cookie attribute. The lock moves aiohttp 3.14.3 → 3.14.4 and yarl 1.24.2 → 1.25.1, and `aiohttp>=3.14.4` joins `pillow` in `[tool.uv] constraint-dependencies` so the lock cannot resolve back below the patch.
+
+### Changed
+- **Dependency refresh (Dependabot #1828–#1834).** typer 0.27.3, temporalio 1.34.0, networkx 3.7, fpdf2 2.8.9, the OpenTelemetry 0.66b1 / 1.45.1 family, `pymdown-extensions>=12.3` for the docs build, and `actions/create-github-app-token` v3.3.0. typer 0.27 drops the private `typer._click.exceptions` module; code that catches a typer exit should catch the public `typer.Exit`.
+- **Lucide 1.59.0 (#1836).** The vendored icon set, the icon registry, the dist bundle, the HaTchi-MaXchi gallery and its Linux visual baselines move to Lucide 1.59.0; some icon glyphs render differently. The weekly vendor workflow now rebuilds the HM gallery after the dist bundles, because the gallery prints the vendored Lucide version and a bump left it stale.
+
 ## [0.124.0] - 2026-10-19
 
 ### Added
