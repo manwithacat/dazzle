@@ -397,9 +397,9 @@ def test_known_tenancy_topics_values_parse(value: str) -> None:
 
 _UNREAD_CASES = {
     "feedback_widget": (
-        "feedback_widget: enabled\n  position: bottom-left\n  shortcut: backtick\n"
+        "feedback_widget: enabled\n  position: bottom-left\n  categories: [bug]\n"
         "  severities: [blocker]\n",
-        "feedback_widget: `shortcut:`/`severities:` declared but not read by the runtime",
+        "feedback_widget: `categories:`/`severities:` declared but not read by the runtime",
         "feedback_widget: enabled\n  position: bottom-left\n",
     ),
     "service stub": (

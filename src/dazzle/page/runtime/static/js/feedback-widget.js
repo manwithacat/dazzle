@@ -58,6 +58,7 @@
   function FeedbackWidget() {
     this._errors = [];
     this._opener = null;
+    this._shortcut = configuredShortcut();
     this._category = null;
     this._severity = "minor";
     this._idempotencyKey = null;
@@ -173,7 +174,13 @@
     this._btn.type = "button";
     this._btn.className = "dz-feedback-btn";
     this._btn.setAttribute("aria-label", "Send feedback");
-    this._btn.setAttribute("title", "Send feedback (`)");
+    if (this._shortcut) {
+      var hint = describeShortcut(this._shortcut, "Ctrl");
+      this._btn.setAttribute("title", "Send feedback (" + hint + ")");
+      this._btn.setAttribute("aria-keyshortcuts", describeShortcut(this._shortcut, "Control"));
+    } else {
+      this._btn.setAttribute("title", "Send feedback");
+    }
     this._btn.appendChild(createChatIcon());
     this._btn.addEventListener("click", function () {
       self.open();
@@ -340,19 +347,97 @@
   /* Shortcut                                                             */
   /* ------------------------------------------------------------------ */
 
+  // DSL `shortcut:` names → KeyboardEvent.key (#1842, WCAG 2.1.4).
+  var KEY_ALIASES = {
+    backtick: "`",
+    backquote: "`",
+    grave: "`",
+    slash: "/",
+    backslash: "\\",
+    question: "?",
+    period: ".",
+    comma: ",",
+    semicolon: ";",
+    quote: "'",
+    space: " ",
+    esc: "Escape",
+  };
+  var MODIFIERS = { ctrl: "ctrl", control: "ctrl", alt: "alt", option: "alt",
+    shift: "shift", meta: "meta", cmd: "meta", command: "meta" };
+  var OFF_VALUES = { "": 1, none: 1, off: 1, disabled: 1, "false": 1 };
+
+  /** Parse the `dz-feedback-shortcut` meta (DSL `feedback_widget: shortcut:`)
+   *  into {key, ctrl, alt, shift, meta}, or null when the shortcut is off.
+   *  No meta → the `backtick` default. Combos join with `+` or `-`
+   *  (`ctrl+shift+f`, `alt-f`); the last part is the key. */
+  function parseShortcut(raw) {
+    var spec = raw == null ? "backtick" : String(raw).trim();
+    if (OFF_VALUES[spec.toLowerCase()]) return null;
+    var parts = spec.length === 1 ? [spec] : spec.split(/[+-](?=.)/);
+    var out = { key: "", ctrl: false, alt: false, shift: false, meta: false };
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i].trim();
+      var lower = p.toLowerCase();
+      if (i < parts.length - 1 && MODIFIERS[lower]) {
+        out[MODIFIERS[lower]] = true;
+      } else {
+        out.key = KEY_ALIASES[lower] || p;
+      }
+    }
+    return out.key ? out : null;
+  }
+
+  /** Key names for the tooltip ("Ctrl+Shift+F") and, with `Control`, for
+   *  `aria-keyshortcuts` ("Control+Shift+F"). */
+  function describeShortcut(sc, ctrlName) {
+    var parts = [];
+    if (sc.ctrl) parts.push(ctrlName);
+    if (sc.alt) parts.push("Alt");
+    if (sc.shift) parts.push("Shift");
+    if (sc.meta) parts.push("Meta");
+    parts.push(sc.key === " " ? "Space" : sc.key.length === 1 ? sc.key.toUpperCase() : sc.key);
+    return parts.join("+");
+  }
+
+  /** The configured shortcut: `<meta name="dz-feedback-shortcut">` from the
+   *  DSL, the backtick default when the meta is absent, null when `none`. */
+  function configuredShortcut() {
+    var el = document.querySelector('meta[name="dz-feedback-shortcut"]');
+    return parseShortcut(el ? el.getAttribute("content") : null);
+  }
+
+  // Focus targets where a bare key belongs to the control (WCAG 2.1.4):
+  // typing, a select's type-ahead, and keys pressed on a button or link.
+  var OWN_KEY_TAGS = { INPUT: 1, TEXTAREA: 1, SELECT: 1, BUTTON: 1, A: 1 };
+
+  function ownsBareKeys(target) {
+    if (!target) return false;
+    if (OWN_KEY_TAGS[target.tagName || ""]) return true;
+    if (target.isContentEditable) return true;
+    return !!(target.closest && target.closest('[contenteditable]:not([contenteditable="false"])'));
+  }
+
+  function matchesShortcut(sc, e) {
+    if (!e.key || e.key.toLowerCase() !== sc.key.toLowerCase()) return false;
+    if (!!e.ctrlKey !== sc.ctrl || !!e.altKey !== sc.alt || !!e.metaKey !== sc.meta) return false;
+    // Shift is part of a letter or named key; for punctuation it is how the
+    // character is typed ("?" is Shift+/), so it only counts when declared.
+    var punctuation = sc.key.length === 1 && !/[a-z0-9]/i.test(sc.key);
+    return sc.shift ? !!e.shiftKey : punctuation || !e.shiftKey;
+  }
+
   FeedbackWidget.prototype._bindShortcut = function () {
     var self = this;
+    var sc = this._shortcut;
+    if (!sc) return; // `shortcut: none`
+    var bare = !(sc.ctrl || sc.alt || sc.meta);
     document.addEventListener("keydown", function (e) {
-      if (e.key !== "`") return;
-      var tag = (e.target && e.target.tagName) || "";
-      if (
-        tag === "TEXTAREA" ||
-        tag === "INPUT" ||
-        (e.target && e.target.isContentEditable)
-      )
-        return;
+      if (!matchesShortcut(sc, e)) return;
+      // A bare-key shortcut never fires while focus owns the key; a
+      // Ctrl/Alt/Meta combination works from anywhere.
+      if (bare && ownsBareKeys(e.target)) return;
       e.preventDefault();
-      if (self._panel.classList.contains("open")) {
+      if (self.isOpen()) {
         self.close();
       } else {
         self.open();

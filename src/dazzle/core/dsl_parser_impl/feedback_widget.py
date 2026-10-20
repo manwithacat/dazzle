@@ -7,7 +7,7 @@ DSL Syntax:
 
     feedback_widget: enabled
       position: bottom-right
-      shortcut: backtick
+      shortcut: backtick          # or none, ctrl+shift+f, f1, ...
       categories: [bug, ux, visual, behaviour, enhancement, other]
       severities: [blocker, annoying, minor]
       capture: [url, persona, viewport, user_agent, console_errors, nav_history, page_snapshot]
@@ -88,12 +88,11 @@ class FeedbackWidgetParserMixin:
             if self.match(TokenType.DEDENT):
                 self.advance()
 
-        # Flense ship U: no framework code reads these three, so declaring
-        # them changes nothing.
+        # Flense ship U: no framework code reads these two, so declaring
+        # them changes nothing. (`shortcut:` reaches the client since #1842.)
         unread = [
             f"`{label}`"
             for label, value in (
-                ("shortcut:", shortcut),
                 ("categories:", categories),
                 ("severities:", severities),
             )

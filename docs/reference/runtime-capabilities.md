@@ -339,7 +339,7 @@ All fields except `enabled` are optional — the defaults above are used when om
 | Option | Default | Description |
 |--------|---------|-------------|
 | `position` | `bottom-right` | Screen corner for the floating button |
-| `shortcut` | `backtick` | Keyboard shortcut to open the panel |
+| `shortcut` | `backtick` | Key that toggles the panel. `none` turns it off; also a key name (`f1`, `slash`, `question`) or a combination joined by `+` or `-` (`ctrl+shift+f`, quote values containing `+`). A bare key is ignored while focus is in a text field, select, button, link or contenteditable; a Ctrl/Alt/Meta combination works anywhere. |
 | `categories` | 6 values | Dropdown options for feedback type |
 | `severities` | 3 values | Dropdown options for severity |
 | `capture` | 7 fields | Context automatically attached to each report |

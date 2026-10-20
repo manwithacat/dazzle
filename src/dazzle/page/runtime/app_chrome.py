@@ -59,6 +59,9 @@ class AppChrome:
             ``"none"`` (empty topbar title).
         page_purpose: ``[ui] page_purpose`` (#1811) — ``False`` stops the shell
             rendering ``ux: purpose:`` as ``.dz-page-purpose`` (default ``True``).
+        meta: App-wide ``<meta name content>`` pairs for the app shell —
+            today ``dz-feedback-shortcut`` (``feedback_widget: shortcut:``,
+            #1842) when the feedback widget is mounted.
     """
 
     css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",)
@@ -83,6 +86,7 @@ class AppChrome:
     use_cdn: bool = False
     topbar_title: TopbarTitleMode = "app"
     page_purpose: bool = True
+    meta: tuple[tuple[str, str], ...] = ()
 
 
 _FRAMEWORK_BUNDLE_CSS = "/static/dist/dazzle.min.css"
@@ -248,8 +252,12 @@ def resolve_app_chrome(
     # Feedback widget (`feedback_widget: enabled`) — the FeedbackReport entity
     # and /feedbackreports API are linker-generated; this mounts the client.
     feedback_widget = getattr(appspec, "feedback_widget", None) if appspec is not None else None
+    meta: list[tuple[str, str]] = []
     if feedback_widget is not None and getattr(feedback_widget, "enabled", False):
         js_scripts.append(FEEDBACK_WIDGET_JS)
+        # #1842: the DSL `shortcut:` reaches the client as a meta tag
+        # (`none` turns the shortcut off; the widget defaults to backtick).
+        meta.append(("dz-feedback-shortcut", str(feedback_widget.shortcut)))
 
     # Onboarding overlay JS (v0.71.6) — auto-mount when the project
     # declares any `guide` block. Apps without guides don't pay the
@@ -288,4 +296,5 @@ def resolve_app_chrome(
         use_cdn=use_cdn,
         topbar_title=topbar_title,
         page_purpose=page_purpose,
+        meta=tuple(meta),
     )

@@ -25,7 +25,10 @@ class FeedbackWidgetSpec(BaseModel):
     Attributes:
         enabled: Whether the widget is active.
         position: Screen position for the floating button.
-        shortcut: Keyboard shortcut to toggle the panel.
+        shortcut: Keyboard shortcut to toggle the panel (#1842): ``backtick``
+            (default), ``none`` to turn it off, a key name (``f1``, ``slash``)
+            or a combination joined by ``+`` / ``-`` (``ctrl+shift+f``). Sent
+            to the client as ``<meta name="dz-feedback-shortcut">``.
         categories: Allowed feedback category values.
         severities: Allowed severity values.
         capture: Auto-captured context fields.

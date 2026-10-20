@@ -1424,6 +1424,7 @@ class _ChromeAssets:
     favicon: str
     topbar_title: TopbarTitleMode = "app"  # #1794 — `[ui] topbar_title` ("app" | "page" | "none")
     page_purpose: bool = True  # #1811 — `[ui] page_purpose`
+    meta: tuple[tuple[str, str], ...] = ()  # #1842 — app-wide meta (feedback shortcut)
 
 
 def _resolve_chrome_assets(app_state: Any) -> _ChromeAssets:
@@ -1443,6 +1444,7 @@ def _resolve_chrome_assets(app_state: Any) -> _ChromeAssets:
         favicon=getattr(app_state, "fragment_chrome_favicon", "/static/assets/dazzle-favicon.svg"),
         topbar_title=getattr(app_state, "fragment_chrome_topbar_title", "app"),
         page_purpose=getattr(app_state, "fragment_chrome_page_purpose", True),
+        meta=tuple(getattr(app_state, "fragment_chrome_meta", None) or ()),
     )
 
 
@@ -2773,6 +2775,7 @@ def _render_response(prc: _PageRequestContext) -> Response:
         favicon=_assets.favicon,
         topbar_title=_assets.topbar_title,
         show_page_purpose=_assets.page_purpose,
+        extra_meta=_assets.meta,
     )
     return HTMLResponse(content=html)  # nosemgrep
 
@@ -3359,6 +3362,7 @@ async def _workspace_handler(
         favicon=_assets.favicon,
         topbar_title=_assets.topbar_title,
         show_page_purpose=_assets.page_purpose,
+        extra_meta=_assets.meta,
     )
     return HTMLResponse(content=html)  # nosemgrep
 

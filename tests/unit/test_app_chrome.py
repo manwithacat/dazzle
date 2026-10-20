@@ -88,8 +88,8 @@ class TestResolveAppChrome:
     @pytest.mark.parametrize(
         ("feedback_widget", "mounted"),
         [
-            (SimpleNamespace(enabled=True), True),
-            (SimpleNamespace(enabled=False), False),
+            (SimpleNamespace(enabled=True, shortcut="backtick"), True),
+            (SimpleNamespace(enabled=False, shortcut="backtick"), False),
             (None, False),
         ],
     )
@@ -97,6 +97,24 @@ class TestResolveAppChrome:
         appspec = SimpleNamespace(feedback_widget=feedback_widget, app_config=None)
         chrome = resolve_app_chrome(appspec, project_root=None, manifest=None)
         assert (FEEDBACK_WIDGET_JS in chrome.js_scripts) is mounted
+        assert (("dz-feedback-shortcut", "backtick") in chrome.meta) is mounted
+
+    @pytest.mark.parametrize("shortcut", ["none", "ctrl-shift-f", "f1"])
+    def test_feedback_shortcut_reaches_the_page_1842(self, shortcut: str) -> None:
+        """The DSL `shortcut:` rides the chrome meta into every app-shell page."""
+        from dazzle.http.runtime.page_routes import _resolve_chrome_assets
+
+        appspec = SimpleNamespace(
+            feedback_widget=SimpleNamespace(enabled=True, shortcut=shortcut), app_config=None
+        )
+        chrome = resolve_app_chrome(appspec, project_root=None, manifest=None)
+        assert chrome.meta == (("dz-feedback-shortcut", shortcut),)
+        assets = _resolve_chrome_assets(SimpleNamespace(fragment_chrome_meta=chrome.meta))
+        ctx = PageContext(page_title="Tasks", app_name="Demo", user_email="ada@example.test")
+        html = dispatch_render_page(
+            ctx, "<p>body</p>", js_scripts=chrome.js_scripts, extra_meta=assets.meta
+        )
+        assert f'<meta name="dz-feedback-shortcut" content="{shortcut}">' in html
 
     def test_missing_theme_returns_default_chain(self) -> None:
         """Themes that don't exist return the default chain — the

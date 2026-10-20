@@ -738,6 +738,7 @@ class SystemRoutesSubsystem:
             ctx.app.state.fragment_chrome_favicon = chrome.favicon
             ctx.app.state.fragment_chrome_topbar_title = chrome.topbar_title
             ctx.app.state.fragment_chrome_page_purpose = chrome.page_purpose
+            ctx.app.state.fragment_chrome_meta = chrome.meta
         except ImportError:
             pass  # dazzle_page not installed (CLI-only context)
 

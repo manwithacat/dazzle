@@ -591,6 +591,7 @@ def _wrap_with_response_contract(
                 favicon=assets.favicon,
                 topbar_title=assets.topbar_title,
                 show_page_purpose=assets.page_purpose,
+                extra_meta=assets.meta,
             )
             return HTMLResponse(content=html, status_code=status)
 

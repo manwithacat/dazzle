@@ -12,6 +12,9 @@ browser in the toolchain) and pins what the chrome wiring relies on:
 * submit POSTs to ``/feedbackreports`` with the identity from the
   ``dz-user-email`` / ``dz-user-role`` meta tags;
 * with no signed-in identity the widget does not mount at all;
+* #1842: the ``dz-feedback-shortcut`` meta configures the toggle key —
+  ``none`` turns it off, a bare key is ignored while focus is in a field,
+  select, button, link or contenteditable, a Ctrl combination works anywhere;
 * #1841: the closed panel is ``inert`` + ``aria-hidden``, opening focuses it,
   Tab wraps inside it, Escape closes it and focus returns to the opener, the
   controls are labelled/grouped and the toggles expose ``aria-pressed``.
@@ -209,6 +212,23 @@ const settle = () => new Promise((r) => setImmediate(r));
     w.open(); w.close();
     out.focusBackToLink = focusState.active === link;
   }
+  if (scenario.keys) {
+    const w = ctx.feedbackWidget;
+    out.title = w._btn.getAttribute("title");
+    out.keyshortcuts = w._btn.getAttribute("aria-keyshortcuts");
+    out.states = scenario.keys.map((k) => {
+      let target = body;
+      if (k.on === "editable") {
+        target = makeEl("div"); target.isContentEditable = true; body.appendChild(target);
+      } else if (k.on) {
+        target = makeEl(k.on); body.appendChild(target);
+      }
+      key(target, k.key, { ctrlKey: !!k.ctrl, shiftKey: !!k.shift, altKey: false, metaKey: false });
+      const open = w._panel.classList.contains("open");
+      if (open) w.close();
+      return open;
+    });
+  }
   if (scenario.submit) {
     const w = ctx.feedbackWidget;
     w.open();
@@ -343,3 +363,50 @@ def test_toggles_expose_aria_pressed(tmp_path: Path) -> None:
         "blocker": "true",
         "minor": "false",
     }
+
+
+def _keys(tmp_path: Path, shortcut: str | None, keys: list[dict[str, object]]) -> dict[str, object]:
+    meta = dict(_IDENTITY)
+    if shortcut is not None:
+        meta["dz-feedback-shortcut"] = shortcut
+    return _run(tmp_path, {"meta": meta, "keys": keys})
+
+
+_FOCUS_OWNERS = ["input", "textarea", "select", "button", "a", "editable"]
+
+
+def test_default_backtick_ignores_focus_that_owns_the_key(tmp_path: Path) -> None:
+    """#1842 / WCAG 2.1.4: no meta → backtick, never while a control owns keys."""
+    keys: list[dict[str, object]] = [{"key": "`"}] + [{"key": "`", "on": t} for t in _FOCUS_OWNERS]
+    result = _keys(tmp_path, None, keys)
+    assert result["states"] == [True] + [False] * len(_FOCUS_OWNERS)
+    assert result["title"] == "Send feedback (`)"
+
+
+def test_shortcut_none_disables_the_key(tmp_path: Path) -> None:
+    result = _keys(tmp_path, "none", [{"key": "`"}, {"key": "`", "ctrl": True}])
+    assert result["states"] == [False, False]
+    assert result["title"] == "Send feedback"
+    assert result["keyshortcuts"] is None
+
+
+@pytest.mark.parametrize("spec", ["ctrl-shift-f", "ctrl+shift+f"])
+def test_modified_shortcut_works_from_any_focus(tmp_path: Path, spec: str) -> None:
+    keys: list[dict[str, object]] = [
+        {"key": "F", "ctrl": True, "shift": True, "on": "textarea"},
+        {"key": "f", "ctrl": True, "shift": True, "on": "select"},
+        {"key": "f", "ctrl": True},
+        {"key": "f"},
+        {"key": "`"},
+    ]
+    result = _keys(tmp_path, spec, keys)
+    assert result["states"] == [True, True, False, False, False]
+    assert result["title"] == "Send feedback (Ctrl+Shift+F)"
+    assert result["keyshortcuts"] == "Control+Shift+F"
+
+
+@pytest.mark.parametrize(("spec", "key"), [("f1", "F1"), ("slash", "/"), ("question", "?")])
+def test_named_keys(tmp_path: Path, spec: str, key: str) -> None:
+    shift = key == "?"
+    result = _keys(tmp_path, spec, [{"key": key, "shift": shift}, {"key": "`"}])
+    assert result["states"] == [True, False]
