@@ -18,6 +18,8 @@ from dazzle.testing.ux.contracts import (
     RBACContract,
     WorkspaceContract,
 )
+from dazzle.testing.ux.control_icons import VOID_TAGS as _VOID_TAGS
+from dazzle.testing.ux.control_icons import find_exposed_control_icons
 from dazzle.testing.ux.htmx_client import _extract_workspace_layout, parse_html
 
 # ---------------------------------------------------------------------------
@@ -381,23 +383,6 @@ def find_hidden_primary_actions(html: str) -> list[tuple[str, str]]:
 # slot, or a sibling that targets it).
 _VERB_ATTRS = ("hx-get", "hx-post", "hx-put", "hx-patch", "hx-delete")
 _SELF_FIRING_EVENTS = frozenset({"load", "revealed", "intersect", "every"})
-_VOID_TAGS = frozenset(
-    {
-        "area",
-        "base",
-        "br",
-        "col",
-        "embed",
-        "hr",
-        "img",
-        "input",
-        "link",
-        "meta",
-        "source",
-        "track",
-        "wbr",
-    }
-)
 
 
 def _self_firing_trigger(trigger: str | None) -> bool:
@@ -778,6 +763,38 @@ _CHECKERS = {
 # ---------------------------------------------------------------------------
 
 
+def _page_wide_gate_errors(html: str) -> list[str]:
+    """Gates that apply to every page shape (INV-10, INV-11)."""
+    errors: list[str] = []
+    # Inherited load-trigger gate (INV-10, issue #1802) — every page shape:
+    # a verb control under a self-firing ancestor trigger fires by itself
+    # under htmx 4 implicit inheritance.
+    inherited = find_inherited_load_triggers(html)
+    if inherited:
+        pairs = ", ".join(f"{anc} > {el}" for anc, el in inherited[:3])
+        more = f" (+ {len(inherited) - 3} more)" if len(inherited) > 3 else ""
+        errors.append(
+            f"Self-firing trigger inherited by a verb control — {pairs}{more}. "
+            f"An element whose hx-trigger fires without a gesture (load / every / "
+            f"revealed / intersect) must not be an ancestor of request elements: "
+            f"make it a self-replacing loader inside the slot or a sibling that "
+            f"targets it."
+        )
+
+    # Exposed control-icon gate (INV-11, issue #1841) — every page shape: an
+    # icon inside a named button/link must be aria-hidden (or itself named).
+    exposed = find_exposed_control_icons(html)
+    if exposed:
+        shown = ", ".join(exposed[:3])
+        more = f" (+ {len(exposed) - 3} more)" if len(exposed) > 3 else ""
+        errors.append(
+            f"Unhidden icon inside a control — {shown}{more}. A decorative <svg> "
+            f'in a button or link needs aria-hidden="true"; an icon that names '
+            f'the control needs role="img" + aria-label.'
+        )
+    return errors
+
+
 def check_contract(contract: Contract, html: str) -> Contract:
     """Parse *html* and verify it satisfies *contract*.
 
@@ -836,20 +853,7 @@ def check_contract(contract: Contract, html: str) -> Contract:
                 f"the element always visible."
             )
 
-    # Inherited load-trigger gate (INV-10, issue #1802) — every page shape:
-    # a verb control under a self-firing ancestor trigger fires by itself
-    # under htmx 4 implicit inheritance.
-    inherited = find_inherited_load_triggers(html)
-    if inherited:
-        pairs = ", ".join(f"{anc} > {el}" for anc, el in inherited[:3])
-        more = f" (+ {len(inherited) - 3} more)" if len(inherited) > 3 else ""
-        errors.append(
-            f"Self-firing trigger inherited by a verb control — {pairs}{more}. "
-            f"An element whose hx-trigger fires without a gesture (load / every / "
-            f"revealed / intersect) must not be an ancestor of request elements: "
-            f"make it a self-replacing loader inside the slot or a sibling that "
-            f"targets it."
-        )
+    errors.extend(_page_wide_gate_errors(html))
 
     if errors:
         contract.status = "failed"

@@ -1014,7 +1014,7 @@ def render_search_box(s: SearchBox) -> str:
         f'hx-swap="innerHTML">'
         f"</div>"
         f'<div id="{results_id}" class="dz-search-box-results" '
-        f'role="region" aria-live="polite">'
+        f'role="region" aria-label="Search results" aria-live="polite">'
         f"{results_body}"
         f"</div>"
         f"</div>"

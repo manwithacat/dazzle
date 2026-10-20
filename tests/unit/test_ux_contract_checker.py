@@ -627,3 +627,49 @@ class TestRBACEntityScoping:
         html = '<a href="/app/system/create">Register System</a>'
         result = check_contract(contract, html)
         assert result.status == "passed", result.error
+
+
+class TestFindExposedControlIcons:
+    """INV-11 (#1841): an icon inside a named control is aria-hidden or named."""
+
+    @pytest.mark.parametrize(
+        "html",
+        [
+            '<button><svg aria-hidden="true"><path/></svg>Add Card</button>',
+            '<button aria-label="Close"><span aria-hidden="true"><svg></svg></span></button>',
+            '<a href="/x"><svg role="img" aria-label="Home"></svg></a>',
+            '<a href="/x"><svg><title>Home</title><path/></svg></a>',
+            "<div><svg><path/></svg></div>",
+        ],
+    )
+    def test_hidden_named_or_outside_a_control_passes(self, html: str) -> None:
+        from dazzle.testing.ux.contract_checker import find_exposed_control_icons
+
+        assert find_exposed_control_icons(html) == []
+
+    def test_unhidden_icon_in_named_button_is_flagged(self) -> None:
+        from dazzle.testing.ux.contract_checker import find_exposed_control_icons
+
+        html = (
+            '<button class="dz-add-card-button"><svg viewBox="0 0 24 24">'
+            '<path d="M12 4v16"/></svg>Add Card</button>'
+        )
+        assert find_exposed_control_icons(html) == ['<button class="dz-add-card-button">']
+
+    def test_check_contract_fails_on_exposed_icon(self) -> None:
+        contract = RBACContract(
+            entity="System", persona="admin", operation="create", expected_present=True
+        )
+        html = '<a href="/app/system/create"><svg><path/></svg>Register System</a>'
+        result = check_contract(contract, html)
+        assert result.status == "failed"
+        assert "Unhidden icon inside a control" in (result.error or "")
+
+    def test_rendered_add_card_row_passes(self) -> None:
+        from dazzle.render.fragment import FragmentRenderer
+        from dazzle.render.fragment.primitives import AddCardRow, CardPicker
+        from dazzle.testing.ux.contract_checker import find_exposed_control_icons
+
+        html = FragmentRenderer().render(AddCardRow(picker=CardPicker(entries=())))
+        assert "Add Card" in html
+        assert find_exposed_control_icons(html) == []

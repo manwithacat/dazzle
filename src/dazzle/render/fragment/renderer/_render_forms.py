@@ -528,12 +528,16 @@ class _RenderFormsMixin:
         )
 
     @staticmethod
-    def _widget_label(label_html: str, name: str, inner: str) -> str:
+    def _widget_label(label_html: str, name: str, inner: str, *, label_id: str = "") -> str:
         """Common substrate field wrapper for `widget=`-driven primitives —
-        the label + the widget element the client controller mounts on."""
+        the label + the widget element the client controller mounts on.
+        `label_id` gives the label text an id for widgets whose focusable
+        element is not the `for=` target (rich text names its editor by
+        `aria-labelledby`, #1841)."""
+        id_attr = f' id="{label_id}"' if label_id else ""
         return (
             f'<label class="dz-field" for="field-{name}">'
-            f'<span class="dz-field__label">{label_html}</span>{inner}</label>'
+            f'<span class="dz-field__label"{id_attr}>{label_html}</span>{inner}</label>'
         )
 
     def _emit_widget_combobox(self, c: WidgetCombobox, ctx: RenderContext) -> str:
@@ -738,18 +742,23 @@ class _RenderFormsMixin:
         rt_opts_json = ctx.escape_attr(json.dumps(rt_opts))
         # Payload is a visually-hidden textarea so `required` is valid HTML
         # (hidden input required is ignored). dz-richtext.js already prefers
-        # input[type=hidden] then textarea.
+        # input[type=hidden] then textarea. #1841: the mirror is out of the tab
+        # order and the accessibility tree; the contenteditable editor is the
+        # control, named by the label text via `aria-labelledby`.
+        label_id = f"field-{name}-label"
+        editor_required = ' aria-required="true"' if r.required else ""
         inner = (
             '<div data-dz-widget="richtext" '
             f"data-dz-options='{rt_opts_json}' "
             'class="dz-form-richtext">'
             f'<textarea id="field-{name}" name="{name}" '
             f'class="visually-hidden" data-dazzle-field="{name}" '
-            f'rows="1"{required_attr}>{ctx.escape(r.initial_value)}</textarea>'
-            "<div data-dz-editor></div>"
+            f'rows="1" tabindex="-1" aria-hidden="true"{required_attr}>'
+            f"{ctx.escape(r.initial_value)}</textarea>"
+            f'<div data-dz-editor aria-labelledby="{label_id}"{editor_required}></div>'
             "</div>"
         )
-        return self._widget_label(ctx.escape(r.label), name, inner)
+        return self._widget_label(ctx.escape(r.label), name, inner, label_id=label_id)
 
     def _emit_form_stepper(self, fs: FormStepper, ctx: RenderContext) -> str:
         """Render the wizard stage-tabs (Tier F4d: the HM dz-wizard.js
@@ -852,7 +861,7 @@ class _RenderFormsMixin:
             f'data-test-id="dz-add-card-trigger" '
             f'class="dz-add-card-button">'
             f'<svg width="16" height="16" fill="none" stroke="currentColor" '
-            f'viewBox="0 0 24 24">'
+            f'viewBox="0 0 24 24" aria-hidden="true">'
             f'<path stroke-linecap="round" stroke-linejoin="round" '
             f'stroke-width="2" d="M12 4v16m8-8H4"/>'
             f"</svg>"

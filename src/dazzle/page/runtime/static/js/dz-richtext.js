@@ -768,6 +768,24 @@
       editor.setAttribute("contenteditable", "true");
       editor.setAttribute("role", "textbox");
       editor.setAttribute("aria-multiline", "true");
+      // #1841: the editor is the control. Name it from the field label when
+      // the server did not, and keep the mirror textarea out of the tab order
+      // and the accessibility tree (it keeps `required` for form validation).
+      if (!editor.hasAttribute("aria-labelledby") && !editor.hasAttribute("aria-label")) {
+        var fieldLabel = host.closest("label");
+        var labelText = fieldLabel && fieldLabel.querySelector(".dz-field__label");
+        if (labelText) {
+          if (!labelText.id) {
+            labelText.id = (hidden && hidden.id ? hidden.id : "dz-richtext") + "-label";
+          }
+          editor.setAttribute("aria-labelledby", labelText.id);
+        }
+      }
+      if (hidden && hidden.tagName === "TEXTAREA") {
+        hidden.setAttribute("tabindex", "-1");
+        hidden.setAttribute("aria-hidden", "true");
+        if (hidden.required) editor.setAttribute("aria-required", "true");
+      }
 
       var initial = (hidden && hidden.value) || "";
       replaceEditorContents(editor, initial);
@@ -794,6 +812,14 @@
         target.addEventListener(ev, fn);
         listeners.push(function () {
           target.removeEventListener(ev, fn);
+        });
+      }
+
+      // #1841: a label click or a failed `required` check focuses the mirror
+      // textarea; send focus on to the editor the user actually types in.
+      if (hidden && hidden.tagName === "TEXTAREA") {
+        on(hidden, "focus", function () {
+          editor.focus();
         });
       }
 

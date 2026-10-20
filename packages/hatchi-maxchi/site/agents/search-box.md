@@ -17,7 +17,7 @@ The FTS search region: a debounced search input, an aria-live results panel, and
     <label for="hm-search-input" class="visually-hidden">Search records</label>
     <input id="hm-search-input" type="search" name="q" class="search-box-input" placeholder="Search records…" autocomplete="off" hx-get="/mock/search" hx-trigger="input changed delay:250ms[this.value.trim().length>0], search[this.value.trim().length>0]" hx-target="#hm-search-results" hx-swap="innerHTML">
   </div>
-  <div id="hm-search-results" class="search-box-results" role="region" aria-live="polite">
+  <div id="hm-search-results" class="search-box-results" role="region" aria-label="Search results" aria-live="polite">
     <div class="search-box-empty">Type a title or keyword</div>
   </div>
 </div>
@@ -157,7 +157,7 @@ def render(s: SearchBox) -> str:
         f'hx-swap="innerHTML">'
         f"</div>"
         f'<div id="{results_id}" class="dz-search-box-results" '
-        f'role="region" aria-live="polite">'
+        f'role="region" aria-label="Search results" aria-live="polite">'
         f"{results_body}"
         f"</div>"
         f"</div>"

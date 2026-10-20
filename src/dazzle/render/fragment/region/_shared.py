@@ -292,13 +292,14 @@ def _render_status_badge_html(
     from html import escape as _esc
 
     from dazzle.render.filters import (
+        BADGE_EMPTY_HTML,
         _humanize_filter,
         badge_icon_html,
         resolve_status_tone,
     )
 
     if value in (None, "", "—"):
-        return '<span class="dz-badge-empty" aria-label="No status">—</span>'
+        return BADGE_EMPTY_HTML
     # #1493 slice 2: a declared `semantic:` binding (semantic_map) wins over the
     # name guess; None/empty map → byte-identical to the legacy name guess.
     tone = resolve_status_tone(value, semantic_map)

@@ -202,6 +202,19 @@ def resolve_status_icon(tone: str | None) -> str:
     return _BADGE_TONE_ICONS.get(normalize_tone(tone) or "", "")
 
 
+BADGE_EMPTY_HTML = (
+    '<span class="dz-badge-empty"><span aria-hidden="true">—</span>'
+    '<span class="visually-hidden">No status</span></span>'
+)
+"""The em-dash placeholder for an absent status badge (#1841).
+
+The dash is decorative (``aria-hidden``); the visually hidden "No status" text
+is the accessible name. ``aria-label`` on a plain ``<span>`` is ignored by ARIA
+(axe ``aria-prohibited-attr``), so the text carries the meaning instead. One
+copy for the list cell, region cell and presentation seams.
+"""
+
+
 def badge_icon_html(tone: str | None) -> str:
     """Render the leading badge icon span for a tone, or "" for neutral/unknown.
 

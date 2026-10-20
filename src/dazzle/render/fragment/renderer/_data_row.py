@@ -27,6 +27,7 @@ from dazzle.render.cell_chrome import (
 )
 from dazzle.render.channel_cell import clerk_email_cell_html, clerk_phone_cell_html
 from dazzle.render.filters import (
+    BADGE_EMPTY_HTML,
     _basename_or_url_filter,
     _bool_icon_filter,
     _currency_filter,
@@ -332,7 +333,7 @@ def _render_cell_display(
         return _html_mod.escape(_json_summary(value), quote=False)
     if col_type == "badge":
         if value in (None, "", "—"):
-            return '<span class="dz-badge-empty" aria-label="No status">—</span>'
+            return BADGE_EMPTY_HTML
         # #1493 slice 2: a declared `semantic:` binding (col["semantic_map"]) wins
         # over the spelling-based name guess; None/empty → byte-identical default.
 

@@ -114,7 +114,8 @@ _WORKSPACE_TOOLBAR_HTML = (
     '<span data-dz-when="clean">Saved</span>'
     '<span data-dz-when="dirty">Save layout</span>'
     '<span data-dz-when="saving" class="dz-workspace-save-busy">'
-    '<svg class="dz-workspace-save-busy-icon" viewBox="0 0 24 24" fill="none">'
+    '<svg class="dz-workspace-save-busy-icon" viewBox="0 0 24 24" fill="none" '
+    'aria-hidden="true">'
     '<circle class="dz-spinner-track" cx="12" cy="12" r="10" stroke="currentColor" '
     'stroke-width="4"/>'
     '<path class="dz-spinner-head" fill="currentColor" '
@@ -123,7 +124,8 @@ _WORKSPACE_TOOLBAR_HTML = (
     "Saving"
     "</span>"
     '<span data-dz-when="saved" class="dz-workspace-save-busy">'
-    '<svg class="dz-workspace-save-busy-icon" viewBox="0 0 20 20" fill="currentColor">'
+    '<svg class="dz-workspace-save-busy-icon" viewBox="0 0 20 20" fill="currentColor" '
+    'aria-hidden="true">'
     '<path fill-rule="evenodd" '
     'd="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 '
     '011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" '

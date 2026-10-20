@@ -1870,7 +1870,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             'hx-swap="innerHTML">'
             "</div>"
             '<div id="hm-search-results" class="dz-search-box-results" '
-            'role="region" aria-live="polite">'
+            'role="region" aria-label="Search results" aria-live="polite">'
             '<div class="dz-search-box-empty">Type a title or keyword</div>'
             "</div></div>",
             notes="Dual-lock root is <code>data-dz-search-box</code> "

@@ -20,7 +20,7 @@ import html as _html_mod
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from dazzle.render.filters import _ref_display_name
+from dazzle.render.filters import BADGE_EMPTY_HTML, _ref_display_name
 from dazzle.render.user_chip import (
     looks_like_person_ref,
     render_user_chip_html,
@@ -306,7 +306,7 @@ def _present_swatch(value: Any, role: Role, host: Host, plain_fallback: str) -> 
 def _present_badge(value: Any, role: Role, host: Host, plain_fallback: str) -> PresentResult:
     if value in (None, ""):
         return PresentResult(
-            html='<span class="dz-badge-empty" aria-label="No status">—</span>',
+            html=BADGE_EMPTY_HTML,
             is_html=True,
             suppress_label=False,
             density="badge",

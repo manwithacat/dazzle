@@ -11,7 +11,10 @@ browser in the toolchain) and pins what the chrome wiring relies on:
   page load (server no longer returns it) shows nothing;
 * submit POSTs to ``/feedbackreports`` with the identity from the
   ``dz-user-email`` / ``dz-user-role`` meta tags;
-* with no signed-in identity the widget does not mount at all.
+* with no signed-in identity the widget does not mount at all;
+* #1841: the closed panel is ``inert`` + ``aria-hidden``, opening focuses it,
+  Tab wraps inside it, Escape closes it and focus returns to the opener, the
+  controls are labelled/grouped and the toggles expose ``aria-pressed``.
 
 Skipped when ``node`` is not on PATH.
 """
@@ -38,6 +41,8 @@ const vm = require("vm");
 const src = fs.readFileSync(process.argv[2], "utf8");
 const scenario = JSON.parse(process.argv[3]);
 
+const focusState = { active: null };
+
 function makeEl(tag) {
   const el = {
     tagName: tag.toUpperCase(), children: [], parent: null, attrs: {},
@@ -45,6 +50,9 @@ function makeEl(tag) {
     dataset: {},
     setAttribute(k, v) { this.attrs[k] = String(v); },
     getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
+    hasAttribute(k) { return k in this.attrs; },
+    removeAttribute(k) { delete this.attrs[k]; },
+    focus() { focusState.active = this; },
     appendChild(c) { if (c.parent) c.parent.removeChild(c); c.parent = this; this.children.push(c); return c; },
     removeChild(c) { this.children = this.children.filter((x) => x !== c); c.parent = null; },
     remove() { if (this.parent) this.parent.removeChild(this); },
@@ -53,8 +61,9 @@ function makeEl(tag) {
     contains(n) { for (let x = n; x; x = x.parent) { if (x === this) return true; } return false; },
     all() { return this.children.flatMap((c) => [c, ...c.all()]); },
     querySelectorAll(sel) {
-      const cls = sel.replace(/^\./, "");
-      return this.all().filter((e) => e.classList.contains(cls));
+      const parts = sel.split(",").map((x) => x.trim());
+      return this.all().filter((e) => parts.some((p) => p.startsWith(".")
+        ? e.classList.contains(p.slice(1)) : e.tagName === p.toUpperCase()));
     },
     cloneNode() { throw new Error("no snapshot in the fake DOM"); },
   };
@@ -78,6 +87,7 @@ function run(page) {
   const docListeners = {};
   const document = {
     readyState: "complete", body, title: "Page",
+    get activeElement() { return focusState.active || body; },
     createElement: makeEl,
     createElementNS: (_ns, tag) => makeEl(tag),
     querySelector(sel) {
@@ -87,6 +97,7 @@ function run(page) {
     },
     addEventListener(t, fn) { (docListeners[t] = docListeners[t] || []).push(fn); },
   };
+  focusState.active = null;
   const store = () => { const d = {}; return {
     getItem: (k) => (k in d ? d[k] : null), setItem: (k, v) => { d[k] = String(v); },
     removeItem: (k) => { delete d[k]; } }; };
@@ -130,6 +141,73 @@ const settle = () => new Promise((r) => setImmediate(r));
     body.children.slice().forEach((c) => body.removeChild(c));
     (docListeners["htmx:after:swap"] || []).forEach((fn) => fn({}));
     out.buttonsAfterSwap = body.children.filter((e) => e.className === "dz-feedback-btn").length;
+  }
+  const key = (target, k, extra) => {
+    const ev = Object.assign({ key: k, target, defaultPrevented: false,
+      preventDefault() { this.defaultPrevented = true; } }, extra || {});
+    for (let el = target; el && el !== body; el = el.parent) {
+      (el.listeners.keydown || []).forEach((fn) => fn(ev));
+    }
+    (docListeners.keydown || []).forEach((fn) => fn(ev));
+    return ev;
+  };
+  const panelState = (w) => ({
+    open: w._panel.classList.contains("open"),
+    inert: w._panel.hasAttribute("inert"),
+    ariaHidden: w._panel.getAttribute("aria-hidden"),
+    focus: focusState.active ? (focusState.active.getAttribute("data-category")
+      || focusState.active.className || focusState.active.tagName) : null,
+  });
+  if (scenario.a11y) {
+    const w = ctx.feedbackWidget;
+    const p = w._panel;
+    const textarea = w._textarea;
+    const label = p.all().find((e) => e.tagName === "LABEL");
+    const groups = p.all().filter((e) => e.getAttribute("role") === "group");
+    const byId = (id) => p.all().find((e) => e.id === id);
+    out.markup = {
+      role: p.getAttribute("role"),
+      ariaModal: p.getAttribute("aria-modal"),
+      title: (byId(p.getAttribute("aria-labelledby")) || {}).textContent,
+      labelFor: label ? label.getAttribute("for") : null,
+      textareaId: textarea.id,
+      groups: groups.map((g) => (byId(g.getAttribute("aria-labelledby")) || {}).textContent),
+      toastRole: toast.getAttribute("role"),
+      iconHidden: w._btn.children[0].getAttribute("aria-hidden"),
+    };
+    out.closed = panelState(w);
+    // Open from the floating button: focus moves into the panel.
+    w._btn.focus();
+    w._btn.click();
+    out.opened = panelState(w);
+    // Tab from the last control wraps to the first (the close button), and
+    // Shift+Tab from there wraps back to submit.
+    w._submitBtn.focus();
+    const tab = key(w._submitBtn, "Tab");
+    const wrappedTo = focusState.active.className;
+    const back = key(focusState.active, "Tab", { shiftKey: true });
+    out.tabWrapped = tab.defaultPrevented && wrappedTo === "dz-feedback-close"
+      && back.defaultPrevented && focusState.active === w._submitBtn;
+    // Toggle state is exposed through aria-pressed.
+    const cat = (c) => p.querySelectorAll(".dz-feedback-cat-btn").find((b) => b.getAttribute("data-category") === c);
+    const sev = (v) => p.querySelectorAll(".dz-feedback-sev-btn").find((b) => b.getAttribute("data-severity") === v);
+    const sevBefore = { minor: sev("minor").getAttribute("aria-pressed"), blocker: sev("blocker").getAttribute("aria-pressed") };
+    cat("ux").click();
+    sev("blocker").click();
+    out.pressed = {
+      ux: cat("ux").getAttribute("aria-pressed"), bug: cat("bug").getAttribute("aria-pressed"),
+      sevBefore,
+      blocker: sev("blocker").getAttribute("aria-pressed"), minor: sev("minor").getAttribute("aria-pressed"),
+    };
+    // Escape inside the panel closes it and returns focus to the opener.
+    const esc = key(textarea, "Escape");
+    out.escapePrevented = esc.defaultPrevented;
+    out.afterEscape = panelState(w);
+    out.focusIsOpener = focusState.active === w._btn;
+    // An opener elsewhere on the page gets focus back.
+    const link = makeEl("a"); body.appendChild(link); link.focus();
+    w.open(); w.close();
+    out.focusBackToLink = focusState.active === link;
   }
   if (scenario.submit) {
     const w = ctx.feedbackWidget;
@@ -223,3 +301,45 @@ def test_no_identity_no_widget(tmp_path: Path) -> None:
 def test_nodes_reattach_after_htmx_body_swap(tmp_path: Path) -> None:
     result = _run(tmp_path, {"meta": _IDENTITY, "swap": True})
     assert result["buttonsAfterSwap"] == 1
+
+
+def test_closed_panel_is_inert_and_hidden(tmp_path: Path) -> None:
+    """#1841: the off-screen panel is out of the tab order and the a11y tree."""
+    result = _run(tmp_path, {"meta": _IDENTITY, "a11y": True})
+    assert result["closed"] == {"open": False, "inert": True, "ariaHidden": "true", "focus": None}
+    assert result["afterEscape"]["inert"] is True
+    assert result["afterEscape"]["ariaHidden"] == "true"
+
+
+def test_panel_markup_names_its_controls(tmp_path: Path) -> None:
+    result = _run(tmp_path, {"meta": _IDENTITY, "a11y": True})
+    markup = result["markup"]
+    assert isinstance(markup, dict)
+    assert markup["role"] == "dialog"
+    assert markup["ariaModal"] == "true"
+    assert markup["title"] == "Send Feedback"
+    assert markup["labelFor"] == markup["textareaId"] == "dz-feedback-description"
+    assert markup["groups"] == ["Category", "Severity (optional)"]
+    assert markup["toastRole"] == "status"
+    assert markup["iconHidden"] == "true"
+
+
+def test_open_focuses_panel_and_escape_returns_focus(tmp_path: Path) -> None:
+    result = _run(tmp_path, {"meta": _IDENTITY, "a11y": True})
+    assert result["opened"] == {"open": True, "inert": False, "ariaHidden": None, "focus": "bug"}
+    assert result["tabWrapped"] is True
+    assert result["escapePrevented"] is True
+    assert result["afterEscape"]["open"] is False
+    assert result["focusIsOpener"] is True
+    assert result["focusBackToLink"] is True
+
+
+def test_toggles_expose_aria_pressed(tmp_path: Path) -> None:
+    result = _run(tmp_path, {"meta": _IDENTITY, "a11y": True})
+    assert result["pressed"] == {
+        "ux": "true",
+        "bug": "false",
+        "sevBefore": {"minor": "true", "blocker": "false"},
+        "blocker": "true",
+        "minor": "false",
+    }

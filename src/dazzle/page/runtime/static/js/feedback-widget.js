@@ -34,6 +34,8 @@
     svg.setAttribute("fill", "none");
     svg.setAttribute("stroke", "currentColor");
     svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
     var path = document.createElementNS(SVG_NS, "path");
     path.setAttribute(
       "d",
@@ -55,6 +57,7 @@
 
   function FeedbackWidget() {
     this._errors = [];
+    this._opener = null;
     this._category = null;
     this._severity = "minor";
     this._idempotencyKey = null;
@@ -185,16 +188,29 @@
     });
     document.body.appendChild(this._backdrop);
 
-    // Panel
+    // Panel. #1841: while closed it is `inert` + `aria-hidden`, so its
+    // controls are out of the tab order and the accessibility tree (it is
+    // only translated off-screen, never display:none).
     this._panel = document.createElement("div");
     this._panel.className = "dz-feedback-panel";
     this._panel.setAttribute("role", "dialog");
-    this._panel.setAttribute("aria-label", "Feedback panel");
+    this._panel.setAttribute("aria-modal", "true");
+    this._panel.setAttribute("aria-labelledby", "dz-feedback-title");
+    this._setPanelHidden(true);
+    this._panel.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" || e.key === "Esc") {
+        e.preventDefault();
+        self.close();
+      } else if (e.key === "Tab") {
+        self._trapTab(e);
+      }
+    });
 
     // Header
     var header = document.createElement("div");
     header.className = "dz-feedback-header";
     var h3 = document.createElement("h3");
+    h3.id = "dz-feedback-title";
     h3.textContent = "Send Feedback";
     var closeBtn = document.createElement("button");
     closeBtn.type = "button";
@@ -212,20 +228,24 @@
     var body = document.createElement("div");
     body.className = "dz-feedback-body";
 
-    // Category
+    // Category (a named group of toggle buttons, #1841)
     var catLabel = document.createElement("div");
     catLabel.className = "dz-feedback-label";
+    catLabel.id = "dz-feedback-category-label";
     catLabel.textContent = "Category";
     body.appendChild(catLabel);
 
     var catGrid = document.createElement("div");
     catGrid.className = "dz-feedback-categories";
+    catGrid.setAttribute("role", "group");
+    catGrid.setAttribute("aria-labelledby", "dz-feedback-category-label");
     ["bug", "ux", "visual", "behaviour", "enhancement", "other"].forEach(
       function (cat) {
         var btn = document.createElement("button");
         btn.type = "button";
         btn.className = "dz-feedback-cat-btn";
         btn.setAttribute("data-category", cat);
+        btn.setAttribute("aria-pressed", "false");
         btn.textContent = cat;
         btn.addEventListener("click", function () {
           self._selectCategory(cat, catGrid);
@@ -238,16 +258,20 @@
     // Severity
     var sevLabel = document.createElement("div");
     sevLabel.className = "dz-feedback-label";
+    sevLabel.id = "dz-feedback-severity-label";
     sevLabel.textContent = "Severity (optional)";
     body.appendChild(sevLabel);
 
     var sevRow = document.createElement("div");
     sevRow.className = "dz-feedback-severities";
+    sevRow.setAttribute("role", "group");
+    sevRow.setAttribute("aria-labelledby", "dz-feedback-severity-label");
     ["blocker", "annoying", "minor"].forEach(function (sev) {
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "dz-feedback-sev-btn";
       if (sev === "minor") btn.classList.add("selected");
+      btn.setAttribute("aria-pressed", sev === "minor" ? "true" : "false");
       btn.setAttribute("data-severity", sev);
       btn.textContent = sev;
       btn.addEventListener("click", function () {
@@ -257,13 +281,15 @@
     });
     body.appendChild(sevRow);
 
-    // Description
-    var descLabel = document.createElement("div");
+    // Description (a real <label for>, #1841)
+    var descLabel = document.createElement("label");
     descLabel.className = "dz-feedback-label";
+    descLabel.setAttribute("for", "dz-feedback-description");
     descLabel.textContent = "Describe what you observed";
     body.appendChild(descLabel);
 
     this._textarea = document.createElement("textarea");
+    this._textarea.id = "dz-feedback-description";
     this._textarea.className = "dz-feedback-description";
     this._textarea.setAttribute("placeholder", "What happened?");
     body.appendChild(this._textarea);
@@ -284,20 +310,29 @@
     // Toast
     this._toast = document.createElement("div");
     this._toast.className = "dz-feedback-toast";
+    this._toast.setAttribute("role", "status");
+    this._toast.setAttribute("aria-live", "polite");
     document.body.appendChild(this._toast);
   };
+
+  /** Selected state on a toggle: the class for the CSS, `aria-pressed`
+   *  for assistive tech (#1841). */
+  function setPressed(btn, on) {
+    btn.classList.toggle("selected", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+  }
 
   FeedbackWidget.prototype._selectCategory = function (cat, grid) {
     this._category = cat;
     grid.querySelectorAll(".dz-feedback-cat-btn").forEach(function (b) {
-      b.classList.toggle("selected", b.getAttribute("data-category") === cat);
+      setPressed(b, b.getAttribute("data-category") === cat);
     });
   };
 
   FeedbackWidget.prototype._selectSeverity = function (sev, row) {
     this._severity = sev;
     row.querySelectorAll(".dz-feedback-sev-btn").forEach(function (b) {
-      b.classList.toggle("selected", b.getAttribute("data-severity") === sev);
+      setPressed(b, b.getAttribute("data-severity") === sev);
     });
   };
 
@@ -345,15 +380,65 @@
   /* Open / Close                                                         */
   /* ------------------------------------------------------------------ */
 
+  /** Closed: `inert` + `aria-hidden`; open: neither (#1841). */
+  FeedbackWidget.prototype._setPanelHidden = function (hidden) {
+    if (hidden) {
+      this._panel.setAttribute("inert", "");
+      this._panel.setAttribute("aria-hidden", "true");
+    } else {
+      this._panel.removeAttribute("inert");
+      this._panel.removeAttribute("aria-hidden");
+    }
+    this._panel.inert = hidden;
+  };
+
+  /** `aria-modal` panel: Tab and Shift+Tab wrap inside it. */
+  FeedbackWidget.prototype._trapTab = function (e) {
+    var controls = [];
+    var all = this._panel.querySelectorAll("button, textarea");
+    for (var i = 0; i < all.length; i++) {
+      if (!all[i].disabled) controls.push(all[i]);
+    }
+    if (!controls.length) return;
+    var first = controls[0];
+    var last = controls[controls.length - 1];
+    var active = document.activeElement;
+    if (e.shiftKey && active === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
+  FeedbackWidget.prototype.isOpen = function () {
+    return this._panel.classList.contains("open");
+  };
+
   FeedbackWidget.prototype.open = function () {
+    if (this.isOpen()) return;
     this._idempotencyKey = crypto.randomUUID();
+    var active = document.activeElement;
+    this._opener = active && active !== document.body ? active : this._btn;
+    this._setPanelHidden(false);
     this._panel.classList.add("open");
     this._backdrop.classList.add("visible");
+    // Focus the first control (the first category toggle).
+    var first = this._panel.querySelectorAll(".dz-feedback-cat-btn")[0];
+    if (first && typeof first.focus === "function") first.focus();
   };
 
   FeedbackWidget.prototype.close = function () {
+    if (!this.isOpen()) return;
     this._panel.classList.remove("open");
     this._backdrop.classList.remove("visible");
+    this._setPanelHidden(true);
+    // Return focus to whatever opened the panel, if it is still on the page.
+    var opener = this._opener;
+    this._opener = null;
+    if (!opener || !document.body.contains(opener)) opener = this._btn;
+    if (opener && typeof opener.focus === "function") opener.focus();
   };
 
   /* ------------------------------------------------------------------ */
@@ -451,13 +536,10 @@
     this._textarea.value = "";
     this._submitBtn.disabled = false;
     this._panel.querySelectorAll(".dz-feedback-cat-btn").forEach(function (b) {
-      b.classList.remove("selected");
+      setPressed(b, false);
     });
     this._panel.querySelectorAll(".dz-feedback-sev-btn").forEach(function (b) {
-      b.classList.toggle(
-        "selected",
-        b.getAttribute("data-severity") === "minor",
-      );
+      setPressed(b, b.getAttribute("data-severity") === "minor");
     });
   };
 
