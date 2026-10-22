@@ -328,6 +328,9 @@ constraint-dependencies = [
     # unbounded memory/CPU use, a missing initial request/header timeout and
     # an unenforced Secure cookie attribute (Dependabot alerts 62–64).
     "aiohttp>=3.14.4",
+    # Transitive (httpx, requests). 2026.10.19 drops the emSign roots whose
+    # intermediate CA keys were compromised (GHSA-6q48-6c7w-9gw2).
+    "certifi>=2026.10.19",
 ]
 
 [tool.setuptools]
