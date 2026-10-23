@@ -1,9 +1,9 @@
 {
-  "src_lines": 331047,
-  "test_lines": 321001,
-  "docs_lines": 49569,
+  "src_lines": 331220,
+  "test_lines": 321422,
+  "docs_lines": 49574,
   "construct_count": 31,
-  "written": "2026-10-20",
+  "written": "2026-10-23",
   "exceptions": [
     {
       "date": "2026-10-11",
@@ -699,6 +699,15 @@
         "test_lines"
       ],
       "reason": "#1835 json row values + #1837 per-entry process load (consumer-forced fixes with regression tests)"
+    },
+    {
+      "date": "2026-10-23",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1838 #1839 #1840 #1841 #1842-shortcut a11y fixes (consumer-forced by cyfuture) with regression tests"
     }
   ]
 }
