@@ -84,6 +84,7 @@ below, link from the issue body (not only a comment).
 | [DD-015](DD-015-task-inbox-region.md) | Multi-source task inbox region (`display: task_inbox`, `task_inbox_config:`) | PARKED | #1015, #1145, #1232, #1303 | Removed 2026-10-16 after AegisMark fb673bc8 dropped its last use; HM `task-inbox` Hyperpart kept; restore from `a112b3d34` when a consumer needs one landing list across entities |
 | [DD-016](DD-016-transition-outcome-and-row-surface-actions.md) | `transition` outcome on surface actions + per-row surface actions in `mode: list` | PARKED | #1787 | Action `visible:` + render-time SM guards shipped; reopen when cyfuture needs transition buttons with custom labels/placement or per-row surface actions |
 | [DD-017](DD-017-calendar-periods.md) | Named calendar periods (`start_of(term)`, `calendar:`) + `window … anchored_to today` | PARKED | #1800 | `start_of(week\|month\|quarter\|year)` shipped; reopen when AegisMark declares term dates as an entity and asks for "this half-term", or a consumer needs fiscal periods |
+| [DD-018](DD-018-auth-mailer-message-objects.md) | Auth mailers take one message object with a framework-rendered default subject/text/html | PARKED | #1842 | Expiry constant + `/login/sent` text shipped; reopen when a consumer needs the expiry (or another field) inside a magic-link / verification / invitation email |
 
 ## Related
 

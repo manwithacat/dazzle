@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Added
+- **A person's declared `initials` field sets their avatar initials.** When the person's entity declares `initials` (e.g. `initials: str(3) optional`, alongside `avatar_url`), a non-empty value is shown as authored, capped at three characters, in the user chip and the cohort-strip halo. A blank value falls back to the derived initials (`render/user_chip.py` `person_initials`). Documented in `docs/reference/hyperpart-presentation.md`.
+- **DD-018 (parked): auth mailers will take one message object with a framework-rendered default subject/text/html**, so the framework can add fields such as the link expiry without breaking host mailers. The plan follows the Auth.js, Laravel and Supabase pattern. Reopen when a consumer needs the expiry inside a magic-link, verification or invitation email.
+
 ### Security
 - **certifi 2026.10.19 (GHSA-6q48-6c7w-9gw2).** certifi arrives transitively through httpx and requests; 2026.10.19 removes the emSign root CAs whose intermediate CA keys were compromised. The lock moves certifi 2026.5.20 → 2026.10.19, and `certifi>=2026.10.19` joins `[tool.uv] constraint-dependencies` so the lock cannot resolve back below it. This turned main's Security Tests job red on ec88dc4b1.
 

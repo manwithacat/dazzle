@@ -25,7 +25,7 @@ from typing import Any
 # Re-exported here for back-internal callers.
 from dazzle.render.display_names import _inject_display_names, _resolve_display_name  # noqa: F401
 from dazzle.render.fragment.renderer._render_interactive import leftover_honest_catalog_id
-from dazzle.render.user_chip import initials_from_display
+from dazzle.render.user_chip import person_initials
 
 logger = logging.getLogger(__name__)
 
@@ -341,6 +341,11 @@ def _build_cohort_cells(
             continue  # row missing id is unrenderable; skip
         # Member name resolution (FK display name first, scalar fallback last).
         fk_value = item.get(member_via)
+        # The member's own row: the loaded FK, or the item itself when
+        # member_via is self-referential (#1299). It may declare `initials`.
+        member_row = (
+            fk_value if isinstance(fk_value, dict) else item if str(fk_value) == member_id else None
+        )
         if isinstance(fk_value, dict):
             member_name = _resolve_display_name(fk_value)
         else:
@@ -441,7 +446,7 @@ def _build_cohort_cells(
                 "member_name": member_name,
                 "primary_value": primary_value,
                 "subtitle": "",  # secondary metadata — populated by adapters that have it
-                "avatar_initials": initials_from_display(member_name, fallback=""),
+                "avatar_initials": person_initials(member_row, member_name, fallback=""),
                 "tone": tone,
                 "drill_url": "",  # entity_card drill-down lands once that ship adds the route
                 "action_html": action_html,

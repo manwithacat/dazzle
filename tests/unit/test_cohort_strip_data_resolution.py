@@ -267,6 +267,24 @@ def test_tone_banding(
             "",
             id="empty-when-no-name",
         ),
+        pytest.param(
+            [{"id": "p1", "score": 78, "profile": {"name": "Alice Wong", "initials": "Al"}}],
+            "profile",
+            "Al",
+            id="declared-initials-on-member-ref",
+        ),
+        pytest.param(
+            [{"id": "p1", "score": 78, "name": "Alice Wong", "initials": "AWo"}],
+            "id",
+            "AWo",
+            id="declared-initials-self-referential",
+        ),
+        pytest.param(
+            [{"id": "p1", "score": 78, "profile": {"name": "Alice Wong", "initials": " "}}],
+            "profile",
+            "AW",
+            id="blank-declared-initials-fall-back",
+        ),
     ],
 )
 def test_avatar_initials(items: list[dict], member_via: str, expected: str) -> None:

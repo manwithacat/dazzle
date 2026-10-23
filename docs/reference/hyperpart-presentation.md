@@ -59,6 +59,14 @@ Density variants: `avatar_only`, `avatar_name`, `badge`, `swatch`, `money`, `pla
 | color | list-like | swatch (R5) |
 | datetime | queue_meta | plain / relative |
 
+**Person avatar content.** A person row shows its `avatar_url` image when it has one;
+otherwise it shows initials. When the person's entity declares an `initials` field
+(e.g. `initials: str(3) optional`), a non-empty value is shown as authored, capped at
+three characters. A blank value falls back to initials derived from the display name:
+the first and last words' first letters, or the first two letters of a one-word name,
+with punctuation skipped. The same rule applies to the user chip and the cohort-strip
+halo (`render/user_chip.py` `person_initials`).
+
 Living code: `PRESENTATION_MATRIX` in `src/dazzle/render/presentation.py`.
 
 ### Queue meta person (product intent)

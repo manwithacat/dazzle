@@ -41,6 +41,18 @@ class TestRenderUserChip:
         assert "AL" in html
         assert "Ada Lovelace" in html
 
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ({"name": "Ada Lovelace", "initials": "Ad"}, ">Ad</span>"),
+            ({"name": "Ada Lovelace", "initials": "ADAL"}, ">ADA</span>"),
+            ({"name": "Ada Lovelace", "initials": ""}, ">AL</span>"),
+        ],
+    )
+    def test_declared_initials_win(self, value: dict, expected: str) -> None:
+        html = render_user_chip_html(value, {"key": "assigned_to", "ref_entity": "User"})
+        assert expected in html
+
     def test_image_chip(self) -> None:
         html = render_user_chip_html(
             {"name": "Ada", "avatar_url": "https://example.com/a.png"},

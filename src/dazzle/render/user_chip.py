@@ -108,6 +108,23 @@ def initials_from_display(name: str, fallback: str = "?") -> str:
     return (parts[0][:1] + parts[-1][:1]).upper()
 
 
+_MAX_DECLARED_INITIALS = 3
+
+
+def person_initials(person: Any, name: str, fallback: str = "?") -> str:
+    """Initials for a person row or ref: its declared ``initials`` wins.
+
+    An entity that declares an ``initials`` field (like ``avatar_url``) controls
+    what its avatar shows; a blank value falls back to
+    :func:`initials_from_display` on *name*.
+    """
+    declared = person.get("initials") if isinstance(person, dict) else None
+    text = str(declared or "").strip()
+    if text:
+        return text[:_MAX_DECLARED_INITIALS]
+    return initials_from_display(name, fallback)
+
+
 def _hue_for_name(name: str) -> int:
     """Stable 0–359 hue so the same person keeps a consistent wash."""
     h = 0
@@ -280,7 +297,7 @@ def render_user_chip_html(
 
     name_esc = _html_mod.escape(name, quote=False)
     name_attr = _html_mod.escape(name, quote=True)
-    initials = _html_mod.escape(initials_from_display(name), quote=False)
+    initials = _html_mod.escape(person_initials(value, name), quote=False)
     avatar = _avatar_markup(name=name, avatar_url=avatar_url, initials=initials)
     if density == "avatar_only":
         # Queue meta density: identity *is* the avatar; name via a11y only.
