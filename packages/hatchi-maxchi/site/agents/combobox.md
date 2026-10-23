@@ -93,6 +93,7 @@ Do **not** re-own the slot:
 ### Pitfalls
 
 - pointerdown on the bare select must enhance first and swallow the native menu
+- an option commits on click, not pointerdown — pointerdown only keeps focus, so moving off before release cancels (WCAG 2.5.2)
 - state is data-dz-open on the root — not a JS open flag a morph would drop
 - leftover typed filter must not invent the previous option (do not revert on blur)
 - allow-create is client option-list UX only — the enclosing form handler must accept/upsert unknown values; do not treat the new option as durable alone

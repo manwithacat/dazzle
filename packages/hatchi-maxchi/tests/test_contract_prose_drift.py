@@ -73,6 +73,7 @@ TRANSIENT_STATE_ATTRS: frozenset[str] = frozenset(
         "data-dz-grid-bulk-refresh",
         "data-dz-grid-clear",
         "data-dz-grid-debounce",
+        "data-dz-grid-edit-error",  # grid-edit failed-commit message (#1842)
         "data-dz-grid-excluded",
         "data-dz-grid-fetch",  # optional separate request element (#1802)
         "data-dz-grid-filter",

@@ -200,7 +200,8 @@
   // listeners react exactly as they did with the bare <select>.
   //
   // Pointerdown on an option uses preventDefault so focus never left the
-  // input mid-click (avoids a blur/re-focus reopen race). After commit we
+  // input mid-click (avoids a blur/re-focus reopen race); the commit runs
+  // on the following `click` (pointer cancellation). After commit we
   // apply focus-after-select (default blur) so enum picks don't leave the
   // field in free-text edit mode with an I-beam caret.
   // Commit a permanent option (existing or just created).
@@ -560,11 +561,25 @@
     }
   });
 
-  // pointerdown (capture) so we can preventDefault and keep focus on the
-  // combobox input — otherwise the input blurs, then choose() would have
-  // needed a re-focus that re-opens the listbox (see choose() note).
+  // pointerdown (capture) only keeps focus on the combobox input —
+  // preventDefault stops the input blurring mid-press, which would
+  // otherwise force a re-focus that re-opens the listbox (see choose()
+  // note). The commit itself waits for `click` (WCAG 2.5.2 Pointer
+  // Cancellation, #1842): pressing on a row and moving off before
+  // release lands the click on a common ancestor, not the row, so
+  // nothing is chosen.
   document.addEventListener(
     "pointerdown",
+    function (evt) {
+      var li = evt.target.closest && evt.target.closest(".dz-combobox-option");
+      if (!li || li.hidden || !li.closest(".dz-combobox")) return;
+      evt.preventDefault();
+    },
+    true,
+  );
+
+  document.addEventListener(
+    "click",
     function (evt) {
       var li = evt.target.closest && evt.target.closest(".dz-combobox-option");
       if (!li || li.hidden) return;

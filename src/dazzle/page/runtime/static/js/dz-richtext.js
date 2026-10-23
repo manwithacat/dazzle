@@ -689,6 +689,28 @@
     );
   }
 
+  // #1842 (WCAG 1.1.1 / 4.1.2): a button's accessible name is a word, not
+  // its glyph ("•", "1.", "🔗", "✕" read as noise). The glyph is
+  // aria-hidden; this name is the aria-label and leads the tooltip.
+  function buttonName(name) {
+    return (
+      {
+        bold: "Bold",
+        italic: "Italic",
+        underline: "Underline",
+        code: "Inline code",
+        h2: "Heading 2",
+        h3: "Heading 3",
+        blockquote: "Quote",
+        paragraph: "Paragraph",
+        ul: "Bulleted list",
+        ol: "Numbered list",
+        link: "Link",
+        clear: "Clear formatting",
+      }[name] || name
+    );
+  }
+
   function shortcutLabel(cmd) {
     var parts = ["Control"];
     if (cmd.shift) parts.push("Shift");
@@ -721,9 +743,17 @@
       btn.setAttribute("data-cmd", name);
       btn.setAttribute("aria-pressed", "false");
       var sc = shortcutLabel(cmd);
+      var label = buttonName(name);
       btn.setAttribute("aria-keyshortcuts", sc);
-      btn.setAttribute("title", name + " (" + sc + ")");
-      btn.textContent = buttonLabel(name);
+      btn.setAttribute("aria-label", label);
+      btn.setAttribute(
+        "title",
+        label + " (" + sc.replace("Control", "Ctrl") + ")",
+      );
+      var glyph = document.createElement("span");
+      glyph.setAttribute("aria-hidden", "true");
+      glyph.textContent = buttonLabel(name);
+      btn.appendChild(glyph);
       if (name === "italic") btn.style.fontStyle = "italic";
       if (name === "bold") btn.style.fontWeight = "700";
       if (name === "underline") btn.style.textDecoration = "underline";

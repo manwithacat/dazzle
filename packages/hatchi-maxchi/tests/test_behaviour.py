@@ -2619,6 +2619,55 @@ def test_grid_inline_edit_commits_via_put_and_refreshes(page) -> None:  # type: 
     assert "Renamed" in names, f"the committed value must render from the server: {names}"
 
 
+def test_grid_inline_edit_announces_outcome_and_describes_error(page) -> None:  # type: ignore[no-untyped-def]
+    """#1842 (WCAG 4.1.3): a commit's outcome reaches the grid's polite live
+    region; a failed commit keeps the editor open with the reason as visible
+    text that the editor references via aria-describedby + aria-invalid (not
+    only a `title`)."""
+    goto_part(page, "grid")
+    _hydrate_grid(page)
+    announce = "[data-grid-announce]"
+    # Fail the next PUT with a FastAPI-shaped 422.
+    page.evaluate(
+        """() => {
+          const real = window.fetch;
+          window.fetch = (url, opts) => {
+            if (window.__failPut && opts && opts.method === "PUT") {
+              return Promise.resolve(new Response(
+                JSON.stringify({detail: [{msg: "Name is too long"}]}),
+                {status: 422, headers: {"Content-Type": "application/json"}}));
+            }
+            return real(url, opts);
+          };
+          window.__failPut = true;
+        }"""
+    )
+    page.query_selector('[data-grid-body] [data-grid-edit="first"]').dblclick()
+    page.wait_for_timeout(80)
+    page.fill("[data-grid-editor]", "Rejected")
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(200)
+    editor = page.query_selector("[data-grid-editor]")
+    assert editor is not None, "a failed commit keeps the editor open"
+    err = page.query_selector("[data-grid-edit-error]")
+    assert err is not None and err.is_visible(), "the reason must be visible text"
+    assert err.inner_text().strip() == "Name is too long"
+    assert editor.get_attribute("aria-describedby") == err.get_attribute("id")
+    assert editor.get_attribute("aria-invalid") == "true"
+    assert not editor.get_attribute("title")
+    assert "not saved: Name is too long" in page.inner_text(announce)
+
+    # Retry succeeds: error cleared, "Saved …" announced, and the row refresh
+    # does not overwrite it with the unchanged result window.
+    page.evaluate("window.__failPut = false")
+    page.fill("[data-grid-editor]", "Accepted")
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(300)
+    assert page.query_selector("[data-grid-editor]") is None
+    assert page.query_selector("[data-grid-edit-error]") is None
+    assert page.inner_text(announce).strip().startswith("Saved")
+
+
 def test_grid_date_leftover_iso_does_not_invent_commit(page) -> None:  # type: ignore[no-untyped-def]
     """Grid-edit leftover ISO must not invent a date commit (cycle 2150).
 
@@ -4047,6 +4096,34 @@ def test_combobox_enhances_and_selects(page) -> None:  # type: ignore[no-untyped
     assert root.get_attribute("data-open") is None
     # Default focus-after-select=blur — leave free-text / I-beam mode.
     assert not root.locator(".combobox-input").evaluate("el => el === document.activeElement")
+
+
+def test_combobox_commits_on_click_not_pointerdown(page) -> None:  # type: ignore[no-untyped-def]
+    """#1842 / WCAG 2.5.2: pressing an option does not commit it; the click
+    does. A press that is released elsewhere (click lands on the listbox,
+    not the row) cancels."""
+    goto_part(page, "combobox")
+    preview = page.locator(".hm-preview")
+    sel = preview.locator("select[data-combobox]").first
+    sel.dispatch_event("pointerdown")
+    page.wait_for_timeout(100)
+    root = preview.locator(".combobox[data-enhanced]").first
+    before = sel.input_value()
+    target = root.locator(".combobox-option:not([hidden])").filter(has_text="High").first
+    # Press only: no commit, listbox still open, focus kept on the input.
+    target.dispatch_event("pointerdown")
+    page.wait_for_timeout(50)
+    assert sel.input_value() == before
+    assert root.get_attribute("data-open") == "true"
+    # Pointer moved off before release: click lands on the listbox.
+    root.locator("[role=listbox]").dispatch_event("click")
+    page.wait_for_timeout(50)
+    assert sel.input_value() == before
+    # A real click on the row commits.
+    target.click()
+    page.wait_for_timeout(50)
+    assert sel.input_value() == "high"
+    assert root.get_attribute("data-open") is None
 
 
 def test_combobox_enhance_preserves_field_box(page) -> None:  # type: ignore[no-untyped-def]

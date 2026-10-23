@@ -13,7 +13,9 @@
  *   - `drag`: mid-flight pointer state during card drag
  *   - `resize`: mid-flight pointer state during card resize
  *   - `saveState`: clean | dirty | saving | saved | error
- *   - `_saveError`: error string for the Save button title attr
+ *   - `_saveError`: error string, shown as visible text beside the Save
+ *     button (`[data-dz-save-error]`, the button's aria-describedby) and
+ *     announced (#1842)
  *   - `showPicker`: add-card picker visibility
  *   - `_keyboardMoveCardId` / `_keyboardResizeCardId` / `_keyboardResizeOriginal`
  *   - `undoStack`: list of undo operations (DOM-snapshot, not array)
@@ -135,7 +137,13 @@ function createDzDashboardBuilder(root) {
         if (!btn || !root.contains(btn)) return;
         const action = btn.getAttribute("data-dz-action");
         if (action === "reset") this.resetLayout();
-        else if (action === "save") this.save();
+        else if (action === "save") {
+          // #1842: the button is aria-disabled (not `disabled`) while it
+          // has nothing to save or a save is in flight, so it keeps focus —
+          // the click has to be refused here instead.
+          if (btn.getAttribute("aria-disabled") === "true") return;
+          this.save();
+        }
         else if (action === "toggle-picker") this.showPicker = !this.showPicker;
       };
       // picker entries carry data-dz-add-region (was an Alpine @click)
@@ -262,7 +270,10 @@ function createDzDashboardBuilder(root) {
 
     async save() {
       if (this.saveState !== "dirty" && this.saveState !== "error") return;
+      // Synchronous state flip before the await: a second click or Ctrl+S
+      // while the PUT is in flight hits the guard above (no double-submit).
       this.saveState = "saving";
+      this._announce("Saving layout…");
 
       const cards = this._allCards().map((el, i) => ({
         id: el.getAttribute("data-card-id"),
@@ -284,6 +295,7 @@ function createDzDashboardBuilder(root) {
         });
         if (!resp.ok) throw new Error("Server returned " + resp.status);
         this.saveState = "saved";
+        this._announce("Layout saved");
         this.undoStack = [];
         clearTimeout(this._savedTimer);
         this._savedTimer = setTimeout(() => {
@@ -291,9 +303,10 @@ function createDzDashboardBuilder(root) {
         }, 1200);
       } catch (err) {
         // _saveError first — the saveState setter mirrors it into the
-        // save button's title.
+        // visible error text beside the save button.
         this._saveError = err.message || "Failed to save";
         this.saveState = "error";
+        this._announce("Layout not saved: " + this._saveError);
       }
     },
 
@@ -906,7 +919,7 @@ function createDzDashboardBuilder(root) {
         el.id = "dz-live-region";
         el.setAttribute("aria-live", "polite");
         el.setAttribute("aria-atomic", "true");
-        el.className = "sr-only";
+        el.className = "visually-hidden";
         document.body.appendChild(el);
       }
       el.textContent = message;
@@ -932,8 +945,32 @@ function createDzDashboardBuilder(root) {
       const btn = root.querySelector(".dz-workspace-save");
       if (btn) {
         btn.setAttribute("data-dz-save-state", v);
-        btn.disabled = v === "clean" || v === "saving" || v === "saved";
-        btn.title = v === "error" ? this._saveError : "";
+        // #1842 (WCAG 4.1.3): aria-disabled, never `disabled` — the user's
+        // focus is usually ON this button as it moves to saving/saved/clean,
+        // and disabling a focused button drops focus to <body>. The click
+        // handler refuses aria-disabled clicks. (The SSR clean state ships
+        // `disabled`, which only holds until the first change.)
+        btn.disabled = false;
+        btn.setAttribute(
+          "aria-disabled",
+          v === "clean" || v === "saving" || v === "saved" ? "true" : "false",
+        );
+        btn.removeAttribute("title");
+        let err = root.querySelector("[data-dz-save-error]");
+        if (v === "error") {
+          if (!err) {
+            err = document.createElement("span");
+            err.className = "dz-workspace-save-error";
+            err.setAttribute("data-dz-save-error", "");
+            err.id = "dz-workspace-save-error";
+            btn.parentNode.insertBefore(err, btn);
+          }
+          err.textContent = "Not saved: " + this._saveError;
+          btn.setAttribute("aria-describedby", err.id);
+        } else if (err) {
+          err.remove();
+          btn.removeAttribute("aria-describedby");
+        }
       }
     },
   });

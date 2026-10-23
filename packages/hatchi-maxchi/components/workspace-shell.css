@@ -207,6 +207,14 @@
   color: var(--colour-danger);
 }
 
+/* Failed-save reason (#1842, WCAG 4.1.3): visible text the controller
+ * inserts before the Save button in the error state only, linked as the
+ * button's aria-describedby. Never present at rest. */
+.dz-workspace-save-error {
+  font-size: var(--text-sm);
+  color: var(--colour-danger);
+}
+
 .dz-workspace-save-busy {
   display: inline-flex;
   align-items: center;

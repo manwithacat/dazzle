@@ -69,8 +69,9 @@ def test_workspace_toolbar_emits_reset_button_with_action_trigger() -> None:
 
 def test_workspace_toolbar_save_button_ssrs_state() -> None:
     """Save button SSRs the clean state, disabled; the controller's
-    saveState setter drives data-dz-save-state/disabled/title from
-    there (F4e state-in-DOM)."""
+    saveState setter drives data-dz-save-state/aria-disabled from there
+    (F4e state-in-DOM; #1842 — the client never re-applies `disabled`, see
+    tests/unit/test_a11y_client_status_1842.py)."""
     html = _render()
     assert 'data-dz-action="save"' in html
     assert 'data-dz-save-state="clean"' in html

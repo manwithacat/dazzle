@@ -1514,8 +1514,8 @@ def compute_kanban_rearrange(
       (AUTO edges never offered — R3).
     * When there is no SM (or group_by is a free enum): ``allowed_by_id``
       is empty and the builder falls back to "any other column".
-    * ``rank_field`` is set when the entity declares rank/position/sort_order
-      so in-column DnD can persist order.
+    * ``rank_field`` is set only when the entity declares rank/position/
+      sort_order, so in-column DnD can persist order; otherwise ``""``.
     """
     if not group_by_field or entity_spec is None:
         return "", "", "", {}, ""
@@ -1523,10 +1523,10 @@ def compute_kanban_rearrange(
     api_endpoint = f"/{to_api_plural(source_name)}" if source_name else ""
     sm = getattr(entity_spec, "state_machine", None)
     status_field = group_by_field
-    # Prefer a real entity order field; fall back to "rank" so in-column DnD
-    # is always available when rearrange is on (apps without the column still
-    # get UI; persist once they declare the field).
-    rank_field = _entity_rank_field(entity_spec) or "rank"
+    # Only a field the entity declares (#1842). Without one the board stamps
+    # no data-dz-kanban-rank-field, so dz-kanban.js offers no in-column
+    # reorder — a drop there would PUT a field the update route rejects.
+    rank_field = _entity_rank_field(entity_spec)
 
     if sm and getattr(sm, "status_field", None) == group_by_field:
         return (

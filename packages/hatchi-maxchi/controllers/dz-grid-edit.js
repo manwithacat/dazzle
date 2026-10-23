@@ -60,7 +60,12 @@
  *             (wrapping to the adjacent row); bool/select commit on change.
  *   - state:  `is-saving` / `is-error` classes on the row (the same classes
  *             the Alpine `:class` bind used); a failed commit keeps the
- *             editor open with the server error in its `title`.
+ *             editor open with the server error as visible text
+ *             (`[data-dz-grid-edit-error]`) linked to the editor's control
+ *             by `aria-describedby` + `aria-invalid` (#1842, WCAG 4.1.3).
+ *   - status: "Saved <label>" / "<label> not saved: <reason>" are written
+ *             to the grid's `[data-dz-grid-announce]` polite live region
+ *             (created visually hidden when the grid has none).
  *   - after a successful commit the controller fires `dz-grid:refresh` on
  *             the grid's request element (the separate fetch element when
  *             present, else the tbody) — the server re-renders rows, so rich display chrome
@@ -217,7 +222,90 @@
     return true;
   }
 
+  // #1842 (WCAG 4.1.3): commit outcomes go to the grid's polite live
+  // region `[data-dz-grid-announce]` (server-emitted beside the pagination
+  // footer; created here, visually hidden, when the grid has none).
+  function announce(root, msg) {
+    var out = root.querySelector("[data-dz-grid-announce]");
+    if (!out) {
+      out = document.createElement("span");
+      out.className = "dz-grid-announce";
+      out.setAttribute("data-dz-grid-announce", "");
+      out.setAttribute("aria-live", "polite");
+      out.setAttribute("aria-atomic", "true");
+      root.appendChild(out);
+    }
+    // Clear first so an identical repeat ("Saved Status") is re-announced.
+    out.textContent = "";
+    out.textContent = msg;
+  }
+
+  // Turn an error response body into one human sentence: FastAPI's
+  // `{"detail": "..."}` / `{"detail": [{"msg": "..."}]}`, else the raw text.
+  function errorText(text, status) {
+    var msg = "";
+    try {
+      var body = JSON.parse(text);
+      var detail = body && body.detail;
+      if (typeof detail === "string") msg = detail;
+      else if (detail && detail.length && detail[0] && detail[0].msg) {
+        msg = String(detail[0].msg);
+      }
+    } catch (e) {
+      msg = "";
+    }
+    if (!msg) msg = String(text || "").trim();
+    if (msg.length > 200) msg = msg.slice(0, 200) + "…";
+    return msg || "Error " + status;
+  }
+
+  function editorControls(editor) {
+    if (!editor) return [];
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(editor.tagName)) return [editor];
+    return Array.prototype.slice.call(
+      editor.querySelectorAll("input, select, textarea"),
+    );
+  }
+
+  function clearError(root) {
+    var err = root.querySelector("[data-dz-grid-edit-error]");
+    if (err && err.parentNode) err.parentNode.removeChild(err);
+    var editor = root.querySelector("[data-dz-grid-editor]");
+    editorControls(editor).forEach(function (c) {
+      c.removeAttribute("aria-invalid");
+      c.removeAttribute("aria-describedby");
+    });
+  }
+
+  var errorSeq = 0;
+
+  // A failed commit keeps the editor open with the reason as VISIBLE text
+  // under it, tied to the editor's control(s) by aria-describedby +
+  // aria-invalid, and announced through the live region.
+  function showError(root, edit, msg) {
+    clearError(root);
+    var editor = root.querySelector("[data-dz-grid-editor]");
+    if (editor && editor.parentNode) {
+      errorSeq += 1;
+      var err = document.createElement("span");
+      err.id = "dz-grid-edit-error-" + errorSeq;
+      err.className = "dz-inline-edit-error";
+      err.setAttribute("data-dz-grid-edit-error", "");
+      err.textContent = msg;
+      editor.parentNode.insertBefore(err, editor.nextSibling);
+      editorControls(editor).forEach(function (c) {
+        c.setAttribute("aria-invalid", "true");
+        c.setAttribute("aria-describedby", err.id);
+      });
+    }
+    announce(
+      root,
+      (edit.label ? edit.label + " not saved: " : "Not saved: ") + msg,
+    );
+  }
+
   function closeEditor(root) {
+    clearError(root);
     var editor = root.querySelector("[data-dz-grid-editor]");
     if (editor) {
       var span = editor.previousSibling;
@@ -457,12 +545,12 @@
           return resp.text().then(function (text) {
             edit.saving = false;
             if (row) row.classList.add("is-error");
-            var editor = root.querySelector("[data-dz-grid-editor]");
-            if (editor) editor.title = text || "Error " + resp.status;
+            showError(root, edit, errorText(text, resp.status));
             return;
           });
         }
         closeEditor(root);
+        announce(root, edit.label ? "Saved " + edit.label : "Saved");
         // Server-owned rendering: refresh the rows so badge/date chrome is
         // re-rendered rather than patched client-side.
         // The refresh goes to the grid's request element — the separate
@@ -483,8 +571,7 @@
           row.classList.remove("is-saving");
           row.classList.add("is-error");
         }
-        var editor = root.querySelector("[data-dz-grid-editor]");
-        if (editor) editor.title = (err && err.message) || "Network error";
+        showError(root, edit, (err && err.message) || "Network error");
       });
   }
 
@@ -588,6 +675,8 @@
       // row with the captured buffer (or drop if the row vanished).
       var stale = grids[i].querySelector("[data-dz-grid-editor]");
       if (stale) stale.parentNode.removeChild(stale);
+      var staleErr = grids[i].querySelector("[data-dz-grid-edit-error]");
+      if (staleErr) staleErr.parentNode.removeChild(staleErr);
       if (!openEditor(grids[i])) grids[i]._dzEdit = null;
     }
   }

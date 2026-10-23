@@ -2298,7 +2298,12 @@
       root.querySelector("[data-grid-pagination] .pagination-summary");
     if (!summary) return;
     var msg = "Showing " + summary.textContent.trim();
-    if (out.textContent !== msg) out.textContent = msg;
+    // Compare against the last WINDOW announced, not the region's text: the
+    // grid-edit extension writes "Saved …" into the same region, and the
+    // row refresh after a save must not re-read an unchanged window (#1842).
+    if (out.getAttribute("data-grid-announced") === msg) return;
+    out.setAttribute("data-grid-announced", msg);
+    out.textContent = msg;
   }
 
   function sync(root) {
@@ -3507,7 +3512,12 @@
  *             (wrapping to the adjacent row); bool/select commit on change.
  *   - state:  `is-saving` / `is-error` classes on the row (the same classes
  *             the Alpine `:class` bind used); a failed commit keeps the
- *             editor open with the server error in its `title`.
+ *             editor open with the server error as visible text
+ *             (`[data-grid-edit-error]`) linked to the editor's control
+ *             by `aria-describedby` + `aria-invalid` (#1842, WCAG 4.1.3).
+ *   - status: "Saved <label>" / "<label> not saved: <reason>" are written
+ *             to the grid's `[data-grid-announce]` polite live region
+ *             (created visually hidden when the grid has none).
  *   - after a successful commit the controller fires `grid:refresh` on
  *             the grid's request element (the separate fetch element when
  *             present, else the tbody) — the server re-renders rows, so rich display chrome
@@ -3664,7 +3674,90 @@
     return true;
   }
 
+  // #1842 (WCAG 4.1.3): commit outcomes go to the grid's polite live
+  // region `[data-grid-announce]` (server-emitted beside the pagination
+  // footer; created here, visually hidden, when the grid has none).
+  function announce(root, msg) {
+    var out = root.querySelector("[data-grid-announce]");
+    if (!out) {
+      out = document.createElement("span");
+      out.className = "grid-announce";
+      out.setAttribute("data-grid-announce", "");
+      out.setAttribute("aria-live", "polite");
+      out.setAttribute("aria-atomic", "true");
+      root.appendChild(out);
+    }
+    // Clear first so an identical repeat ("Saved Status") is re-announced.
+    out.textContent = "";
+    out.textContent = msg;
+  }
+
+  // Turn an error response body into one human sentence: FastAPI's
+  // `{"detail": "..."}` / `{"detail": [{"msg": "..."}]}`, else the raw text.
+  function errorText(text, status) {
+    var msg = "";
+    try {
+      var body = JSON.parse(text);
+      var detail = body && body.detail;
+      if (typeof detail === "string") msg = detail;
+      else if (detail && detail.length && detail[0] && detail[0].msg) {
+        msg = String(detail[0].msg);
+      }
+    } catch (e) {
+      msg = "";
+    }
+    if (!msg) msg = String(text || "").trim();
+    if (msg.length > 200) msg = msg.slice(0, 200) + "…";
+    return msg || "Error " + status;
+  }
+
+  function editorControls(editor) {
+    if (!editor) return [];
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(editor.tagName)) return [editor];
+    return Array.prototype.slice.call(
+      editor.querySelectorAll("input, select, textarea"),
+    );
+  }
+
+  function clearError(root) {
+    var err = root.querySelector("[data-grid-edit-error]");
+    if (err && err.parentNode) err.parentNode.removeChild(err);
+    var editor = root.querySelector("[data-grid-editor]");
+    editorControls(editor).forEach(function (c) {
+      c.removeAttribute("aria-invalid");
+      c.removeAttribute("aria-describedby");
+    });
+  }
+
+  var errorSeq = 0;
+
+  // A failed commit keeps the editor open with the reason as VISIBLE text
+  // under it, tied to the editor's control(s) by aria-describedby +
+  // aria-invalid, and announced through the live region.
+  function showError(root, edit, msg) {
+    clearError(root);
+    var editor = root.querySelector("[data-grid-editor]");
+    if (editor && editor.parentNode) {
+      errorSeq += 1;
+      var err = document.createElement("span");
+      err.id = "grid-edit-error-" + errorSeq;
+      err.className = "inline-edit-error";
+      err.setAttribute("data-grid-edit-error", "");
+      err.textContent = msg;
+      editor.parentNode.insertBefore(err, editor.nextSibling);
+      editorControls(editor).forEach(function (c) {
+        c.setAttribute("aria-invalid", "true");
+        c.setAttribute("aria-describedby", err.id);
+      });
+    }
+    announce(
+      root,
+      (edit.label ? edit.label + " not saved: " : "Not saved: ") + msg,
+    );
+  }
+
   function closeEditor(root) {
+    clearError(root);
     var editor = root.querySelector("[data-grid-editor]");
     if (editor) {
       var span = editor.previousSibling;
@@ -3904,12 +3997,12 @@
           return resp.text().then(function (text) {
             edit.saving = false;
             if (row) row.classList.add("is-error");
-            var editor = root.querySelector("[data-grid-editor]");
-            if (editor) editor.title = text || "Error " + resp.status;
+            showError(root, edit, errorText(text, resp.status));
             return;
           });
         }
         closeEditor(root);
+        announce(root, edit.label ? "Saved " + edit.label : "Saved");
         // Server-owned rendering: refresh the rows so badge/date chrome is
         // re-rendered rather than patched client-side.
         // The refresh goes to the grid's request element — the separate
@@ -3930,8 +4023,7 @@
           row.classList.remove("is-saving");
           row.classList.add("is-error");
         }
-        var editor = root.querySelector("[data-grid-editor]");
-        if (editor) editor.title = (err && err.message) || "Network error";
+        showError(root, edit, (err && err.message) || "Network error");
       });
   }
 
@@ -4035,6 +4127,8 @@
       // row with the captured buffer (or drop if the row vanished).
       var stale = grids[i].querySelector("[data-grid-editor]");
       if (stale) stale.parentNode.removeChild(stale);
+      var staleErr = grids[i].querySelector("[data-grid-edit-error]");
+      if (staleErr) staleErr.parentNode.removeChild(staleErr);
       if (!openEditor(grids[i])) grids[i]._dzEdit = null;
     }
   }
@@ -5273,7 +5367,8 @@
   // listeners react exactly as they did with the bare <select>.
   //
   // Pointerdown on an option uses preventDefault so focus never left the
-  // input mid-click (avoids a blur/re-focus reopen race). After commit we
+  // input mid-click (avoids a blur/re-focus reopen race); the commit runs
+  // on the following `click` (pointer cancellation). After commit we
   // apply focus-after-select (default blur) so enum picks don't leave the
   // field in free-text edit mode with an I-beam caret.
   // Commit a permanent option (existing or just created).
@@ -5633,11 +5728,25 @@
     }
   });
 
-  // pointerdown (capture) so we can preventDefault and keep focus on the
-  // combobox input — otherwise the input blurs, then choose() would have
-  // needed a re-focus that re-opens the listbox (see choose() note).
+  // pointerdown (capture) only keeps focus on the combobox input —
+  // preventDefault stops the input blurring mid-press, which would
+  // otherwise force a re-focus that re-opens the listbox (see choose()
+  // note). The commit itself waits for `click` (WCAG 2.5.2 Pointer
+  // Cancellation, #1842): pressing on a row and moving off before
+  // release lands the click on a common ancestor, not the row, so
+  // nothing is chosen.
   document.addEventListener(
     "pointerdown",
+    function (evt) {
+      var li = evt.target.closest && evt.target.closest(".combobox-option");
+      if (!li || li.hidden || !li.closest(".combobox")) return;
+      evt.preventDefault();
+    },
+    true,
+  );
+
+  document.addEventListener(
+    "click",
     function (evt) {
       var li = evt.target.closest && evt.target.closest(".combobox-option");
       if (!li || li.hidden) return;

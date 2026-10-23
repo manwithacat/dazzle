@@ -326,7 +326,12 @@
       root.querySelector("[data-dz-grid-pagination] .dz-pagination-summary");
     if (!summary) return;
     var msg = "Showing " + summary.textContent.trim();
-    if (out.textContent !== msg) out.textContent = msg;
+    // Compare against the last WINDOW announced, not the region's text: the
+    // grid-edit extension writes "Saved …" into the same region, and the
+    // row refresh after a save must not re-read an unchanged window (#1842).
+    if (out.getAttribute("data-dz-grid-announced") === msg) return;
+    out.setAttribute("data-dz-grid-announced", msg);
+    out.textContent = msg;
   }
 
   function sync(root) {

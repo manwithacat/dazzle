@@ -71,7 +71,8 @@ def test_compute_rearrange_manual_sm_edges_only() -> None:
     assert field == "status"
     assert api == "/tasks"
     assert allowed["t1"] == ("in_progress",)
-    assert rank_field == "rank"
+    # #1842: no declared order field → no rank field (no in-column reorder).
+    assert rank_field == ""
 
 
 def test_compute_rearrange_free_enum_empty_map() -> None:
@@ -84,7 +85,18 @@ def test_compute_rearrange_free_enum_empty_map() -> None:
     assert field == "stage"
     assert api == "/deals"
     assert allowed == {}
-    assert rank_field == "rank"
+    assert rank_field == ""
+
+
+@pytest.mark.parametrize("declared", ["rank", "position", "sort_order"])
+def test_compute_rearrange_rank_field_only_when_declared(declared: str) -> None:
+    """#1842: the rank field is the entity's own order field, never a default."""
+    entity = SimpleNamespace(
+        state_machine=None,
+        fields=[SimpleNamespace(name="title"), SimpleNamespace(name=declared)],
+    )
+    *_, rank_field = compute_kanban_rearrange(entity, "stage", "Deal", [])
+    assert rank_field == declared
 
 
 def test_card_render_read_only_no_rearrange_attrs() -> None:

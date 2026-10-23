@@ -7372,6 +7372,18 @@ summary.table-col-menu-trigger::-webkit-details-marker {
   cursor: not-allowed;
 }
 
+/* Failed-commit reason under the open editor (#1842, WCAG 4.1.3): visible
+ * text, linked to the editor by aria-describedby. Editor-only chrome — the
+ * rest-state gallery never shows it. */
+.inline-edit-error {
+  display: block;
+  margin-block-start: var(--space-xs);
+  font-size: var(--text-xs);
+  line-height: 1.3;
+  white-space: normal;
+  color: var(--colour-danger);
+}
+
 /* Date leftover honesty (cycle 2150): native picker + ISO companion.
  * Rest-state gallery (display spans) is unchanged — editor-only chrome. */
 .inline-edit-date {
@@ -9150,6 +9162,14 @@ select.filter-select {
 
 .workspace-save[data-save-state="error"] {
   border-color: var(--colour-danger);
+  color: var(--colour-danger);
+}
+
+/* Failed-save reason (#1842, WCAG 4.1.3): visible text the controller
+ * inserts before the Save button in the error state only, linked as the
+ * button's aria-describedby. Never present at rest. */
+.workspace-save-error {
+  font-size: var(--text-sm);
   color: var(--colour-danger);
 }
 

@@ -319,6 +319,18 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   cursor: not-allowed;
 }
 
+/* Failed-commit reason under the open editor (#1842, WCAG 4.1.3): visible
+ * text, linked to the editor by aria-describedby. Editor-only chrome — the
+ * rest-state gallery never shows it. */
+.dz-inline-edit-error {
+  display: block;
+  margin-block-start: var(--space-xs);
+  font-size: var(--text-xs);
+  line-height: 1.3;
+  white-space: normal;
+  color: var(--colour-danger);
+}
+
 /* Date leftover honesty (cycle 2150): native picker + ISO companion.
  * Rest-state gallery (display spans) is unchanged — editor-only chrome. */
 .dz-inline-edit-date {
