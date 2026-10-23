@@ -3,7 +3,7 @@
 import pytest
 
 from dazzle.render.fragment.htmx import URL
-from dazzle.render.fragment.primitives.forms import Combobox, Field, FormStack, Submit
+from dazzle.render.fragment.primitives.forms import Combobox, Field, FormStack, Submit, SwitchField
 
 
 def test_form_stack_requires_action() -> None:
@@ -51,3 +51,21 @@ def test_combobox_option_pairs() -> None:
 def test_submit_label_required() -> None:
     s = Submit(label="Save changes")
     assert s.label == "Save changes"
+
+
+@pytest.mark.parametrize(
+    "primitive",
+    [
+        Field(name="active", label="Active", kind="checkbox", initial_value="true"),
+        SwitchField(name="active", label="Active", initial_value="true"),
+    ],
+    ids=["checkbox", "switch"],
+)
+def test_checkbox_posts_false_when_unticked(primitive: object) -> None:
+    """#1848 follow-up: an unticked checkbox posts nothing, so a hidden `false`
+    precedes it; the ticked box comes later and its value wins."""
+    from dazzle.render.fragment import FragmentRenderer
+
+    html = FragmentRenderer().render(primitive)
+    hidden = html.index('<input type="hidden" name="active" value="false">')
+    assert hidden < html.index('type="checkbox"')

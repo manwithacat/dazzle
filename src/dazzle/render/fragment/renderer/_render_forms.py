@@ -63,6 +63,16 @@ if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
 
 
+def _unchecked_value(name: str) -> str:
+    """A hidden ``false`` posted ahead of a checkbox (#1848 follow-up).
+
+    An unticked checkbox posts nothing, so an edit form could never save
+    ``false``; the update leaves an absent key alone. The checkbox comes
+    later in the form, and the last value for a key wins, so a ticked box
+    still posts ``true``/``on``. ``name`` is already attribute-escaped."""
+    return f'<input type="hidden" name="{name}" value="false">'
+
+
 class _RenderFormsMixin:
     """Mixin adding the 9 forms-family `_emit_*` methods to
     `FragmentRenderer`. Same pattern as `_RenderLayoutMixin`.
@@ -212,6 +222,7 @@ class _RenderFormsMixin:
             checked = " checked" if f.initial_value == "true" else ""
             return (
                 '<div class="dz-form-field">'
+                f"{_unchecked_value(name)}"
                 '<label class="dz-form-checkbox-label">'
                 f'<input type="checkbox" name="{name}" id="field-{name}" '
                 f'data-dazzle-field="{name}" class="dz-form-checkbox"'
@@ -684,6 +695,7 @@ class _RenderFormsMixin:
         # <label for=> which would nest labels illegally.
         return (
             f'<div class="dz-form-field" data-dz-widget="switch">'
+            f"{_unchecked_value(name)}"
             f'<label class="dz-switch">'
             f'<input type="checkbox" id="field-{name}" name="{name}" '
             f'value="true" data-dz-switch data-dazzle-field="{name}"'

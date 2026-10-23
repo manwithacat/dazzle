@@ -51,6 +51,7 @@ entity Contact "Contact":
   agent: ref Agent
   follow_up: date
   notes: text
+  active: bool=true
 
 surface agent_list "Agents":
   uses entity Agent
@@ -95,6 +96,7 @@ surface contact_edit "Edit Contact":
     field initials "Initials"
     field agent "Agent"
     field follow_up "Follow up"
+    field active "Active"
 """
 
 _FORM = {"content-type": "application/x-www-form-urlencoded"}
@@ -183,3 +185,29 @@ async def test_required_field_sent_empty_is_rejected(client: Any) -> None:
 
     row = (await client.get(f"/contacts/{contact_id}")).json()
     assert row["name"] == "Quentin"
+
+
+@pytest.mark.parametrize(
+    ("posted", "expected"),
+    [
+        # Unticked: only the hidden companion is posted.
+        ([("active", "false")], False),
+        # Ticked: the checkbox follows the hidden input, and the last value wins.
+        ([("active", "false"), ("active", "on")], True),
+    ],
+)
+async def test_edit_form_checkbox_saves_both_states(
+    client: Any, posted: list[tuple[str, str]], expected: bool
+) -> None:
+    """An unticked checkbox posts nothing, so `false` could never be saved; the
+    form now posts a hidden `false` ahead of it (#1848 follow-up)."""
+    contact_id, values = await _seed(client)
+    await client.put(f"/contacts/{contact_id}", json={"active": not expected})
+
+    from urllib.parse import urlencode
+
+    resp = await client.put(
+        f"/contacts/{contact_id}", content=urlencode([*values.items(), *posted]), headers=_FORM
+    )
+    assert resp.status_code == 200, resp.text[:400]
+    assert (await client.get(f"/contacts/{contact_id}")).json()["active"] is expected
