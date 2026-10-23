@@ -7116,7 +7116,8 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
   } else {
     enhanceSeeded();
   }
-  document.addEventListener("htmx:afterSettle", enhanceSeeded);
+  document.addEventListener("htmx:after:settle", enhanceSeeded); // htmx 4
+  document.addEventListener("htmx:afterSettle", enhanceSeeded); // htmx ≤2
 
   // ── Enhance-on-first-interaction (empty / not-yet-enhanced) ──────────
   // A pointerdown on the bare input would focus it; enhance first and swallow

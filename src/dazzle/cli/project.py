@@ -25,6 +25,7 @@ from dazzle.core.anti_turing import AntiTuringValidator
 from dazzle.core.discovery import RelevanceGroup
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.htmx_event_hygiene import SourceKind, scan_htmx_event_names
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
@@ -147,6 +148,47 @@ def _renderer_registration_advisory(extra_renderers: list[str]) -> str | None:
     )
 
 
+# (glob under the project root, scanner kind). Route overrides are Python files
+# whose pages and inline scripts live in string literals, plus any HTML beside them.
+_CLIENT_FILE_GLOBS: tuple[tuple[str, SourceKind], ...] = (
+    ("static/**/*.js", "js"),
+    ("static/**/*.html", "html"),
+    ("templates/**/*.html", "html"),
+    ("routes/**/*.py", "python"),
+    ("routes/**/*.html", "html"),
+)
+# Third-party code a project vendors is not the project's to fix.
+_SKIPPED_DIRS = frozenset({"vendor", "node_modules"})
+
+
+def _htmx_event_name_warnings(root: Path) -> list[str]:
+    """#1845: htmx 2 event names in the project's own client code.
+
+    Dazzle bundles htmx 4, so a host listener on ``htmx:afterSettle`` (or an
+    ``hx-on::after-swap`` handler) never fires. ``validate``/``lint`` check the
+    parsed spec, so this is the one place the project's static JS, templates and
+    route overrides are read for it.
+    """
+    warnings: list[str] = []
+    seen: set[Path] = set()
+    for pattern, kind in _CLIENT_FILE_GLOBS:
+        for path in sorted(root.glob(pattern)):
+            rel = path.relative_to(root)
+            if path in seen or not path.is_file() or path.name.endswith(".min.js"):
+                continue
+            if _SKIPPED_DIRS.intersection(rel.parts[:-1]):
+                continue
+            seen.add(path)
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            warnings.extend(
+                f.message for f in scan_htmx_event_names(text, path=rel.as_posix(), kind=kind)
+            )
+    return warnings
+
+
 def _resolve_manifest(manifest: str, project: object) -> Path:
     """Resolve the manifest path from either a CLI call or a direct call.
 
@@ -201,6 +243,7 @@ def validate_command(
         )
         if renderer_advisory:
             warnings.append(renderer_advisory)
+        warnings.extend(_htmx_event_name_warnings(root))
 
         # Statically parse sitespec.yaml (if present) so schema errors
         # surface at validate-time instead of being swallowed by the
@@ -302,6 +345,7 @@ def lint_command(
         renderer_advisory = _renderer_registration_advisory(list(mf.renderers.extra))
         if renderer_advisory:
             warnings.append(renderer_advisory)
+        warnings.extend(_htmx_event_name_warnings(root))
 
         if format == "vscode":
             _print_vscode_diagnostics(errors, warnings, root)

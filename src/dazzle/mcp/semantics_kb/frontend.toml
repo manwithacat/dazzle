@@ -849,3 +849,44 @@ page_purpose = false         # every surface; default true
 App-wide off means off: `show_purpose: true` on a surface does not override `[ui] page_purpose = \
 false`."""
 related = ["topbar_title"]
+
+[concepts.client_events]
+category = "Frontend"
+doc_page = "frontend"
+doc_order = 14
+definition = """Client-side events host JS can listen for (#1845). Dazzle bundles **htmx 4**, \
+which dispatches colon-namespaced events only: `htmx:before:request`, `htmx:config:request`, \
+`htmx:after:request`, `htmx:before:swap`, `htmx:after:swap`, `htmx:after:settle`, \
+`htmx:after:init`, `htmx:error`. A listener on an htmx 2 camelCase name (`htmx:afterSettle`, \
+`htmx:configRequest`) or an htmx 2 handler attribute (`hx-on::after-swap`, `hx-on--after-swap`) \
+never fires and raises no error. `dazzle validate` and `dazzle lint` warn about them, with \
+`file:line` and the htmx 4 name, in the project's `static/**/*.js` and `*.html`, \
+`templates/**/*.html` and `routes/` overrides (`.py` and `.html`); `vendor/` and \
+`node_modules/` directories and `*.min.js` files are skipped.
+
+**`dz:region-loaded`** is Dazzle's own contract for "a workspace region's content was swapped \
+in", so host enhancements need not key off htmx internals:
+
+```js
+document.addEventListener("dz:region-loaded", function (e) {
+  // e.target is the region element ([data-dz-region]); e.detail.name its region name
+  enhanceLabels(e.target);
+});
+```
+
+It is a bubbling `CustomEvent` dispatched on the `[data-dz-region]` element after the swap \
+settles and component-bridge widgets are mounted, with `detail.name` set to the region's \
+`data-dz-region-name`. It fires once per swap whose target is the region or lies inside it (the \
+first fetch of a lazy region, a refresh, a filter change, a row swapped in place). It does not \
+fire on the initial page load; run the same enhancement on `DOMContentLoaded` for server-rendered \
+content.
+
+The CSRF header needs no host listener: `dz-csrf.js` copies the `dazzle_csrf` cookie into \
+`X-CSRF-Token` on every unsafe htmx request, so an `htmx:configRequest` CSRF listener can be \
+deleted rather than renamed."""
+related = ["app_scripts", "htmx"]
+cognition_tips = [
+    "Host JS listens to htmx 4 colon names (htmx:after:settle), never htmx 2 camelCase",
+    "Prefer dz:region-loaded over htmx events for work after a workspace region loads",
+    "dazzle lint flags htmx 2 event names in static/, templates/ and routes/",
+]
