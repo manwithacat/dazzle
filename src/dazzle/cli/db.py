@@ -25,8 +25,10 @@ from dazzle.core.environment import DAZZLE_ENV_VAR
 from dazzle.core.ir import TenancyMode
 from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.ir.fk_graph import FKGraph
+from dazzle.db.framework_drift import detect_framework_drift
 from dazzle.db.rls_drift import detect_rls_drift
 from dazzle.db.schema_snapshot import merge_inherited_snapshot
+from dazzle.db.search_apply import apply_search_columns, detect_search_drift
 from dazzle.db.tenant_dump import (
     DumpError,
     DumpPosture,
@@ -733,8 +735,19 @@ def upgrade_command(
     ),
     database_url: DatabaseUrlOption = "",
     no_rls_tripwire: NoRlsTripwireOption = False,
+    no_search: bool = typer.Option(
+        False,
+        "--no-search",
+        help="Skip reconciling the DSL `search:` columns after the upgrade (apply "
+        "them separately with `dazzle db apply-search`).",
+    ),
 ) -> None:
     """Apply pending migrations (upgrade to target revision).
+
+    After the migrations, the DSL's ``search:`` columns (generated
+    ``search_vector`` + GIN index) are reconciled (#1850): added when missing,
+    rebuilt when the field list changed. Pass ``--no-search`` to skip and run
+    ``dazzle db apply-search`` separately.
 
     In ``shared_schema`` tenancy mode, RLS policies are applied automatically
     after the migrations succeed — as the SAME owner-capable role that just ran
@@ -783,6 +796,12 @@ def upgrade_command(
         console.print(f"[red]Upgrade failed: {e}[/red]")
         raise typer.Exit(1)
 
+    # #1850: the DSL-derived search columns are not in any migration (their
+    # expression comes from the DSL); production runs no boot DDL, so they are
+    # reconciled here, on the same owner-capable role, like RLS below.
+    if appspec is not None and not no_search:
+        _apply_search_after_upgrade(target, appspec, project_root)
+
     # Phase D: apply RLS policies after a successful migration, in shared_schema
     # mode, on the SAME owner-capable role that just ran the DDL migrations
     # (CREATE POLICY / FORCE ROW LEVEL SECURITY need table ownership; the runtime
@@ -804,6 +823,46 @@ def _load_upgrade_appspec(project_root: Path) -> Any | None:
     except Exception:
         logger.debug("Could not load appspec for dazzle db upgrade", exc_info=True)
         return None
+
+
+def _print_search_actions(actions: list[Any]) -> None:
+    """Report applied search actions and the entity tables that do not exist yet."""
+    applied = [a for a in actions if a.statements]
+    missing = [a.table for a in actions if a.action == "table_missing"]
+    if applied:
+        summary = ", ".join(f"{a.table}: {a.action}" for a in applied)
+        console.print(f"[green]Search columns reconciled ({summary}).[/green]")
+    if missing:
+        console.print(
+            f"[yellow]Search columns skipped — table(s) not created yet: "
+            f"{', '.join(missing)}. Run the migrations, then `dazzle db apply-search`.[/yellow]"
+        )
+
+
+def _apply_search_after_upgrade(resolved_url: str, appspec: Any, project_root: Path) -> None:
+    """Reconcile the ``search:`` columns after a successful ``dazzle db upgrade`` (#1850).
+
+    A no-op (no connection) when the appspec declares no ``search:`` block and so
+    has nothing to add; stale columns from a removed block are then left for
+    ``dazzle db apply-search``. Re-raises on failure (ERROR logged).
+    """
+    if not list(getattr(appspec, "searches", []) or []):
+        return
+    entities = convert_entities(appspec.domain.entities)
+
+    async def _run(conn: Any) -> Any:
+        return await apply_search_columns(conn, appspec, entities)
+
+    try:
+        actions = asyncio.run(_run_with_connection(project_root, resolved_url, _run))
+    except Exception as e:
+        logger.error("Failed to apply search columns after upgrade: %s", e, exc_info=True)
+        console.print(
+            f"[red]Migration succeeded but applying the search columns failed: {e}[/red]\n"
+            "[dim]Re-run `dazzle db apply-search` as the table owner once resolved.[/dim]"
+        )
+        raise typer.Exit(1)
+    _print_search_actions(actions)
 
 
 def _apply_rls_after_upgrade(resolved_url: str, appspec: Any, project_root: Path) -> None:
@@ -1704,7 +1763,12 @@ def verify_command(
         help="Auto-apply legacy money-column migration (#840). Destructive — back up the DB first.",
     ),
 ) -> None:
-    """Check FK integrity + legacy money-column shape across entities (#840)."""
+    """Check FK integrity, schema drift and missing framework objects.
+
+    Reports FK orphans, legacy money columns (#840), signable columns (#1340),
+    RLS policy drift (shared_schema), DSL ``search:`` column drift and framework
+    tables / columns / indexes the database lacks (#1850). Exits 1 on any finding.
+    """
     import json as json_mod
 
     project_root = Path.cwd().resolve()
@@ -1735,6 +1799,12 @@ def verify_command(
             "money": money_result,
             "signable": signable_result,
             "rls": rls_result,
+            # #1850: DSL search columns + framework objects a dev boot would create.
+            "search": await detect_search_drift(
+                conn, appspec, convert_entities(appspec.domain.entities)
+            ),
+            # Framework tables live in public; a per-tenant schema run skips them.
+            "framework": [] if schema else await detect_framework_drift(conn),
         }
         if rls_entities:
             # #1788: warn (never fail) when a plain pg_dump cannot back this DB up.
@@ -1757,6 +1827,8 @@ def verify_command(
         or (_money["drift_count"] + _money["partial_count"])
         or result["signable"]
         or result["rls"]
+        or result["search"]
+        or result["framework"]
     )
 
     if as_json:
@@ -1885,6 +1957,10 @@ def verify_command(
     elif _is_shared_schema(appspec):
         console.print("\n[green]No RLS policy drift.[/green]")
 
+    _print_search_drift(result["search"])
+    if not schema:
+        _print_framework_drift(result["framework"])
+
     if result.get("dumpable") is not None:
         style, message = _dump_posture_line(DumpPosture(**result["dumpable"]))
         console.print(f"\n[bold]Backup posture (#1788):[/bold]\n  [{style}]{message}[/{style}]")
@@ -1900,6 +1976,39 @@ def verify_command(
         raise typer.Exit(1)
 
 
+def _print_search_drift(drifts: list[dict[str, Any]]) -> None:
+    """``dazzle db verify`` section for the DSL ``search:`` columns (#1850)."""
+    if not drifts:
+        console.print("\n[green]No search column drift.[/green]")
+        return
+    console.print("\n[bold]Search column drift (#1850):[/bold]")
+    for drift in drifts:
+        console.print(f"  [red]✗[/red] {drift['entity']}: {drift['detail']}")
+    console.print(
+        "\n[yellow]Reconcile as the table owner:[/yellow]\n"
+        "    [dim]dazzle db apply-search[/dim]   [dim](or `dazzle db upgrade`)[/dim]"
+    )
+
+
+def _print_framework_drift(drifts: list[dict[str, Any]]) -> None:
+    """``dazzle db verify`` section for missing framework objects (#1850)."""
+    if not drifts:
+        console.print("\n[green]No missing framework objects.[/green]")
+        return
+    console.print("\n[bold]Missing framework objects (#1850):[/bold]")
+    for drift in drifts:
+        if drift["missing_table"]:
+            console.print(f"  [red]✗[/red] table {drift['table']}")
+            continue
+        parts = [f"column {c}" for c in drift["columns"]]
+        parts += [f"index {i}" for i in drift["indexes"]]
+        console.print(f"  [red]✗[/red] {drift['table']}: {', '.join(parts)}")
+    console.print(
+        "\n[yellow]The framework migrations have not been applied to this database:[/yellow]\n"
+        "    [dim]dazzle db upgrade head[/dim]"
+    )
+
+
 def _is_shared_schema(appspec: Any) -> bool:
     """True when the appspec declares row-level (``shared_schema``) tenancy.
 
@@ -1911,6 +2020,56 @@ def _is_shared_schema(appspec: Any) -> bool:
     if tenancy is None:
         return False
     return bool(tenancy.isolation.mode == TenancyMode.SHARED_SCHEMA)
+
+
+@db_app.command(name="apply-search")
+def apply_search_command(
+    database_url: DatabaseUrlOption = "",
+    tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
+    as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Reconcile the DSL `search:` columns (generated search_vector + GIN index).
+
+    Adds a missing column, drops and re-adds one whose expression no longer
+    matches the ``search:`` field list, creates a missing index and drops a
+    generated column whose ``search:`` block was removed. A database that already
+    matches gets no DDL. ``dazzle db upgrade`` runs this after the migrations;
+    production boots never do (#1850). Run as the table owner.
+    """
+    import json as json_mod
+
+    project_root = Path.cwd().resolve()
+    appspec = load_project_appspec(project_root)
+    entities = convert_entities(appspec.domain.entities)
+    url = _resolve_url(database_url)
+    schema = _resolve_tenant_schema(tenant) if tenant else ""
+
+    async def _run(conn: Any) -> Any:
+        return await apply_search_columns(conn, appspec, entities)
+
+    try:
+        actions = asyncio.run(_run_with_connection(project_root, url, _run, schema=schema))
+    except Exception as e:
+        console.print(f"[red]Failed to apply search columns: {e}[/red]")
+        raise typer.Exit(1)
+
+    if as_json:
+        console.print(
+            json_mod.dumps(
+                {
+                    "actions": [
+                        {"entity": a.table, "action": a.action, "statements": list(a.statements)}
+                        for a in actions
+                    ]
+                },
+                indent=2,
+            )
+        )
+        return
+    if not actions:
+        console.print("[green]Search columns already match the DSL — nothing to apply.[/green]")
+        return
+    _print_search_actions(actions)
 
 
 @db_app.command(name="apply-rls")

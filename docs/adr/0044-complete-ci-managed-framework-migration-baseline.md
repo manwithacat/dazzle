@@ -3,6 +3,7 @@
 **Status:** Accepted
 **Builds on:** ADR-0017 (Alembic for all schema changes), ADR-0008 (PostgreSQL-only app runtime), ADR-0005 (no new singletons), ADR-0003 (clean breaks), #1431 (`SCHEMA_SNAPSHOT` serializer + `schema_diff`), #1390 (autostamp), #1309 (baseline reconcile)
 **Amended by:** ADR-0047 (2026-06-27) — artifact *membership and per-artifact metadata* (class / owner / RLS posture / boot-DDL gating) is now sourced from the DB-artifact registry (`dazzle.db.artifact_registry`); this ADR's `IN_SCOPE_TABLES` is registry-derived (`in_baseline_tables()`). ADR-0044 remains the record of the baseline *construction + parity* mechanism (the squash, the shared-DDL orchestrator, the three-way real-PG parity gate).
+**Amended by:** #1850 (2026-10-23) — the dual-write rule below. Every change to the orchestrator's DDL ships an **incremental framework revision**; regenerating the baseline alone no longer suffices, because #1462 made the orchestrator development-only and the baseline reaches only fresh databases. Gate: `tests/unit/test_orchestrator_ddl_revision_gate.py`.
 
 ## Decision
 
@@ -126,6 +127,9 @@ downstream app migrations chain off the framework head). By consumer state:
 1. **At the head / app-migrations chaining off `0019`:** nothing.
    `alembic_version` still resolves; the baseline is the new root; `upgrade head`
    is a no-op. Eager tables arrive via the orchestrator at boot (idempotent).
+   *Since #1462 that boot DDL runs in development only; a production database
+   gets later orchestrator objects from incremental revisions (amended rule below,
+   #1850).*
 2. **Lagging on an old framework revision:** one `dazzle db migrate` (autostamp
    #1390: schema materialized + version stale → stamp; guarded, re-run is a no-op).
 3. **App migration whose `down_revision` is a deleted intermediate id
@@ -135,12 +139,36 @@ downstream app migrations chain off the framework head). By consumer state:
 
 ## The widened dual-write rule
 
-A new framework table goes in the **orchestrator** (preferably as a shared
-`ensure_*` function called by both the store and the orchestrator), and the
-baseline is **regenerated** (`dazzle db reframework-baseline`) — *not* added as a
-fresh per-table migration. The rare destructive change adds one incremental
-migration, re-folded into the baseline at the next release. The chain-cleanliness
-gate enforces that `versions/` doesn't silently re-accumulate churn.
+*Amended for #1850 (2026-10-23). The original text follows the amendment.*
+
+A new framework table, column or index goes in the **orchestrator** (preferably as a
+shared `ensure_*` function called by both the store and the orchestrator) **and** in a
+new **incremental framework revision** under `src/dazzle/http/alembic/versions/`
+(next `00NN_…` id, `down_revision` = the previous head) whose idempotent DDL brings an
+already-stamped database to the new shape. Freeze the DDL in the revision (see
+`0021`, `0022`, `0028`) unless the revision deliberately shares a DDL tuple the store
+also runs (`0026`, `0027`). The head revision declares `ORCHESTRATOR_DDL_SHA256`, the
+fingerprint of the orchestrator's normalised statements; the gate
+`tests/unit/test_orchestrator_ddl_revision_gate.py` fails when the orchestrator's DDL
+no longer matches the head's fingerprint, so a DDL change cannot ship without a new
+head. Add the new id to `_ALLOWED_VERSIONS` in `tests/unit/test_framework_chain_clean.py`.
+
+Why: consumer adaptation case 1 above assumed eager tables arrive via the orchestrator
+at boot. #1462 then made the orchestrator development-only (production runs no
+boot-time DDL, Alembic owns the schema), and `0019` calls the *live* orchestrator, so
+only a database created after a change got it. `_dazzle_usage_events`,
+`dazzle_files.uploaded_by`, `memberships.partition_root_id` and
+`users_email_lower_key` were missing on production databases stamped at `0019`
+earlier; revision `0028_runtime_schema_parity` adds them (#1850). DSL-derived DDL that
+a development boot applies follows the RLS precedent instead: `dazzle db upgrade`
+applies it after the migrations (`search_vector` columns: `dazzle db apply-search`).
+
+*Original text (superseded):* A new framework table goes in the **orchestrator**
+(preferably as a shared `ensure_*` function called by both the store and the
+orchestrator), and the baseline is **regenerated** (`dazzle db reframework-baseline`)
+— *not* added as a fresh per-table migration. The rare destructive change adds one
+incremental migration, re-folded into the baseline at the next release. The
+chain-cleanliness gate enforces that `versions/` doesn't silently re-accumulate churn.
 
 ## Test-coverage shift
 

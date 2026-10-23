@@ -332,3 +332,100 @@ class TestDbUpgradeRlsTripwire:
         # The attribute must be in place by the time alembic runs env.py.
         assert mock_upgrade.call_args.args[0] is cfg
         assert bool(cfg.attributes.get(RLS_TRIPWIRE_ATTR)) is armed
+
+
+def _search_appspec() -> MagicMock:
+    """A non-tenant stub appspec that declares one ``search:`` block."""
+    appspec = _non_tenant_appspec()
+    appspec.searches = [MagicMock(entity="Ticket")]
+    return appspec
+
+
+def _actions() -> list:
+    from dazzle.http.runtime.search_schema import SearchAction
+
+    return [
+        SearchAction("Ticket", "rebuild", ("DROP INDEX IF EXISTS x",)),
+        SearchAction("Note", "table_missing", ()),
+    ]
+
+
+_UPGRADE_PATCHES = (
+    patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro),
+    patch("dazzle.cli.db.load_project_appspec"),
+    patch("dazzle.cli.db._safe_current_revision", side_effect=["base", "head"]),
+    patch("dazzle.cli.db._validate_revision_widths"),
+    patch("dazzle.cli.db._guard_single_head"),
+    patch("dazzle.cli.db._get_alembic_cfg"),
+    patch("alembic.command.upgrade"),
+)
+
+
+class TestDbUpgradeSearchHook:
+    """#1850: `dazzle db upgrade` reconciles the DSL search columns after migrating."""
+
+    def _invoke(self, args: list[str], appspec: MagicMock, run_effect=None):
+        with (
+            _UPGRADE_PATCHES[0] as mock_run,
+            _UPGRADE_PATCHES[1] as mock_load,
+            _UPGRADE_PATCHES[2],
+            _UPGRADE_PATCHES[3],
+            _UPGRADE_PATCHES[4],
+            _UPGRADE_PATCHES[5] as mock_cfg,
+            _UPGRADE_PATCHES[6],
+        ):
+            mock_cfg.return_value.get_main_option.return_value = "postgresql://localhost/db"
+            mock_load.return_value = appspec
+            mock_run.return_value = _actions()
+            if run_effect is not None:
+                mock_run.side_effect = run_effect
+            return runner.invoke(db_app, args), mock_run
+
+    @pytest.mark.parametrize(
+        ("appspec_factory", "args", "applied"),
+        [
+            (_search_appspec, ["upgrade"], True),
+            (_search_appspec, ["upgrade", "--no-search"], False),
+            (_non_tenant_appspec, ["upgrade"], False),  # no search: block → no connection
+        ],
+        ids=["search_block", "opt_out_flag", "no_search_block"],
+    )
+    def test_apply_is_wired(self, appspec_factory, args: list[str], applied: bool) -> None:
+        result, mock_run = self._invoke(args, appspec_factory())
+        assert result.exit_code == 0, result.output
+        assert mock_run.called is applied
+        if applied:
+            assert "Ticket: rebuild" in result.output
+            assert "not created yet: Note" in result.output
+
+    def test_apply_failure_exits_nonzero(self) -> None:
+        def _close_then_raise(coro):
+            coro.close()
+            raise RuntimeError("must be owner of table Ticket")
+
+        result, _ = self._invoke(["upgrade"], _search_appspec(), _close_then_raise)
+        assert result.exit_code == 1
+        assert "applying the search columns failed" in result.output
+        assert "dazzle db apply-search" in result.output
+
+
+class TestApplySearchCommand:
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
+    @patch("dazzle.cli.db._resolve_url")
+    @patch("dazzle.cli.db.load_project_appspec")
+    def test_reports_actions(self, mock_load: MagicMock, _url: MagicMock, mock_run: MagicMock):
+        mock_load.return_value = _search_appspec()
+        mock_run.return_value = _actions()
+        result = runner.invoke(db_app, ["apply-search"])
+        assert result.exit_code == 0
+        assert "Ticket: rebuild" in result.output
+
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
+    @patch("dazzle.cli.db._resolve_url")
+    @patch("dazzle.cli.db.load_project_appspec")
+    def test_nothing_to_apply(self, mock_load: MagicMock, _url: MagicMock, mock_run: MagicMock):
+        mock_load.return_value = _search_appspec()
+        mock_run.return_value = []
+        result = runner.invoke(db_app, ["apply-search", "--json"])
+        assert result.exit_code == 0
+        assert '"actions": []' in result.output

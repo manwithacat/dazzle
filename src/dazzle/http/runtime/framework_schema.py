@@ -25,10 +25,15 @@ tables (separate DB); tenant registry ``public.tenants`` + per-tenant schemas.
   Now they are created eagerly for every app at boot time.  Each table has
   live consumers (usage-audited 2026-06-23); none is dead code.
 
-**Dual-write rule (widened by ADR-0044):**
-  A new framework table goes in the orchestrator here; the squashed alembic
-  baseline (0019_process_runtime_tables, down_revision=None) is then
-  regenerated.  Per-subsystem DDL methods delegate here — no divergent creator.
+**Dual-write rule (ADR-0044, amended for #1850):**
+  A new framework table, column or index goes in the orchestrator here AND in a
+  new incremental framework revision (``src/dazzle/http/alembic/versions``) that
+  brings an already-stamped database to the new shape — production runs no
+  boot-time DDL (#1462) and ``0019`` reaches only fresh databases. The head
+  revision's ``ORCHESTRATOR_DDL_SHA256`` pins this module's DDL; the gate
+  ``tests/unit/test_orchestrator_ddl_revision_gate.py`` fails until a new head
+  carries the new fingerprint. Per-subsystem DDL methods delegate here — no
+  divergent creator.
 """
 
 from __future__ import annotations
@@ -207,6 +212,8 @@ def _ensure_framework_schema_ddl(cur: Any) -> None:  # cur: psycopg.Cursor
     # ── TENANT HOST ALIASES (ADR-0055 PR4) ───────────────────────────────
     # Composing custom-domain aliases. Orchestrator-only (no request-path
     # boot entry). Alembic 0020 covers already-stamped 0019 production DBs.
+    #
+    # Adding DDL above? Ship an incremental framework revision too (#1850).
     ensure_tenant_host_aliases_table(cur)
 
 

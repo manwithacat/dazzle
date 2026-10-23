@@ -51,6 +51,14 @@ Each artifact declares:
    `SessionInfo`, `AIJob`, `AuditEntry`, `FeedbackReport`, `OnboardingState`): the
    project lineage creates them and they belong in its `SCHEMA_SNAPSHOT` (#1851).
 
+   **Search columns** are a second app_entity pattern row (`<search_vector columns>`):
+   the generated `search_vector` tsvector column + GIN index a DSL `search:` block puts
+   on an entity. No migration creates them (the expression comes from the DSL);
+   `dazzle db upgrade` applies them after the migrations, `dazzle db apply-search`
+   alone, a development boot after `create_all`, and `dazzle db verify` reports drift
+   (#1850). Creator: `search_schema.SearchColumn.create_index_sql`, planned by
+   `search_schema.plan_search_ddl` (a changed field list drops and re-adds the column).
+
 3. **tenant_registry** — `public.tenants` + per-tenant schemas; separate tenant
    lifecycle. One class row.
 
@@ -108,6 +116,18 @@ resolved — `refresh_tokens` (#1496), `_grants`/`_grant_events` (#1497), `devic
 by revision `0025_flense_park_event_transport` in flense ship AR). The
 mechanism stays in place: any future ungated boot path is registered with a
 `known_ungated_issue` until gated.
+
+## Production parity: every orchestrator change ships a revision (#1850)
+
+Production runs no boot-time DDL (#1462): a framework-internal object reaches a
+production database only through the framework Alembic chain. The root `0019` calls
+the live orchestrator, so it reaches only databases created after a change. Adding a
+table, column or index to `_ensure_framework_schema_ddl` (or a function it delegates
+to) therefore also needs an incremental framework revision with idempotent DDL, and
+the head revision's `ORCHESTRATOR_DDL_SHA256` must match the orchestrator's
+statements — `tests/unit/test_orchestrator_ddl_revision_gate.py` fails otherwise.
+`0028_runtime_schema_parity` closed the gaps this rule had let through. `dazzle db
+verify` reports any framework table, column or index a live database lacks.
 
 ## Relationship to ADR-0044
 

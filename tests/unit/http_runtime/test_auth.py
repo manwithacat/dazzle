@@ -236,8 +236,30 @@ class TestAuthStore:
         store = AuthStore(os.environ["DATABASE_URL"])
         with pytest.raises(RuntimeError) as exc:
             store.ensure_initialized()
-        assert "collide on LOWER(email)" in str(exc.value)
+        assert "share an address once lowercased" in str(exc.value)
         assert "dup@example.com" in str(exc.value)
+
+    def test_email_ci_uniqueness_normalizes_legacy_mixed_case(self, auth_store: Any) -> None:
+        """A row written before #1342 kept its case, which login (lowercased lookup)
+        cannot find; init rewrites it, as revision 0028 does in production."""
+        from uuid import uuid4
+
+        from dazzle.http.runtime.pg_backend import PostgresBackend
+
+        auth_store.ensure_initialized()
+        db = PostgresBackend(os.environ["DATABASE_URL"])
+        now = datetime.now(UTC).isoformat()
+        with db.connection() as conn:
+            conn.execute("DROP INDEX IF EXISTS users_email_lower_key")
+            conn.execute(
+                "INSERT INTO users (id, email, password_hash, username, is_active, "
+                "is_superuser, roles, created_at, updated_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (str(uuid4()), " Legacy@Example.com", "x", None, True, False, "[]", now, now),
+            )
+
+        AuthStore(os.environ["DATABASE_URL"]).ensure_initialized()
+        assert auth_store.get_user_by_email("legacy@example.com") is not None
 
     def test_update_password(self, auth_store: Any) -> None:
         """Test updating user password."""

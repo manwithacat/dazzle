@@ -590,6 +590,8 @@ The following are explicitly not handled by the #1431 engine:
 
 **RLS (Row Level Security):** RLS policies are reconciled separately. `dazzle db upgrade` applies RLS automatically after a successful migration in `shared_schema` tenancy mode, or you can run `dazzle db apply-rls` independently. RLS is not part of the `SCHEMA_SNAPSHOT` diff.
 
+**Full-text `search:` columns (#1850):** a `search on <Entity>:` block becomes a generated `search_vector` tsvector column plus a GIN index `ix_<entity>_search_vector`. The expression comes from the DSL, so it is not in a revision and not in the `SCHEMA_SNAPSHOT` diff. `dazzle db upgrade` reconciles it after the migrations (before RLS): a missing column is added, a column whose expression no longer matches the field list is dropped and re-added with its index (the content is derived, so nothing is lost), and a matching database gets no DDL. `dazzle db apply-search` runs that step alone and also drops the column when a `search:` block is removed; `--no-search` skips it on `upgrade`. Production boots run no DDL, so without this step a production database never gets the column. Autogenerate ignores the reflected column and index.
+
 **Composite UNIQUE constraints:** the engine's unique-constraint tracking is per-column (single-column uniques). Multi-column `UNIQUE(a, b)` constraints are flattened to per-column entries in the snapshot. A true composite unique constraint declared in the DSL would be tracked as two single-column uniques, not as the joint constraint. File a revision by hand if you need multi-column uniqueness.
 
 **PK type canonicalization:** primary-key type changes (e.g. `int` → `uuid`) are tracked as `AlterColumn` ops but the FK cascade to referencing tables is not auto-resolved. Tracked in #1432.
@@ -617,6 +619,10 @@ dazzle db downgrade -2
 
 Note: the target revision is a positional argument. `dazzle db downgrade` with no arguments steps back one revision. Passing a negative integer like `-1` as a flag (e.g. `dazzle db downgrade --target -1`) does not work — use the positional form.
 
+### Framework revisions and production parity (#1850)
+
+The framework chain (`src/dazzle/http/alembic/versions`, root `0019_process_runtime_tables`) is shared by every project. A development boot also runs the framework orchestrator (`ensure_framework_schema`); production runs no boot-time DDL, so a production database has exactly what the chain gives it. `0019` calls the live orchestrator, so it only reaches databases created after a change; every later change to the orchestrator therefore ships an incremental framework revision (ADR-0044 as amended; gate `tests/unit/test_orchestrator_ddl_revision_gate.py`). Revision `0028_runtime_schema_parity` brought databases stamped at an older `0019` up to date: `_dazzle_usage_events` and its two indexes, `dazzle_files.uploaded_by`, `memberships.partition_root_id` and the case-insensitive email index `users_email_lower_key` (the upgrade stops, naming the addresses, if existing users collide on `LOWER(email)`). Its downgrade is a no-op. `dazzle db verify` reports any framework table, column or index the database still lacks.
+
 ### Verify ref integrity
 
 After applying a migration that creates or drops FK relationships — or as a periodic audit of a long-lived database — verify the database state against the DSL:
@@ -632,6 +638,8 @@ Refs compile to **soft (un-constrained) columns** by design, and `required` + in
 - **Required-ref NULLs** — `ref X required` columns containing NULL.
 - **Unanchored rows** — entities declaring an at-least-one-anchor invariant (`invariant: case_ref != null or matter_ref != null`) where every anchor is NULL. Only that statically translatable invariant shape is checked; other invariants remain app-write-time contracts.
 - **Exclusive conflicts** (#1617 Phase 1) — same invariant shape, but **more than one** anchor is non-null (sparse exclusive FKs violated). Status `exclusive_conflict` in the verify report.
+- **Search column drift** (#1850) — a `search:` entity whose `search_vector` column or GIN index is missing or whose expression differs from the DSL (fix: `dazzle db apply-search`).
+- **Missing framework objects** (#1850) — framework tables, columns and indexes in `FRAMEWORK_SCHEMA_SNAPSHOT` that the database lacks (fix: `dazzle db upgrade head`; skipped with `--tenant`).
 - **Hard CHECK** (#1620) — the same exclusive-anchor invariant set also drives a named table `CHECK` (exactly one non-null) in `build_metadata` / migration ops (`AddCheck` → Alembic `CreateCheckConstraintOp`). Soft verify still reports counts; CHECK blocks violating writes.
 
 To remove the bad rows:

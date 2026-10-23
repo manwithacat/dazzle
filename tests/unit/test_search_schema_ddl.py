@@ -317,3 +317,76 @@ class TestBackendConvertedEntityShape:
         spec = _spec("Contact", [("count", 4)])
         ddl = build_search_index_ddl([e], [spec])
         assert ddl == [], "non-text scalar must not produce DDL"
+
+
+# ---------------------------------------------------------------------------
+# #1850 — live-state planner (dev boot, `dazzle db upgrade`, apply-search, verify)
+# ---------------------------------------------------------------------------
+
+# What Postgres 17 stores for title(4) + body(1) under 'english' (pg_get_expr).
+_PG_EXPR = (
+    "(setweight(to_tsvector('english'::regconfig, COALESCE(title, ''::text)), 'A'::\"char\") "
+    "|| setweight(to_tsvector('english'::regconfig, COALESCE(body, ''::text)), 'D'::\"char\"))"
+)
+
+
+class TestPlanSearchDdl:
+    def _plan(self, fields: list[tuple[str, int]], **live: Any) -> list[Any]:
+        from dazzle.http.runtime.search_schema import build_search_columns, plan_search_ddl
+
+        doc = _entity("Doc", [("title", FieldTypeKind.STR), ("body", FieldTypeKind.TEXT)])
+        desired = build_search_columns([doc], [_spec("Doc", fields)] if fields else [])
+        return plan_search_ddl(
+            desired,
+            live_columns=live.get("columns", {}),
+            live_indexes=live.get("indexes", set()),
+            live_tables=live.get("tables", {"Doc"}),
+            entity_tables=["Doc"],
+        )
+
+    def test_normalised_pg_expression_matches_the_generated_one(self) -> None:
+        from dazzle.http.runtime.search_schema import (
+            build_search_columns,
+            normalise_search_expression,
+        )
+
+        doc = _entity("Doc", [("title", FieldTypeKind.STR), ("body", FieldTypeKind.TEXT)])
+        (column,) = build_search_columns([doc], [_spec("Doc", [("title", 4), ("body", 1)])])
+        assert normalise_search_expression(_PG_EXPR) == normalise_search_expression(
+            column.expression
+        )
+
+    @pytest.mark.parametrize(
+        ("fields", "live", "expected"),
+        [
+            ([("title", 4), ("body", 1)], {}, [("create", 2)]),
+            (
+                [("title", 4), ("body", 1)],
+                {"columns": {"Doc": _PG_EXPR}, "indexes": {"ix_doc_search_vector"}},
+                [],
+            ),
+            (
+                [("title", 4), ("body", 1)],
+                {"columns": {"Doc": _PG_EXPR}},
+                [("add_index", 1)],
+            ),
+            (  # body's weight changed → drop index, drop column, add column, add index
+                [("title", 4), ("body", 3)],
+                {"columns": {"Doc": _PG_EXPR}, "indexes": {"ix_doc_search_vector"}},
+                [("rebuild", 4)],
+            ),
+            (  # a plain, non-generated search_vector column is rebuilt
+                [("title", 4)],
+                {"columns": {"Doc": None}, "indexes": set()},
+                [("rebuild", 4)],
+            ),
+            ([], {"columns": {"Doc": _PG_EXPR}}, [("drop_stale", 2)]),
+            ([("title", 4)], {"tables": set()}, [("table_missing", 0)]),
+        ],
+        ids=["create", "noop", "add_index", "rebuild", "plain_column", "stale", "no_table"],
+    )
+    def test_plan(self, fields: Any, live: Any, expected: Any) -> None:
+        actions = self._plan(fields, **live)
+        assert [(a.action, len(a.statements)) for a in actions] == expected
+        for action in actions:
+            assert action.detail

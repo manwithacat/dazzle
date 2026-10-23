@@ -289,6 +289,8 @@ dazzle db COMMAND [OPTIONS]
 | `current` | Show current revision |
 | `history` | Show migration history |
 | `apply-rls` | Apply the `shared_schema` RLS policies (`--check-dumpable`: check only) |
+| `apply-search` | Reconcile the DSL `search:` columns (generated `search_vector` + GIN index) |
+| `verify` | Report FK, money, signable, RLS and `search:` drift and missing framework objects; exit 1 on any finding |
 | `dump` | Tenant-aware backup under `shared_schema` RLS (one bound dump per tenant + manifest) |
 | `restore-check` | Restore a `dump` into a scratch database and compare every row count |
 | `resanitize-rich-text` | Re-run the rich-text sanitiser over stored `widget=rich_text` values |
@@ -303,7 +305,16 @@ dazzle db upgrade [REVISION]            # default: head
 |--------|-------------|
 | `--no-rls` | `shared_schema` only: skip applying the RLS policies after the migrations (run `dazzle db apply-rls` separately) |
 | `--no-rls-tripwire` | `shared_schema` only: do not run the upgrade with `row_security = off` (#1778) |
+| `--no-search` | Skip reconciling the DSL `search:` columns after the migrations (run `dazzle db apply-search` separately) |
 | `--database-url URL` | Target database |
+
+After the migrations succeed, `upgrade` reconciles the `search:` columns of the
+project's DSL on the same connection role (#1850): a missing `search_vector`
+column and GIN index are created, a column whose expression no longer matches the
+`search:` field list is dropped and re-added, and a database that already matches
+gets no DDL. Production boots run no DDL, so this step (or `dazzle db
+apply-search`) is how a production database gets them. RLS policies are applied
+after it (`shared_schema` only).
 
 For `shared_schema` apps the whole upgrade transaction runs with
 `SET LOCAL row_security = off`. A migration binds no tenant, so DML on a fenced
@@ -313,6 +324,29 @@ seams run tenant DML through `for_each_tenant`
 ([migrations](migrations.md#seam-dml-under-shared_schema-tenancy-1778)).
 Superuser and `BYPASSRLS` connections are never filtered, so the tripwire does
 not affect them.
+
+#### dazzle db apply-search
+
+```bash
+dazzle db apply-search [--database-url URL] [--tenant SLUG] [--json]
+```
+
+Runs the `upgrade` post-step alone. It also drops a generated `search_vector`
+column on an entity whose `search:` block was removed, and reports entities
+whose table does not exist yet. Run it as the table owner.
+
+#### dazzle db verify
+
+```bash
+dazzle db verify [--database-url URL] [--tenant SLUG] [--json] [--fix-money]
+```
+
+Reports FK orphans and column mismatches, legacy money columns (#840), signable
+columns (#1340), RLS policy drift (`shared_schema`), `search:` column drift and
+the framework tables, columns and indexes the database lacks compared with
+`FRAMEWORK_SCHEMA_SNAPSHOT` (#1850; skipped with `--tenant`). It exits 1 on any
+finding, so a release phase can gate on it. Missing framework objects are fixed
+by `dazzle db upgrade head`, search drift by `dazzle db apply-search`.
 
 #### dazzle db dump / restore-check
 

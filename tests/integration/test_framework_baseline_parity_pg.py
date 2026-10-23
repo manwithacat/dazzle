@@ -116,8 +116,8 @@ def scratch_url_orchestrator() -> Generator[str, None, None]:
             a.execute(f'DROP DATABASE IF EXISTS "{name}"')  # nosemgrep
 
 
-def _alembic_head(plain_url: str) -> None:
-    """Run ``alembic upgrade head`` (framework versions only) on *plain_url*."""
+def _alembic_head(plain_url: str, target: str = "head") -> None:
+    """Run ``alembic upgrade <target>`` (framework versions only) on *plain_url*."""
     from alembic import command
     from alembic.config import Config
 
@@ -129,7 +129,7 @@ def _alembic_head(plain_url: str) -> None:
     cfg.set_main_option("path_separator", "os")
     cfg.set_main_option("version_locations", str(fw / "versions"))  # framework only
     cfg.set_main_option("sqlalchemy.url", _sa_url(plain_url))
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, target)
 
 
 def _ensure_orch(plain_url: str) -> None:
@@ -419,6 +419,91 @@ class TestFrameworkBaselineParityPG:
             "Add them to IN_SCOPE_TABLES in both the test and "
             "framework_schema_snapshot.py, then regenerate FRAMEWORK_SCHEMA_SNAPSHOT."
         )
+
+
+# ---------------------------------------------------------------------------
+# #1850 — a production DB stamped at an older 0019 reaches parity at head
+# ---------------------------------------------------------------------------
+
+# What a production DB stamped at the 2026-06-23 0019 and upgraded to 0027 lacks
+# (found by diffing each historical 0019 against a fresh head + development boot).
+_PARITY_GAPS = (
+    "DROP TABLE _dazzle_usage_events",
+    "ALTER TABLE dazzle_files DROP COLUMN uploaded_by",
+    "ALTER TABLE memberships DROP COLUMN partition_root_id",
+    "DROP INDEX users_email_lower_key",
+)
+
+
+def _framework_drift(plain_url: str) -> list[dict[str, Any]]:
+    import asyncio
+
+    from dazzle.db.connection import get_connection
+    from dazzle.db.framework_drift import detect_framework_drift
+
+    async def _go() -> list[dict[str, Any]]:
+        conn = await get_connection(explicit_url=plain_url)
+        try:
+            return await detect_framework_drift(conn)
+        finally:
+            await conn.close()
+
+    return asyncio.run(_go())
+
+
+class TestRuntimeSchemaParity0028:
+    """0028_runtime_schema_parity adds what an older 0019 never created (#1850)."""
+
+    def _db_at_0027_missing_gaps(self, url: str) -> None:
+        _alembic_head(url, "0027_two_factor_restore")
+        with psycopg.connect(url, autocommit=True) as c:
+            for stmt in _PARITY_GAPS:
+                c.execute(stmt)
+
+    def test_upgrade_head_adds_the_missing_objects(self, scratch_url_alembic: str) -> None:
+        self._db_at_0027_missing_gaps(scratch_url_alembic)
+        before = {d["table"]: d for d in _framework_drift(scratch_url_alembic)}
+        assert before["_dazzle_usage_events"]["missing_table"] is True
+        assert before["dazzle_files"]["columns"] == ["uploaded_by"]
+        assert before["memberships"]["columns"] == ["partition_root_id"]
+        assert before["users"]["indexes"] == ["users_email_lower_key"]
+        assert set(before) == {"_dazzle_usage_events", "dazzle_files", "memberships", "users"}
+
+        _alembic_head(scratch_url_alembic)
+
+        assert _framework_drift(scratch_url_alembic) == []
+        snap = _introspect(scratch_url_alembic)
+        from dazzle.http.runtime.framework_schema_snapshot import FRAMEWORK_SCHEMA_SNAPSHOT
+
+        _assert_equal(snap, FRAMEWORK_SCHEMA_SNAPSHOT, "0027+gaps → head", "committed-snapshot")
+
+    def test_case_colliding_emails_stop_the_upgrade(self, scratch_url_alembic: str) -> None:
+        self._db_at_0027_missing_gaps(scratch_url_alembic)
+        with psycopg.connect(scratch_url_alembic, autocommit=True) as c:
+            for uid, email in (("u1", "Ann@example.com"), ("u2", "ann@example.com")):
+                c.execute(
+                    "INSERT INTO users (id, email, password_hash, created_at, updated_at) "
+                    "VALUES (%s, %s, 'x', '2026-10-23', '2026-10-23')",
+                    (uid, email),
+                )
+        with pytest.raises(RuntimeError, match=r"ann@example\.com \(x2\)"):
+            _alembic_head(scratch_url_alembic)
+
+    def test_legacy_mixed_case_emails_are_normalized(self, scratch_url_alembic: str) -> None:
+        """Rows written before #1342 kept their case; login looks up the lowercased
+        form, so 0028 rewrites them before adding the index."""
+        self._db_at_0027_missing_gaps(scratch_url_alembic)
+        with psycopg.connect(scratch_url_alembic, autocommit=True) as c:
+            for uid, email in (("u1", " Ann@Example.com"), ("u2", "bob@example.com")):
+                c.execute(
+                    "INSERT INTO users (id, email, password_hash, created_at, updated_at) "
+                    "VALUES (%s, %s, 'x', '2026-10-23', '2026-10-23')",
+                    (uid, email),
+                )
+        _alembic_head(scratch_url_alembic)
+        with psycopg.connect(scratch_url_alembic) as c:
+            rows = c.execute("SELECT id, email FROM users ORDER BY id").fetchall()
+        assert rows == [("u1", "ann@example.com"), ("u2", "bob@example.com")]
 
 
 # ---------------------------------------------------------------------------

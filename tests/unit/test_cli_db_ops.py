@@ -74,10 +74,14 @@ class TestDbVerifyCommand:
             },
             "signable": [],
             "rls": [],
+            "search": [],
+            "framework": [],
         }
 
         result = runner.invoke(db_app, ["verify"])
         assert result.exit_code == 0
+        assert "No search column drift" in result.output
+        assert "No missing framework objects" in result.output
         assert (
             "0" in result.output
             or "issues" in result.output.lower()
@@ -116,6 +120,10 @@ class TestDbVerifyCommand:
                 "applied_count": 0,
                 "errors": [],
             },
+            "signable": [],
+            "rls": [],
+            "search": [],
+            "framework": [],
         }
 
         result = runner.invoke(db_app, ["verify"])
@@ -127,6 +135,57 @@ class TestDbVerifyCommand:
         assert "Company" in result.output
         assert "revenue" in result.output
         assert "--fix-money" in result.output
+
+    @patch("dazzle.cli.db.asyncio.run", side_effect=_close_coro)
+    @patch("dazzle.cli.db.load_project_appspec")
+    def test_verify_reports_search_and_framework_drift(
+        self, mock_load: MagicMock, mock_run: MagicMock
+    ) -> None:
+        """#1850: search column drift and missing framework objects fail verify."""
+        appspec = MagicMock()
+        appspec.domain.entities = []
+        mock_load.return_value = appspec
+        mock_run.return_value = {
+            "fk": {"checks": [], "total_issues": 0},
+            "money": {
+                "drifts": [],
+                "drift_count": 0,
+                "partial_count": 0,
+                "applied_count": 0,
+                "errors": [],
+            },
+            "signable": [],
+            "rls": [],
+            "search": [
+                {
+                    "entity": "Ticket",
+                    "action": "rebuild",
+                    "detail": "search_vector expression differs from the search: field list",
+                }
+            ],
+            "framework": [
+                {
+                    "table": "_dazzle_usage_events",
+                    "missing_table": True,
+                    "columns": [],
+                    "indexes": [],
+                },
+                {
+                    "table": "dazzle_files",
+                    "missing_table": False,
+                    "columns": ["uploaded_by"],
+                    "indexes": [],
+                },
+            ],
+        }
+
+        result = runner.invoke(db_app, ["verify"])
+        assert result.exit_code == 1
+        assert "Ticket: search_vector expression differs" in result.output
+        assert "dazzle db apply-search" in result.output
+        assert "table _dazzle_usage_events" in result.output
+        assert "dazzle_files: column uploaded_by" in result.output
+        assert "dazzle db upgrade head" in result.output
 
 
 class TestDbResetCommand:

@@ -1510,18 +1510,23 @@ class AuthStore(
             # #1363: serialize across workers — released at commit/close.
             cursor.execute("SELECT pg_advisory_xact_lock(%s)", (AUTH_DDL_LOCK_KEY,))
             cursor.execute(
-                "SELECT LOWER(email) AS k, COUNT(*) AS n FROM users "
-                "GROUP BY LOWER(email) HAVING COUNT(*) > 1 LIMIT 5"
+                "SELECT LOWER(TRIM(email)) AS k, COUNT(*) AS n FROM users "
+                "GROUP BY LOWER(TRIM(email)) HAVING COUNT(*) > 1 LIMIT 5"
             )
             collisions = cursor.fetchall()
             if collisions:
                 examples = ", ".join(f"{r['k']} (x{r['n']})" for r in collisions)
                 raise RuntimeError(
-                    "Cannot enforce case-insensitive email uniqueness (#1342): "
-                    f"the users table has rows that collide on LOWER(email): {examples}. "
-                    "Merge the duplicate user rows (one identity per lowercased email), "
-                    "then restart."
+                    "Cannot enforce case-insensitive email uniqueness (#1342): separate "
+                    f"accounts share an address once lowercased: {examples}. "
+                    "Merge or re-address the duplicate users (one identity per "
+                    "lowercased email), then restart."
                 )
+            # Rows written before #1342 kept their case; login looks up the
+            # lowercased form, so normalize them (same as revision 0028).
+            cursor.execute(
+                "UPDATE users SET email = LOWER(TRIM(email)) WHERE email <> LOWER(TRIM(email))"
+            )
             cursor.execute(
                 "CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_key ON users (LOWER(email))"
             )

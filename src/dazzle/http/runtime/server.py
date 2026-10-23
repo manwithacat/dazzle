@@ -71,7 +71,14 @@ from dazzle.http.runtime.sa_schema import (
     ensure_missing_entity_columns,
     scoped_entity_names,
 )
-from dazzle.http.runtime.search_schema import build_search_index_ddl
+from dazzle.http.runtime.search_schema import (
+    LIVE_INDEXES_SQL,
+    LIVE_SEARCH_COLUMNS_SQL,
+    LIVE_TABLES_SQL,
+    build_search_columns,
+    live_search_state,
+    plan_search_ddl,
+)
 from dazzle.http.runtime.security_middleware import apply_security_middleware
 from dazzle.http.runtime.service_generator import ServiceFactory
 from dazzle.http.runtime.service_loader import ServiceLoader
@@ -911,31 +918,40 @@ class DazzleBackendApp:
             )
 
     def _apply_search_indexes(self, engine: Any) -> None:
-        """Apply #954 cycle 2 search indexes (tsvector + GIN) to *engine*.
+        """Reconcile the #954 search columns (tsvector + GIN) on *engine* (dev boot).
 
-        Reads ``self._appspec.searches`` and runs the DDL produced by
-        :func:`build_search_index_ddl`. No-op when the AppSpec has no
-        search blocks. Statements are idempotent (``IF NOT EXISTS``)
-        so dev-mode reboots don't error.
+        Runs the same planner as ``dazzle db upgrade`` / ``dazzle db apply-search``
+        (#1850): a missing column is added, a column whose expression no longer
+        matches the ``search:`` field list is rebuilt, and a matching one gets no
+        DDL. No-op when the AppSpec has no search blocks and no stale columns.
         """
-        searches = list(getattr(self._appspec, "searches", []) or [])
-        if not searches:
-            return
         from sqlalchemy import text as _sa_text
 
-        statements = build_search_index_ddl(self._entities, searches)
-        if not statements:
-            return
+        searches = list(getattr(self._appspec, "searches", []) or [])
+        desired = build_search_columns(self._entities, searches)
         with engine.begin() as conn:
+            columns, indexes, tables = live_search_state(
+                conn.execute(_sa_text(LIVE_SEARCH_COLUMNS_SQL)).fetchall(),
+                conn.execute(_sa_text(LIVE_INDEXES_SQL)).fetchall(),
+                conn.execute(_sa_text(LIVE_TABLES_SQL)).fetchall(),
+            )
+            actions = plan_search_ddl(
+                desired,
+                live_columns=columns,
+                live_indexes=indexes,
+                live_tables=tables,
+                entity_tables=[e.name for e in self._entities],
+            )
+            statements = [stmt for action in actions for stmt in action.statements]
             for stmt in statements:
                 conn.execute(_sa_text(stmt))
-        logger.info(
-            "Applied %d FTS index statement%s for %d searchable entit%s",
-            len(statements),
-            "" if len(statements) == 1 else "s",
-            len(searches),
-            "y" if len(searches) == 1 else "ies",
-        )
+        if statements:
+            logger.info(
+                "Applied %d FTS statement%s (%s)",
+                len(statements),
+                "" if len(statements) == 1 else "s",
+                ", ".join(f"{a.table}: {a.action}" for a in actions),
+            )
 
     def _compute_rls_user_attr_names_for_appspec(self) -> set[str]:
         """The app-wide scope-attr set under ``shared_schema``, else empty (Phase C).

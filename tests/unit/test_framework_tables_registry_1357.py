@@ -60,6 +60,20 @@ def test_include_object_skips_reflected_runtime_indexes() -> None:
     assert _include_object(None, "idx_anything", "index", False, None) is True
 
 
+def test_include_object_skips_reflected_search_columns() -> None:
+    """#1850: search_vector + its GIN index are applied after the migrations, never by
+    the metadata; a live compare must not propose dropping them."""
+    from dazzle.http.alembic.framework_tables import SEARCH_VECTOR_COLUMN
+    from dazzle.http.runtime.search_schema import SEARCH_VECTOR_COLUMN as RUNTIME_NAME
+
+    assert SEARCH_VECTOR_COLUMN == RUNTIME_NAME
+    assert _include_object(None, "search_vector", "column", True, None) is False
+    assert _include_object(None, "ix_ticket_search_vector", "index", True, None) is False
+    # A metadata-declared column of that name (compare_to set) still compares.
+    assert _include_object(None, "search_vector", "column", True, object()) is True
+    assert _include_object(None, "title", "column", True, None) is True
+
+
 def test_entity_constraints_reach_sqlalchemy_metadata(tmp_path: Path) -> None:
     # End-to-end: DSL `unique`/`index` constraint lines → IR → converter →
     # back EntitySpec → build_metadata table args.

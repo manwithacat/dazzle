@@ -14,6 +14,10 @@ runtime table is not registered here.
 
 from __future__ import annotations
 
+# The DSL search column's conventional name (search_schema.SEARCH_VECTOR_COLUMN).
+# Not imported: this module is loaded by env.py and stays free of the runtime.
+SEARCH_VECTOR_COLUMN = "search_vector"
+
 # Tables created by framework runtime DDL (auth store, token/otp stores,
 # grants, files, analytics, audit, events, deploy history, spec versioning,
 # ops schema…). Names scraped from src/dazzle/http/ and
@@ -65,6 +69,15 @@ def is_framework_table(name: str) -> bool:
     return name in FRAMEWORK_TABLES or name.startswith(FRAMEWORK_TABLE_PREFIXES)
 
 
+def _is_search_object(name: str | None, type_: str) -> bool:
+    """The DSL search column or its ``ix_<entity>_search_vector`` GIN index."""
+    if name is None:
+        return False
+    if type_ == "column":
+        return name == SEARCH_VECTOR_COLUMN
+    return type_ == "index" and name.endswith(f"_{SEARCH_VECTOR_COLUMN}")
+
+
 def include_object(
     obj: object, name: str | None, type_: str, reflected: bool, compare_to: object
 ) -> bool:
@@ -79,12 +92,18 @@ def include_object(
       framework-table indexes) are created by DDL at boot, not by the
       metadata — reflected-only ``idx_*`` entries are skipped
       (metadata-emitted indexes use the ``ix_`` prefix).
+    - The DSL ``search:`` column ``search_vector`` and its GIN index
+      ``ix_<entity>_search_vector`` are applied after the migrations by
+      ``dazzle db upgrade`` / ``apply-search`` (#1850), never by the metadata —
+      reflected-only, they would otherwise be proposed for dropping.
     - Unnamed unique constraints cannot be reconciled by name, so Alembic
       re-emits them every run.
     """
     if type_ == "table" and name is not None and is_framework_table(name):
         return False
     if type_ == "index" and reflected and name is not None and name.startswith("idx_"):
+        return False
+    if reflected and compare_to is None and _is_search_object(name, type_):
         return False
     if type_ == "unique_constraint" and name is None:
         return False

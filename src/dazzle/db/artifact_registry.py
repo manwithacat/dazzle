@@ -183,6 +183,21 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
         is_pattern=True,
     ),
     Artifact(
+        name="<search_vector columns>",
+        cls=ArtifactClass.APP_ENTITY,
+        creator="dazzle.http.runtime.search_schema.SearchColumn.create_index_sql",
+        boot_entry=None,
+        owner=Ownership.OWNER_ROLE,
+        rls=RlsPosture.NOT_APPLICABLE,
+        in_baseline=False,
+        boot_ddl_gated=False,
+        notes="per-DSL `search:` generated tsvector column + GIN index on an app entity; "
+        "not in any migration — applied after the migrations by `dazzle db upgrade` / "
+        "`dazzle db apply-search` and on a development boot; `dazzle db verify` reports "
+        "drift (#1850)",
+        is_pattern=True,
+    ),
+    Artifact(
         name="public.tenants / <tenant schemas>",
         cls=ArtifactClass.TENANT_REGISTRY,
         creator="dazzle.http.runtime.tenant",

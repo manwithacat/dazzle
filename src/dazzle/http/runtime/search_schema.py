@@ -36,7 +36,9 @@ The runtime calls :func:`build_search_index_ddl` after
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any
 
 from dazzle.core import ir
@@ -225,28 +227,49 @@ def _build_concat_expression(
     return " || ".join(parts)
 
 
-def build_search_index_ddl(
-    entities: Iterable[Any],
-    searches: Iterable[Any],
-) -> list[str]:
-    """Return the DDL strings required to set up FTS for every SearchSpec.
+@dataclass(frozen=True)
+class SearchColumn:
+    """The desired ``search_vector`` generated column + GIN index for one entity."""
 
-    Each entity that has a SearchSpec gets two statements:
+    table: str
+    expression: str  # the GENERATED ALWAYS AS (...) inner expression
 
-      1. ``ALTER TABLE … ADD COLUMN IF NOT EXISTS search_vector
-         tsvector GENERATED ALWAYS AS (…) STORED``
-      2. ``CREATE INDEX IF NOT EXISTS … ON … USING GIN (search_vector)``
+    @property
+    def index_name(self) -> str:
+        return f"ix_{self.table.lower()}_{SEARCH_VECTOR_COLUMN}"
 
-    The runtime executes them in order via ``engine.execute()`` after
-    ``metadata.create_all`` — the table must exist before the ALTER
-    lands. ``IF NOT EXISTS`` makes both statements idempotent so
-    repeated boots / migration replays don't error.
+    def add_column_sql(self) -> str:
+        return (
+            f"ALTER TABLE {_quote_ident(self.table)} "
+            f"ADD COLUMN IF NOT EXISTS {_quote_ident(SEARCH_VECTOR_COLUMN)} tsvector "
+            f"GENERATED ALWAYS AS ({self.expression}) STORED"
+        )
 
-    Returns an empty list when ``searches`` is empty or no spec
-    references an actual indexable field.
+    def create_index_sql(self) -> str:
+        return (
+            f"CREATE INDEX IF NOT EXISTS {_quote_ident(self.index_name)} "
+            f"ON {_quote_ident(self.table)} USING GIN ({_quote_ident(SEARCH_VECTOR_COLUMN)})"
+        )
+
+
+def drop_search_column_sql(table: str) -> list[str]:
+    """Drop *table*'s ``search_vector`` column and its GIN index (both idempotent)."""
+    index = f"ix_{table.lower()}_{SEARCH_VECTOR_COLUMN}"
+    return [
+        f"DROP INDEX IF EXISTS {_quote_ident(index)}",
+        f"ALTER TABLE {_quote_ident(table)} DROP COLUMN IF EXISTS "
+        f"{_quote_ident(SEARCH_VECTOR_COLUMN)}",
+    ]
+
+
+def build_search_columns(entities: Iterable[Any], searches: Iterable[Any]) -> list[SearchColumn]:
+    """Return the desired search column for every SearchSpec with indexable fields.
+
+    Specs on an unknown entity, or with no text-shaped single-segment field, are
+    skipped with a log line (see :func:`_build_concat_expression`).
     """
     entity_by_name = {e.name: e for e in entities}
-    out: list[str] = []
+    out: list[SearchColumn] = []
     for spec in searches:
         entity = entity_by_name.get(spec.entity)
         if entity is None:
@@ -264,19 +287,177 @@ def build_search_index_ddl(
                 spec.entity,
             )
             continue
-        table = _quote_ident(spec.entity)
-        column = _quote_ident(SEARCH_VECTOR_COLUMN)
-        index_name = _quote_ident(f"ix_{spec.entity.lower()}_{SEARCH_VECTOR_COLUMN}")
-        out.append(
-            f"ALTER TABLE {table} "
-            f"ADD COLUMN IF NOT EXISTS {column} tsvector "
-            f"GENERATED ALWAYS AS ({expr}) STORED"
-        )
-        out.append(f"CREATE INDEX IF NOT EXISTS {index_name} ON {table} USING GIN ({column})")
+        out.append(SearchColumn(table=spec.entity, expression=expr))
     return out
 
 
+def build_search_index_ddl(
+    entities: Iterable[Any],
+    searches: Iterable[Any],
+) -> list[str]:
+    """Return the create-if-missing DDL for every SearchSpec.
+
+    Each entity that has a SearchSpec gets two statements:
+
+      1. ``ALTER TABLE … ADD COLUMN IF NOT EXISTS search_vector
+         tsvector GENERATED ALWAYS AS (…) STORED``
+      2. ``CREATE INDEX IF NOT EXISTS … ON … USING GIN (search_vector)``
+
+    These never change an existing column whose ``search:`` field list moved on;
+    :func:`plan_search_ddl` does (drop + re-add on an expression mismatch).
+
+    Returns an empty list when ``searches`` is empty or no spec
+    references an actual indexable field.
+    """
+    out: list[str] = []
+    for column in build_search_columns(entities, searches):
+        out.append(column.add_column_sql())
+        out.append(column.create_index_sql())
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Live-state planning (#1850): one planner for the dev boot, `dazzle db upgrade`,
+# `dazzle db apply-search` and the `dazzle db verify` drift report.
+# ---------------------------------------------------------------------------
+
+#: Generated ``search_vector`` columns in the current schema, with their expression.
+LIVE_SEARCH_COLUMNS_SQL = f"""
+    SELECT c.relname AS table_name,
+           CASE WHEN a.attgenerated = 's' THEN pg_get_expr(d.adbin, d.adrelid) END AS expression
+    FROM pg_attribute a
+    JOIN pg_class c ON c.oid = a.attrelid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+    WHERE n.nspname = current_schema()
+      AND c.relkind IN ('r', 'p')
+      AND a.attname = '{SEARCH_VECTOR_COLUMN}'
+      AND NOT a.attisdropped
+"""
+
+#: Index names in the current schema.
+LIVE_INDEXES_SQL = "SELECT indexname FROM pg_indexes WHERE schemaname = current_schema()"
+
+#: Base tables in the current schema.
+LIVE_TABLES_SQL = "SELECT tablename FROM pg_tables WHERE schemaname = current_schema()"
+
+_CAST = re.compile(r'::(?:"[^"]*"|[A-Za-z_][A-Za-z0-9_]*)')
+
+
+def normalise_search_expression(expr: str) -> str:
+    """Canonicalise a tsvector expression for comparison.
+
+    Postgres stores ``pg_get_expr`` output with casts (``'english'::regconfig``,
+    ``''::text``, ``'A'::"char"``), extra parentheses around ``||`` and identifiers
+    unquoted when lower-case. Dropping casts, quotes, parentheses, whitespace and
+    case leaves the token sequence — config, columns, weights and their order —
+    which is what a ``search:`` change moves.
+    """
+    out = _CAST.sub("", expr)
+    out = re.sub(r'[()"\s]', "", out)
+    return out.lower()
+
+
+def _same_expression(live: str | None, desired: str) -> bool:
+    if live is None:  # a plain (non-generated) search_vector column
+        return False
+    return normalise_search_expression(live) == normalise_search_expression(desired)
+
+
+def live_search_state(
+    column_rows: Iterable[Any], index_rows: Iterable[Any], table_rows: Iterable[Any]
+) -> tuple[dict[str, str | None], set[str], set[str]]:
+    """Fold the three live-state queries' rows (mappings or tuples) into planner input."""
+
+    def _vals(row: Any) -> list[Any]:
+        return list(row.values()) if isinstance(row, dict) else list(row)
+
+    columns = {_vals(r)[0]: _vals(r)[1] for r in column_rows}
+    indexes = {_vals(r)[0] for r in index_rows}
+    tables = {_vals(r)[0] for r in table_rows}
+    return columns, indexes, tables
+
+
+@dataclass(frozen=True)
+class SearchAction:
+    """One reconciliation step for one table."""
+
+    table: str
+    action: str  # "create" | "rebuild" | "add_index" | "drop_stale" | "table_missing"
+    statements: tuple[str, ...]
+
+    @property
+    def detail(self) -> str:
+        return {
+            "create": "search_vector column and GIN index missing",
+            "rebuild": "search_vector expression differs from the search: field list",
+            "add_index": "GIN index on search_vector missing",
+            "drop_stale": "search_vector column on an entity with no search: block",
+            "table_missing": "table does not exist yet (run the migrations first)",
+        }[self.action]
+
+
+def plan_search_ddl(
+    desired: Iterable[SearchColumn],
+    *,
+    live_columns: dict[str, str | None],
+    live_indexes: set[str],
+    live_tables: set[str],
+    entity_tables: Iterable[str],
+) -> list[SearchAction]:
+    """Diff the desired search columns against the live schema.
+
+    ``live_columns`` maps table → generated expression (``None`` for a plain,
+    non-generated ``search_vector`` column). An empty result means the live
+    schema matches. A stale generated column on a DSL entity whose ``search:``
+    block was removed is dropped — its content is derived, so nothing is lost.
+    """
+    actions: list[SearchAction] = []
+    wanted: set[str] = set()
+    for column in desired:
+        wanted.add(column.table)
+        if column.table not in live_tables:
+            actions.append(SearchAction(column.table, "table_missing", ()))
+            continue
+        if column.table not in live_columns:
+            actions.append(
+                SearchAction(
+                    column.table,
+                    "create",
+                    (column.add_column_sql(), column.create_index_sql()),
+                )
+            )
+        elif not _same_expression(live_columns[column.table], column.expression):
+            actions.append(
+                SearchAction(
+                    column.table,
+                    "rebuild",
+                    (
+                        *drop_search_column_sql(column.table),
+                        column.add_column_sql(),
+                        column.create_index_sql(),
+                    ),
+                )
+            )
+        elif column.index_name not in live_indexes:
+            actions.append(SearchAction(column.table, "add_index", (column.create_index_sql(),)))
+    for table in sorted(set(entity_tables) - wanted):
+        if live_columns.get(table) is not None:
+            actions.append(SearchAction(table, "drop_stale", tuple(drop_search_column_sql(table))))
+    return actions
+
+
 __all__ = [
+    "LIVE_INDEXES_SQL",
+    "LIVE_SEARCH_COLUMNS_SQL",
+    "LIVE_TABLES_SQL",
     "SEARCH_VECTOR_COLUMN",
+    "SearchAction",
+    "SearchColumn",
+    "build_search_columns",
     "build_search_index_ddl",
+    "drop_search_column_sql",
+    "live_search_state",
+    "normalise_search_expression",
+    "plan_search_ddl",
 ]

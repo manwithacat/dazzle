@@ -60,6 +60,9 @@ _ALLOWED_VERSIONS: dict[str, str] = {
     "0027_two_factor_restore": (
         "restores the two-factor tables and adds the session's second factor (DD-014 FORCED)"
     ),
+    "0028_runtime_schema_parity": (
+        "adds the orchestrator objects production DBs stamped at an older 0019 lack (#1850)"
+    ),
 }
 
 
