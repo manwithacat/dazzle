@@ -46,7 +46,11 @@ _PERSON_FIELD_RE = re.compile(
     r"reviewer|approver|manager)",
     re.I,
 )
-_AVATAR_URL_KEYS = ("avatar_url", "picture_url", "photo_url")
+AVATAR_URL_KEYS = ("avatar_url", "picture_url", "photo_url")
+# Keys a person ref dict may carry that change its chip beyond the name: the
+# declared ``initials`` and the photo. The FK-display JOIN path
+# projects these alongside ``__display__`` when the target declares them (#1849).
+PERSON_CHIP_REF_KEYS = ("initials", *AVATAR_URL_KEYS)
 _NAME_KEYS = ("name", "first_name", "__display__")
 
 
@@ -70,7 +74,7 @@ def _col_ref_entity(col: dict[str, Any]) -> str:
 
 
 def _value_looks_like_person(value: dict[str, Any]) -> bool:
-    if any(value.get(k) for k in _AVATAR_URL_KEYS):
+    if any(value.get(k) for k in AVATAR_URL_KEYS):
         return True
     if value.get("email") and any(value.get(k) for k in _NAME_KEYS):
         return True

@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from dazzle.db.sql import quote_identifier
+from dazzle.render.user_chip import PERSON_CHIP_REF_KEYS
 
 if TYPE_CHECKING:
     from dazzle.http.specs.entity import EntitySpec, RelationSpec
@@ -460,7 +461,30 @@ class RelationLoader:
                 extra_cols.append(
                     f'"{alias}".{quote_identifier(display_field)} AS "{relation_name}__display"'
                 )
+            # #1849: a person target's declared initials / photo ride the same
+            # JOIN so region chips match list cells (no second query).
+            for key in self._chip_ref_fields(relation.to_entity):
+                extra_cols.append(f'"{alias}".{quote_identifier(key)} AS "{relation_name}__{key}"')
         return joins, extra_cols, fallback
+
+    def _chip_ref_fields(self, entity_name: str) -> list[str]:
+        """Person-chip keys (``initials``, avatar URLs) *entity_name* declares.
+
+        Only plain scalar fields qualify; a field marked ``sensitive`` is never
+        projected into a ref dict. Entities that declare none (most non-person
+        targets) get ``[]``, so their JOIN projection is unchanged.
+        """
+        entity = self.entity_map.get(entity_name)
+        if entity is None:
+            return []
+        by_name = {f.name: f for f in entity.fields}
+        keys: list[str] = []
+        for key in PERSON_CHIP_REF_KEYS:
+            spec = by_name.get(key)
+            if spec is None or spec.sensitive or spec.type.kind != "scalar":
+                continue
+            keys.append(key)
+        return keys
 
     def apply_display_joins_to_rows(
         self,
@@ -474,6 +498,8 @@ class RelationLoader:
         this helper reshapes them into ``row[rel] = {id, __display__}`` dicts
         matching what the batched ``_load_to_one`` path produces, so
         downstream consumers (``_inject_display_names``) don't need changes.
+        Person-chip columns (``{rel}__initials``, ``{rel}__avatar_url``, …)
+        fold in under their plain keys (#1849).
         """
         for row in rows:
             for relation_name in include:
@@ -484,11 +510,16 @@ class RelationLoader:
                 if display_key not in row:
                     continue
                 display_val = row.pop(display_key)
+                chip = {
+                    key: row.pop(f"{relation_name}__{key}")
+                    for key in PERSON_CHIP_REF_KEYS
+                    if f"{relation_name}__{key}" in row
+                }
                 fk_id = row.get(relation.foreign_key_field)
                 if fk_id is None:
                     row[relation_name] = None
                 else:
-                    row[relation_name] = {"id": fk_id, "__display__": display_val}
+                    row[relation_name] = {"id": fk_id, "__display__": display_val, **chip}
         return rows
 
 

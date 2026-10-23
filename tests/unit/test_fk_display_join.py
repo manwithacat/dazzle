@@ -14,11 +14,14 @@ is an opt-in optimisation rather than a replacement.
 
 from __future__ import annotations
 
+import pytest
+
 from dazzle.http.runtime.relation_loader import (
     RelationInfo,
     RelationLoader,
     RelationRegistry,
 )
+from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 
 def _registry_with(
@@ -294,3 +297,110 @@ class TestFilterTableQualification:
         assert '"ClassEnrolment"."name"' in where, (
             f"search column not qualified with source table alias: {where!r}"
         )
+
+
+def _contact(*extra: tuple[str, str, bool]) -> EntitySpec:
+    """Contact person target: ``name`` plus ``(field, kind, sensitive)`` extras."""
+    fields = [FieldSpec(name="name", type=FieldType(kind="scalar", scalar_type=ScalarType.STR))]
+    for name, kind, sensitive in extra:
+        ftype = (
+            FieldType(kind="ref", ref_entity="Upload")
+            if kind == "ref"
+            else FieldType(kind="scalar", scalar_type=ScalarType.STR)
+        )
+        fields.append(FieldSpec(name=name, type=ftype, sensitive=sensitive))
+    return EntitySpec(name="Contact", fields=fields)
+
+
+def _recipient_registry() -> RelationRegistry:
+    return _registry_with("Notification", "recipient", "Contact", "recipient_id", "name")
+
+
+class TestPersonChipColumns:
+    """#1849: region chips get a person's declared initials / photo from the
+    same JOIN — only for fields the target declares, never sensitive ones."""
+
+    @pytest.mark.parametrize(
+        ("extra", "expected"),
+        [
+            pytest.param((), [], id="non-person-unchanged"),
+            pytest.param(
+                (("initials", "scalar", False), ("avatar_url", "scalar", False)),
+                [
+                    '"_fkd_recipient"."initials" AS "recipient__initials"',
+                    '"_fkd_recipient"."avatar_url" AS "recipient__avatar_url"',
+                ],
+                id="initials-and-avatar",
+            ),
+            pytest.param(
+                (("photo_url", "scalar", False),),
+                ['"_fkd_recipient"."photo_url" AS "recipient__photo_url"'],
+                id="photo-url",
+            ),
+            pytest.param((("initials", "scalar", True),), [], id="sensitive-skipped"),
+            pytest.param((("picture_url", "ref", False),), [], id="ref-skipped"),
+        ],
+    )
+    def test_projection_only_for_declared_chip_fields(
+        self, extra: tuple[tuple[str, str, bool], ...], expected: list[str]
+    ) -> None:
+        loader = RelationLoader(registry=_recipient_registry(), entities=[_contact(*extra)])
+
+        joins, extras, fallback = loader.build_display_join_plan("Notification", ["recipient"])
+
+        assert len(joins) == 1, "still one JOIN — no extra query"
+        assert fallback == []
+        assert extras == ['"_fkd_recipient"."name" AS "recipient__display"', *expected]
+
+    def test_fold_moves_chip_columns_into_ref_dict(self) -> None:
+        loader = RelationLoader(registry=_recipient_registry(), entities=[])
+        rows = [
+            {
+                "id": "n-1",
+                "recipient_id": "c-1",
+                "recipient__display": "Demo Xero Sync",
+                "recipient__initials": "XQ",
+                "recipient__avatar_url": None,
+            },
+            {
+                "id": "n-2",
+                "recipient_id": None,
+                "recipient__display": None,
+                "recipient__initials": None,
+            },
+        ]
+
+        result = loader.apply_display_joins_to_rows(rows, "Notification", ["recipient"])
+
+        assert result[0]["recipient"] == {
+            "id": "c-1",
+            "__display__": "Demo Xero Sync",
+            "initials": "XQ",
+            "avatar_url": None,
+        }
+        assert result[1]["recipient"] is None
+        assert not [k for r in result for k in r if k.startswith("recipient__")]
+
+    def test_region_chip_shows_declared_initials(self) -> None:
+        from dazzle.render.fragment.region._shared import _render_typed_value
+
+        loader = RelationLoader(registry=_recipient_registry(), entities=[])
+        row = loader.apply_display_joins_to_rows(
+            [
+                {
+                    "id": "n-1",
+                    "recipient_id": "c-1",
+                    "recipient__display": "Demo Xero Sync",
+                    "recipient__initials": "XQ",
+                }
+            ],
+            "Notification",
+            ["recipient"],
+        )[0]
+
+        frag = _render_typed_value(
+            row, {"key": "recipient", "type": "ref", "ref_entity": "Contact"}
+        )
+
+        assert ">XQ</span>" in frag.html  # type: ignore[attr-defined]
+        assert ">DX</span>" not in frag.html  # type: ignore[attr-defined]

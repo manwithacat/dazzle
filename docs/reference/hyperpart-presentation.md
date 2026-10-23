@@ -65,7 +65,9 @@ otherwise it shows initials. When the person's entity declares an `initials` fie
 three characters. A blank value falls back to initials derived from the display name:
 the first and last words' first letters, or the first two letters of a one-word name,
 with punctuation skipped. The same rule applies to the user chip and the cohort-strip
-halo (`render/user_chip.py` `person_initials`).
+halo (`render/user_chip.py` `person_initials`), in entity lists and workspace regions
+alike: a region's FK-display JOIN projects the target's declared `initials` and
+`avatar_url` / `picture_url` / `photo_url` into the ref dict (never a `sensitive` field).
 
 Living code: `PRESENTATION_MATRIX` in `src/dazzle/render/presentation.py`.
 
