@@ -93,7 +93,8 @@ LOGIN_ERROR_MESSAGES: dict[str, str] = {
     "sso_no_membership": (
         "You don't have a membership in that organization. Ask an admin to invite you."
     ),
-    "2fa_expired": "That sign-in timed out before it was verified. Please sign in again.",
+    # #1842 (WCAG 2.2.1): plain words; the email is filled in when the flow knows it.
+    "2fa_expired": "Your sign-in code expired. Sign in again to get a new one.",
 }
 SIGNUP_ERROR_MESSAGES: dict[str, str] = {
     "mismatch": "The two password fields didn't match. Try again.",
@@ -195,6 +196,7 @@ def build_login_magic_link_view(
     next_url: str = "/",
     error_message: str = "",
     sso_providers: tuple[Any, ...] = (),
+    email: str = "",
     css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
     js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
 ) -> Page:
@@ -242,6 +244,7 @@ def build_login_magic_link_view(
                     kind="email",
                     required=True,
                     placeholder="you@example.com",
+                    initial_value=email,
                 ),
             ),
             submit=Submit(label="Send sign-in link", variant="primary"),
@@ -263,6 +266,7 @@ def build_login_password_view(
     next_url: str = "/",
     error_message: str = "",
     sso_providers: tuple[Any, ...] = (),
+    email: str = "",
     css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
     js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
 ) -> Page:
@@ -308,6 +312,7 @@ def build_login_password_view(
                     kind="email",
                     required=True,
                     placeholder="you@example.com",
+                    initial_value=email,
                 ),
                 Field(
                     name="password",

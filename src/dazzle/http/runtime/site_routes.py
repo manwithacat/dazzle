@@ -28,6 +28,7 @@ from dazzle.http.runtime.auth.auth_views import (
     build_login_sent_view,
     build_reset_password_done_view,
     build_reset_password_view,
+    leftover_honest_auth_email,
     leftover_honest_auth_error,
     leftover_honest_auth_token,
 )
@@ -978,6 +979,7 @@ def create_auth_page_routes(
         sitespec: dict[str, Any] = sitespec_data,
         next: str = "/",
         error: str = "",
+        email: str = "",
     ) -> Response:
         """Serve the login page.
 
@@ -1008,6 +1010,9 @@ def create_auth_page_routes(
         honest_next = leftover_honest_auth_next(next)
         if honest_next is None:
             return HTMLResponse("Unknown login next", status_code=400)
+        # ``?email=`` prefills the form (#1842: a timed-out two-factor sign-in returns
+        # here with it). Junk is ignored rather than refused: it only fills a field.
+        honest_email = leftover_honest_auth_email(email) or ""
         error_message = LOGIN_ERROR_MESSAGES.get(honest_error, "")
         builder = build_login_password_view if password_mode else build_login_magic_link_view
         page = builder(
@@ -1016,6 +1021,7 @@ def create_auth_page_routes(
             next_url=honest_next or "/",
             error_message=error_message,
             sso_providers=sso_providers,
+            email=honest_email,
             css_links=css_links,
             js_scripts=js_scripts,
         )

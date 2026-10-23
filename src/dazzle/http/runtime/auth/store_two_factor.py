@@ -10,7 +10,9 @@
   one-time codes (``_dazzle_otp_codes``, 5-minute TTL, 3 attempts, single use);
 * pending sign-in challenges (``_dazzle_2fa_challenges``): a short-lived token that is
   NOT a session — it opens nothing but the second-factor step, is stored only as a
-  SHA-256 hash, dies after 5 wrong codes, 10 minutes, or one success;
+  SHA-256 hash, dies after 5 wrong codes, 10 minutes, or one success. #1842 (WCAG
+  2.2.1): "More time" pushes the deadline out by another 10 minutes, never past 30
+  minutes from creation (``CHALLENGE_MAX_LIFETIME``);
 * the second factor a session completed (``sessions.mfa_*``).
 
 ``TWO_FACTOR_DDL`` is the one DDL source for the three tables: the auth store's boot DDL
@@ -74,6 +76,9 @@ TWO_FACTOR_DDL: tuple[str, ...] = (
 )
 
 CHALLENGE_TTL = timedelta(minutes=10)
+# #1842 (WCAG 2.2.1 Timing Adjustable): "More time" extends a live challenge by another
+# CHALLENGE_TTL, but never past this hard cap from creation — the token stays short-lived.
+CHALLENGE_MAX_LIFETIME = timedelta(minutes=30)
 MAX_CODE_ATTEMPTS = 5
 EMAIL_CODE_TTL = timedelta(minutes=5)
 EMAIL_CODE_ATTEMPTS = 3
@@ -98,6 +103,23 @@ class TwoFactorChallenge:
     membership_id: str | None
     redirect_to: str
     attempts: int
+    created_at: datetime
+    expires_at: datetime
+
+    @property
+    def hard_deadline(self) -> datetime:
+        """The latest this challenge can live, however often it is extended."""
+        return self.created_at + CHALLENGE_MAX_LIFETIME
+
+    @property
+    def can_extend(self) -> bool:
+        """Whether "More time" can still move the deadline (it is short of the cap)."""
+        return self.expires_at < self.hard_deadline
+
+    def extended_expiry(self, now: datetime) -> datetime | None:
+        """The deadline "More time" would set, or None when it would gain nothing."""
+        new = min(now + CHALLENGE_TTL, self.hard_deadline)
+        return new if new > self.expires_at else None
 
 
 def _sha256(value: str) -> str:
@@ -336,7 +358,50 @@ class TwoFactorStoreMixin:
             membership_id=row.get("membership_id"),
             redirect_to=row["redirect_to"],
             attempts=int(row["attempts"]),
+            created_at=datetime.fromisoformat(row["created_at"]),
+            expires_at=datetime.fromisoformat(row["expires_at"]),
         )
+
+    def extend_2fa_challenge(self, token: str) -> datetime | None:
+        """Push a live challenge's deadline out (#1842, WCAG 2.2.1); the new deadline.
+
+        None when the challenge is gone (unknown, expired, spent, locked) or already at
+        ``CHALLENGE_MAX_LIFETIME``. Only the challenge moves: an emailed code keeps its
+        own ``EMAIL_CODE_TTL`` (a code that travelled by email stays short-lived).
+        """
+        ch = self.get_2fa_challenge(token)
+        if ch is None:
+            return None
+        now = datetime.now(UTC)
+        new = ch.extended_expiry(now)
+        if new is None:
+            return None
+        updated = self._execute_modify(
+            "UPDATE _dazzle_2fa_challenges SET expires_at = %s "
+            "WHERE token_hash = %s AND consumed = FALSE AND expires_at > %s AND attempts < %s",
+            (new.isoformat(), _sha256(token), now.isoformat(), MAX_CODE_ATTEMPTS),
+        )
+        return new if updated == 1 else None
+
+    def expired_2fa_challenge_user_id(self, token: str) -> str | None:
+        """The user of a sign-in challenge that ran out of time (not spent or locked).
+
+        Lets the sign-in page say the code expired and prefill the email (#1842).
+        """
+        if not token:
+            return None
+        row = self._execute_one(
+            "SELECT user_id FROM _dazzle_2fa_challenges WHERE token_hash = %s "
+            "AND purpose IN (%s, %s) AND consumed = FALSE AND expires_at <= %s AND attempts < %s",
+            (
+                _sha256(token),
+                PURPOSE_VERIFY,
+                PURPOSE_ENROL,
+                datetime.now(UTC).isoformat(),
+                MAX_CODE_ATTEMPTS,
+            ),
+        )
+        return str(row["user_id"]) if row else None
 
     def fail_2fa_challenge(self, token: str) -> None:
         """Count a wrong code; the fifth kills the challenge."""

@@ -9,6 +9,13 @@ JSON body — never a session):
   email or recovery code finishes the sign-in through ``sign_in.finish_sign_in``.
 * ``POST /auth/2fa/challenge`` (JSON), ``POST /auth/2fa/email-otp-send/submit`` (form)
   — email a code (also for step-up on a signed-in session).
+* ``POST /auth/2fa/challenge/extend`` — "More time" (#1842, WCAG 2.2.1): pushes the
+  challenge deadline out by ``CHALLENGE_TTL``, capped at ``CHALLENGE_MAX_LIFETIME``.
+  Answers JSON to the page script (``Accept: application/json``), else 303 back.
+  CSRF-gated (``CSRFConfig.protected_paths``) although it carries no session.
+
+A challenge that ran out of time sends the browser to ``/login?error=2fa_expired``
+with the email filled in.
 
 Enrolment (a signed-in session, or an ``enforce_for_roles`` enrolment challenge):
 ``POST /auth/2fa/setup/totp`` + ``/auth/2fa/verify/totp``, ``POST /auth/2fa/setup/email-otp``
@@ -26,8 +33,10 @@ Pages: ``/2fa/challenge``, ``/2fa/setup``, ``/2fa/settings``, ``/2fa/step-up``.
 ADR-0014: no ``from __future__ import annotations`` in FastAPI route files.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 from typing import Annotated, Any
+from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Form, HTTPException, Query, Request
@@ -63,6 +72,7 @@ from dazzle.http.runtime.auth.sign_in import (
     finish_sign_in,
 )
 from dazzle.http.runtime.auth.store_two_factor import (
+    EMAIL_CODE_TTL,
     PURPOSE_ENROL,
     PURPOSE_VERIFY,
     TwoFactorChallenge,
@@ -70,6 +80,7 @@ from dazzle.http.runtime.auth.store_two_factor import (
 )
 from dazzle.http.runtime.auth.totp import generate_totp_secret, get_totp_uri
 from dazzle.http.runtime.auth.two_factor_views import (
+    ChallengeTimeout,
     build_2fa_settings_view,
     build_2fa_setup_view,
     build_code_entry_view,
@@ -82,6 +93,7 @@ MANAGE_MAX_AGE_SECONDS = 15 * 60
 JSON_SESSION_DAYS = 7
 _INVALID_CODE = "That code didn't work. Check it and try again."
 _LOCKED = "Too many wrong codes. Sign in again."
+EXTEND_PATH = "/auth/2fa/challenge/extend"
 
 
 @dataclass(frozen=True)
@@ -117,6 +129,33 @@ def _challenge(request: Request, token: str = "") -> TwoFactorChallenge | None:
     raw = token or request.cookies.get(CHALLENGE_COOKIE, "")
     honest = leftover_honest_auth_token(raw)
     return _store(request).get_2fa_challenge(honest) if honest else None
+
+
+def _challenge_gone(request: Request) -> RedirectResponse:
+    """Back to sign-in when no live challenge is left (#1842, WCAG 2.2.1).
+
+    A challenge that simply ran out of time names its user, so the sign-in page can
+    say the code expired and fill in the email; a spent, locked or unknown token
+    gets the same message without one.
+    """
+    url = "/login?error=2fa_expired"
+    store = _store(request)
+    honest = leftover_honest_auth_token(request.cookies.get(CHALLENGE_COOKIE, ""))
+    user_id = store.expired_2fa_challenge_user_id(honest) if honest else None
+    user: UserRecord | None = store.get_user_by_id(UUID(user_id)) if user_id else None
+    if user is not None and user.is_active and user.email:
+        url = f"{url}&email={quote(user.email, safe='@')}"
+    return RedirectResponse(url=url, status_code=303)
+
+
+def _challenge_timeout(ch: TwoFactorChallenge, method: str) -> ChallengeTimeout:
+    """What the code page's timeout warning needs (#1842, WCAG 2.2.1)."""
+    now = datetime.now(UTC)
+    return ChallengeTimeout(
+        expires_in=max(0, int((ch.expires_at - now).total_seconds())),
+        extend_action=f"{EXTEND_PATH}?method={method}" if ch.can_extend else "",
+        email_code_minutes=int(EMAIL_CODE_TTL.total_seconds() // 60),
+    )
 
 
 def _challenge_user(request: Request, ch: TwoFactorChallenge) -> UserRecord | None:
@@ -382,7 +421,7 @@ def create_two_factor_routes() -> APIRouter:
         ch = _challenge(request)
         outcome = _verify_pending(request, ch, method, code)
         if outcome == "expired":
-            return RedirectResponse(url="/login?error=2fa_expired", status_code=303)
+            return _challenge_gone(request)
         if outcome == "invalid_code":
             return RedirectResponse(
                 url=f"/2fa/challenge?method={method}&error=invalid_code", status_code=303
@@ -418,7 +457,7 @@ def create_two_factor_routes() -> APIRouter:
         pending = ch is not None and ch.purpose == PURPOSE_VERIFY
         user = _email_target(request)
         if user is None:
-            return RedirectResponse(url="/login?error=2fa_expired", status_code=303)
+            return _challenge_gone(request)
         if user.email_otp_enabled and "email_otp" in allowed_methods(_cfg(request)):
             send_email_code(request, _store(request), user, EMAIL_PURPOSE_SIGN_IN)
         target = (
@@ -429,6 +468,40 @@ def create_two_factor_routes() -> APIRouter:
         return RedirectResponse(url=target, status_code=303)
 
     router.post("/auth/2fa/email-otp-send/submit", include_in_schema=False)(limited(send_code_form))
+
+    async def extend_challenge(request: Request, method: Annotated[str, Query()] = "") -> Response:
+        """ "More time" on a pending sign-in (#1842, WCAG 2.2.1 Timing Adjustable).
+
+        Extends only the challenge named by this browser's challenge cookie. An emailed
+        code is NOT extended: it keeps its own ``EMAIL_CODE_TTL`` because it travelled
+        by email, so the page offers "Email me a new code" alongside "More time".
+        """
+        wants_json = "application/json" in request.headers.get("accept", "")
+        ch = _challenge(request)
+        if ch is None:
+            if wants_json:
+                raise HTTPException(status_code=401, detail="No pending sign-in")
+            return _challenge_gone(request)
+        new_expiry = _store(request).extend_2fa_challenge(ch.token)
+        if wants_json:
+            if new_expiry is None:
+                raise HTTPException(status_code=409, detail="This sign-in can't be extended")
+            now = datetime.now(UTC)
+            return JSONResponse(
+                content={
+                    "expires_in": max(0, int((new_expiry - now).total_seconds())),
+                    "extendable": replace(ch, expires_at=new_expiry).can_extend,
+                }
+            )
+        page = "/2fa/challenge" if ch.purpose == PURPOSE_VERIFY else "/2fa/setup"
+        params = [f"method={method}"] if method in CODE_METHODS else []
+        if new_expiry is not None and ch.purpose == PURPOSE_VERIFY:
+            params.append("extended=1")
+        return RedirectResponse(
+            url=f"{page}?{'&'.join(params)}" if params else page, status_code=303
+        )
+
+    router.post(EXTEND_PATH, include_in_schema=False)(limited(extend_challenge))
 
     # ── enrolment ────────────────────────────────────────────────────────
 
@@ -579,11 +652,13 @@ def create_two_factor_routes() -> APIRouter:
         method: Annotated[str, Query()] = "",
         sent: Annotated[str, Query()] = "",
         error: Annotated[str, Query()] = "",
+        extended: Annotated[str, Query()] = "",
     ) -> Response:
         ch = _challenge(request)
         user = _challenge_user(request, ch) if ch and ch.purpose == PURPOSE_VERIFY else None
         if user is None:
-            return RedirectResponse(url="/login?error=2fa_expired", status_code=303)
+            return _challenge_gone(request)
+        assert ch is not None
         methods = tuple(enrolled_methods(_cfg(request), user))
         if not methods:  # every enrolled factor was switched off in dazzle.toml
             return RedirectResponse(url="/login?error=2fa_expired", status_code=303)
@@ -599,6 +674,8 @@ def create_two_factor_routes() -> APIRouter:
                 page_path="/2fa/challenge",
                 code_sent=sent == "1",
                 error_message=_INVALID_CODE if error == "invalid_code" else "",
+                timeout=_challenge_timeout(ch, mode),
+                extended=extended == "1",
                 **_assets(request),
             )
         )

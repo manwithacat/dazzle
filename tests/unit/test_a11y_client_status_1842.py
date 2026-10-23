@@ -8,9 +8,14 @@
   ``aria-disabled`` (never ``disabled``) so it keeps focus; a second click
   while saving does not PUT again; the error is visible text the button
   references with ``aria-describedby``.
+* Two-factor sign-in timeout (2.2.1): the warning is announced through a
+  ``role="alert"`` region without taking focus from the code field; "More
+  time" posts with the CSRF echo, hides itself and hands focus back to the
+  code field; when time is up the page says so and offers "Sign in again".
 
-The scripts run against real SSR markup (``WorkspaceToolbar``) on a
-``set_content`` page. Skipped without Playwright or a Chromium build.
+The scripts run against real SSR markup (``WorkspaceToolbar``,
+``build_code_entry_view``) on a ``set_content`` page or a routed origin.
+Skipped without Playwright or a Chromium build.
 """
 
 from __future__ import annotations
@@ -22,6 +27,10 @@ import pytest
 
 pw = pytest.importorskip("playwright.sync_api")
 
+from dazzle.http.runtime.auth.two_factor_views import (  # noqa: E402
+    ChallengeTimeout,
+    build_code_entry_view,
+)
 from dazzle.render.fragment import FragmentRenderer, WorkspaceToolbar  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -188,3 +197,86 @@ def test_workspace_save_error_is_visible_and_described(page: Any) -> None:
     )
     s = _state(page)
     assert s["errId"] is None and s["describedby"] is None
+
+
+# ── 2.2.1: the two-factor challenge warns before it times out ──────────
+
+
+def _challenge_page(expires_in: int) -> str:
+    html = FragmentRenderer().render(
+        build_code_entry_view(
+            product_name="Acme",
+            heading="Verify",
+            mode="totp",
+            methods=("totp",),
+            verify_action="/auth/2fa/verify/submit",
+            send_action="/auth/2fa/email-otp-send/submit",
+            page_path="/2fa/challenge",
+            timeout=ChallengeTimeout(expires_in, "/auth/2fa/challenge/extend?method=totp", 5),
+            js_scripts=(),
+        )
+    )
+    # The script is injected by the test, not fetched from /static.
+    return html.replace('<script defer src="/static/js/dz-2fa-timeout.js"></script>', "")
+
+
+def _open_challenge(page: Any, expires_in: int, extend: dict[str, Any]) -> list[dict[str, str]]:
+    """Serve the page from a real origin (the script fetches) and record extend posts."""
+    posts: list[dict[str, str]] = []
+
+    def on_extend(route: Any) -> None:
+        posts.append(route.request.headers)
+        route.fulfill(status=200, content_type="application/json", json=extend)
+
+    page.unroute("**/*")
+    page.route(
+        "http://dz.test/2fa/challenge",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="text/html",
+            headers={"set-cookie": "dazzle_csrf=tok; Path=/"},
+            body=_challenge_page(expires_in),
+        ),
+    )
+    page.route("http://dz.test/auth/2fa/challenge/extend*", on_extend)
+    page.goto("http://dz.test/2fa/challenge")
+    page.focus("input[name='code']")
+    page.add_script_tag(path=str(JS / "dz-2fa-timeout.js"))
+    return posts
+
+
+_TIMEOUT_STATE = """() => {
+  const msg = document.querySelector('[data-dz-2fa-timeout-message]');
+  return {
+    text: msg.textContent,
+    role: msg.getAttribute('role'),
+    actionsHidden: document.querySelector('[data-dz-2fa-timeout-actions]').hidden,
+    restartHidden: document.querySelector('[data-dz-2fa-timeout-restart]').hidden,
+    focused: document.activeElement && document.activeElement.name,
+  };
+}"""
+
+
+def test_two_factor_timeout_warns_and_more_time_extends(page: Any) -> None:
+    # 30s left, warned 60s ahead: the warning shows at once.
+    posts = _open_challenge(page, 30, {"expires_in": 600, "extendable": True})
+    s = page.evaluate(_TIMEOUT_STATE)
+    assert s["role"] == "alert" and s["text"].startswith("Your sign-in times out")
+    assert s["actionsHidden"] is False and s["restartHidden"] is True
+    assert s["focused"] == "code", "the warning must not steal focus from the code field"
+
+    page.click("[data-dz-2fa-extend] button")
+    page.wait_for_function("document.querySelector('[data-dz-2fa-timeout-actions]').hidden")
+    s = page.evaluate(_TIMEOUT_STATE)
+    assert s["text"] == "You have more time to enter your code."
+    assert s["focused"] == "code", "focus returns to the code field after More time"
+    assert len(posts) == 1
+    assert posts[0]["accept"] == "application/json" and posts[0]["x-csrf-token"] == "tok"
+
+
+def test_two_factor_timeout_says_when_time_is_up(page: Any) -> None:
+    _open_challenge(page, 1, {})
+    page.wait_for_function("!document.querySelector('[data-dz-2fa-timeout-restart]').hidden")
+    s = page.evaluate(_TIMEOUT_STATE)
+    assert s["text"] == "Your sign-in timed out. Sign in again to get a new code."
+    assert s["actionsHidden"] is True

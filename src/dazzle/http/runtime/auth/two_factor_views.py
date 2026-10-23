@@ -1,7 +1,9 @@
 """Typed-Fragment two-factor pages (DD-014): challenge, step-up, setup, recovery codes,
 settings.
 
-Native form posts and 303s throughout — no client script. The enrolment QR, the
+Native form posts and 303s throughout. The one client script is the sign-in
+challenge's timeout warning (``dz-2fa-timeout.js``, #1842 WCAG 2.2.1), which enhances
+a native "More time" form. The enrolment QR, the
 manual secret and the recovery-code grid are the HaTchi-MaXchi ``two-factor``
 Hyperpart's chrome (``.dz-auth-qr-container``, ``.dz-auth-secret-inline``,
 ``.dz-auth-recovery-grid`` / ``.dz-auth-recovery-pill``) emitted through ``RawHTML``
@@ -10,6 +12,7 @@ Codes are never echoed back into a page; recovery codes are shown once, in the
 response that minted them.
 """
 
+from dataclasses import dataclass
 from html import escape
 from typing import Any
 from urllib.parse import quote
@@ -42,6 +45,78 @@ _MODE_INPUT_HINTS: dict[str, tuple[str, str]] = {
     "email_otp": ("one-time-code", "numeric"),
     "recovery": ("", ""),
 }
+TIMEOUT_SCRIPT = "/static/js/dz-2fa-timeout.js"
+# WCAG 2.2.1 needs at least 20 seconds to react; a minute leaves room to read and act.
+TIMEOUT_WARN_SECONDS = 60
+
+
+@dataclass(frozen=True)
+class ChallengeTimeout:
+    """The pending sign-in's clock, for the code page's warning (#1842, WCAG 2.2.1).
+
+    ``expires_in`` is seconds from render (relative, so a skewed client clock does not
+    matter); ``extend_action`` is the "More time" form target, empty once the
+    challenge is at its lifetime cap; ``email_code_minutes`` is the emailed code's own
+    life, which "More time" does not extend.
+    """
+
+    expires_in: int
+    extend_action: str
+    email_code_minutes: int
+
+
+def _timeout_warning(timeout: ChallengeTimeout, mode: str, send_action: str) -> RawHTML:
+    """The hidden warning ``dz-2fa-timeout.js`` reveals shortly before the deadline.
+
+    The message element is a live ``role="alert"`` region present (empty) from page
+    load, so filling it is announced; focus stays in the code field. Without the
+    script nothing shows, and the forms still work as native posts.
+    """
+    if timeout.extend_action:
+        warn = "Your sign-in times out in about a minute. Choose More time if you need longer."
+    else:
+        warn = (
+            "Your sign-in times out in about a minute and can't be extended again. "
+            "If it runs out, sign in again."
+        )
+    if mode == "email_otp":
+        warn += (
+            f" Email codes last {timeout.email_code_minutes} minutes, so if yours has "
+            "expired, email yourself a new one."
+        )
+    actions = ""
+    if timeout.extend_action:
+        actions += (
+            f'<form method="post" action="{escape(timeout.extend_action, quote=True)}" '
+            "data-dz-2fa-extend>"
+            '<button type="submit" class="dz-submit dz-submit--variant-primary">'
+            "More time</button></form>"
+        )
+    if mode == "email_otp":
+        actions += (
+            f'<form method="post" action="{escape(send_action, quote=True)}">'
+            '<button type="submit" class="dz-submit dz-submit--variant-secondary">'
+            "Email me a new code</button></form>"
+        )
+    return RawHTML(
+        html=(
+            '<div class="dz-stack" data-dz-gap="sm" data-dz-2fa-timeout '
+            f'data-expires-in="{int(timeout.expires_in)}" '
+            f'data-warn-seconds="{TIMEOUT_WARN_SECONDS}">'
+            '<p class="dz-text dz-text--tone-danger" role="alert" aria-atomic="true" '
+            f'data-dz-2fa-timeout-message data-warn-text="{escape(warn, quote=True)}" '
+            'data-extended-text="You have more time to enter your code." '
+            'data-expired-text="Your sign-in timed out. Sign in again to get a new code.">'
+            "</p>"
+            f'<div class="dz-stack" data-dz-gap="sm" data-dz-2fa-timeout-actions hidden>'
+            f"{actions}</div>"
+            '<a class="dz-link" href="/2fa/challenge" data-dz-2fa-timeout-restart hidden>'
+            "Sign in again</a>"
+            "</div>"
+        )
+    )
+
+
 _MODE_LINKS: dict[str, str] = {
     "totp": "Use your authenticator app",
     "email_otp": "Email me a code",
@@ -66,6 +141,8 @@ def build_code_entry_view(
     next_url: str = "",
     code_sent: bool = False,
     error_message: str = "",
+    timeout: ChallengeTimeout | None = None,
+    extended: bool = False,
     css_links: tuple[str, ...] = _DEFAULT_CSS,
     js_scripts: tuple[str, ...] = _DEFAULT_JS,
 ) -> Page:
@@ -73,6 +150,8 @@ def build_code_entry_view(
 
     ``verify_action`` / ``send_action`` are form targets; ``?method=`` (and ``next``)
     ride on the action URL so the form carries one visible field: the code.
+    ``timeout`` (sign-in challenge only) adds the warn-and-extend block and its script;
+    ``extended`` confirms a native (no-script) "More time" post.
     """
     subtitle, label, placeholder = _MODE_COPY[mode]
     autocomplete, inputmode = _MODE_INPUT_HINTS[mode]
@@ -83,6 +162,8 @@ def build_code_entry_view(
     ]
     if error_message:
         children.append(Text(body=error_message, tone="danger"))
+    if extended:
+        children.append(Text(body="You have more time to enter your code.", tone="muted"))
     if mode == "email_otp" and not code_sent:
         children.append(
             FormStack(
@@ -114,6 +195,9 @@ def build_code_entry_view(
                 submit=Submit(label="Verify", variant="primary"),
             )
         )
+    if timeout is not None:
+        children.append(_timeout_warning(timeout, mode, send_action))
+        js_scripts = (*js_scripts, TIMEOUT_SCRIPT)
     others = [m for m in methods if m != mode]
     if others:
         children.append(Text(body="Or use a different method:", tone="muted"))

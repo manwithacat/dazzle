@@ -13,6 +13,7 @@ import os
 import time
 import uuid
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import psycopg
@@ -28,6 +29,7 @@ from dazzle.http.runtime.auth.password_login_routes import create_password_login
 from dazzle.http.runtime.auth.routes import create_auth_routes
 from dazzle.http.runtime.auth.sign_in import CHALLENGE_COOKIE
 from dazzle.http.runtime.auth.store import AuthStore
+from dazzle.http.runtime.auth.store_two_factor import CHALLENGE_MAX_LIFETIME, CHALLENGE_TTL
 from dazzle.http.runtime.auth.totp import generate_totp
 from dazzle.http.runtime.auth.two_factor_routes import create_two_factor_routes
 
@@ -301,3 +303,43 @@ def test_email_code_is_delivered_by_the_mailer_and_signs_in(scratch_url: str) ->
     )
     assert resp.status_code == 200
     assert store.validate_session(resp.cookies["dazzle_session"]).mfa_method == "email_otp"
+
+
+def test_more_time_extends_up_to_the_cap_and_a_timed_out_challenge_names_its_user(
+    scratch_url: str,
+) -> None:
+    """#1842 (WCAG 2.2.1) on the real SQL: an extension adds CHALLENGE_TTL, never past
+    CHALLENGE_MAX_LIFETIME; a challenge that ran out of time still names its user (so
+    sign-in can prefill the email) while a locked one does not."""
+    store = _store(scratch_url)
+    user = store.create_user(email="t@practice.test", password=_PASSWORD)
+    token = store.create_2fa_challenge(
+        user.id, purpose="verify", primary_method="password", membership_id=None, redirect_to="/"
+    )
+
+    def _age(created_ago: timedelta, expires_in: timedelta) -> None:
+        now = datetime.now(UTC)
+        with psycopg.connect(scratch_url, autocommit=True) as conn:
+            conn.execute(
+                "UPDATE _dazzle_2fa_challenges SET created_at = %s, expires_at = %s",
+                ((now - created_ago).isoformat(), (now + expires_in).isoformat()),
+            )
+
+    _age(timedelta(minutes=9), timedelta(minutes=1))
+    new = store.extend_2fa_challenge(token)
+    assert new is not None and abs(new - datetime.now(UTC) - CHALLENGE_TTL) < timedelta(seconds=5)
+    assert store.get_2fa_challenge(token).expires_at == new  # type: ignore[union-attr]
+
+    _age(timedelta(minutes=25), timedelta(minutes=1))
+    capped = store.extend_2fa_challenge(token)
+    ch = store.get_2fa_challenge(token)
+    assert ch is not None and capped == ch.created_at + CHALLENGE_MAX_LIFETIME
+    assert store.extend_2fa_challenge(token) is None  # at the cap
+
+    _age(timedelta(minutes=11), -timedelta(minutes=1))
+    assert store.get_2fa_challenge(token) is None
+    assert store.extend_2fa_challenge(token) is None
+    assert store.expired_2fa_challenge_user_id(token) == str(user.id)
+    for _ in range(5):
+        store.fail_2fa_challenge(token)
+    assert store.expired_2fa_challenge_user_id(token) is None  # locked, not timed out

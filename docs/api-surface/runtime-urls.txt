@@ -144,7 +144,7 @@ module: auth_sso_routes
 
 module: auth_two_factor_routes
   GET | /2fa/challenge
-    handler: challenge_page(request: Request, method: Annotated[str, Query()] = '', sent: Annotated[str, Query()] = '', error: Annotated[str, Query()] = '') -> Response
+    handler: challenge_page(request: Request, method: Annotated[str, Query()] = '', sent: Annotated[str, Query()] = '', error: Annotated[str, Query()] = '', extended: Annotated[str, Query()] = '') -> Response
   GET | /2fa/settings
     handler: settings_page(request: Request) -> Response
   GET | /2fa/setup
@@ -254,7 +254,7 @@ module: site_routes
   GET | /forgot-password/sent
     handler: forgot_password_sent_page(request: Request, sitespec: dict[str, Any] = sitespec_data) -> str
   GET | /login
-    handler: login_page(request: Request, sitespec: dict[str, Any] = sitespec_data, next: str = '/', error: str = '') -> Response
+    handler: login_page(request: Request, sitespec: dict[str, Any] = sitespec_data, next: str = '/', error: str = '', email: str = '') -> Response
   GET | /login/sent
     handler: login_sent_page(request: Request, sitespec: dict[str, Any] = sitespec_data, email: str = '') -> str
   GET | /reset-password

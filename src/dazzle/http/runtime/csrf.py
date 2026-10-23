@@ -158,6 +158,10 @@ class CSRFConfig:
             "/auth/2fa/totp",
             "/auth/2fa/email-otp",
             "/auth/2fa/settings/submit",
+            # #1842 (WCAG 2.2.1): "More time" on a pending sign-in. It carries no
+            # session, but it changes server state for the challenge cookie's owner,
+            # so a cross-site page must not be able to keep a challenge alive.
+            "/auth/2fa/challenge/extend",
         ]
     )
     # Signature-authenticated endpoints (spec §4.1 NA_SIGNATURE). The HMAC /

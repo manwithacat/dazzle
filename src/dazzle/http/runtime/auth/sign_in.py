@@ -48,7 +48,7 @@ from dazzle.http.runtime.auth.org_activation import (
     memberships_required,
 )
 from dazzle.http.runtime.auth.store_two_factor import (
-    CHALLENGE_TTL,
+    CHALLENGE_MAX_LIFETIME,
     PURPOSE_ENROL,
     PURPOSE_VERIFY,
 )
@@ -146,6 +146,13 @@ def enrolled_methods(cfg: TwoFactorConfig | None, user: Any) -> list[str]:
 
 
 def set_challenge_cookie(response: Response, request: Any, token: str) -> None:
+    """The challenge cookie lives for the challenge's hard cap, not its current deadline.
+
+    The server's ``expires_at`` is the authority (a timed-out token opens nothing). The
+    longer cookie life lets "More time" extend the challenge without re-issuing the
+    cookie, and lets a timed-out challenge still be recognised so the sign-in page can
+    say the code expired and prefill the email (#1842, WCAG 2.2.1).
+    """
     response.set_cookie(
         key=CHALLENGE_COOKIE,
         value=token,
@@ -153,7 +160,7 @@ def set_challenge_cookie(response: Response, request: Any, token: str) -> None:
         secure=cookie_secure(request),
         samesite="lax",
         path="/",
-        max_age=int(CHALLENGE_TTL.total_seconds()),
+        max_age=int(CHALLENGE_MAX_LIFETIME.total_seconds()),
     )
 
 
