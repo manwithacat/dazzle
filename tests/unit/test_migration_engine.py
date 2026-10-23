@@ -21,9 +21,11 @@ from alembic.operations import ops as aops
 
 from dazzle.db.migration_engine import (
     RevisionPlan,
+    WholeSchemaRevisionRefused,
     build_plan,
     generate_baseline_plan,
     generate_revision,
+    guard_whole_schema_revision,
 )
 
 pytestmark = pytest.mark.migration_engine
@@ -320,3 +322,111 @@ class TestGenerateBaselinePlan:
         recovered = ast.literal_eval(plan.snapshot_literal)
         # Full post-state — framework "users" present so the next revision cancels it.
         assert set(recovered.keys()) == {"Project", "users"}
+
+
+# ---------------------------------------------------------------------------
+# #1846: whole-schema guard — an empty previous snapshot against a populated DB
+# ---------------------------------------------------------------------------
+
+
+class TestWholeSchemaGuard:
+    @pytest.mark.parametrize(
+        ("prev", "existing"),
+        [
+            (CURR_WITH_TASK, ["task"]),  # normal: a snapshot exists
+            (PREV_EMPTY, None),  # DB not inspected (offline) → guard off
+            (PREV_EMPTY, []),  # genuinely fresh DB
+            (PREV_EMPTY, ["users", "alembic_version"]),  # framework tables only
+        ],
+    )
+    def test_allows(self, prev: dict[str, Any], existing: list[str] | None) -> None:
+        guard_whole_schema_revision(prev, CURR_WITH_TASK, existing)
+
+    def test_refuses_empty_prev_when_db_has_project_tables(self) -> None:
+        with pytest.raises(WholeSchemaRevisionRefused, match=r"already has 1 of them \(task\)"):
+            guard_whole_schema_revision(PREV_EMPTY, CURR_WITH_TASK, ["task", "users"])
+
+    def test_generate_revision_refuses_before_rendering(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("dazzle.db.migration_engine.project_current", lambda: CURR_WITH_TASK)
+        head = SimpleNamespace(module=SimpleNamespace(), down_revision=None, path=None)
+        script_dir = MagicMock()
+        script_dir.get_heads.return_value = ["h1"]
+        script_dir.get_revision.return_value = head
+        with pytest.raises(WholeSchemaRevisionRefused):
+            generate_revision(script_dir, appspec=SimpleNamespace(), existing_tables=["task"])
+
+    def test_generate_revision_carries_unsnapshotted_note(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A hand-authored revision above the snapshot is surfaced as a note."""
+        monkeypatch.setattr("dazzle.db.migration_engine.project_current", lambda: CURR_WITH_TASK)
+        hand = SimpleNamespace(module=SimpleNamespace(), down_revision="snap1", path=None)
+        snap = SimpleNamespace(
+            module=SimpleNamespace(SCHEMA_SNAPSHOT=CURR_WITH_TASK), down_revision=None, path=None
+        )
+        script_dir = MagicMock()
+        script_dir.get_heads.return_value = ["hand1"]
+        script_dir.get_revision.side_effect = {"hand1": hand, "snap1": snap}.get
+        monkeypatch.setattr(
+            "dazzle.db.migration_engine._load_project_appspec_for_hints", lambda: None
+        )
+
+        plan = generate_revision(script_dir, existing_tables=["task"])
+        assert plan.is_empty
+        assert len(plan.notes) == 1 and "hand1" in plan.notes[0]
+
+
+# ---------------------------------------------------------------------------
+# #1851: framework-injected platform entities are project-lineage tables
+# ---------------------------------------------------------------------------
+
+
+_PLATFORM_DSL = """\
+module p
+app p "P":
+  security_profile: standard
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+"""
+
+
+def test_platform_entities_are_in_the_project_snapshot(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Persisted platform entities (admin workspace) are projected like DSL entities.
+
+    They are AppSpec entities, created by the project's own baseline revision
+    (``db baseline``), not by the framework lineage and not in the framework
+    table registry, so they belong in the project's ``SCHEMA_SNAPSHOT``; a
+    revision diffed against a snapshot of the same DSL never re-creates them.
+    Virtual platform entities have no table at all.
+    """
+    from dazzle.db.schema_snapshot import project_current
+    from dazzle.db.virtual import VIRTUAL_ENTITY_NAMES
+    from dazzle.http.alembic.framework_tables import is_framework_table
+
+    (tmp_path / "dazzle.toml").write_text(
+        '[project]\nname = "p"\nversion = "0.1.0"\nroot = "p"\n', encoding="utf-8"
+    )
+    (tmp_path / "dsl").mkdir()
+    (tmp_path / "dsl" / "app.dsl").write_text(_PLATFORM_DSL, encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    snap = project_current()
+    assert {"DeployHistory", "SessionInfo", "Task"} <= set(snap)
+    assert not set(snap) & VIRTUAL_ENTITY_NAMES
+    assert not any(is_framework_table(t) for t in ("DeployHistory", "SessionInfo"))
+
+    # Adding one entity diffs to exactly one create_table: no platform table.
+    grown = {**snap, "Widget": _table({"id": _UUID_PK})}
+    plan = build_plan(snap, grown)
+    created = [
+        o.table_name
+        for o in _flatten_ops(plan.upgrade_ops.ops)
+        if isinstance(o, aops.CreateTableOp)
+    ]
+    assert created == ["Widget"]

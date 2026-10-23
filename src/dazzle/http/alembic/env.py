@@ -112,7 +112,31 @@ def _framework_table_filter(name: str) -> bool:
     return _include_object(None, name, "table", False, None)
 
 
-def _drive_snapshot_engine(cfg: Any, script: Any, *, baseline: bool = False) -> bool:
+def _existing_tables(context: Any, cfg: Any) -> list[str] | None:
+    """Table names in the target database, or ``None`` when it can't be inspected.
+
+    Feeds the engine's whole-schema guard (#1846): an empty previous snapshot
+    against a database that already holds project tables is refused. Offline
+    mode has no connection, so the guard does not apply there.
+    """
+    conn = getattr(context, "connection", None)
+    if conn is None:
+        return None
+    try:
+        schema = cfg.attributes.get("tenant_schema") or None
+        return list(sqlalchemy.inspect(conn).get_table_names(schema=schema))
+    except Exception:
+        logger.debug("could not list target tables for the whole-schema guard", exc_info=True)
+        return None
+
+
+def _drive_snapshot_engine(
+    cfg: Any,
+    script: Any,
+    *,
+    baseline: bool = False,
+    existing_tables: list[str] | None = None,
+) -> bool:
     """Replace the autogenerate ops with the #1431 snapshot-diff engine's ops.
 
     Returns ``True`` when the engine suppressed an empty directive (caller clears
@@ -134,7 +158,9 @@ def _drive_snapshot_engine(cfg: Any, script: Any, *, baseline: bool = False) -> 
         plan = generate_baseline_plan(table_filter=_framework_table_filter)
     else:
         script_dir = ScriptDirectory.from_config(cfg)
-        plan = generate_revision(script_dir)
+        plan = generate_revision(script_dir, existing_tables=existing_tables)
+        # Snapshot-provenance warnings (#1846) for the command to print.
+        cfg.attributes["dazzle_engine_notes"] = plan.notes
 
     if plan.is_empty:
         return True  # signal: suppress (caller clears directives)
@@ -183,7 +209,8 @@ def _process_revision_directives(context: Any, revision: Any, directives: list[A
         return
 
     baseline = bool(cfg.attributes.get("dazzle_baseline", False))
-    if _drive_snapshot_engine(cfg, script, baseline=baseline):
+    existing = None if baseline else _existing_tables(context, cfg)
+    if _drive_snapshot_engine(cfg, script, baseline=baseline, existing_tables=existing):
         directives[:] = []
 
 

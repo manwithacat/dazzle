@@ -20,13 +20,17 @@ The **DSL-snapshot engine** is the **sole** migration generator (ADR-0045) — e
 
 **How it works:**
 
-1. The engine reads the `SCHEMA_SNAPSHOT` constant embedded in the project's head migration — a plain Python dict encoding the previous DSL's table/column/FK/index shape.
+1. The engine reads the `SCHEMA_SNAPSHOT` constant embedded in the project's head migration — a plain Python dict encoding the previous DSL's table/column/FK/index shape. When the head carries none (a `reconcile-baseline` merge, or a hand-authored `--no-autogenerate` revision), the engine walks down the revision graph to the nearest project-lineage revision that does (#1846). Framework-lineage revisions never carry a project snapshot and are skipped. Hand-authored revisions it passes over are named in a `Note:` on `db revision`, since a DSL-modelled change they made is not in that snapshot and will reappear in the diff.
 2. It projects the current DSL through the same SQLAlchemy metadata builder used by Alembic, producing a new snapshot dict.
 3. `diff(prev, curr)` computes a minimal ordered list of `SchemaOp` values (add table, drop column, rename column, etc.). With `was:` rename hints present (see below), renames are detected rather than emitted as drop+add.
 4. `render(ops)` converts those ops to Alembic `UpgradeOps` / `DowngradeOps` op-trees.
 5. The generated migration file carries the new snapshot as `SCHEMA_SNAPSHOT = <literal>` so the _next_ revision can diff against it.
 
 Because the engine diffs snapshot-to-snapshot rather than schema-to-DB, it never produces the destructive whole-schema rewrite that schema-to-DB diffing emits when the DB has already applied the previous migration.
+
+**Whole-schema guard (#1846).** If no revision reachable from the head carries a snapshot, the previous snapshot is `{}` and every DSL table would be emitted as `create_table`. That is correct for a fresh project. When the target database already has any of those tables, `dazzle db revision` and `dazzle db migrate` exit non-zero instead, and say so. There is no override flag. Put the DSL back to what the database holds, run `dazzle db snapshot-baseline` and `dazzle db upgrade`, re-apply the DSL change, and generate the revision again.
+
+**Platform entities (#1851).** Entities the linker injects into the AppSpec (the admin workspace's `DeployHistory` and `SessionInfo`, plus `AIJob`, `AuditEntry`, `FeedbackReport`, `OnboardingState`, and the governed `ProcessRun`) are ordinary project tables. The project's own `dazzle db baseline` creates them, they are not framework-owned (not in `framework_tables.FRAMEWORK_TABLES`, not in the DB-artifact registry), and they are in every `SCHEMA_SNAPSHOT`. A revision diffed against a real snapshot never re-creates them. The virtual admin entities (`SystemHealth`, `SystemMetric`, `LogEntry`, `EventTrace`, the monitoring `ProcessRun`) have no table at all. If a revision re-creates platform tables, the previous snapshot was `{}`, which the guard above now refuses.
 
 **All generation goes through the engine:**
 
@@ -293,7 +297,7 @@ dazzle db upgrade
 dazzle db revision -m "add field"
 ```
 
-The command is **idempotent**: if the head migration already carries `SCHEMA_SNAPSHOT`, it prints a message and exits without writing a file.
+The command is **idempotent**: if the head migration already carries `SCHEMA_SNAPSHOT` (directly, or through snapshot-less merges), it prints a message and exits without writing a file. If the nearest snapshot sits below hand-authored revisions that carry none, it is stale, so the command writes a new stamp. Run it while the DSL matches the database: the stamp records the current DSL as already applied.
 
 What `snapshot-baseline` does:
 
@@ -732,6 +736,12 @@ no `stamp` is needed.)
    ```bash
    dazzle db reconcile-baseline      # writes a merge migration → single head
    ```
+
+   A merge changes no schema, so the merge file embeds the `SCHEMA_SNAPSHOT` it
+   inherits from its project parent (#1846). It embeds none, and prints why, when
+   no merged lineage carries a snapshot or when hand-authored revisions sit above
+   the nearest one. Either way the next `db revision` walks through the merge;
+   see the whole-schema guard above.
 
 4. **Apply.** The framework baseline is **idempotent**, so applying it to a DB
    that already has the framework tables (from when you ran the old chain) is

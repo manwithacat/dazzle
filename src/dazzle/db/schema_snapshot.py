@@ -22,12 +22,17 @@ All dict keys and lists are sorted for deterministic comparison.
 
 from __future__ import annotations
 
+import logging
 import pprint
 from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
 from types import ModuleType
 from typing import Any
 
 import sqlalchemy as sa
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Type token mapping
@@ -397,37 +402,193 @@ def introspect_schema(
     return dict(sorted(snapshot.items()))
 
 
+@dataclass(frozen=True)
+class SnapshotLocation:
+    """Where the engine's previous ``SCHEMA_SNAPSHOT`` was found (#1846).
+
+    Attributes
+    ----------
+    snapshot:
+        The embedded snapshot, or ``{}`` when no project-lineage revision
+        reachable from the head carries one.
+    revision:
+        The revision id that carries *snapshot* (``None`` when none was found).
+    head:
+        The head the walk started from (``None`` when there are no heads).
+    unsnapshotted:
+        Project-lineage, non-merge revisions passed over between the head and
+        the carrier (hand-authored ``--no-autogenerate`` revisions, or ones whose
+        snapshot was stripped). Schema they changed is **not** in *snapshot*, so
+        a DSL-modelled change they made reappears in the next diff. Empty in the
+        normal engine flow.
+    ambiguous:
+        True when parents of a merge led to *different* snapshots at the same
+        distance (two project branches merged); the first parent's (in
+        ``down_revision`` order) is used.
+    """
+
+    snapshot: dict[str, Any]
+    revision: str | None
+    head: str | None
+    unsnapshotted: tuple[str, ...] = ()
+    ambiguous: bool = False
+
+
+def _framework_versions_dir() -> Path | None:
+    """The framework's own alembic ``versions`` directory (``dazzle/http/alembic/versions``).
+
+    Resolved from this file's location rather than by importing
+    ``dazzle.http.alembic`` (keeps ``dazzle.db`` free of an ``http`` import).
+    """
+    path = Path(__file__).resolve().parents[1] / "http" / "alembic" / "versions"
+    return path if path.is_dir() else None
+
+
+def _is_framework_script(script: Any, framework_dir: Path | None) -> bool:
+    """True if *script* is a framework-lineage revision (lives in the framework dir).
+
+    Framework revisions never carry ``SCHEMA_SNAPSHOT`` (the project snapshot is
+    written only into the project's ``.dazzle/migrations/versions``), and their
+    parents are framework revisions too, so the walk never needs to descend
+    into them.
+    """
+    path = getattr(script, "path", None)
+    if framework_dir is None or not isinstance(path, str):
+        return False
+    return Path(path).resolve().parent == framework_dir
+
+
+def _parent_ids(script: Any) -> tuple[str, ...]:
+    """Parent revision ids of *script*, in ``down_revision`` order."""
+    down = getattr(script, "down_revision", None)
+    if isinstance(down, str):
+        return (down,)
+    if isinstance(down, (tuple, list)):
+        return tuple(str(d) for d in down if isinstance(d, str) and d)
+    return ()
+
+
+def locate_snapshot(script_dir: Any, start: str) -> SnapshotLocation:
+    """Walk down from revision *start* to the nearest revision carrying a snapshot.
+
+    Breadth-first over ``down_revision`` (parents visited in tuple order, so the
+    result is deterministic): the first level that holds a snapshot-bearing
+    revision wins. Framework-lineage revisions are skipped and not descended
+    into — they never carry the project snapshot (#1846: the
+    ``reconcile-baseline`` merge revises ``(<framework head>, <project rev>)``
+    and carries no snapshot itself, so the walk passes through it to the
+    project parent).
+    """
+    framework_dir = _framework_versions_dir()
+    level: list[str] = [start]
+    seen: set[str] = set()
+    unsnapshotted: list[str] = []
+    while level:
+        found: list[tuple[str, dict[str, Any]]] = []
+        next_level: list[str] = []
+        for rev_id in level:
+            if rev_id in seen:
+                continue
+            seen.add(rev_id)
+            script = script_dir.get_revision(rev_id)
+            if script is None or _is_framework_script(script, framework_dir):
+                continue
+            snap = snapshot_from_module(script.module)
+            if snap:
+                found.append((rev_id, snap))
+                continue
+            parents = _parent_ids(script)
+            if len(parents) <= 1:
+                unsnapshotted.append(rev_id)
+            next_level.extend(p for p in parents if p not in seen)
+        if found:
+            rev_id, snap = found[0]
+            ambiguous = any(other != snap for _, other in found[1:])
+            if ambiguous:
+                logger.warning(
+                    "merge parents carry different SCHEMA_SNAPSHOTs (%s); diffing against %s",
+                    ", ".join(r for r, _ in found),
+                    rev_id,
+                )
+            return SnapshotLocation(
+                snapshot=snap,
+                revision=rev_id,
+                head=start,
+                unsnapshotted=tuple(unsnapshotted),
+                ambiguous=ambiguous,
+            )
+        level = next_level
+    return SnapshotLocation(
+        snapshot={}, revision=None, head=start, unsnapshotted=tuple(unsnapshotted)
+    )
+
+
+def find_head_snapshot(script_dir: Any) -> SnapshotLocation:
+    """Locate the previous snapshot for the next revision (see :func:`load_head_snapshot`)."""
+    heads: list[str] = list(script_dir.get_heads())
+    first: SnapshotLocation | None = None
+    for head_rev in heads:
+        loc = locate_snapshot(script_dir, head_rev)
+        if loc.snapshot:
+            return loc
+        if first is None:
+            first = loc
+    return first or SnapshotLocation(snapshot={}, revision=None, head=None)
+
+
 def load_head_snapshot(script_dir: Any) -> dict[str, Any]:
-    """Return the SCHEMA_SNAPSHOT embedded in the project-lineage head revision.
+    """Return the project's previous ``SCHEMA_SNAPSHOT`` for the next revision.
 
     Resolves the head revision(s) from *script_dir* (an
-    ``alembic.script.ScriptDirectory`` instance), loads their Python modules
-    via ``Script.module``, and returns ``snapshot_from_module()`` for the head
-    that carries ``SCHEMA_SNAPSHOT``.
+    ``alembic.script.ScriptDirectory`` instance) and, from each head, walks
+    down the revision graph to the nearest project-lineage revision whose
+    module carries ``SCHEMA_SNAPSHOT`` (:func:`locate_snapshot`).
 
-    Returns ``{}`` in three safe-fallback cases:
+    **Snapshot-less heads (#1846)**: ``dazzle db reconcile-baseline`` writes a
+    merge revision whose ``down_revision`` is ``(<framework head>, <project
+    rev>)``. A merge changes no schema, so the snapshot of its project parent
+    is the post-merge state; the walk passes through the merge (and through
+    hand-authored ``--no-autogenerate`` revisions, which are reported as
+    ``unsnapshotted`` by :func:`find_head_snapshot`) to reach it. Framework
+    lineage revisions never carry a project snapshot and are not descended.
 
-    * No head exists (empty or uninitialised versions directory).
-    * The head revision module has no ``SCHEMA_SNAPSHOT`` attribute — meaning
-      the migration pre-dates the engine (Task 1.1) and adoption via the
-      baseline-stamp command (Task 6.2) has not yet run.
+    **Multi-head (dual-lineage)**: with two independent roots (see
+    ``_guard_single_head`` in ``dazzle.cli.db``) the first head whose walk
+    finds a snapshot wins.
 
-    **Multi-head (dual-lineage) rule**: ``dazzle db`` chains the framework
-    versions directory and the project versions directory into one
-    ``ScriptDirectory``, yielding two heads when both lineages have
-    independent roots (see ``_guard_single_head`` in ``dazzle.cli.db``).
-    Only the project-lineage head carries ``SCHEMA_SNAPSHOT``; the framework
-    head never does.  Resolution strategy: iterate all heads, return the
-    ``SCHEMA_SNAPSHOT`` of the *first* head whose module exposes it, or
-    ``{}`` if none does.  A merge migration (single head) is the normal
-    post-``reconcile-baseline`` state and is handled by the same path.
+    Returns ``{}`` when there is no head, or when no reachable project revision
+    carries a snapshot (a project that predates the engine and has not run
+    ``dazzle db snapshot-baseline``). ``dazzle db revision`` refuses to diff
+    against ``{}`` when the database already holds project tables.
     """
-    heads: list[str] = list(script_dir.get_heads())
-    for head_rev in heads:
-        script = script_dir.get_revision(head_rev)
-        if script is None:
-            continue
-        snap = snapshot_from_module(script.module)
-        if snap:
-            return snap
-    return {}
+    return find_head_snapshot(script_dir).snapshot
+
+
+def merge_inherited_snapshot(script_dir: Any, heads: list[str]) -> tuple[str | None, str]:
+    """The snapshot literal a ``reconcile-baseline`` merge inherits, or why none (#1846).
+
+    Returns ``(literal, "")`` or ``(None, reason)``. A merge changes no schema,
+    so its post-state is the union of its parents'. Framework-lineage parents
+    carry no project snapshot, so when exactly one parent's walk finds one, with
+    no snapshot-less project revision in between (whose changes the snapshot
+    would not reflect), that snapshot is the merge's state. Deliberately not the
+    live DSL projection: DSL edits not yet migrated must still diff next time.
+    """
+    found = [loc for loc in (locate_snapshot(script_dir, h) for h in heads) if loc.snapshot]
+    if not found:
+        return None, (
+            "no merged lineage carries one; run `dazzle db snapshot-baseline` before "
+            "the next `dazzle db revision`."
+        )
+    if any(loc.snapshot != found[0].snapshot for loc in found[1:]):
+        return None, "more than one merged lineage carries a snapshot, and they differ."
+    loc = found[0]
+    if loc.ambiguous:
+        return None, f"merge parents below {loc.head} carry different snapshots."
+    if loc.unsnapshotted:
+        return None, (
+            f"the nearest one ({loc.revision}) predates revision(s) without a snapshot "
+            f"({', '.join(loc.unsnapshotted)}); run `dazzle db snapshot-baseline` while "
+            "the DSL matches the database, before the next `dazzle db revision`."
+        )
+    return render_snapshot_literal(loc.snapshot), ""

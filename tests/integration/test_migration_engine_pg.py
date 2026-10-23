@@ -440,6 +440,106 @@ entity Task "Task":
 
 
 # ---------------------------------------------------------------------------
+# #1846 / #1851: revision after reconcile-baseline, and the whole-schema guard
+# ---------------------------------------------------------------------------
+
+
+def _strip_snapshot(path: Path) -> None:
+    """Cut the appended SCHEMA_SNAPSHOT block (as an older dazzle wrote the file)."""
+    text = path.read_text(encoding="utf-8")
+    path.write_text(text.split("\n\n# DSL-snapshot embedded", 1)[0] + "\n", encoding="utf-8")
+    assert "SCHEMA_SNAPSHOT" not in path.read_text(encoding="utf-8")
+
+
+def _engine_baseline_as_parallel_root(project: Path) -> Path:
+    """Engine baseline, applied, then re-rooted (``down_revision = None``).
+
+    That is the pre-#1308 project shape: the framework lineage and the project
+    lineage are two roots, so there are two heads until ``reconcile-baseline``.
+    """
+    import re
+
+    from dazzle.cli.db import revision_command, upgrade_command
+
+    revision_command(message="baseline", autogenerate=True)
+    upgrade_command(revision="head", no_rls=True)
+    baseline = _project_revision_files(project)[-1]
+    text = baseline.read_text(encoding="utf-8")
+    text = re.sub(r"(?m)^down_revision.*$", "down_revision = None", text, count=1)
+    baseline.write_text(text, encoding="utf-8")
+    return baseline
+
+
+def test_revision_after_reconcile_baseline_diffs_only_the_dsl_change(
+    in_project: tuple[Path, str],
+) -> None:
+    """#1846 + #1851: after reconcile-baseline, one new entity → one create_table.
+
+    The merge revision carries no snapshot when an older dazzle wrote it; the
+    engine walks through it to the project baseline's. Before the fix the head
+    snapshot read as ``{}`` and every table — the framework-injected platform
+    entity ``DeployHistory`` first among them — was re-created.
+    """
+    from dazzle.cli.db import (
+        _get_alembic_cfg,
+        _get_heads,
+        reconcile_baseline_command,
+        revision_command,
+        stamp_command,
+        upgrade_command,
+    )
+
+    project, _ = in_project
+    _engine_baseline_as_parallel_root(project)
+    assert len(_get_heads(_get_alembic_cfg())) == 2
+
+    before = set(_project_revision_files(project))
+    reconcile_baseline_command()
+    merge = [p for p in _project_revision_files(project) if p not in before]
+    assert len(merge) == 1
+    merge_text = merge[0].read_text(encoding="utf-8")
+    assert "SCHEMA_SNAPSHOT" in merge_text, "reconcile-baseline embeds the inherited snapshot"
+    assert "'DeployHistory'" in merge_text, "platform entities are in the project snapshot"
+    stamp_command(revision="heads")
+
+    # A merge written before #1846 had no snapshot: the walk must find the parent's.
+    _strip_snapshot(merge[0])
+
+    (project / "dsl" / "app.dsl").write_text(_DSL_WITH_NOTE, encoding="utf-8")
+    before = set(_project_revision_files(project))
+    revision_command(message="add note", autogenerate=True)
+    new = [p for p in _project_revision_files(project) if p not in before]
+    assert len(new) == 1
+    body = _upgrade_body(new[0].read_text(encoding="utf-8"))
+    assert body.count("op.create_table(") == 1, body
+    assert "create_table('Note'" in body
+    assert "DeployHistory" not in body and "'Task'" not in body
+
+    upgrade_command(revision="head", no_rls=True)
+
+
+def test_revision_refuses_whole_schema_against_populated_db(
+    in_project: tuple[Path, str],
+) -> None:
+    """#1846: no snapshot anywhere + project tables in the DB → non-zero exit, no file."""
+    import typer
+
+    from dazzle.cli.db import revision_command, upgrade_command
+
+    project, _ = in_project
+    revision_command(message="baseline", autogenerate=True)
+    upgrade_command(revision="head", no_rls=True)
+    _strip_snapshot(_project_revision_files(project)[-1])
+
+    (project / "dsl" / "app.dsl").write_text(_DSL_WITH_NOTE, encoding="utf-8")
+    before = _project_revision_files(project)
+    with pytest.raises(typer.Exit) as exc:
+        revision_command(message="add note", autogenerate=True)
+    assert exc.value.exit_code == 1
+    assert _project_revision_files(project) == before, "no revision file may be written"
+
+
+# ---------------------------------------------------------------------------
 # Task 6.2: snapshot-baseline adoption command
 # ---------------------------------------------------------------------------
 

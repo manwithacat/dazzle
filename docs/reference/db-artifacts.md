@@ -46,7 +46,10 @@ Each artifact declares:
 
 2. **app_entity** — the per-DSL entity tables. Created by the migration engine
    (ADR-0045) the framework generates per app; tenant-scoped entities are RLS-**fenced**.
-   Not enumerated here (per-app) — represented as one class row.
+   Not enumerated here (per-app) — represented as one class row. This class includes
+   the persisted entities the linker injects into the AppSpec (`DeployHistory`,
+   `SessionInfo`, `AIJob`, `AuditEntry`, `FeedbackReport`, `OnboardingState`): the
+   project lineage creates them and they belong in its `SCHEMA_SNAPSHOT` (#1851).
 
 3. **tenant_registry** — `public.tenants` + per-tenant schemas; separate tenant
    lifecycle. One class row.

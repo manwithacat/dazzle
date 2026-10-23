@@ -239,3 +239,188 @@ def test_load_head_snapshot_multi_head_picks_snapshot_bearer(
 
     result = load_head_snapshot(sd)
     assert result == snap_val
+
+
+# ---------------------------------------------------------------------------
+# #1846: walk from a snapshot-less head (reconcile-baseline merge) to the
+# nearest project snapshot
+# ---------------------------------------------------------------------------
+
+_SNAP_V1 = {"Order": {"columns": {}, "fks": [], "uniques": [], "indexes": []}}
+_SNAP_V2 = {"Order": {"columns": {}, "fks": [], "uniques": [], "indexes": ["id"]}}
+
+
+def _rev_file(
+    vdir: Any, rev: str, down: str | tuple[str, ...] | None, snap: dict | None = None
+) -> None:
+    """Write one minimal alembic revision module into *vdir*."""
+    lines = [
+        f"revision = {rev!r}",
+        f"down_revision = {down!r}",
+        "branch_labels = None",
+        "depends_on = None",
+    ]
+    if snap is not None:
+        lines.append(f"SCHEMA_SNAPSHOT = {snap!r}")
+    lines += ["def upgrade(): pass", "def downgrade(): pass"]
+    (vdir / f"{rev}.py").write_text("\n".join(lines) + "\n")
+
+
+def _two_lineage_dirs(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> tuple[Any, Any, Any]:
+    """A framework versions dir (registered as the framework's) + a project one.
+
+    Returns ``(fw_dir, proj_dir, make_script_dir)``.
+    """
+    import os
+    from pathlib import Path
+
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    root = Path(str(tmp_path))
+    fw_dir = root / "fw_versions"
+    proj_dir = root / "proj_versions"
+    fw_dir.mkdir()
+    proj_dir.mkdir()
+    monkeypatch.setattr(
+        "dazzle.db.schema_snapshot._framework_versions_dir", lambda: fw_dir.resolve()
+    )
+
+    def make() -> Any:
+        cfg = Config()
+        cfg.set_main_option("script_location", str(root))
+        cfg.set_main_option("path_separator", "os")
+        cfg.set_main_option("version_locations", os.pathsep.join([str(fw_dir), str(proj_dir)]))
+        return ScriptDirectory.from_config(cfg)
+
+    return fw_dir, proj_dir, make
+
+
+def test_load_head_snapshot_walks_through_reconcile_merge(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#1846: merge head ``(fw head, project rev)`` without a snapshot → project parent's."""
+    from dazzle.db.schema_snapshot import find_head_snapshot, load_head_snapshot
+
+    fw, proj, make = _two_lineage_dirs(tmp_path, monkeypatch)
+    _rev_file(fw, "fw1", None)
+    _rev_file(fw, "fw2", "fw1")
+    _rev_file(proj, "p1", None, _SNAP_V1)  # parallel-root project baseline
+    _rev_file(proj, "merge1", ("fw2", "p1"))  # what reconcile-baseline writes
+
+    sd = make()
+    assert list(sd.get_heads()) == ["merge1"]
+    assert load_head_snapshot(sd) == _SNAP_V1
+    loc = find_head_snapshot(sd)
+    assert (loc.revision, loc.head, loc.unsnapshotted, loc.ambiguous) == (
+        "p1",
+        "merge1",
+        (),
+        False,
+    )
+
+
+def test_load_head_snapshot_prefers_nearest_snapshot_through_repeated_merges(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Framework increments merged in turn: the newest project snapshot wins."""
+    from dazzle.db.schema_snapshot import load_head_snapshot
+
+    fw, proj, make = _two_lineage_dirs(tmp_path, monkeypatch)
+    _rev_file(fw, "fw1", None)
+    _rev_file(fw, "fw2", "fw1")
+    _rev_file(fw, "fw3", "fw2")
+    _rev_file(proj, "p1", "fw1", _SNAP_V1)
+    _rev_file(proj, "m1", ("fw2", "p1"))
+    _rev_file(proj, "p2", "m1", _SNAP_V2)
+    _rev_file(proj, "m2", ("fw3", "p2"))
+
+    assert load_head_snapshot(make()) == _SNAP_V2
+
+
+def test_framework_revisions_are_not_snapshot_carriers(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A SCHEMA_SNAPSHOT in the framework lineage is never taken as the project's."""
+    from dazzle.db.schema_snapshot import load_head_snapshot
+
+    fw, proj, make = _two_lineage_dirs(tmp_path, monkeypatch)
+    _rev_file(fw, "fw1", None, _SNAP_V2)
+    _rev_file(proj, "p1", None, _SNAP_V1)
+    _rev_file(proj, "merge1", ("fw1", "p1"))
+
+    assert load_head_snapshot(make()) == _SNAP_V1
+
+
+def test_walk_reports_unsnapshotted_hand_authored_revisions(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Hand-authored revisions above the snapshot are listed: their changes aren't in it."""
+    from dazzle.db.schema_snapshot import find_head_snapshot
+
+    fw, proj, make = _two_lineage_dirs(tmp_path, monkeypatch)
+    _rev_file(fw, "fw1", None)
+    _rev_file(proj, "p1", "fw1", _SNAP_V1)
+    _rev_file(proj, "hand1", "p1")
+    _rev_file(proj, "hand2", "hand1")
+
+    loc = find_head_snapshot(make())
+    assert (loc.snapshot, loc.revision, loc.unsnapshotted) == (_SNAP_V1, "p1", ("hand2", "hand1"))
+
+
+def test_walk_flags_merge_of_two_divergent_project_snapshots(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two project branches with different snapshots merged: first parent wins, flagged."""
+    from dazzle.db.schema_snapshot import find_head_snapshot
+
+    _, proj, make = _two_lineage_dirs(tmp_path, monkeypatch)
+    _rev_file(proj, "base", None, _SNAP_V1)
+    _rev_file(proj, "a", "base", _SNAP_V1)
+    _rev_file(proj, "b", "base", _SNAP_V2)
+    _rev_file(proj, "m", ("a", "b"))
+
+    loc = find_head_snapshot(make())
+    assert (loc.revision, loc.snapshot, loc.ambiguous) == ("a", _SNAP_V1, True)
+
+
+def test_walk_returns_empty_when_no_project_snapshot(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pre-engine project merged with the framework: nothing to diff against → {}."""
+    from dazzle.db.schema_snapshot import find_head_snapshot
+
+    fw, proj, make = _two_lineage_dirs(tmp_path, monkeypatch)
+    _rev_file(fw, "fw1", None)
+    _rev_file(proj, "p1", None)
+    _rev_file(proj, "merge1", ("fw1", "p1"))
+
+    loc = find_head_snapshot(make())
+    assert (loc.snapshot, loc.revision) == ({}, None)
+
+
+@pytest.mark.parametrize(
+    ("hand_authored", "embeds"),
+    [(False, True), (True, False)],
+)
+def test_merge_inherited_snapshot(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch, hand_authored: bool, embeds: bool
+) -> None:
+    """reconcile-baseline embeds the project parent's snapshot unless it is stale."""
+    import ast
+
+    from dazzle.db.schema_snapshot import merge_inherited_snapshot
+
+    fw, proj, make = _two_lineage_dirs(tmp_path, monkeypatch)
+    _rev_file(fw, "fw1", None)
+    _rev_file(proj, "p1", None, _SNAP_V1)
+    head = "p1"
+    if hand_authored:
+        _rev_file(proj, "hand1", "p1")
+        head = "hand1"
+
+    literal, why = merge_inherited_snapshot(make(), ["fw1", head])
+    if embeds:
+        assert literal is not None and ast.literal_eval(literal) == _SNAP_V1 and why == ""
+    else:
+        assert literal is None and "hand1" in why
