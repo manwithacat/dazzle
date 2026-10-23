@@ -276,6 +276,13 @@ RENDERS = [
         ["dz-split-media", 'src="/x.png"'],
         id="split-content-image-media",
     ),
+    # #1842: a `source:` body arrives pre-rendered as `body_html` and is
+    # emitted as-is (it was escaped a second time, printing raw tags).
+    pytest.param(
+        {"type": "split_content", "body_html": "<ul><li><strong>Fast</strong></li></ul>"},
+        ['<div class="dz-split-body"><ul><li><strong>Fast</strong></li></ul></div>'],
+        id="split-content-source-html-not-re-escaped",
+    ),
     # ── card_grid ──
     pytest.param({"type": "card_grid"}, ["dz-card-grid"], id="card-grid-wrapper"),
     pytest.param(
@@ -624,6 +631,11 @@ OMITS = [
         {"type": "split_content", "headline": "Hi", "media": {"kind": "video"}},
         ["dz-split-media"],
         id="split-content-non-image-media",
+    ),
+    pytest.param(
+        {"type": "split_content", "body_html": "<p>From source</p>", "body": "inline"},
+        ["&lt;p&gt;", "<p>inline</p>"],
+        id="split-content-source-html-wins-over-inline-body",
     ),
     pytest.param(
         {"type": "team", "items": [{"name": "Alice Wong", "role": "CEO", "image": "/alice.jpg"}]},

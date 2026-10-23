@@ -256,6 +256,12 @@ def test_tone_banding(
             id="initials-from-member-name",
         ),
         pytest.param(
+            [{"id": "p1", "score": 78, "profile_display": "Persona (Codirector)"}],
+            "profile",
+            "PC",
+            id="initials-skip-punctuation-1842",
+        ),
+        pytest.param(
             [{"id": "p1", "score": 78}],
             "missing",
             "",

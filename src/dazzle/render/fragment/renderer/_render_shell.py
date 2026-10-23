@@ -777,7 +777,7 @@ class _RenderShellMixin:
             f'data-workspace-name="{ctx.escape_attr(w.workspace_name)}"'
             f"{fold_attr}>"
             f'<div class="dz-workspace-heading">'
-            f'<h2 class="dz-workspace-title">{ctx.escape(w.title)}</h2>'
+            f'<h1 class="dz-workspace-title">{ctx.escape(w.title)}</h1>'
             f"{self._emit_workspace_as_of(w, ctx)}"
             f"{primary_actions_html}"
             f"</div>"

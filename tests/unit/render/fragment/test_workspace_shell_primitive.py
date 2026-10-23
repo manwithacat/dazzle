@@ -6,7 +6,7 @@ Pins the chrome contract emitted by `_emit_workspace_shell`:
   - `<div class="dz-workspace" data-dz-dashboard-builder ...>`
     outer wrapper carrying the Alpine state machine + workspace name
     + optional fold count.
-  - `<div class="dz-workspace-heading">` with `<h2 class="dz-workspace-title">`
+  - `<div class="dz-workspace-heading">` with `<h1 class="dz-workspace-title">`
     and an optional primary-actions row.
 
 Byte-equivalence against the full legacy `workspace/_content.html` is
@@ -57,12 +57,13 @@ def test_workspace_shell_emits_fold_count_when_supplied() -> None:
     assert "data-fold-count" not in html_without
 
 
-def test_workspace_shell_renders_heading_with_h2_title() -> None:
+def test_workspace_shell_renders_heading_with_h1_title() -> None:
     """The heading row carries the user-facing title in a `dz-workspace-title`
-    `<h2>`."""
+    `<h1>` — the page's only h1, above its h2 regions (#1842, WCAG 1.3.1)."""
     html = _render(WorkspaceShell(workspace_name="d", title="My Dashboard", body=Text("")))
     assert '<div class="dz-workspace-heading">' in html
-    assert '<h2 class="dz-workspace-title">My Dashboard</h2>' in html
+    assert '<h1 class="dz-workspace-title">My Dashboard</h1>' in html
+    assert html.count("<h1") == 1
 
 
 def test_workspace_shell_escapes_title_html() -> None:

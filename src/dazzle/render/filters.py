@@ -302,10 +302,22 @@ def _badge_tone_filter(value: Any) -> str:
 
 
 def _bool_icon_filter(value: Any) -> Markup:
-    """Render a boolean as a check or cross icon."""
+    """Render a boolean as a check or cross icon with a text alternative.
+
+    The glyph is decorative (``aria-hidden``); a visually-hidden "Yes"/"No"
+    carries the value for assistive tech (WCAG 1.1.1, #1842).
+    """
     if value:
-        return Markup('<span style="color: var(--colour-success)">&#10003;</span>')
-    return Markup('<span style="color: var(--colour-text-muted); opacity: 0.5">&#10005;</span>')
+        return Markup(
+            '<span style="color: var(--colour-success)">'
+            '<span aria-hidden="true">&#10003;</span>'
+            '<span class="visually-hidden">Yes</span></span>'
+        )
+    return Markup(
+        '<span style="color: var(--colour-text-muted); opacity: 0.5">'
+        '<span aria-hidden="true">&#10005;</span>'
+        '<span class="visually-hidden">No</span></span>'
+    )
 
 
 def _calendar_date(value: Any) -> date | None:

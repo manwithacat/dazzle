@@ -61,7 +61,10 @@ def _format_page_response(page: dict[str, Any], project_root: Path | None) -> di
                     fmt = source.get("format", "md")
                     rendered = _render_content(raw, fmt)
                     if sec_type == "split_content":
-                        section["body"] = rendered
+                        # #1842: already HTML — a separate key so the
+                        # builder emits it as-is (inline `body` stays
+                        # escaped text; escaping this again printed tags).
+                        section["body_html"] = rendered
                     else:
                         section["content"] = rendered
 

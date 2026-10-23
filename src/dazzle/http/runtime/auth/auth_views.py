@@ -24,6 +24,7 @@ from typing import Any
 
 from fastapi.responses import HTMLResponse
 
+from dazzle.http.runtime.auth.magic_link import email_magic_link_ttl_minutes
 from dazzle.http.runtime.mailbox_shape import is_mailbox_shape
 from dazzle.render.fragment import (
     URL,
@@ -662,7 +663,8 @@ def build_login_sent_view(
 ) -> Page:
     """Render the post-magic-link confirmation page.
 
-    "Check your inbox" message + a hint about what happens next.
+    "Check your inbox" message + the link's lifetime (from
+    `EMAIL_MAGIC_LINK_TTL`) + a hint about what happens next.
     `email` is shown back to the user when supplied — defensive:
     omit if the issuance route can't safely echo the input (e.g.
     when account-enumeration protection is required).
@@ -686,6 +688,8 @@ def build_login_sent_view(
                     title=title,
                     description=description,
                 ),
+                # #1842 (WCAG 2.2.1): state the link's lifetime up front.
+                Text(body=f"The link expires in {email_magic_link_ttl_minutes()} minutes."),
                 Text(body="Didn't get it? Check your spam folder, or "),
                 Link(label="try a different email", href=URL("/login")),
             )

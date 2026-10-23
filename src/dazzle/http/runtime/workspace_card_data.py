@@ -9,7 +9,6 @@ renderers.
 Contents:
 - `_CARD_TEMPLATE_RE`: regex for `{{ field.path }}` interpolation.
 - `_resolve_path`: walk a dotted path against an item dict.
-- `_initials_from`: 1–2 character initials from a name string.
 - `_build_cohort_cells`: cohort_strip cell list.
 - `_build_day_timeline_slots`: day_timeline slot list with overlap layout.
 - `_interpolate_card_template`: card template interpolation.
@@ -26,6 +25,7 @@ from typing import Any
 # Re-exported here for back-internal callers.
 from dazzle.render.display_names import _inject_display_names, _resolve_display_name  # noqa: F401
 from dazzle.render.fragment.renderer._render_interactive import leftover_honest_catalog_id
+from dazzle.render.user_chip import initials_from_display
 
 logger = logging.getLogger(__name__)
 
@@ -203,18 +203,6 @@ def _resolve_path(item: Any, path: str) -> Any:
         if cur is None:
             return None
     return cur
-
-
-def _initials_from(name: str) -> str:
-    """Compute initials from a name string for the avatar fallback (#892).
-
-    Takes the first letter of up to the first 2 whitespace-separated
-    words, uppercased. Empty / None input returns empty string.
-    """
-    if not name:
-        return ""
-    words = name.split()[:2]
-    return "".join(w[0].upper() for w in words if w)
 
 
 def _apply_format_spec(value: Any, format_spec: str, *, context: str = "") -> str:
@@ -453,7 +441,7 @@ def _build_cohort_cells(
                 "member_name": member_name,
                 "primary_value": primary_value,
                 "subtitle": "",  # secondary metadata — populated by adapters that have it
-                "avatar_initials": _initials_from(member_name),
+                "avatar_initials": initials_from_display(member_name, fallback=""),
                 "tone": tone,
                 "drill_url": "",  # entity_card drill-down lands once that ship adds the route
                 "action_html": action_html,

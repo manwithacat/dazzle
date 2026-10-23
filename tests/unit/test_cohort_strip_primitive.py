@@ -299,13 +299,18 @@ def test_render_uses_avatar_initials_when_provided() -> None:
     assert ">AW</div>" in html
 
 
-def test_render_synthesises_initials_from_member_name() -> None:
-    """Empty `avatar_initials` → renderer uses the first two letters
-    of `member_name`, uppercased. Defensive default for adapters that
-    don't compute initials upstream."""
-    cells = (CohortStripCell(member_id="p1", member_name="alice", primary_value="78"),)
+@pytest.mark.parametrize(
+    ("member_name", "initials"),
+    [("alice", "AL"), ("Persona (Codirector)", "PC")],
+)
+def test_render_synthesises_initials_from_member_name(member_name: str, initials: str) -> None:
+    """Empty `avatar_initials` → renderer derives them via the shared
+    `initials_from_display` (punctuation skipped, #1842). Defensive default
+    for adapters that don't compute initials upstream. The halo is
+    decorative (`aria-hidden`) so the initials never join the cell's name."""
+    cells = (CohortStripCell(member_id="p1", member_name=member_name, primary_value="78"),)
     html = _render(_strip(cells=cells))
-    assert ">AL</div>" in html
+    assert f'<div class="dz-cohort-strip-cell-halo" aria-hidden="true">{initials}</div>' in html
 
 
 def test_render_subtitle_appears_when_set() -> None:

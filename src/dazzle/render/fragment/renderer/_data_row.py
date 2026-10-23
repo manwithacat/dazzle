@@ -52,6 +52,7 @@ from dazzle.render.fragment.state_affordance import gated_row_transitions
 from dazzle.render.iban_cell import clerk_iban_cell_html
 from dazzle.render.open_discovery import edit_action_open_attr_suffix
 from dazzle.render.rating_cell import clerk_rating_cell_html
+from dazzle.render.row_label import row_label_value
 from dazzle.render.tags_cell import clerk_tags_cell_html
 from dazzle.render.temperature_cell import clerk_temperature_cell_html
 from dazzle.render.user_chip import looks_like_person_ref, render_user_chip_linked_html
@@ -479,16 +480,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     item_id = str(item.get("id", "") or "")
     item_id_attr = _html_mod.escape(item_id, quote=True)
 
-    # Row label: first non-{ref,badge,bool,currency} column else id; ref dicts
-    # resolve via `_ref_display_name`.
-    row_label_key = "id"
-    for col in columns:
-        if col.get("type") not in ("ref", "badge", "bool", "currency"):
-            row_label_key = col.get("key", "id")
-            break
-    raw_label = item.get(row_label_key, item.get("id", ""))
-    if isinstance(raw_label, dict):
-        raw_label = _ref_display_name(raw_label)
+    raw_label = row_label_value(columns, item)
     row_label = _html_mod.escape(str(raw_label or ""), quote=False)
     row_label_attr = _html_mod.escape(str(raw_label or ""), quote=True)
 

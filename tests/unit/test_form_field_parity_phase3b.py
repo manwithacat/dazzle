@@ -142,7 +142,7 @@ def test_plain_field_render(field: dict, present: list[str], absent: list[str]) 
             "12",
             "data-dz-number-group",
             "data-dz-number-value",
-            "Number value",
+            "F value",
             id="number_cycle_2149",
         ),
         pytest.param(
@@ -150,7 +150,7 @@ def test_plain_field_render(field: dict, present: list[str], absent: list[str]) 
             "2026-06-01",
             "data-dz-date-group",
             "data-dz-date-iso",
-            "ISO date",
+            "F ISO date",
             id="date_cycle_2145",
         ),
         pytest.param(
@@ -158,7 +158,7 @@ def test_plain_field_render(field: dict, present: list[str], absent: list[str]) 
             "14:30",
             "data-dz-time-group",
             "data-dz-time-iso",
-            "ISO time",
+            "F ISO time",
             id="time_cycle_2144",
         ),
         pytest.param(
@@ -166,7 +166,7 @@ def test_plain_field_render(field: dict, present: list[str], absent: list[str]) 
             "2026-06-01T14:30",
             "data-dz-time-group",
             "data-dz-time-iso",
-            "ISO datetime",
+            "F ISO datetime",
             id="datetime_local",
         ),
     ],

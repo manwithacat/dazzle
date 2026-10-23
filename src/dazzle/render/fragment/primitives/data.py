@@ -1930,7 +1930,7 @@ class WorkspaceShell:
     Emits the dashboard chrome shell:
       - Outer `<div class="dz-workspace" data-dz-dashboard-builder ...>`
         with `data-workspace-name` (always) and optional `data-fold-count`.
-      - Heading row: `<h2 class="dz-workspace-title">` + optional
+      - Heading row: `<h1 class="dz-workspace-title">` (#1842) + optional
         primary-actions row (`<div class="dz-workspace-primary-actions">`
         with `data-test-id="dz-workspace-primary-actions"`).
       - The `body` slot — a Fragment carrying the rest of the chrome

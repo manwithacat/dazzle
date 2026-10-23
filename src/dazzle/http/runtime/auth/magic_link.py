@@ -8,6 +8,17 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+# Lifetime of an emailed sign-in / sign-up link (#1842, WCAG 2.2.1). The
+# `/login/sent` page states it, and host `MagicLinkMailer` implementations
+# should render it in the email body from this constant, not a literal.
+EMAIL_MAGIC_LINK_TTL = timedelta(minutes=15)
+
+
+def email_magic_link_ttl_minutes() -> int:
+    """`EMAIL_MAGIC_LINK_TTL` in whole minutes, for user-facing copy."""
+    return int(EMAIL_MAGIC_LINK_TTL.total_seconds() // 60)
+
+
 MAGIC_LINKS_DDL = """
 CREATE TABLE IF NOT EXISTS magic_links (
     token TEXT PRIMARY KEY,

@@ -53,6 +53,11 @@ class Field:
     # ADR-0050 Phase 5b (#1517 1a): usage-driven — the entity's most-engaged
     # plain field opens focused. Default False = byte-identical output.
     autofocus: bool = False
+    # Native input hints for plain `<input>` kinds (#1842, WCAG 3.3.8): e.g.
+    # `autocomplete="one-time-code"` + `inputmode="numeric"` on 2FA codes.
+    # Empty = attribute omitted (byte-identical output).
+    autocomplete: str = ""
+    inputmode: str = ""
 
     def __post_init__(self) -> None:
         if self.kind not in _FIELD_KINDS:

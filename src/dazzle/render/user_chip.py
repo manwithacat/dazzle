@@ -92,11 +92,16 @@ def looks_like_person_ref(value: Any, col: dict[str, Any] | None = None) -> bool
     return _value_looks_like_person(value)
 
 
-def initials_from_display(name: str) -> str:
-    """Up to two initials from a display name."""
-    parts = [p for p in re.split(r"\s+", (name or "").strip()) if p]
+def initials_from_display(name: str, fallback: str = "?") -> str:
+    """Up to two initials from a display name.
+
+    Punctuation is skipped (#1842): "Persona (Co)" → "PC", not "P(".
+    A name with no letters or digits yields *fallback*.
+    """
+    tokens = re.split(r"\s+", (name or "").strip())
+    parts = [t for t in ("".join(ch for ch in tok if ch.isalnum()) for tok in tokens) if t]
     if not parts:
-        return "?"
+        return fallback
     if len(parts) == 1:
         token = parts[0]
         return (token[:2] if len(token) > 1 else token[:1]).upper()

@@ -35,6 +35,13 @@ _MODE_COPY: dict[str, tuple[str, str, str]] = {
     "email_otp": ("Enter the 6-digit code we emailed you.", "Email code", "000000"),
     "recovery": ("Enter one of your saved recovery codes.", "Recovery code", "XXXX-XXXX"),
 }
+# #1842 (WCAG 3.3.8): numeric TOTP / email codes autofill from the OS and get
+# a numeric keypad; recovery codes are alphanumeric (XXXX-XXXX), so neither.
+_MODE_INPUT_HINTS: dict[str, tuple[str, str]] = {
+    "totp": ("one-time-code", "numeric"),
+    "email_otp": ("one-time-code", "numeric"),
+    "recovery": ("", ""),
+}
 _MODE_LINKS: dict[str, str] = {
     "totp": "Use your authenticator app",
     "email_otp": "Email me a code",
@@ -68,6 +75,7 @@ def build_code_entry_view(
     ride on the action URL so the form carries one visible field: the code.
     """
     subtitle, label, placeholder = _MODE_COPY[mode]
+    autocomplete, inputmode = _MODE_INPUT_HINTS[mode]
     children: list[Any] = [
         Link(label=product_name, href=URL("/")),
         Heading(body=heading, level=1),
@@ -99,6 +107,8 @@ def build_code_entry_view(
                         required=True,
                         placeholder=placeholder,
                         autofocus=True,
+                        autocomplete=autocomplete,
+                        inputmode=inputmode,
                     ),
                 ),
                 submit=Submit(label="Verify", variant="primary"),
@@ -177,6 +187,8 @@ def build_2fa_setup_view(
                         kind="text",
                         required=True,
                         placeholder="000000",
+                        autocomplete="one-time-code",
+                        inputmode="numeric",
                     ),
                 ),
                 submit=Submit(label="Verify and turn on", variant="primary"),
@@ -197,6 +209,8 @@ def build_2fa_setup_view(
                             kind="text",
                             required=True,
                             placeholder="000000",
+                            autocomplete="one-time-code",
+                            inputmode="numeric",
                         ),
                     ),
                     submit=Submit(label="Verify and turn on", variant="primary"),

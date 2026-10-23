@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from dazzle.render.fragment.renderer._data_row import _render_cell_display
 from dazzle.render.user_chip import (
     initials_from_display,
@@ -47,9 +49,23 @@ class TestRenderUserChip:
         assert "<img" in html
         assert "https://example.com/a.png" in html
 
-    def test_initials_helper(self) -> None:
-        assert initials_from_display("Ada Lovelace") == "AL"
-        assert initials_from_display("Prince") == "PR"
+    @pytest.mark.parametrize(
+        ("name", "expected"),
+        [
+            ("Ada Lovelace", "AL"),
+            ("Prince", "PR"),
+            # #1842 (2.4.4): punctuation is skipped, never an initial.
+            ("Persona (Codirector)", "PC"),
+            ("(Persona", "PE"),
+            ("— Ada", "AD"),
+            ("()", "?"),
+        ],
+    )
+    def test_initials_helper(self, name: str, expected: str) -> None:
+        assert initials_from_display(name) == expected
+
+    def test_initials_helper_fallback(self) -> None:
+        assert initials_from_display("", fallback="") == ""
 
 
 class TestDataRowIntegration:

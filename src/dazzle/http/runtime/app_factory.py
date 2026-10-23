@@ -872,6 +872,20 @@ def build_server_config(
     )
 
 
+def _stash_product_name_sources(
+    app: "FastAPI", appspec: AppSpec, sitespec_data: dict[str, Any] | None
+) -> None:
+    """Expose the brand sources `auth.product_name.product_name` reads (#1842).
+
+    Auth-page chrome (2FA setup/challenge, recovery, profile, org pages)
+    resolves the product name from ``app.state.sitespec`` and falls back to
+    ``app.state.app_title`` (the DSL ``app`` title) before ``"Dazzle"``.
+    Nothing set ``app.state.sitespec`` before, so those pages said "Dazzle".
+    """
+    app.state.sitespec = sitespec_data or {}
+    app.state.app_title = appspec.title or appspec.name or ""
+
+
 def assemble_post_build_routes(
     app: "FastAPI",
     appspec: AppSpec,
@@ -899,6 +913,8 @@ def assemble_post_build_routes(
     8. 404 handler (if sitespec)
     9. Route validation via ``validate_routes()``
     """
+    _stash_product_name_sources(app, appspec, sitespec_data)
+
     # Resolve auth context callable once — used by both site and app routes
     get_auth_context = None
     if builder.auth_middleware:

@@ -103,9 +103,11 @@ def test_bool_field_renders_icon_not_text() -> None:
         [FieldContext(name="done", label="Done", type="bool")],
         {"id": "a", "done": True},
     )
-    # _bool_icon_filter returns an icon glyph, not the word "True"
+    # _bool_icon_filter returns a decorative glyph, not the word "True"; the
+    # only text is the visually-hidden "Yes" for assistive tech (#1842).
     assert "True" not in html
-    assert "Yes" not in html
+    assert '<span aria-hidden="true">&#10003;</span>' in html
+    assert '<span class="visually-hidden">Yes</span>' in html
 
 
 def test_ref_field_renders_display_name_not_uuid() -> None:

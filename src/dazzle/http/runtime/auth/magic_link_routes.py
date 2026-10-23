@@ -23,6 +23,7 @@ from dazzle.http.runtime.auth.auth_views import (
 )
 from dazzle.http.runtime.auth.enterprise_login import sso_redirect_for
 from dazzle.http.runtime.auth.magic_link import (
+    EMAIL_MAGIC_LINK_TTL,
     create_magic_link,
     validate_magic_link,
 )
@@ -189,7 +190,7 @@ def create_magic_link_routes() -> APIRouter:
                 token = create_magic_link(
                     auth_store,
                     user_id=user.id,
-                    ttl_seconds=900,  # 15 minutes
+                    ttl_seconds=int(EMAIL_MAGIC_LINK_TTL.total_seconds()),
                     created_by="login_form",
                 )
                 link_url = _build_magic_link_url(request=request, token=token, next_path=next)
@@ -281,7 +282,7 @@ def create_magic_link_routes() -> APIRouter:
                 token = create_magic_link(
                     auth_store,
                     user_id=user.id,
-                    ttl_seconds=900,
+                    ttl_seconds=int(EMAIL_MAGIC_LINK_TTL.total_seconds()),
                     created_by="signup_form",
                 )
                 link_url = _build_magic_link_url(request=request, token=token, next_path=next)

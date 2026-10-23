@@ -184,6 +184,16 @@ class _RenderFormsMixin:
         describedby = f' aria-describedby="hint-{name_attr}"' if help_text else ""
         return req + describedby
 
+    @staticmethod
+    def _input_hint_attrs(f: Field, ctx: RenderContext) -> str:
+        """` autocomplete=…` / ` inputmode=…` when the field declares them."""
+        attrs = ""
+        if f.autocomplete:
+            attrs += f' autocomplete="{ctx.escape_attr(f.autocomplete)}"'
+        if f.inputmode:
+            attrs += f' inputmode="{ctx.escape_attr(f.inputmode)}"'
+        return attrs
+
     def _emit_field(self, f: Field, ctx: RenderContext) -> str:
         """Render a plain form field at parity with the legacy
         `render_form_field` standard-field contract: a `<div class="dz-form-field">`
@@ -230,14 +240,17 @@ class _RenderFormsMixin:
                 f'value="{val}"{a11y}{readonly_attr}{autofocus_attr}>'
                 f'<input data-dz-date-iso class="dz-form-date-iso" type="text" '
                 f'spellcheck="false" autocomplete="off"{readonly_attr} '
-                f'aria-label="ISO date" value="{val}">'
+                f'aria-label="{ctx.escape_attr(f.label)} ISO date" value="{val}">'
                 "</div>"
             )
         elif f.kind in ("time", "datetime-local"):
             # Native clock + ISO companion (cycle 2144). Companion has no
             # name — leftover junk must not invent a time. Native
             # datetime-local still suppresses the placeholder (legacy parity).
-            iso_label = "ISO time" if f.kind == "time" else "ISO datetime"
+            # #1842 (2.4.6): companion named after its field, not a generic
+            # "ISO time" repeated across the form.
+            iso_kind = "ISO time" if f.kind == "time" else "ISO datetime"
+            iso_label = ctx.escape_attr(f"{f.label} {iso_kind}")
             val = ctx.escape_attr(f.initial_value)
             inner = (
                 f'<div class="dz-form-time-group" data-dz-time-group>'
@@ -263,7 +276,8 @@ class _RenderFormsMixin:
                 f'value="{val}"{placeholder}{a11y}{readonly_attr}{autofocus_attr}>'
                 f'<input data-dz-number-value class="dz-form-number-value" '
                 f'type="text" inputmode="decimal" spellcheck="false" '
-                f'autocomplete="off"{readonly_attr} aria-label="Number value" '
+                f'autocomplete="off"{readonly_attr} '
+                f'aria-label="{ctx.escape_attr(f.label)} value" '
                 f'value="{val}">'
                 "</div>"
             )
@@ -273,7 +287,8 @@ class _RenderFormsMixin:
                 f'<input id="field-{name}" type="{f.kind}" name="{name}" '
                 f'data-dazzle-field="{name}" class="dz-form-input" '
                 f'value="{ctx.escape_attr(f.initial_value)}"'
-                f"{placeholder}{a11y}{readonly_attr}{autofocus_attr}>"
+                f"{placeholder}{self._input_hint_attrs(f, ctx)}"
+                f"{a11y}{readonly_attr}{autofocus_attr}>"
             )
         return (
             '<div class="dz-form-field">'
@@ -353,7 +368,11 @@ class _RenderFormsMixin:
         label = ctx.escape(r.label)
         ref_api = ctx.escape_attr(r.ref_api.value)
         initial_value = ctx.escape_attr(r.initial_value)
-        required_attr = " required" if r.required else ""
+        required_attr = ' required aria-required="true"' if r.required else ""
+        # #1842: an empty first option so nothing is preselected — the
+        # browser otherwise selects the first record dz-utils.js appends,
+        # silently satisfying `required`. dz-utils.js appends after it.
+        placeholder_option = '<option value="">Select…</option>'
         if r.initial_value:
             initial_option = (
                 f'<option value="{initial_value}" selected>'
@@ -363,13 +382,14 @@ class _RenderFormsMixin:
             initial_option = ""
         return (
             f'<label class="dz-ref-picker">'
-            f'<span class="dz-ref-picker__label">{label}</span>'
+            f'<span class="dz-ref-picker__label">{label}'
+            f"{self._form_required_indicator(r.required)}</span>"
             f'<select class="dz-ref-picker__select" name="{name}" '
             f'data-ref-api="{ref_api}" '
             f'data-selected-value="{initial_value}" '
             # auto-mounted by dz-utils.js off data-ref-api (was x-init)
             f"{required_attr}>"
-            f"{initial_option}"
+            f"{placeholder_option}{initial_option}"
             f"</select>"
             f"</label>"
         )
@@ -479,9 +499,16 @@ class _RenderFormsMixin:
         display_attr = ctx.escape_attr(seam.major_display)
         root = money_root_attrs(seam)
         fid = ctx.escape_attr(seam.field_id)
+        # #1842 (3.3.2): a visible `dz-field` label `for=` the amount input
+        # (`field-{name}`), not an aria-label behind a "0.00" placeholder.
+        label_html = label_text + self._form_required_indicator(m.required)
 
         if m.currency_fixed:
-            return (
+            # The prefix symbol is aria-hidden; the code rides in the label.
+            fixed_label = (
+                f'{label_html}<span class="visually-hidden"> ({ctx.escape(m.currency_code)})</span>'
+            )
+            money_html = (
                 f'<div class="dz-money" {root}>'
                 '<div class="dz-form-money-group">'
                 f'<span class="dz-form-money-prefix" aria-hidden="true">'
@@ -490,8 +517,7 @@ class _RenderFormsMixin:
                 f'data-dazzle-field="{name}" '
                 f'value="{display_attr}" '
                 'class="dz-form-input dz-form-input-trailing" '
-                'placeholder="0.00" '
-                f'aria-label="{label_text} ({ctx.escape(m.currency_code)})"'
+                'placeholder="0.00"'
                 f"{required_attr}>"
                 "</div>"
                 f'<input type="hidden" name="{name}_minor" value="{minor_attr}">'
@@ -499,6 +525,7 @@ class _RenderFormsMixin:
                 f'value="{ctx.escape_attr(m.currency_code)}">'
                 "</div>"
             )
+            return self._widget_label(fixed_label, name, money_html)
         currency_opts = "".join(
             f'<option value="{ctx.escape_attr(code)}" '
             f'data-scale="{ctx.escape_attr(opt_scale)}" '
@@ -507,7 +534,7 @@ class _RenderFormsMixin:
             + f">{ctx.escape(opt_symbol)} {ctx.escape(code)}</option>"
             for code, opt_scale, opt_symbol in m.currency_options
         )
-        return (
+        money_html = (
             f'<div class="dz-money" {root}>'
             '<div class="dz-form-money-group">'
             f'<select name="{name}_currency" '
@@ -519,13 +546,13 @@ class _RenderFormsMixin:
             f'data-dazzle-field="{name}" '
             f'value="{display_attr}" '
             'class="dz-form-input dz-form-input-trailing" '
-            'placeholder="0.00" '
-            f'aria-label="{label_text}"'
+            'placeholder="0.00"'
             f"{required_attr}>"
             "</div>"
             f'<input type="hidden" name="{name}_minor" value="{minor_attr}">'
             "</div>"
         )
+        return self._widget_label(label_html, name, money_html)
 
     @staticmethod
     def _widget_label(label_html: str, name: str, inner: str, *, label_id: str = "") -> str:
@@ -602,7 +629,7 @@ class _RenderFormsMixin:
             f'class="dz-form-color-input" value="{init_attr}"{required_attr}>'
             f'<input class="dz-form-color-hex" type="text" '
             f'spellcheck="false" autocomplete="off" '
-            f'aria-label="Hex colour" value="{init_attr}">'
+            f'aria-label="{ctx.escape_attr(c.label)} hex colour" value="{init_attr}">'
             "</div>"
         )
         return self._widget_label(ctx.escape(c.label), name, inner)
@@ -623,7 +650,8 @@ class _RenderFormsMixin:
             f'value="{ctx.escape_attr(s.initial_value)}"{required_attr}>'
             '<input data-dz-range-value class="dz-form-slider-value" '
             'type="text" inputmode="decimal" spellcheck="false" '
-            'autocomplete="off" aria-label="Slider value" '
+            'autocomplete="off" '
+            f'aria-label="{ctx.escape_attr(s.label)} value" '
             f'value="{ctx.escape_attr(s.initial_value)}">'
             "</div>"
         )

@@ -42,6 +42,7 @@ from dazzle.render.fragment.primitives.data import region_poll_id
 from dazzle.render.fragment.renderer._render_interactive import (
     _with_leftover_honest_temporal,
 )
+from dazzle.render.user_chip import initials_from_display
 
 if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
@@ -325,10 +326,8 @@ class _RenderDashboardMixin:
             cell_parts: list[str] = []
             for cell in c.cells:
                 tone = cell.tone if cell.tone in ("good", "warn", "bad") else "neutral"
-                initials = (
-                    ctx.escape(cell.avatar_initials)
-                    if cell.avatar_initials
-                    else ctx.escape(cell.member_name[:2].upper())
+                initials = ctx.escape(
+                    cell.avatar_initials or initials_from_display(cell.member_name)
                 )
                 year_html = (
                     f'<div class="dz-cohort-strip-cell-subtitle">{ctx.escape(cell.subtitle)}</div>'
@@ -344,7 +343,7 @@ class _RenderDashboardMixin:
                     else ""
                 )
                 inner = (
-                    f'<div class="dz-cohort-strip-cell-halo">{initials}</div>'
+                    f'<div class="dz-cohort-strip-cell-halo" aria-hidden="true">{initials}</div>'
                     f'<div class="dz-cohort-strip-cell-name">{ctx.escape(cell.member_name)}</div>'
                     f"{year_html}"
                     f'<div class="dz-cohort-strip-cell-primary" '

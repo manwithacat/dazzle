@@ -21,6 +21,7 @@ from dazzle.http.runtime.auth.auth_views import (
     build_login_magic_link_view,
     build_login_sent_view,
 )
+from dazzle.http.runtime.auth.magic_link import EMAIL_MAGIC_LINK_TTL
 from dazzle.render.fragment import FragmentRenderer
 
 _LOGIN = build_login_magic_link_view
@@ -131,6 +132,14 @@ _SIGN_IN: dict[str, Any] = {"page_title": "Sign in", "product_name": "Test"}
         ),
         pytest.param(
             _SENT, {"product_name": "Acme Co"}, (">Acme Co<",), (), id="sent-product-name-link"
+        ),
+        # #1842 (WCAG 2.2.1): the link lifetime is stated, from the TTL constant.
+        pytest.param(
+            _SENT,
+            {"product_name": "Test"},
+            (f"The link expires in {int(EMAIL_MAGIC_LINK_TTL.total_seconds() // 60)} minutes.",),
+            (),
+            id="sent-states-link-expiry",
         ),
         pytest.param(
             _SENT,
