@@ -10,6 +10,8 @@ Verifies that TransitionValidator correctly handles:
 from unittest.mock import MagicMock
 from uuid import uuid4
 
+import pytest
+
 from dazzle.http.runtime.state_machine import (
     GuardNotSatisfiedError,
     InvalidTransitionError,
@@ -203,11 +205,13 @@ class TestValidateStatusUpdate:
         assert result is not None
         assert result.is_valid
 
-    def test_invalid_transition_rejected(self) -> None:
+    # None: an update that clears the status field (#1848 writes explicit nulls).
+    @pytest.mark.parametrize("to_state", ["closed", None])
+    def test_invalid_transition_rejected(self, to_state: str | None) -> None:
         result = validate_status_update(
             self._sm(),
             {"status": "open"},
-            {"status": "closed"},
+            {"status": to_state},
         )
         assert result is not None
         assert not result.is_valid

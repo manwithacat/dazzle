@@ -1020,7 +1020,9 @@ class Repository[T: BaseModel]:
 
         Args:
             id: Entity ID
-            data: Fields to update (only non-None values)
+            data: Fields to update. Every key is written, so an explicit
+                ``None`` sets the column to NULL (#1848); a caller that means
+                "leave this column alone" omits the key.
             conn: when provided (#1319, ADR-0032 Slice B), run the UPDATE on this
                 caller-owned connection (NOT a fresh one) and read the row back on
                 the SAME connection — so the write joins the caller's transaction
@@ -1031,8 +1033,8 @@ class Repository[T: BaseModel]:
         Returns:
             Updated entity or None if not found
         """
-        # Filter out None values
-        update_data = {k: v for k, v in data.items() if v is not None}
+        # #1848: an explicit None clears the column; absent keys are untouched.
+        update_data = dict(data)
 
         if not update_data:
             return await self.read(id)
@@ -1096,7 +1098,8 @@ class Repository[T: BaseModel]:
         # owns the commit boundary; tenant_host + invoke-transition is not a v1
         # combination (busting a not-yet-committed slug would be premature).
         if conn is None and slug_field is not None and slug_field in update_data:
-            new_slug = str(update_data[slug_field])
+            raw_new = update_data[slug_field]
+            new_slug = str(raw_new) if raw_new is not None else None
             if old_slug != new_slug:
                 from dazzle.tenant.cache_registry import bust
 

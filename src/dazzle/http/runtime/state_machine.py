@@ -648,12 +648,24 @@ def validate_status_update(
 
     status_field = state_machine.status_field
     new_status = update_data.get(status_field)
+    current_status = current_data.get(status_field)
+
+    # #1848: an update writes explicit nulls, so clearing the status field
+    # would leave the machine without a state. Not a transition — refuse it.
+    if new_status is None and status_field in update_data and current_status is not None:
+        return TransitionValidationResult.failure(
+            InvalidTransitionError(
+                current_status,
+                "<none>",
+                set(state_machine.states),
+                f"'{status_field}' cannot be cleared; it is a state machine field.",
+            )
+        )
 
     # No status change in update
     if new_status is None:
         return None
 
-    current_status = current_data.get(status_field)
     if current_status is None:
         # No current status - allow setting initial state
         if new_status in state_machine.states:

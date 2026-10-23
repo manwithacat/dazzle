@@ -309,7 +309,7 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
     async def update(
         self,
         id: UUID,
-        data: UpdateT,
+        data: UpdateT | dict[str, Any],
         user_roles: list[str] | None = None,
         current_user: str | None = None,
         is_superuser: bool = False,
@@ -345,11 +345,16 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
             validate_status_update,
         )
 
-        # Strip tags from single-line string input fields (#135; text: ship W)
-        self._sanitize_fields(data)
-
-        # Get update data, excluding None values
-        update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+        # #1848: only the fields the caller SET are written. A field sent as
+        # null/empty clears the column; a field not sent is left untouched.
+        if isinstance(data, BaseModel):
+            # Strip tags from single-line string input fields (#135; text: ship W)
+            self._sanitize_fields(data)
+            update_data = data.model_dump(exclude_unset=True)
+        else:
+            # Internal callers (e.g. soft delete stamping ``deleted_at``) pass a
+            # plain dict of exactly the columns to write.
+            update_data = dict(data)
 
         # Inject auto_update timestamps (v0.25 - #132)
         if self.entity_spec:

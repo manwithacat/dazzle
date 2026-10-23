@@ -10,7 +10,8 @@ from decimal import Decimal
 from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import AfterValidator, BaseModel, Field, create_model
+from pydantic import AfterValidator, BaseModel, BeforeValidator, Field, create_model
+from pydantic_core import PydanticCustomError
 
 from dazzle.http.runtime.slug_validator import validate_slug
 from dazzle.http.specs.entity import (
@@ -409,6 +410,13 @@ def generate_create_schema(
     )
 
 
+def _reject_explicit_null(value: Any) -> Any:
+    """A required field may be omitted from an update, never sent as null (#1848)."""
+    if value is None:
+        raise PydanticCustomError("missing", "Field required")
+    return value
+
+
 def generate_update_schema(
     entity: EntitySpec,
     name_suffix: str = "Update",
@@ -419,8 +427,12 @@ def generate_update_schema(
     """
     Generate a Pydantic schema for updating an entity.
 
-    All fields are optional to support partial updates. The framework partition
-    key is excluded for tenant-scoped entities (Plan 1d — server-managed).
+    Every field may be omitted to support partial updates; only the fields a
+    client sends are written (``model_dump(exclude_unset=True)``, #1848). An
+    optional field sent as null (or ``""``, which the write handlers map to
+    null) clears the column. A ``required`` field sent as null fails validation
+    with ``Field required``. The framework partition key is excluded for
+    tenant-scoped entities (Plan 1d — server-managed).
 
     Args:
         entity: Entity specification
@@ -445,8 +457,14 @@ def generate_update_schema(
             continue
 
         python_type = _field_type_to_python(field.type, {}, field.name)
-        # Make all fields optional for partial updates
-        field_definitions[field.name] = (python_type | None, None)
+        if field.required:
+            # Omittable (default None is not validated), but not nullable.
+            field_definitions[field.name] = (
+                Annotated[python_type, BeforeValidator(_reject_explicit_null)],
+                None,
+            )
+        else:
+            field_definitions[field.name] = (python_type | None, None)
 
     # Create the model
     return _create_typed_model(

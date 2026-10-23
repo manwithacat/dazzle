@@ -185,7 +185,13 @@ class MappingExecutor:
         """
         if self._update_entity is None:
             return
-        values = dict(fields)
+        # A mapping writes only what it resolved: an unresolved source (missing
+        # response path, or a ``response.headers.*`` source on a cache hit) is
+        # None and must not clear the column — the repository writes explicit
+        # nulls since #1848.
+        values = {k: v for k, v in fields.items() if v is not None}
+        if not values:
+            return
         caps = self._rich_text_fields.get(entity_name)
         if caps:
             sanitise_rich_text_values(values, caps)
