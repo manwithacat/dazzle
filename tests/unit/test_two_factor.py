@@ -153,3 +153,32 @@ def test_boot_fails_when_totp_secrets_cannot_be_encrypted(
     monkeypatch.delenv("DAZZLE_CONNECTION_SECRET", raising=False)
     with pytest.raises(TwoFactorBootError, match="DAZZLE_CONNECTION_SECRET"):
         require_two_factor_runtime(TwoFactorConfig(enabled=True))
+
+
+@pytest.mark.parametrize(
+    ("totp", "email_otp", "labels"),
+    [
+        (True, False, ("New recovery codes", "Turn off the authenticator app")),
+        (False, True, ("New recovery codes", "Turn off email codes")),
+        (False, False, ()),
+    ],
+)
+def test_settings_view_renders_manage_actions(
+    totp: bool, email_otp: bool, labels: tuple[str, ...]
+) -> None:
+    """#1844: a user with a second factor got a 500 (empty-field FormStack)."""
+    from dazzle.http.runtime.auth.two_factor_views import build_2fa_settings_view
+    from dazzle.render.fragment import FragmentRenderer
+
+    html = FragmentRenderer().render(
+        build_2fa_settings_view(
+            product_name="Acme",
+            totp_enabled=totp,
+            email_otp_enabled=email_otp,
+            email_otp_allowed=True,
+            recovery_remaining=5,
+        )
+    )
+    for label in labels:
+        assert label in html
+    assert html.count("/auth/2fa/settings/submit?action=") == len(labels)

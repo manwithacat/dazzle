@@ -17,6 +17,12 @@ def test_form_stack_rejects_no_fields() -> None:
         FormStack(action=URL("/x"), fields=())
 
 
+def test_form_stack_accepts_submit_only_action_form() -> None:
+    """#1844: a one-button action form has a submit and no fields."""
+    fs = FormStack(action=URL("/x"), fields=(), submit=Submit(label="Turn off"))
+    assert fs.fields == ()
+
+
 def test_field_required() -> None:
     f = Field(name="title", label="Title")
     assert f.required is False

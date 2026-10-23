@@ -494,8 +494,10 @@ class FormStack:
     peek_view_url: str = ""  # read-only view URL to re-fetch after a save-and-stay
 
     def __post_init__(self) -> None:
-        if not self.fields:
-            raise ValueError("FormStack requires at least one field")
+        # #1844: a one-button action form (disable a factor, regenerate
+        # codes) has a submit and no fields.
+        if not self.fields and self.submit is None:
+            raise ValueError("FormStack requires at least one field or a submit")
         if self.method not in _METHODS:
             raise ValueError(f"invalid method {self.method!r}")
         if self.peek_target and self.method == "GET":
