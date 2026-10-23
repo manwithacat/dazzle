@@ -63,6 +63,7 @@ from dazzle.render.access_evaluator import evaluate_permission
 from dazzle.render.access_messages import _forbidden_detail
 from dazzle.render.breadcrumbs import clerk_list_empty_kind
 from dazzle.render.context import TransitionContext
+from dazzle.render.filters import _ref_display_name
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
 from dazzle.render.fragment.renderer._data_row import render_data_table_rows
 from dazzle.render.fragment.state_affordance import transition_affordances
@@ -708,7 +709,10 @@ async def _list_handler_body(
                 materialised.append(item)
                 continue
             if display_field in row and "__display__" not in row:
-                row["__display__"] = row[display_field]
+                # #1842: a display_field that is itself a ref arrives as the
+                # nested record; label the option with its display name.
+                value = row[display_field]
+                row["__display__"] = _ref_display_name(value) if isinstance(value, dict) else value
             materialised.append(row)
         result["items"] = materialised
 

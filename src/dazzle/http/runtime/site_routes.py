@@ -43,10 +43,8 @@ from dazzle.render.navigation_menu import build_site_navigation_menu
 logger = logging.getLogger(__name__)
 
 
-def _format_page_response(page: dict[str, Any], project_root: Path | None) -> dict[str, Any]:
-    """Format page data (sections resolved from content files) for rendering."""
-    sections = list(page.get("sections", []))
-
+def _resolve_section_bodies(sections: list[dict[str, Any]], project_root: Path | None) -> None:
+    """Render `markdown` / `split_content` section bodies to HTML in place."""
     # Resolve section-level markdown sources
     if project_root:
         for section in sections:
@@ -62,11 +60,24 @@ def _format_page_response(page: dict[str, Any], project_root: Path | None) -> di
                     rendered = _render_content(raw, fmt)
                     if sec_type == "split_content":
                         # #1842: already HTML — a separate key so the
-                        # builder emits it as-is (inline `body` stays
-                        # escaped text; escaping this again printed tags).
+                        # builder emits it as-is (escaping it again printed tags).
                         section["body_html"] = rendered
                     else:
                         section["content"] = rendered
+
+    # #1842: an inline split_content `body` is Markdown, like a `source:`
+    # file or a `markdown` section (author-owned trust).
+    for section in sections:
+        if section.get("type") == "split_content" and "body_html" not in section:
+            body = section.pop("body", None)
+            if body:
+                section["body_html"] = _render_content(str(body), "md")
+
+
+def _format_page_response(page: dict[str, Any], project_root: Path | None) -> dict[str, Any]:
+    """Format page data (sections resolved from content files) for rendering."""
+    sections = list(page.get("sections", []))
+    _resolve_section_bodies(sections, project_root)
 
     response: dict[str, Any] = {
         "route": page.get("route"),

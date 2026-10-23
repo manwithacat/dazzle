@@ -242,3 +242,14 @@ def test_split_content_source_renders_as_body_html(tmp_path: Path) -> None:
     section = _format_page_response(page, tmp_path)["sections"][0]
     assert "<strong>Fast</strong>" in section["body_html"]
     assert "body" not in section
+
+
+@pytest.mark.parametrize("project_root", [None, Path(".")])
+def test_split_content_inline_body_renders_markdown(project_root: Path | None) -> None:
+    page = {
+        "route": "/",
+        "sections": [{"type": "split_content", "body": "Why:\n\n- **Fast**\n- Safe\n"}],
+    }
+    section = _format_page_response(page, project_root)["sections"][0]
+    assert "<li><strong>Fast</strong></li>" in section["body_html"]
+    assert "body" not in section

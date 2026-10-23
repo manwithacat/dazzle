@@ -64,7 +64,6 @@ async def _fetch_entity_card_section_rows(
     query logs at warning level and yields an empty list rather
     than crashing the whole entity_card render.
     """
-    from contextlib import suppress
     from dataclasses import replace as _dc_replace
 
     cfg_sections = list(getattr(config, "sections", []) or [])
@@ -105,7 +104,7 @@ async def _fetch_entity_card_section_rows(
         if section_filter is not None:
             from dazzle.http.runtime.scope_filters import _extract_condition_filters
 
-            with suppress(Exception):
+            try:
                 # #1225: thread `context_id` through so per-section
                 # `filter: X = current_context` predicates resolve to
                 # the scoped record id. Pre-fix this argument was None
@@ -122,6 +121,18 @@ async def _fetch_entity_card_section_rows(
                     None,
                     context_id,
                 )
+            except Exception as exc:
+                # #1847: fail closed — an uncompilable section filter
+                # renders the section empty, never unfiltered.
+                logger.error(
+                    "entity_card_section_filter_failed source=%s exc=%s",
+                    section_source,
+                    type(exc).__name__,
+                    exc_info=True,
+                )
+                indices.append(idx)
+                coros.append(_empty_list_coro())
+                continue
 
         section_limit = getattr(section, "limit", None)
         page_size = section_limit if section_limit and section_limit > 0 else 20

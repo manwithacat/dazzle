@@ -68,7 +68,8 @@ def test_file_upload_emits_nameless_file_picker() -> None:
     )
     assert 'type="file"' in html
     assert "dz-file-upload-input" in html
-    assert "data-dz-file-name" in html
+    # #1842: the upload status is announced.
+    assert 'data-dz-file-name role="status"' in html
     # Picker must not steal the form field name from the hidden FK.
     assert "name=" not in html.split('type="file"', 1)[1].split(">", 1)[0]
 

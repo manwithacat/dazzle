@@ -393,7 +393,7 @@ All available section types for sitespec.yaml page sections. Each section has a 
 # split_content — Text + image side-by-side
 - type: split_content
   headline: "Built for teams"
-  body: "Collaborate in real time."
+  body: "Collaborate in real time."   # Markdown; or source: {path: why.md}
   media: {kind: image, src: "/img/team.png", alt: "Team"}
   alignment: right           # left (default) or right
 

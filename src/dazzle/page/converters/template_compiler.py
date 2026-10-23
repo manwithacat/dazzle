@@ -1049,8 +1049,8 @@ def _compile_list_surface(
             if _variant.action_primary:
                 persona_action_primary[_variant.persona] = _variant.action_primary
                 # Resolve CREATE-mode targets to a concrete list-header CTA
-                # route + label (surface title). EDIT/VIEW targets stay as
-                # names only — they need a record id the list header lacks.
+                # route. EDIT/VIEW targets stay as names only — they need a
+                # record id the list header lacks.
                 target = _surfaces.get(_variant.action_primary)
                 if target is not None and target.mode == SurfaceMode.CREATE:
                     t_entity = target.entity_ref or entity_name
@@ -1058,7 +1058,12 @@ def _compile_list_surface(
                     persona_create_urls[_variant.persona] = app_paths.create_path(
                         app_prefix, t_slug
                     )
-                    if target.title:
+                    # #1842 (3.2.4): creating this list's own entity keeps the
+                    # entity-title label ("New Agent Assignment"), the name the
+                    # workspace CTA uses; a surface title such as "Assign Agent"
+                    # would give the same action a second name. Only a target
+                    # of another entity carries its surface title.
+                    if target.title and t_entity != entity_name:
                         persona_create_labels[_variant.persona] = target.title
 
     table_id = f"dt-{surface.name}"

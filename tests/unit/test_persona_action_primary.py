@@ -74,7 +74,43 @@ def test_compile_list_resolves_create_action_primary() -> None:
     assert ctx.table.persona_create_urls == {
         "manager": create_path("/app", entity_slug("Task")),
     }
-    assert ctx.table.persona_create_labels == {"manager": "Create Task"}
+    # #1842 (3.2.4): the list's own entity keeps the entity-title CTA label.
+    assert ctx.table.persona_create_labels == {}
+
+
+def test_compile_list_labels_create_target_of_another_entity() -> None:
+    entity = _task_entity()
+    list_s = ir.SurfaceSpec(
+        name="task_list",
+        title="Tasks",
+        mode=ir.SurfaceMode.LIST,
+        entity_ref="Task",
+        sections=[SurfaceSection(name="main", elements=[])],
+        ux=ir.UXSpec(
+            persona_variants=[ir.PersonaVariant(persona="tester", action_primary="issue_create")]
+        ),
+    )
+    create_s = ir.SurfaceSpec(
+        name="issue_create",
+        title="Report Issue",
+        mode=ir.SurfaceMode.CREATE,
+        entity_ref="IssueReport",
+        sections=[SurfaceSection(name="main", elements=[])],
+    )
+    ctx = _compile_list_surface(
+        list_s,
+        entity,
+        "Task",
+        "/tasks",
+        "task",
+        "/app",
+        surfaces_by_name={"task_list": list_s, "issue_create": create_s},
+    )
+    assert ctx.table is not None
+    assert ctx.table.persona_create_urls == {
+        "tester": create_path("/app", entity_slug("IssueReport")),
+    }
+    assert ctx.table.persona_create_labels == {"tester": "Report Issue"}
 
 
 def test_compile_skips_edit_mode_action_primary_for_create_url() -> None:
@@ -188,7 +224,7 @@ def test_appspec_compile_threads_surfaces_by_name() -> None:
     contexts = compile_appspec_to_templates(appspec, app_prefix="/app")
     # Find list context by table presence
     list_ctx = next(c for c in contexts.values() if c.table is not None)
-    assert list_ctx.table.persona_create_labels.get("admin") == "Add Task"
+    assert list_ctx.table.persona_create_labels == {}
     assert list_ctx.table.persona_create_urls["admin"] == "/app/task/create"
 
 

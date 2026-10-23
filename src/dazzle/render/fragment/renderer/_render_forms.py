@@ -357,7 +357,7 @@ class _RenderFormsMixin:
             f'value="{value_attr}">'
             f'<input type="file" class="dz-file-upload-input"{picker_accept}'
             f"{picker_required}>"
-            f'<span class="dz-file-upload-zone-prompt" data-dz-file-name>'
+            f'<span class="dz-file-upload-zone-prompt" data-dz-file-name role="status">'
             f"{status}</span>"
             f"</div>"
             f"</label>"

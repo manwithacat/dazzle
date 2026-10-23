@@ -56,28 +56,27 @@ async def _fetch_region_json(
             filters: dict[str, Any] | None = None
             ir_filter = ctx.ir_region.filter
             if ir_filter is not None:
-                try:
-                    from dazzle.http.runtime.scope_filters import (
-                        _extract_condition_filters,
-                    )
+                # #1847: a filter that cannot be compiled raises into the
+                # fail-closed handler below, never fetches the region unfiltered.
+                from dazzle.http.runtime.scope_filters import (
+                    _extract_condition_filters,
+                )
 
-                    filters = {}
-                    _extract_condition_filters(
-                        ir_filter,
-                        user_id or (filter_context or {}).get("current_user_id", ""),
-                        filters,
-                        logger,
-                        auth_context,
-                        # #1304: thread FK→target map for multi-hop dotted
-                        # `current_context` resolution (batch JSON path).
-                        ref_targets=ctx.entity_ref_targets.get(ctx.source) or {},
-                        context_id=(filter_context or {}).get("current_context"),
-                        all_ref_targets=ctx.entity_ref_targets,  # #1304
-                    )
-                    if not filters:
-                        filters = None
-                except Exception:
-                    logger.warning("Failed to evaluate condition filter for region", exc_info=True)
+                filters = {}
+                _extract_condition_filters(
+                    ir_filter,
+                    user_id or (filter_context or {}).get("current_user_id", ""),
+                    filters,
+                    logger,
+                    auth_context,
+                    # #1304: thread FK→target map for multi-hop dotted
+                    # `current_context` resolution (batch JSON path).
+                    ref_targets=ctx.entity_ref_targets.get(ctx.source) or {},
+                    context_id=(filter_context or {}).get("current_context"),
+                    all_ref_targets=ctx.entity_ref_targets,  # #1304
+                )
+                if not filters:
+                    filters = None
             # #1773: the compiled region `filter:` (incl. current_context) so
             # the aggregate metrics below count the rows the region shows.
             _region_filters_batch = dict(filters) if filters else None

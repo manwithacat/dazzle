@@ -446,13 +446,24 @@ class TestListHandlerDisplayFieldInjection:
     this hop the widget falls back to UUID values."""
 
     @pytest.mark.asyncio
-    async def test_display_field_injects_display_key(self) -> None:
+    @pytest.mark.parametrize(
+        "values",
+        [
+            ("English Language", "Mathematics"),
+            # #1842: a display_field that is itself a ref arrives nested.
+            (
+                {"id": "c1", "__display__": "English Language"},
+                {"id": "c2", "name": "Mathematics"},
+            ),
+        ],
+    )
+    async def test_display_field_injects_display_key(self, values: tuple) -> None:
         class MockService:
             async def execute(self, **kwargs: object) -> dict:
                 return {
                     "items": [
-                        {"id": "abc-123", "component_name": "English Language"},
-                        {"id": "def-456", "component_name": "Mathematics"},
+                        {"id": "abc-123", "component_name": values[0]},
+                        {"id": "def-456", "component_name": values[1]},
                     ],
                     "total": 2,
                     "page": 1,

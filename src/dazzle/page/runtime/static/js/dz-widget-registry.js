@@ -60,6 +60,12 @@
       if (!picker || !hidden) return null;
       var max = parseInt(el.getAttribute("data-dz-max-size") || "0", 10);
       var url = el.getAttribute("data-dz-target") || "";
+      // #1842: tell host scripts and form logic the stored value changed.
+      function setValue(v) {
+        hidden.value = v;
+        hidden.dispatchEvent(new Event("input", { bubbles: true }));
+        hidden.dispatchEvent(new Event("change", { bubbles: true }));
+      }
       function onChange() {
         var file = picker.files && picker.files[0];
         if (!file) return;
@@ -89,12 +95,12 @@
             return r.json();
           })
           .then(function (data) {
-            hidden.value = data.id || data.url || "";
+            setValue(data.id || data.url || "");
             if (status) status.textContent = data.filename || file.name;
           })
           .catch(function () {
             if (status) status.textContent = "Upload failed";
-            hidden.value = "";
+            setValue("");
           });
       }
       picker.addEventListener("change", onChange);

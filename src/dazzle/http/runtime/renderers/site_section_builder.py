@@ -553,7 +553,7 @@ def _build_comparison_section(section: dict[str, Any]) -> str:
 
 def _build_split_content_section(section: dict[str, Any]) -> str:
     """Typed builder for `type: split_content` — text + media side-
-    by-side layout. A `source:` body arrives pre-rendered as `body_html`. `alignment: right` swaps the order via the
+    by-side layout. The body arrives pre-rendered as `body_html`. `alignment: right` swaps the order via the
     `dz-split--reversed` class."""
     parts: list[str] = []
     order_cls = " dz-split--reversed" if section.get("alignment") == "right" else ""
@@ -566,15 +566,12 @@ def _build_split_content_section(section: dict[str, Any]) -> str:
     text_inner: list[str] = []
     headline = str(section.get("headline", "") or "")
     text_inner.append(f"<h2>{_html.escape(headline)}</h2>")
-    # `body_html` is a `source:` file pre-rendered to HTML by the site route
-    # (author-owned trust, as `markdown` sections' `content`) — emitted as-is
-    # (#1842). Inline `body` stays escaped text in one `<p>`.
+    # `body_html` is the inline `body` or a `source:` file, rendered from
+    # Markdown by the site route (author-owned trust, as `markdown` sections'
+    # `content`) — emitted as-is (#1842).
     body_html = section.get("body_html")
-    body = section.get("body")
     if body_html:
         text_inner.append(f'<div class="dz-split-body">{body_html}</div>')
-    elif body:
-        text_inner.append(f"<p>{_html.escape(str(body))}</p>")
     primary_cta = section.get("primary_cta") or {}
     if primary_cta:
         href = str(primary_cta.get("href", "#") or "#")

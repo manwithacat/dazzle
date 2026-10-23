@@ -42,3 +42,24 @@ def test_region_query_failure_logs_error_with_exception_class(module: str, log_f
     call = src.index(f'"{log_format}"')
     assert src.rfind("logger.error(", 0, call) > src.rfind("except Exception as exc:", 0, call) > 0
     assert "type(exc).__name__" in src[call : call + 200]
+
+
+def test_failing_region_filter_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    """#1847: a region `filter:` that cannot be compiled must raise into
+    `fetch_region_items`' fail-closed handler (pinned above), never return
+    no filter — which fetched the region unfiltered."""
+    from types import SimpleNamespace
+
+    from dazzle.http.runtime import scope_filters
+    from dazzle.http.runtime.workspace_region_fetch import _region_condition_filters
+
+    def _broken(*args: object, **kwargs: object) -> None:
+        raise TypeError("stale host wrapper signature")
+
+    monkeypatch.setattr(scope_filters, "_extract_condition_filters", _broken)
+    ctx = SimpleNamespace(
+        source="Ticket", ir_region=SimpleNamespace(filter=object()), entity_ref_targets={}
+    )
+    user_ctx = SimpleNamespace(user_id="u1", auth_ctx_for_filters=None, filter_context={})
+    with pytest.raises(TypeError):
+        _region_condition_filters(ctx, user_ctx)

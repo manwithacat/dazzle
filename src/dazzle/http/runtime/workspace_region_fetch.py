@@ -203,37 +203,36 @@ def _region_condition_filters(
     """Compile the region's ``filter:`` (current_user, has_grant, current_context...).
 
     Multi-source regions store a per-source filter on ``_source_filter``.
+    A filter that cannot be compiled raises: ``fetch_region_items`` then fails
+    closed rather than fetching the region unfiltered (#1847).
     """
     filters: dict[str, Any] | None = None
     ir_filter = getattr(ctx, "_source_filter", None) or ctx.ir_region.filter
     if ir_filter is not None:
-        try:
-            from dazzle.http.runtime.scope_filters import _extract_condition_filters
+        from dazzle.http.runtime.scope_filters import _extract_condition_filters
 
-            filters = {}
-            _extract_condition_filters(
-                ir_filter,
-                user_ctx.user_id or "",
-                filters,
-                logger,
-                user_ctx.auth_ctx_for_filters,
-                # #1304: thread the source entity's FK→target map so a
-                # multi-hop dotted `current_context` filter (e.g.
-                # `assessment_event.teaching_group = current_context`)
-                # resolves to an FK-path subquery instead of a raw dotted
-                # key the repo can't map (which silently matched all rows).
-                ref_targets=ctx.entity_ref_targets.get(ctx.source) or {},
-                context_id=user_ctx.filter_context.get("current_context"),
-                # #1304: the global entity→FK-map so a 2-hop dotted path
-                # resolves the *target* entity's FK column correctly
-                # (`teaching_group` → `teaching_group_id`) rather than
-                # blindly suffixing `_id` (which broke bare-named FKs).
-                all_ref_targets=ctx.entity_ref_targets,
-            )
-            if not filters:
-                filters = None
-        except Exception:
-            logger.warning("Failed to evaluate condition filter", exc_info=True)
+        filters = {}
+        _extract_condition_filters(
+            ir_filter,
+            user_ctx.user_id or "",
+            filters,
+            logger,
+            user_ctx.auth_ctx_for_filters,
+            # #1304: thread the source entity's FK→target map so a
+            # multi-hop dotted `current_context` filter (e.g.
+            # `assessment_event.teaching_group = current_context`)
+            # resolves to an FK-path subquery instead of a raw dotted
+            # key the repo can't map (which silently matched all rows).
+            ref_targets=ctx.entity_ref_targets.get(ctx.source) or {},
+            context_id=user_ctx.filter_context.get("current_context"),
+            # #1304: the global entity→FK-map so a 2-hop dotted path
+            # resolves the *target* entity's FK column correctly
+            # (`teaching_group` → `teaching_group_id`) rather than
+            # blindly suffixing `_id` (which broke bare-named FKs).
+            all_ref_targets=ctx.entity_ref_targets,
+        )
+        if not filters:
+            filters = None
     return filters
 
 

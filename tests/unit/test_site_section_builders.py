@@ -261,7 +261,7 @@ RENDERS = [
         {
             "type": "split_content",
             "headline": "Big idea",
-            "body": "Long-form copy",
+            "body_html": "<p>Long-form copy</p>",
             "primary_cta": {"label": "Read", "href": "/r"},
         },
         ["<h2>Big idea</h2>", "<p>Long-form copy</p>", "dz-cta-group--left", 'href="/r"'],
