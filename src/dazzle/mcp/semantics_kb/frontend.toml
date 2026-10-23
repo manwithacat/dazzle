@@ -890,3 +890,29 @@ cognition_tips = [
     "Prefer dz:region-loaded over htmx events for work after a workspace region loads",
     "dazzle lint flags htmx 2 event names in static/, templates/ and routes/",
 ]
+
+[concepts.adaptive_ui]
+category = "Frontend"
+doc_page = "frontend"
+doc_order = 15
+definition = """Usage-driven UI adaptation is opt-in (#1843). Dazzle records usage events \
+(first focus on a form field, clicks on heading actions) in `_dazzle_usage_events` either way; \
+`[ui] adaptive_ui` decides whether that signal may change what a page renders. The default is \
+`false`: every page renders as declared, so the UI you tested is the UI users get.
+
+```toml
+[ui]
+adaptive_ui = true                          # every adaptation
+# adaptive_ui = ["combobox", "autofocus"]   # or name the ones you want
+```
+
+| Name | What changes once a tenant crosses the usage floor |
+|------|----------------------------------------------------|
+| `combobox` | a plain select with 8+ options becomes the searchable combobox |
+| `autofocus` | the most-engaged plain form field gets `autofocus` |
+| `actions` | workspace heading actions reorder by click frequency |
+| `columns` | auto-derived list columns keep heavily-engaged fields |
+
+Any other name fails manifest load. A field's own `widget=` always wins: \
+`field deadline_type "Type" widget=select` pins a plain select even when `combobox` is on."""
+related = ["page_purpose", "widget_combobox"]

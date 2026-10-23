@@ -237,6 +237,26 @@ class ServerConfig:
     # `AuditLogger.verify_chain()` for offline verification.
     audit_integrity: str = "none"  # "none" | "hash_chain"
 
+    # #1843 — `[ui] adaptive_ui`: the usage-driven adaptations allowed to change
+    # rendered output (names from `manifest.ADAPTIVE_UI_NAMES`). Empty = off;
+    # usage events are still recorded.
+    adaptive_ui: frozenset[str] = frozenset()
+
+
+def _usage_columns_full(
+    entity: Any, list_surface: Any, adaptive_ui: frozenset[str]
+) -> list[dict[str, Any]] | None:
+    """The untruncated column set the list handler's usage-boosted economy
+    works from (ADR-0050 2d), or None to serve the declared-salience columns.
+
+    None when a list surface declares the columns (the author's projection
+    wins) or when `[ui] adaptive_ui` does not enable "columns" (#1843 — off
+    by default, so a list renders as declared).
+    """
+    if list_surface or "columns" not in adaptive_ui:
+        return None
+    return _build_entity_columns_full(entity)
+
 
 def _tenancy_metadata_kwargs(appspec: AppSpec) -> dict[str, Any]:
     """Tenant-scoping kwargs for ``build_metadata`` (RLS Phase A).
@@ -1699,7 +1719,7 @@ class DazzleBackendApp:
             # the FULL untruncated column set so the request-time usage inferer can
             # rescue a heavily-engaged field that build-time salience would shed. None
             # for surface-declared columns (explicit author projection wins).
-            cols_full = None if _ls else _build_entity_columns_full(entity)
+            cols_full = _usage_columns_full(entity, _ls, self._config.adaptive_ui)
             # #1494 (2c, Slice 2): peek is declared PER SURFACE, but one entity can
             # host several list surfaces with different `peek:` modes. Map each
             # surface's table_id (= surface.name = region_name) to its resolved
@@ -2537,6 +2557,11 @@ class DazzleBackendApp:
     def get_service(self, name: str) -> Any | None:
         """Get a service by name."""
         return self._services.get(name)
+
+    @property
+    def adaptive_ui(self) -> frozenset[str]:
+        """`[ui] adaptive_ui` (#1843) — the usage-driven adaptations enabled."""
+        return self._config.adaptive_ui
 
     def services_by_entity(self) -> dict[str, Any]:
         """Entity-name-keyed view of the services (#1181, #1428).

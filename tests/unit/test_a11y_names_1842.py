@@ -19,7 +19,17 @@ from dazzle.http.runtime.auth.two_factor_views import (
 )
 from dazzle.http.runtime.site_routes import _format_page_response
 from dazzle.render.filters import _bool_icon_filter
-from dazzle.render.fragment import URL, FragmentRenderer, MoneyField, RefPicker
+from dazzle.render.fragment import (
+    URL,
+    ColorField,
+    FragmentRenderer,
+    MoneyField,
+    RefPicker,
+    RichTextField,
+    SliderField,
+    TagsField,
+    WidgetCombobox,
+)
 from dazzle.render.fragment.primitives import RowCapabilities
 from dazzle.render.fragment.renderer._data_row import render_data_row
 
@@ -151,6 +161,55 @@ def test_row_controls_named_by_display_text(columns: list, item: dict, label: st
             ('<option value="">Select…</option><option value="u1" selected>Ada</option>',),
             ("dz-form-required", "aria-required"),
             id="ref-picker-edit-keeps-current",
+        ),
+        # #1843 (3.3.2): every widget label keeps the required marker a plain
+        # field shows; the combobox label text has an id its enhanced input
+        # and listbox are named by.
+        pytest.param(
+            WidgetCombobox(
+                name="kind", label="Type", options=(("a", "A"), ("b", "B")), required=True
+            ),
+            (
+                '<label class="dz-field" for="field-kind">'
+                '<span class="dz-field__label" id="field-kind-label">Type'
+                '<span class="dz-form-required" aria-hidden="true">*</span>'
+                '<span class="visually-hidden">(required)</span></span>',
+            ),
+            (),
+            id="widget-combobox-required-1843",
+        ),
+        pytest.param(
+            WidgetCombobox(name="kind", label="Type", options=(("a", "A"),)),
+            ('<span class="dz-field__label" id="field-kind-label">Type</span>',),
+            ("dz-form-required",),
+            id="widget-combobox-optional-1843",
+        ),
+        pytest.param(
+            TagsField(name="labels", label="Labels", required=True),
+            ('<span class="dz-form-required" aria-hidden="true">*</span>',),
+            (),
+            id="tags-required-1843",
+        ),
+        pytest.param(
+            ColorField(name="accent", label="Accent", required=True),
+            ('<span class="dz-form-required" aria-hidden="true">*</span>',),
+            (),
+            id="color-required-1843",
+        ),
+        pytest.param(
+            SliderField(name="score", label="Score", required=True),
+            ('<span class="dz-form-required" aria-hidden="true">*</span>',),
+            (),
+            id="slider-required-1843",
+        ),
+        pytest.param(
+            RichTextField(name="notes", label="Notes", required=True),
+            (
+                '<span class="dz-field__label" id="field-notes-label">Notes'
+                '<span class="dz-form-required" aria-hidden="true">*</span>',
+            ),
+            (),
+            id="rich-text-required-1843",
         ),
     ],
 )

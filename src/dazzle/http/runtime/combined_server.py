@@ -43,6 +43,7 @@ class UnifiedServerConfig:
     tenant_config: Any = None
     storage_defs: dict[str, Any] | None = None  # #932 — propagated from manifest
     dark_mode_toggle: bool = True  # #1445 — `[ui] dark_mode_toggle`, threaded to site routes
+    adaptive_ui: frozenset[str] = frozenset()  # #1843 — `[ui] adaptive_ui`
 
 
 # =============================================================================
@@ -176,6 +177,7 @@ def run_unified_server(
     local_assets: bool = False,
     storage_defs: dict[str, Any] | None = None,
     dark_mode_toggle: bool = True,
+    adaptive_ui: frozenset[str] = frozenset(),
     *,
     config: UnifiedServerConfig | None = None,
 ) -> None:
@@ -208,6 +210,7 @@ def run_unified_server(
         tenant_config = config.tenant_config
         storage_defs = config.storage_defs
         dark_mode_toggle = config.dark_mode_toggle
+        adaptive_ui = config.adaptive_ui
     try:
         import uvicorn
 
@@ -271,6 +274,7 @@ def run_unified_server(
         storage_defs=storage_defs,
         audit_integrity=audit_integrity,
         security_profile=security_profile_override,
+        adaptive_ui=adaptive_ui,
     )
     builder = DazzleBackendApp(appspec, config=server_config)
     app = builder.build()
@@ -410,6 +414,7 @@ def run_backend_only(
     redis_url: str = "",
     workers: int | None = None,
     storage_defs: dict[str, Any] | None = None,
+    adaptive_ui: frozenset[str] = frozenset(),
 ) -> None:
     """
     Run only the FastAPI backend server.
@@ -458,6 +463,7 @@ def run_backend_only(
         storage_defs=storage_defs,
         audit_integrity=os.environ.get("DAZZLE_AUDIT_INTEGRITY", "none"),
         security_profile=os.environ.get("DAZZLE_SECURITY_PROFILE") or None,
+        adaptive_ui=adaptive_ui,
     )
     app_builder = DazzleBackendApp(appspec, config=config)
     app = app_builder.build()

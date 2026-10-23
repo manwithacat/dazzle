@@ -5182,9 +5182,14 @@
  *
  * Open/closed is `data-open` on the `.combobox` ROOT (CSS hides the
  * listbox off it); `aria-expanded` on the input is the a11y mirror. Focus
- * leaving the widget closes after a 200ms grace (mirrors search-select
- * — a click on an option blurs the input first). Enhance-once is marked
- * with `data-enhanced` on the root.
+ * leaving the widget (input OR listbox) for another control closes it at
+ * once; with no focus destination it closes after a 200ms grace.
+ * Enhance-once is marked with `data-enhanced` on the root.
+ *
+ * One Tab stop (#1843): the listbox is tabindex=-1. Input and listbox are
+ * named by the field label span (aria-labelledby, so the required marker
+ * is not copied into a name), and the label's `for=` moves to the visible
+ * input once the native select is hidden.
  *
  * a11y: input is role=combobox + aria-expanded + aria-controls +
  * aria-autocomplete=list + aria-haspopup=listbox + aria-activedescendant;
@@ -5527,10 +5532,13 @@
 
     // Field label: the substrate wraps the widget in
     // `<label class="field"><span class="field__label">…</span>…</label>`.
-    var labelSpan = select.closest(".field")
-      ? select.closest(".field").querySelector(".field__label")
-      : null;
-    var labelText = labelSpan ? labelSpan.textContent.trim() : "";
+    // Name the input + listbox BY the label span (aria-labelledby), never a
+    // copy of its text: the span carries the required marker, and a copied
+    // aria-label would read "Type*(required)" (#1843, 3.3.2).
+    var field = select.closest(".field");
+    var labelSpan = field ? field.querySelector(".field__label") : null;
+    if (labelSpan && !labelSpan.id) labelSpan.id = name + "-label";
+    var labelId = labelSpan ? labelSpan.id : "";
 
     // The leading value="" option is the placeholder prompt, not a choice.
     var opts = Array.prototype.slice.call(select.options);
@@ -5540,6 +5548,7 @@
 
     var input = document.createElement("input");
     input.type = "text";
+    input.id = name + "-input";
     input.className = "combobox-input";
     input.setAttribute("role", "combobox");
     input.setAttribute("autocomplete", "off");
@@ -5547,7 +5556,7 @@
     input.setAttribute("aria-controls", listId);
     input.setAttribute("aria-autocomplete", "list");
     input.setAttribute("aria-haspopup", "listbox");
-    if (labelText) input.setAttribute("aria-label", labelText);
+    if (labelId) input.setAttribute("aria-labelledby", labelId);
     if (placeholder) input.setAttribute("placeholder", placeholder);
     var wasRequired = select.hasAttribute("required");
     if (wasRequired) {
@@ -5558,7 +5567,12 @@
     list.className = "combobox-listbox";
     list.id = listId;
     list.setAttribute("role", "listbox");
-    if (labelText) list.setAttribute("aria-label", labelText);
+    // Not a Tab stop (#1843, 2.4.3): a scrollable <ul> is keyboard-focusable
+    // in modern engines, which made the listbox a second stop after the
+    // input. Arrow keys move the active descendant; -1 keeps it out of the
+    // tab order while a click on its scrollbar stays inside the widget.
+    list.setAttribute("tabindex", "-1");
+    if (labelId) list.setAttribute("aria-labelledby", labelId);
 
     var selectedText = "";
     choices.forEach(function (opt, i) {
@@ -5598,6 +5612,11 @@
     root.appendChild(select);
     root.appendChild(list);
     root.setAttribute("data-enhanced", "");
+    // The label's `for=` pointed at the native select, now display:none —
+    // point it at the visible input so the label focuses the real control.
+    if (field && field.tagName === "LABEL" && field.htmlFor === select.id) {
+      field.htmlFor = input.id;
+    }
     if (wasRequired) syncRequiredValidity(root);
     return root;
   }
@@ -5644,33 +5663,53 @@
     }
   });
 
-  document.addEventListener("focusout", function (evt) {
-    var input = evt.target.closest && evt.target.closest(".combobox-input");
+  // Focus has left the widget: settle the typed text, close the listbox.
+  function settle(root) {
+    var input = root.querySelector(".combobox-input");
     if (!input) return;
-    var root = input.closest(".combobox");
+    var parsed = leftoverKind(root, input.value);
+    var select = root.querySelector("select[data-combobox]");
+    if (parsed.kind === "empty") {
+      input.value = selectedLabel(root);
+      syncLeftoverValidity(root, { kind: "ok" });
+    } else if (parsed.kind === "ok" && parsed.option) {
+      choose(root, parsed.option);
+      return;
+    } else if (parsed.kind === "invalid" && allowCreate(select)) {
+      createAndChoose(root, input.value);
+      return;
+    } else if (parsed.kind === "invalid") {
+      // leftover junk stays visible — must not vanish / revert
+      // (never invent the previous option as if leftover were accepted)
+      syncLeftoverValidity(root, parsed);
+    } else {
+      input.value = selectedLabel(root);
+      syncLeftoverValidity(root, { kind: "ok" });
+    }
+    setOpen(root, false);
+  }
+
+  // Watch focus leaving ANY part of the widget (input or listbox), not only
+  // the input (#1843, 2.4.11): focus that left via the listbox used to keep
+  // `data-open`, and the z-index:50 listbox covered the fields below.
+  document.addEventListener("focusout", function (evt) {
+    var root =
+      evt.target.closest &&
+      evt.target.closest(".combobox[data-enhanced]");
     if (!root) return;
+    var next = evt.relatedTarget;
+    if (next && root.contains(next)) return; // moving within the widget
+    if (next) {
+      // Focus went to another control (Tab / Shift+Tab): close now so the
+      // listbox never sits over the newly focused field.
+      settle(root);
+      return;
+    }
+    // No destination (pointer on a non-focusable spot, window blur): short
+    // grace, then settle unless focus came back.
     setTimeout(function () {
       if (root.contains(document.activeElement)) return; // re-focused
-      var parsed = leftoverKind(root, input.value);
-      var select = root.querySelector("select[data-combobox]");
-      if (parsed.kind === "empty") {
-        input.value = selectedLabel(root);
-        syncLeftoverValidity(root, { kind: "ok" });
-      } else if (parsed.kind === "ok" && parsed.option) {
-        choose(root, parsed.option);
-        return;
-      } else if (parsed.kind === "invalid" && allowCreate(select)) {
-        createAndChoose(root, input.value);
-        return;
-      } else if (parsed.kind === "invalid") {
-        // leftover junk stays visible — must not vanish / revert
-        // (never invent the previous option as if leftover were accepted)
-        syncLeftoverValidity(root, parsed);
-      } else {
-        input.value = selectedLabel(root);
-        syncLeftoverValidity(root, { kind: "ok" });
-      }
-      setOpen(root, false);
+      settle(root);
     }, 200);
   });
 
@@ -5925,21 +5964,25 @@
 
     // Field label: the substrate wraps the widget in
     // `<label class="field"><span class="field__label">…</span>…</label>`.
+    // Named BY the label span (aria-labelledby), not a copy of its text —
+    // the span carries the required marker (#1843).
     var labelSpan = native.closest(".field")
       ? native.closest(".field").querySelector(".field__label")
       : null;
-    var labelText = labelSpan ? labelSpan.textContent.trim() : "";
+    if (labelSpan && !labelSpan.id)
+      labelSpan.id = (native.id || native.name || "tags") + "-label";
+    var labelId = labelSpan ? labelSpan.id : "";
 
     var list = document.createElement("span");
     list.className = "tags-list";
     list.setAttribute("role", "list");
-    if (labelText) list.setAttribute("aria-label", labelText);
+    if (labelId) list.setAttribute("aria-labelledby", labelId);
 
     var entry = document.createElement("input");
     entry.type = "text";
     entry.className = "tags-entry";
     entry.setAttribute("autocomplete", "off");
-    if (labelText) entry.setAttribute("aria-label", labelText);
+    if (labelId) entry.setAttribute("aria-labelledby", labelId);
     var placeholder = native.getAttribute("placeholder");
     if (placeholder) entry.setAttribute("placeholder", placeholder);
 

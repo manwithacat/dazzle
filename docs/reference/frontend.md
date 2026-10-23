@@ -757,3 +757,26 @@ The CSRF header needs no host listener: `dz-csrf.js` copies the `dazzle_csrf` co
 **Related:** [App Scripts](frontend.md#app-scripts), [Htmx](frontend.md#htmx)
 
 ---
+
+## Adaptive Ui
+
+Usage-driven UI adaptation is opt-in (#1843). Dazzle records usage events (first focus on a form field, clicks on heading actions) in `_dazzle_usage_events` either way; `[ui] adaptive_ui` decides whether that signal may change what a page renders. The default is `false`: every page renders as declared, so the UI you tested is the UI users get.
+
+```toml
+[ui]
+adaptive_ui = true                          # every adaptation
+# adaptive_ui = ["combobox", "autofocus"]   # or name the ones you want
+```
+
+| Name | What changes once a tenant crosses the usage floor |
+|------|----------------------------------------------------|
+| `combobox` | a plain select with 8+ options becomes the searchable combobox |
+| `autofocus` | the most-engaged plain form field gets `autofocus` |
+| `actions` | workspace heading actions reorder by click frequency |
+| `columns` | auto-derived list columns keep heavily-engaged fields |
+
+Any other name fails manifest load. A field's own `widget=` always wins: `field deadline_type "Type" widget=select` pins a plain select even when `combobox` is on.
+
+**Related:** [Page Purpose](frontend.md#page-purpose), Widget Combobox
+
+---

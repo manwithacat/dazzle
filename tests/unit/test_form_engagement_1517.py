@@ -120,18 +120,19 @@ def test_cool_select_never_upgrades() -> None:
     assert "widget" not in fields[2]
 
 
-def test_author_widget_is_authoritative() -> None:
+@pytest.mark.parametrize("widget", ["tags", "select"])  # select: the #1843 pin
+def test_author_widget_is_authoritative(widget: str) -> None:
     fields = [
         {
             "name": "category",
             "kind": "select",
             "label": "Category",
-            "widget": "tags",
+            "widget": widget,
             "options": [(f"c{i}", f"C{i}") for i in range(10)],
         },
     ]
     annotate_form_fields_by_usage(fields, {"category": 50})
-    assert fields[0]["widget"] == "tags"
+    assert fields[0]["widget"] == widget
 
 
 def test_ref_select_never_upgrades() -> None:

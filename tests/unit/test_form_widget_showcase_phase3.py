@@ -25,6 +25,7 @@ import pytest
 from dazzle.http.runtime.renderers.fragment_adapter import _field_to_primitive
 from dazzle.render.fragment import (
     ColorField,
+    Combobox,
     FragmentRenderer,
     RichTextField,
     SliderField,
@@ -70,6 +71,20 @@ def _render(field_dict: dict) -> str:
             ),
             ('data-dz-widget="combobox"', "data-dz-options="),
             id="combobox-native-select",
+        ),
+        # #1843: `widget=select` pins a plain native select — never the
+        # searchable combobox, however long the list.
+        pytest.param(
+            {
+                "name": "kind",
+                "label": "Type",
+                "widget": "select",
+                "options": [(f"k{i}", f"K{i}") for i in range(9)],
+            },
+            Combobox,
+            ("<select", 'id="field-kind"', '<option value="k8"'),
+            ("data-dz-combobox",),
+            id="select-pins-native-select-1843",
         ),
         # HMC-018 slice 2: native <input data-dz-tags> with a comma-joined value.
         pytest.param(
@@ -260,6 +275,27 @@ _LEFTOVER = ("must not invent", "leftover junk stays visible")
             ("function leftoverKind", *_LEFTOVER),
             (),
             id="dz-combobox-leftover-2135",
+        ),
+        # #1843: one Tab stop (listbox tabindex=-1), focus leaving via the
+        # listbox closes it, and names come from the label span by id — a
+        # copied aria-label would read the required marker.
+        pytest.param(
+            f"{_HM_CONTROLLERS}/dz-combobox.js",
+            (
+                'list.setAttribute("tabindex", "-1")',
+                'closest(".dz-combobox[data-dz-enhanced]")',
+                "evt.relatedTarget",
+                'input.setAttribute("aria-labelledby", labelId)',
+                "field.htmlFor = input.id",
+            ),
+            ('setAttribute("aria-label"',),
+            id="dz-combobox-one-tab-stop-1843",
+        ),
+        pytest.param(
+            f"{_HM_CONTROLLERS}/dz-tags.js",
+            ('entry.setAttribute("aria-labelledby", labelId)',),
+            ('entry.setAttribute("aria-label"',),
+            id="dz-tags-labelledby-1843",
         ),
         pytest.param(
             f"{_HM_CONTROLLERS}/dz-tags.js",

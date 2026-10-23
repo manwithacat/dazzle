@@ -720,6 +720,7 @@ def build_server_config(
     storage_defs: Any = None,  # dict[str, StorageConfig] from manifest (#932)
     audit_integrity: str = "none",  # "none" | "hash_chain" (#1197, #1206)
     security_profile: str | None = None,  # "basic" | "standard" | "strict" (#1235)
+    adaptive_ui: frozenset[str] = frozenset(),  # `[ui] adaptive_ui` (#1843)
 ) -> "ServerConfig":
     """Build a fully-populated ``ServerConfig`` from an AppSpec.
 
@@ -869,6 +870,7 @@ def build_server_config(
         storage_defs=dict(storage_defs or {}),
         audit_integrity=audit_integrity,
         security_profile=security_profile,
+        adaptive_ui=adaptive_ui,
     )
 
 
@@ -1024,6 +1026,8 @@ def assemble_post_build_routes(
             # builder carries the resolved flags).
             require_auth_by_default=bool(getattr(builder, "_enable_auth", False))
             and not bool(getattr(builder, "_enable_test_mode", False)),
+            # #1843: `[ui] adaptive_ui` gates the usage-driven form/action adaptations.
+            adaptive_ui=builder.adaptive_ui,
         )
         app.include_router(page_router, prefix="/app")
         logger.info("  App pages: %s workspaces mounted at /app", len(appspec.workspaces))
@@ -1391,6 +1395,7 @@ def create_app_factory(
         storage_defs=getattr(manifest, "storage_defs", None),
         audit_integrity=audit_integrity,
         security_profile=security_profile_override,
+        adaptive_ui=manifest.adaptive_ui,
     )
 
     # Build and return the FastAPI app

@@ -3,6 +3,7 @@
 One table per outcome: a section is absent (default), parsed, filtered, or
 rejected loudly. Each row names the section and the issue that introduced it:
 [extensions] routers (#786), [renderers] extra (#1116), [ui] app_scripts (#1515), [ui] topbar_title (#1794), [ui] page_purpose (#1811),
+[ui] adaptive_ui (#1843),
 [auth.admin_capabilities] (admin-authz) and
 [serve] app (ADR-0046), [auth.enterprise] protocols (DD-013),
 [auth.two_factor] (DD-014).
@@ -40,6 +41,7 @@ def _attr(obj: Any, dotted: str) -> Any:
         pytest.param("app_scripts", [], id="ui_app_scripts_1515"),
         pytest.param("topbar_title", "app", id="ui_topbar_title_1794"),
         pytest.param("page_purpose", True, id="ui_page_purpose_1811"),
+        pytest.param("adaptive_ui", frozenset(), id="ui_adaptive_ui_off_by_default_1843"),
         pytest.param("auth.admin_capabilities", {}, id="auth_admin_capabilities"),
         pytest.param("serve.app", None, id="serve_app_adr0046"),
         pytest.param("auth.enterprise.protocols", [], id="auth_enterprise_dd013"),
@@ -94,6 +96,24 @@ def test_absent_section_defaults_empty(tmp_path: Path, attr: str, expected: Any)
         ),
         pytest.param(
             "\n[ui]\npage_purpose = false\n", "page_purpose", False, id="ui_page_purpose_off_1811"
+        ),
+        pytest.param(
+            "\n[ui]\nadaptive_ui = true\n",
+            "adaptive_ui",
+            frozenset({"combobox", "autofocus", "actions", "columns"}),
+            id="ui_adaptive_ui_true_is_all_1843",
+        ),
+        pytest.param(
+            "\n[ui]\nadaptive_ui = false\n",
+            "adaptive_ui",
+            frozenset(),
+            id="ui_adaptive_ui_false_1843",
+        ),
+        pytest.param(
+            '\n[ui]\nadaptive_ui = ["actions", "columns"]\n',
+            "adaptive_ui",
+            frozenset({"actions", "columns"}),
+            id="ui_adaptive_ui_named_subset_1843",
         ),
         pytest.param(
             '\n[auth]\nenabled = true\norg_admin_roles = ["org_admin"]\n'
@@ -185,6 +205,16 @@ def test_lenient_section_filters_bad_entries(
             '\n[ui]\ntopbar_title = "breadcrumb"\n',
             "topbar_title must be true, false, or 'page'",
             id="ui_topbar_title_unknown_1794",
+        ),
+        pytest.param(
+            '\n[ui]\nadaptive_ui = ["combobox", "layout"]\n',
+            r"adaptive_ui names unknown adaptation\(s\) \['layout'\]",
+            id="ui_adaptive_ui_unknown_name_1843",
+        ),
+        pytest.param(
+            '\n[ui]\nadaptive_ui = "combobox"\n',
+            "adaptive_ui must be true, false, or a list",
+            id="ui_adaptive_ui_scalar_1843",
         ),
         pytest.param(
             '\n[auth.enterprise]\nprotocols = ["oidc", "saml"]\n',

@@ -13,7 +13,11 @@ primitive dispatch:
 
 - **Combobox upgrade** — a heavily-engaged plain ``select`` with a long option
   list is promoted to the searchable ``combobox`` widget. An author-declared
-  ``widget`` is authoritative and never overridden.
+  ``widget`` is authoritative and never overridden — ``widget=select`` pins
+  a plain select (#1843).
+
+Both adaptations are opt-in per app via ``[ui] adaptive_ui`` (#1843); the
+usage signal is recorded either way.
 
 Same contract as the sibling resolvers (`action_prominence_resolver`,
 `column_economy_resolver`): **cold-start byte parity** — below the min-sample
@@ -73,6 +77,8 @@ def annotate_form_fields_by_usage(
     *,
     min_samples: int = _DEFAULT_MIN_SAMPLES,
     combobox_min_options: int = _DEFAULT_COMBOBOX_MIN_OPTIONS,
+    upgrade_combobox: bool = True,
+    autofocus: bool = True,
 ) -> None:
     """Annotate form field dicts in place from the engagement signal.
 
@@ -84,6 +90,10 @@ def annotate_form_fields_by_usage(
       stable max) gains ``autofocus: True``;
     - every plain ``select`` with ``>= combobox_min_options`` options whose
       own engagement clears ``min_samples`` gains ``widget: "combobox"``.
+
+    ``upgrade_combobox`` / ``autofocus`` switch each pass off independently —
+    the http seam derives them from ``[ui] adaptive_ui`` (#1843), which is off
+    by default so a form renders as declared.
     """
     total = sum(usage.values())
     if total < min_samples or not fields:
@@ -93,6 +103,19 @@ def annotate_form_fields_by_usage(
     # it must already carry `widget` when the autofocus pass filters on
     # plainness — otherwise the hottest select could take autofocus and then
     # turn into the searchable combobox control autofocus is excluded from.
+    if upgrade_combobox:
+        _upgrade_long_selects(fields, usage, min_samples, combobox_min_options)
+    if autofocus:
+        _autofocus_hottest(fields, usage, min_samples, total)
+
+
+def _upgrade_long_selects(
+    fields: list[dict[str, Any]],
+    usage: dict[str, int],
+    min_samples: int,
+    combobox_min_options: int,
+) -> None:
+    """Promote each heavily-engaged long plain select to ``widget: "combobox"``."""
     for entry in fields:
         if entry.get("widget") or str(entry.get("kind", "")).lower() != "select":
             continue
@@ -111,7 +134,11 @@ def annotate_form_fields_by_usage(
                 min_samples,
             )
 
-    # Autofocus: hottest engaged plain field, declared order winning ties.
+
+def _autofocus_hottest(
+    fields: list[dict[str, Any]], usage: dict[str, int], min_samples: int, total: int
+) -> None:
+    """Autofocus the hottest engaged plain field, declared order winning ties."""
     hottest: dict[str, Any] | None = None
     hottest_count = 0
     for entry in fields:

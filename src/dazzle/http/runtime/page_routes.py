@@ -1320,6 +1320,10 @@ class _PageRouterConfig:
     # command palette denies anonymous requests instead of serving the
     # full surface index.
     require_auth_by_default: bool = False
+    # #1843: `[ui] adaptive_ui` — which usage-driven adaptations may change the
+    # rendered page ("combobox", "autofocus", "actions"). Empty = off; the
+    # usage signal is still recorded.
+    adaptive_ui: frozenset[str] = frozenset()
 
 
 # =============================================================================
@@ -2497,6 +2501,13 @@ def _annotate_form_usage(
     byte-identical form (cold-start parity). Section dicts alias the flat
     entries, so sectioned forms are covered by the same pass.
     """
+    # #1843: opt-in per adaptation via `[ui] adaptive_ui`; off → no read, the
+    # form renders exactly as declared.
+    adaptive = prc.deps.adaptive_ui
+    upgrade_combobox = "combobox" in adaptive
+    autofocus = "autofocus" in adaptive
+    if not (upgrade_combobox or autofocus):
+        return
     # Forms only: the detail ctx also carries "fields", and annotating those
     # dicts (widget upgrades) would leak into read-only rendering.
     if getattr(render_ctx, "form", None) is None or not ctx_dict.get("fields"):
@@ -2508,7 +2519,12 @@ def _annotate_form_usage(
         prc.request, surface=form_entity, kind=USAGE_KIND_FIELD
     )
     if field_usage:
-        annotate_form_fields_by_usage(ctx_dict["fields"], field_usage)
+        annotate_form_fields_by_usage(
+            ctx_dict["fields"],
+            field_usage,
+            upgrade_combobox=upgrade_combobox,
+            autofocus=autofocus,
+        )
 
 
 def _dispatch_custom_mode(
@@ -3121,6 +3137,17 @@ def gate_authored_primary_actions_for_principal(
     return out
 
 
+def _workspace_action_usage(
+    deps: _PageRouterConfig, request: Any, workspace_name: str
+) -> dict[str, int]:
+    """The heading-action click signal, when `[ui] adaptive_ui` enables
+    "actions" (#1843). Otherwise ``{}`` — below every floor, so
+    ``resolve_action_prominence_by_usage`` keeps the declared-order split."""
+    if "actions" not in deps.adaptive_ui:
+        return {}
+    return _read_workspace_action_usage(request, workspace_name)
+
+
 def _read_workspace_action_usage(request: Any, surface_name: str) -> dict[str, int]:
     """Best-effort per-render read of heading-action usage counts (ADR-0050 3a).
 
@@ -3260,7 +3287,7 @@ async def _workspace_handler(
     # below the floor / no usage / no DB it is byte-identical to the declared-order
     # split. Read is best-effort (a failure → declared order). A ≤3-action heading
     # is unchanged (empty overflow) regardless.
-    _action_usage = _read_workspace_action_usage(request, render_ws_ctx.name)
+    _action_usage = _workspace_action_usage(deps, request, render_ws_ctx.name)
     primary_actions, overflow_actions = resolve_action_prominence_by_usage(
         primary_actions, _action_usage, route_of=lambda a: a["route"]
     )
@@ -3436,6 +3463,7 @@ def create_page_routes(
     entity_services: dict[str, Any] | None = None,
     entity_auto_includes: dict[str, Any] | None = None,
     require_auth_by_default: bool = False,
+    adaptive_ui: frozenset[str] = frozenset(),
 ) -> APIRouter:
     """
     Create FastAPI page routes from an AppSpec.
@@ -3457,6 +3485,9 @@ def create_page_routes(
             this set are skipped so the framework's auto-route doesn't
             shadow the explicit override (#1140). Paths here are the
             REGISTRATION paths (stripped of ``app_prefix``).
+        adaptive_ui: ``[ui] adaptive_ui`` (#1843) — the usage-driven
+            adaptations allowed to change a page ("combobox", "autofocus",
+            "actions"). Empty (the default) renders every page as declared.
 
     Returns:
         FastAPI router with page routes.
@@ -3567,6 +3598,7 @@ def create_page_routes(
         anon_nav=anon_nav,
         unrestricted_nav=unrestricted_nav,
         unmatched_role_navs=unmatched_role_navs,
+        adaptive_ui=adaptive_ui,
     )
 
     # Register routes — sort by specificity so FastAPI matches the most-specific

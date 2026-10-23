@@ -17,6 +17,11 @@ _FRAGMENT_CHROME_WARNED = False
 # "page" → "page" (the current page title, app name as fallback).
 TopbarTitleMode = Literal["app", "page", "none"]
 
+# #1843 — the usage-driven UI adaptations `[ui] adaptive_ui` can switch on.
+# Usage events are recorded either way; these only gate whether the recorded
+# signal changes what a page renders.
+ADAPTIVE_UI_NAMES: tuple[str, ...] = ("combobox", "autofocus", "actions", "columns")
+
 
 def _fragment_chrome_warned() -> bool:
     global _FRAGMENT_CHROME_WARNED
@@ -705,6 +710,11 @@ class ProjectManifest:
     # app shell rendering `ux: purpose:` as `.dz-page-purpose` on every surface.
     # App-wide off wins over a surface's `ux: show_purpose: true`. The text stays
     # in the IR / inspection / compliance docs.
+    adaptive_ui: frozenset[str] = frozenset()  # #1843 — `[ui] adaptive_ui`:
+    # which usage-driven adaptations may change a rendered page. Default off
+    # (an app that states conformance must render what was tested); `true` =
+    # all of ADAPTIVE_UI_NAMES, or a list naming some of them. Usage events
+    # are recorded regardless.
     app_theme: str | None = None  # v0.61.36: app-shell theme preset (overrides
     # the default shadcn-zinc tokens with an alternate :root block). One of
     # the presets shipped in src/dazzle/page/runtime/static/css/themes/<name>.css
@@ -908,6 +918,27 @@ def _parse_topbar_title(value: object) -> TopbarTitleMode:
     raise ValueError(f"[ui] topbar_title must be true, false, or 'page'; got {value!r}")
 
 
+def _parse_adaptive_ui(value: object) -> frozenset[str]:
+    """`[ui] adaptive_ui` (#1843): `false` (default) → none, `true` → every
+    adaptation in ``ADAPTIVE_UI_NAMES``, or a list naming a subset."""
+    if value is False:
+        return frozenset()
+    if value is True:
+        return frozenset(ADAPTIVE_UI_NAMES)
+    if isinstance(value, list):
+        unknown = [v for v in value if v not in ADAPTIVE_UI_NAMES]
+        if unknown:
+            raise ValueError(
+                f"[ui] adaptive_ui names unknown adaptation(s) {unknown!r}; "
+                f"choose from {list(ADAPTIVE_UI_NAMES)}"
+            )
+        return frozenset(str(v) for v in value)
+    raise ValueError(
+        f"[ui] adaptive_ui must be true, false, or a list drawn from "
+        f"{list(ADAPTIVE_UI_NAMES)}; got {value!r}"
+    )
+
+
 def load_manifest(path: Path) -> ProjectManifest:
     # #1414: a missing dazzle.toml used to raise a raw FileNotFoundError that
     # escaped the CLI's `except (ParseError, DazzleError)` handlers as an
@@ -1100,6 +1131,7 @@ def load_manifest(path: Path) -> ProjectManifest:
     haptic_enabled = bool(ui_data.get("haptic", False))
     topbar_title_mode = _parse_topbar_title(ui_data.get("topbar_title", True))
     page_purpose_enabled = bool(ui_data.get("page_purpose", True))
+    adaptive_ui_names = _parse_adaptive_ui(ui_data.get("adaptive_ui", False))
     # Phase 4 app-shell migration (v0.67.45): `[ui] fragment_chrome` is
     # retired. The key is still accepted in dazzle.toml without raising
     # so existing project manifests keep loading; a deprecation log
@@ -1229,6 +1261,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         dark_mode_toggle=dark_mode_toggle_enabled,
         topbar_title=topbar_title_mode,
         page_purpose=page_purpose_enabled,
+        adaptive_ui=adaptive_ui_names,
         haptic=haptic_enabled,
         environments=environments,
         extensions=extensions_config,

@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
 SEED_SCHEMA_VERSION = (
-    65  # v65: client_events concept: htmx 4 event names + dz:region-loaded (#1845);
+    66  # v66: adaptive_ui concept teaches `[ui] adaptive_ui` + widget=select pin (#1843);
+    # v65: client_events concept: htmx 4 event names + dz:region-loaded (#1845);
     # v64: split_content inline body is Markdown (#1842);
     # v63: region filters: none / exclude: / eager: + comparison limit: top-N (#1809, #1814);
     # v62: state_machine concept teaches transition label/confirm + row_transitions (#1813);

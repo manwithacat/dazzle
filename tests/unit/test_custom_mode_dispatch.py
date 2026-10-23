@@ -68,7 +68,7 @@ def _make_prc(
     # default the production helper handles the same way.
     return SimpleNamespace(
         surface_name=surface.name,
-        deps=SimpleNamespace(appspec=appspec),
+        deps=SimpleNamespace(appspec=appspec, adaptive_ui=frozenset()),
         request=request,
         auth_ctx=None,
         render_ctx=render_ctx,

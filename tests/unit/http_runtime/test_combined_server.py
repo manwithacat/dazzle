@@ -77,6 +77,7 @@ def test_clickable_url(
                 "tenant_config",
                 "workers",
                 "dark_mode_toggle",  # #1445 slice 3 — threaded to the typed render context
+                "adaptive_ui",  # #1843 — `[ui] adaptive_ui`
             },
             id="run_unified_server",
         ),
@@ -95,6 +96,7 @@ def test_clickable_url(
                 "redis_url",
                 "storage_defs",
                 "workers",
+                "adaptive_ui",  # #1843 — gates the list-column adaptation
             },
             id="run_backend_only",
         ),

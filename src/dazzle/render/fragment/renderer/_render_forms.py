@@ -501,7 +501,7 @@ class _RenderFormsMixin:
         fid = ctx.escape_attr(seam.field_id)
         # #1842 (3.3.2): a visible `dz-field` label `for=` the amount input
         # (`field-{name}`), not an aria-label behind a "0.00" placeholder.
-        label_html = label_text + self._form_required_indicator(m.required)
+        label_html = label_text
 
         if m.currency_fixed:
             # The prefix symbol is aria-hidden; the code rides in the label.
@@ -525,7 +525,7 @@ class _RenderFormsMixin:
                 f'value="{ctx.escape_attr(m.currency_code)}">'
                 "</div>"
             )
-            return self._widget_label(fixed_label, name, money_html)
+            return self._widget_label(fixed_label, name, money_html, required=m.required)
         currency_opts = "".join(
             f'<option value="{ctx.escape_attr(code)}" '
             f'data-scale="{ctx.escape_attr(opt_scale)}" '
@@ -552,19 +552,23 @@ class _RenderFormsMixin:
             f'<input type="hidden" name="{name}_minor" value="{minor_attr}">'
             "</div>"
         )
-        return self._widget_label(label_html, name, money_html)
+        return self._widget_label(label_html, name, money_html, required=m.required)
 
-    @staticmethod
-    def _widget_label(label_html: str, name: str, inner: str, *, label_id: str = "") -> str:
+    def _widget_label(
+        self, label_html: str, name: str, inner: str, *, required: bool, label_id: str = ""
+    ) -> str:
         """Common substrate field wrapper for `widget=`-driven primitives —
         the label + the widget element the client controller mounts on.
-        `label_id` gives the label text an id for widgets whose focusable
-        element is not the `for=` target (rich text names its editor by
-        `aria-labelledby`, #1841)."""
+        A required field carries the same `*` + `(required)` marker as a
+        plain field (#1843, WCAG 3.3.2). `label_id` gives the label text an
+        id for widgets whose focusable element is not the `for=` target
+        (rich text names its editor, and the enhanced combobox its input, by
+        `aria-labelledby` — #1841, #1843)."""
         id_attr = f' id="{label_id}"' if label_id else ""
         return (
             f'<label class="dz-field" for="field-{name}">'
-            f'<span class="dz-field__label"{id_attr}>{label_html}</span>{inner}</label>'
+            f'<span class="dz-field__label"{id_attr}>{label_html}'
+            f"{self._form_required_indicator(required)}</span>{inner}</label>"
         )
 
     def _emit_widget_combobox(self, c: WidgetCombobox, ctx: RenderContext) -> str:
@@ -588,7 +592,15 @@ class _RenderFormsMixin:
             f'class="dz-form-input"{required_attr}>'
             f"{opts}</select>"
         )
-        return self._widget_label(ctx.escape(c.label), name, inner)
+        # #1843: the label text carries an id — once enhanced, the visible
+        # combobox input and its listbox are named by it (`aria-labelledby`).
+        return self._widget_label(
+            ctx.escape(c.label),
+            name,
+            inner,
+            required=c.required,
+            label_id=f"field-{name}-label",
+        )
 
     def _emit_tags_field(self, t: TagsField, ctx: RenderContext) -> str:
         # HM-native multi-value chips via ingest seam (#1577):
@@ -612,7 +624,7 @@ class _RenderFormsMixin:
             f'class="dz-form-input" value="{ctx.escape_attr(joined)}"'
             f"{placeholder_attr}{required_attr}>"
         )
-        return self._widget_label(ctx.escape(t.label), name, inner)
+        return self._widget_label(ctx.escape(t.label), name, inner, required=t.required)
 
     def _emit_color_field(self, c: ColorField, ctx: RenderContext) -> str:
         name = ctx.escape_attr(c.name)
@@ -632,7 +644,7 @@ class _RenderFormsMixin:
             f'aria-label="{ctx.escape_attr(c.label)} hex colour" value="{init_attr}">'
             "</div>"
         )
-        return self._widget_label(ctx.escape(c.label), name, inner)
+        return self._widget_label(ctx.escape(c.label), name, inner, required=c.required)
 
     def _emit_slider_field(self, s: SliderField, ctx: RenderContext) -> str:
         name = ctx.escape_attr(s.name)
@@ -655,7 +667,7 @@ class _RenderFormsMixin:
             f'value="{ctx.escape_attr(s.initial_value)}">'
             "</div>"
         )
-        return self._widget_label(ctx.escape(s.label), name, inner)
+        return self._widget_label(ctx.escape(s.label), name, inner, required=s.required)
 
     def _emit_switch_field(self, s: SwitchField, ctx: RenderContext) -> str:
         """HM Switch — label.dz-switch + data-dz-switch + track (gallery spine).
@@ -786,7 +798,9 @@ class _RenderFormsMixin:
             f'<div data-dz-editor aria-labelledby="{label_id}"{editor_required}></div>'
             "</div>"
         )
-        return self._widget_label(ctx.escape(r.label), name, inner, label_id=label_id)
+        return self._widget_label(
+            ctx.escape(r.label), name, inner, required=r.required, label_id=label_id
+        )
 
     def _emit_form_stepper(self, fs: FormStepper, ctx: RenderContext) -> str:
         """Render the wizard stage-tabs (Tier F4d: the HM dz-wizard.js

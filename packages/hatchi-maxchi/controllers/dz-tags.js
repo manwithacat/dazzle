@@ -163,21 +163,25 @@
 
     // Field label: the substrate wraps the widget in
     // `<label class="dz-field"><span class="dz-field__label">…</span>…</label>`.
+    // Named BY the label span (aria-labelledby), not a copy of its text —
+    // the span carries the required marker (#1843).
     var labelSpan = native.closest(".dz-field")
       ? native.closest(".dz-field").querySelector(".dz-field__label")
       : null;
-    var labelText = labelSpan ? labelSpan.textContent.trim() : "";
+    if (labelSpan && !labelSpan.id)
+      labelSpan.id = (native.id || native.name || "dz-tags") + "-label";
+    var labelId = labelSpan ? labelSpan.id : "";
 
     var list = document.createElement("span");
     list.className = "dz-tags-list";
     list.setAttribute("role", "list");
-    if (labelText) list.setAttribute("aria-label", labelText);
+    if (labelId) list.setAttribute("aria-labelledby", labelId);
 
     var entry = document.createElement("input");
     entry.type = "text";
     entry.className = "dz-tags-entry";
     entry.setAttribute("autocomplete", "off");
-    if (labelText) entry.setAttribute("aria-label", labelText);
+    if (labelId) entry.setAttribute("aria-labelledby", labelId);
     var placeholder = native.getAttribute("placeholder");
     if (placeholder) entry.setAttribute("placeholder", placeholder);
 

@@ -527,6 +527,7 @@ def _serve_backend_only(ctx: _ServeContext) -> None:
         redis_url=ctx.redis_url,
         workers=ctx.workers,
         storage_defs=getattr(ctx.mf, "storage_defs", None) if ctx.mf else None,
+        adaptive_ui=ctx.mf.adaptive_ui if ctx.mf else frozenset(),
     )
 
 
@@ -694,6 +695,7 @@ def _serve_combined(ctx: _ServeContext) -> None:
         local_assets=use_local_assets,
         storage_defs=getattr(mf, "storage_defs", None),
         dark_mode_toggle=mf.dark_mode_toggle,
+        adaptive_ui=mf.adaptive_ui,
     )
 
 
