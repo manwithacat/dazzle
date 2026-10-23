@@ -1,6 +1,6 @@
 {
   "src_lines": 331220,
-  "test_lines": 321422,
+  "test_lines": 321435,
   "docs_lines": 49574,
   "construct_count": 31,
   "written": "2026-10-23",
@@ -708,6 +708,13 @@
         "docs_lines"
       ],
       "reason": "#1838 #1839 #1840 #1841 #1842-shortcut a11y fixes (consumer-forced by cyfuture) with regression tests"
+    },
+    {
+      "date": "2026-10-23",
+      "rose": [
+        "test_lines"
+      ],
+      "reason": "red-main fix: workspace drawer icons aria-hidden + static-template INV-11 sweep test"
     }
   ]
 }

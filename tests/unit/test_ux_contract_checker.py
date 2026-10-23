@@ -1,5 +1,7 @@
 """Tests for contract checker — HTML assertion engine."""
 
+from pathlib import Path
+
 import pytest
 
 from dazzle.testing.ux.contract_checker import check_contract
@@ -664,6 +666,17 @@ class TestFindExposedControlIcons:
         result = check_contract(contract, html)
         assert result.status == "failed"
         assert "Unhidden icon inside a control" in (result.error or "")
+
+    @pytest.mark.parametrize(
+        "template",
+        sorted((Path(__file__).parents[2] / "src/dazzle/render/fragment/static").glob("*.html")),
+        ids=lambda p: p.name,
+    )
+    def test_static_chrome_templates_pass(self, template: Path) -> None:
+        """Static chrome (e.g. the workspace drawer) bypasses the renderer sweep."""
+        from dazzle.testing.ux.contract_checker import find_exposed_control_icons
+
+        assert find_exposed_control_icons(template.read_text(encoding="utf-8")) == []
 
     def test_rendered_add_card_row_passes(self) -> None:
         from dazzle.render.fragment import FragmentRenderer
