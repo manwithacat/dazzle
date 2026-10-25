@@ -1496,6 +1496,39 @@ llm_intent classify_ticket "Classify Support Ticket":
 # constants, then run `dazzle grammar`.
 # ---------------------------------------------------------------------------
 
+_RUNTIME_CONSTRUCTS_SECTION = """\
+## Runtime Constructs
+
+### `feedback_widget:` (#1854)
+
+Opt-in in-app feedback. `enabled` makes the linker generate the `FeedbackReport`
+entity (with `feedback_create` / `feedback_admin` / `feedback_edit` surfaces and
+the `/feedbackreports` API) and mounts the widget on every signed-in page.
+
+```ebnf
+feedback_widget_block ::= "feedback_widget" ":" ("enabled" | "disabled") NEWLINE
+                          (INDENT feedback_widget_key+ DEDENT)?
+feedback_widget_key   ::= "position" ":" position_value NEWLINE
+                        | "shortcut" ":" shortcut_value NEWLINE
+                        | "categories" ":" "[" IDENT ("," IDENT)* "]" NEWLINE
+                        | "severities" ":" "[" IDENT ("," IDENT)* "]" NEWLINE
+                        | "capture" ":" "[" IDENT ("," IDENT)* "]" NEWLINE
+                        | "review" ":" NEWLINE INDENT review_key+ DEDENT
+review_key            ::= "personas" ":" "[" IDENT ("," IDENT)* "]" NEWLINE   (* required *)
+                        | "shortcut" ":" shortcut_value NEWLINE                 (* default alt+shift+r *)
+                        | "screenshot" ":" ("off" | "optional") NEWLINE
+shortcut_value        ::= "none" | IDENT ("-" IDENT)* | STRING                 (* backtick, f1, ctrl-shift-f, "ctrl+shift+f" *)
+```
+
+`categories:` and `severities:` become the `FeedbackReport.category` / `severity`
+enums (the first severity is the default). `review: personas:` names the declared
+personas that get the review posture — pointing at an element and leaving a note
+anchored to it; an unknown persona is a validate error. `screenshot: optional`
+offers "Attach screenshot" where the browser supports it. See
+`docs/reference/runtime-capabilities.md` § Feedback Widget for the metas the page
+carries and the `POST` / `GET /feedbackreports` contract.
+"""
+
 _ENTITY_CONSTRUCTS_SECTION = """\
 ## Entity Constructs
 
@@ -1772,6 +1805,8 @@ def generate_grammar() -> str:
 
     # Hand-authored construct guides (preserved across regeneration, #1350)
     parts.append(_ENTITY_CONSTRUCTS_SECTION.rstrip())
+    parts.append("")
+    parts.append(_RUNTIME_CONSTRUCTS_SECTION.rstrip())
     parts.append("")
 
     # DSL examples by category
