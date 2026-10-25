@@ -62,10 +62,10 @@ _EXPECTED_NAMES = {
     "bold": "Bold",
     "italic": "Italic",
     "underline": "Underline",
-    "h2": "Heading 2",
-    "h3": "Heading 3",
+    "h2": "Heading 2, H2",
+    "h3": "Heading 3, H3",
     "ul": "Bulleted list",
-    "ol": "Numbered list",
+    "ol": "Numbered list, 1.",
     "link": "Link",
     "clear": "Clear formatting",
 }
@@ -81,6 +81,7 @@ def test_richtext_toolbar_buttons_are_named_by_words(page: Any) -> None:
         """bs => bs.map(b => ({
             cmd: b.dataset.cmd,
             label: b.getAttribute("aria-label"),
+            glyph: b.textContent,
             title: b.title,
             tabindex: b.getAttribute("tabindex"),
             glyphHidden: [...b.childNodes].every(
@@ -90,6 +91,9 @@ def test_richtext_toolbar_buttons_are_named_by_words(page: Any) -> None:
     assert {b["cmd"]: b["label"] for b in buttons} == _EXPECTED_NAMES
     for b in buttons:
         assert b["glyphHidden"], f"{b['cmd']}: glyph must be aria-hidden"
+        # WCAG 2.5.3 Label in Name: visible letters/digits are in the name.
+        if any(c.isalnum() for c in b["glyph"]):
+            assert b["glyph"].lower() in b["label"].lower(), b
         assert b["title"].startswith(b["label"] + " (Ctrl+"), b
     # Roving tabindex: one tab stop, ArrowRight moves it.
     assert [b["tabindex"] for b in buttons].count("0") == 1

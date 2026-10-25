@@ -1,9 +1,9 @@
 {
   "src_lines": 333161,
-  "test_lines": 324842,
+  "test_lines": 324875,
   "docs_lines": 49845,
   "construct_count": 31,
-  "written": "2026-10-24",
+  "written": "2026-10-25",
   "exceptions": [
     {
       "date": "2026-10-11",
@@ -741,6 +741,13 @@
         "docs_lines"
       ],
       "reason": "issues batch: #1843 #1844 #1845 #1846 #1848 #1849 #1850 #1851"
+    },
+    {
+      "date": "2026-10-25",
+      "rose": [
+        "test_lines"
+      ],
+      "reason": "#1842 follow-up: Label-in-Name toolbar check + form-control border gate"
     }
   ]
 }

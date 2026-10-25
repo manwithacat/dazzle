@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+### Fixed
+- **Rich-text toolbar names contain their visible glyph, and the feedback description box has a 3:1 border (#1842 follow-up, consumer-forced by cyfuture).** The #1842 names "Heading 2", "Heading 3" and "Numbered list" did not contain the visible "H2", "H3" and "1.", so a speech user saying "click H2" missed them (WCAG 2.5.3 Label in Name; axe `label-content-name-mismatch` flagged every form with a rich-text field). A button whose glyph has a letter or digit the word lacks now appends it: "Heading 2, H2", "Heading 3, H3", "Numbered list, 1.". Symbol glyphs (•, 🔗, ✕) and B / I / U (contained in "Bold", "Italic", "Underline") are unchanged. The feedback widget's description `<textarea>` still drew `--colour-border` (1.24:1); it now uses `--colour-border-control` like every other control since #1840 (1.4.11). A new gate in `tests/unit/test_token_contrast_wcag.py` scans the HaTchi-MaXchi component and framework stylesheets for any form-control selector that draws `--colour-border`. cyfuture can drop the `, <glyph>` toolbar patch from host JS and the feedback-textarea rule from `static/css/custom.css`.
+
 ## [0.125.0] - 2026-10-24
 
 ### Added

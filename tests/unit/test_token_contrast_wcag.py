@@ -189,3 +189,32 @@ def test_dark_fallback_matches_light_dark_branch() -> None:
         assert _oklch_components(tokens, value, "dark") == _oklch_components(
             tokens, tokens[name], "dark"
         ), f"{name}: @supports fallback disagrees with light-dark() dark branch"
+
+
+_REPO = Path(__file__).parents[2]
+# A selector naming a form control: the element, or a class ending in a
+# control word (`.dz-form-input`, `.dz-feedback-description`), but not a
+# part of one (`.dz-search-select-results` is a popover).
+_CONTROL_SELECTOR = re.compile(
+    r"(^|[\s,>+~(])(input|textarea|select)\b|-(input|textarea|select|description)(?![\w-])"
+)
+_DIVIDER_BORDER = re.compile(r"border(-[a-z-]+)?\s*:[^;]*var\(--colour-border\)")
+
+
+def test_form_controls_never_draw_the_divider_border() -> None:
+    """A control boundary uses --colour-border-control (WCAG 1.4.11, #1840).
+
+    #1840 moved the controls by hand and missed the feedback description
+    textarea (#1842 follow-up), so the class is scanned, not listed.
+    """
+    sheets = sorted((_REPO / "packages/hatchi-maxchi/components").glob("*.css")) + sorted(
+        (_REPO / "src/dazzle/page/runtime/static/css").glob("*.css")
+    )
+    offenders = []
+    for sheet in sheets:
+        css = re.sub(r"/\*.*?\*/", "", sheet.read_text(), flags=re.S)
+        for selector, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+            bare = re.sub(r":[a-z-]+(\([^)]*\))?", "", selector)
+            if _DIVIDER_BORDER.search(body) and _CONTROL_SELECTOR.search(bare):
+                offenders.append(f"{sheet.name}: {' '.join(selector.split())}")
+    assert not offenders, "use --colour-border-control:\n" + "\n".join(offenders)
