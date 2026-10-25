@@ -746,3 +746,212 @@ class TestFeedbackReportNotificationField:
         assert entity is not None
         field_names = {f.name for f in entity.fields}
         assert "notification_sent" in field_names
+
+
+# ---------------------------------------------------------------------------
+# 10. Review posture, applied enums, anchors (#1854)
+# ---------------------------------------------------------------------------
+
+
+def _link(dsl: str) -> object:
+    from pathlib import Path
+
+    from dazzle.core.dsl_parser_impl import parse_dsl
+    from dazzle.core.ir import ModuleIR
+    from dazzle.core.linker import build_appspec
+
+    mod_name, app_name, app_title, app_config, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+    module = ModuleIR(
+        name=mod_name or "test",
+        file=Path("test.dsl"),
+        app_name=app_name,
+        app_title=app_title,
+        app_config=app_config,
+        uses=uses,
+        fragment=fragment,
+    )
+    return build_appspec([module], module.name)
+
+
+_BASE_1854 = (
+    'module test\napp test "Test"\n\n'
+    'entity User "User":\n'
+    "  id: uuid pk\n"
+    "  name: str(100)\n\n"
+    'persona admin "Admin":\n'
+    '  description: "Runs the place"\n\n'
+    'persona teacher "Teacher":\n'
+    '  description: "Marks"\n\n'
+)
+
+
+class TestFeedbackReviewSpec1854:
+    """``review:`` block → ``FeedbackReviewSpec`` (#1854)."""
+
+    def test_defaults(self) -> None:
+        from dazzle.core.ir.feedback_widget import FeedbackReviewSpec
+
+        spec = FeedbackReviewSpec(personas=["admin"])
+        assert spec.shortcut == "alt+shift+r"
+        assert spec.screenshot == "off"
+
+    def test_screenshot_policy_is_closed(self) -> None:
+        from dazzle.core.ir.feedback_widget import FeedbackReviewSpec
+
+        assert FeedbackReviewSpec(personas=["a"], screenshot="optional").screenshot == "optional"
+        with pytest.raises(ValidationError, match="off, optional"):
+            FeedbackReviewSpec(personas=["a"], screenshot="always")
+
+    def test_widget_spec_review_defaults_to_none(self) -> None:
+        from dazzle.core.ir.feedback_widget import FeedbackWidgetSpec
+
+        assert FeedbackWidgetSpec(enabled=True).review is None
+
+    def test_parser_reads_review_block(self) -> None:
+        frag = _parse(
+            'module test\napp test "Test"\n\n'
+            "feedback_widget: enabled\n"
+            "  review:\n"
+            "    personas: [super_admin, trust_admin]\n"
+            "    shortcut: alt-shift-r\n"
+            "    screenshot: optional\n"
+        )
+        review = frag.feedback_widget.review
+        assert review is not None
+        assert review.personas == ["super_admin", "trust_admin"]
+        assert review.shortcut == "alt-shift-r"
+        assert review.screenshot == "optional"
+
+    def test_parser_review_defaults(self) -> None:
+        frag = _parse(
+            'module test\napp test "Test"\n\nfeedback_widget: enabled\n  review:\n'
+            "    personas: [admin]\n"
+        )
+        review = frag.feedback_widget.review
+        assert review.shortcut == "alt+shift+r"
+        assert review.screenshot == "off"
+
+    @pytest.mark.parametrize(
+        ("body", "message"),
+        [
+            ("  review:\n    shortcut: none\n", "`personas:` is required"),
+            ("  review:\n    personas: [admin]\n    screenshot: always\n", "must be `off` or"),
+            ("  review:\n    personas: [admin]\n    bogus: 1\n", "unknown key `bogus:`"),
+        ],
+        ids=["personas-required", "screenshot-closed-set", "unknown-key"],
+    )
+    def test_parser_review_errors(self, body: str, message: str) -> None:
+        from dazzle.core.errors import ParseError
+
+        with pytest.raises(ParseError, match=message):
+            _parse('module test\napp test "Test"\n\nfeedback_widget: enabled\n' + body)
+
+    def test_review_subkeys_coexist_with_the_other_subkeys(self) -> None:
+        """`review:` can sit between the flat sub-keys without eating them."""
+        frag = _parse(
+            'module test\napp test "Test"\n\n'
+            "feedback_widget: enabled\n"
+            "  categories: [bug, ux]\n"
+            "  review:\n"
+            "    personas: [admin]\n"
+            "  severities: [p1, note]\n"
+            "  shortcut: none\n"
+        )
+        fw = frag.feedback_widget
+        assert fw.categories == ["bug", "ux"]
+        assert fw.severities == ["p1", "note"]
+        assert fw.shortcut == "none"
+        assert fw.review.personas == ["admin"]
+
+    def test_linker_rejects_unknown_review_persona(self) -> None:
+        from dazzle.core.linker import LinkError
+
+        with pytest.raises(LinkError, match="review references unknown persona 'ghost'"):
+            _link(_BASE_1854 + "feedback_widget: enabled\n  review:\n    personas: [ghost]\n")
+
+    def test_linker_accepts_declared_review_personas(self) -> None:
+        app = _link(_BASE_1854 + "feedback_widget: enabled\n  review:\n    personas: [admin]\n")
+        assert app.feedback_widget.review.personas == ["admin"]
+
+
+class TestFeedbackEnumsApplied1854:
+    """``categories:`` / ``severities:`` build the FeedbackReport enums (#1854)."""
+
+    def test_declared_lists_become_the_enums(self) -> None:
+        app = _link(
+            _BASE_1854 + "feedback_widget: enabled\n"
+            "  categories: [bug, ux, copy, data, question, idea]\n"
+            "  severities: [p1, p2, p3, note]\n"
+        )
+        entity = app.get_entity("FeedbackReport")
+        category = next(f for f in entity.fields if f.name == "category")
+        severity = next(f for f in entity.fields if f.name == "severity")
+        assert category.type.enum_values == ["bug", "ux", "copy", "data", "question", "idea"]
+        assert severity.type.enum_values == ["p1", "p2", "p3", "note"]
+        # The first declared severity is the default.
+        assert severity.default == "p1"
+
+    def test_framework_defaults_when_undeclared(self) -> None:
+        app = _link(_BASE_1854 + "feedback_widget: enabled\n")
+        entity = app.get_entity("FeedbackReport")
+        category = next(f for f in entity.fields if f.name == "category")
+        severity = next(f for f in entity.fields if f.name == "severity")
+        assert category.type.enum_values == [
+            "bug",
+            "ux",
+            "visual",
+            "behaviour",
+            "enhancement",
+            "other",
+        ]
+        assert severity.type.enum_values == ["blocker", "annoying", "minor"]
+        assert severity.default == "minor"
+
+    def test_feedback_report_fields_helper_without_spec_equals_constant(self) -> None:
+        from dazzle.core.ir.feedback_widget import FEEDBACK_REPORT_FIELDS, feedback_report_fields
+
+        assert feedback_report_fields(None) == FEEDBACK_REPORT_FIELDS
+
+    def test_empty_list_is_a_parse_error(self) -> None:
+        from dazzle.core.errors import ParseError
+
+        with pytest.raises(ParseError, match="at least one value"):
+            _parse('module test\napp test "Test"\n\nfeedback_widget: enabled\n  severities: []\n')
+
+
+class TestFeedbackReportAnchorFields1854:
+    """The anchor / context / surface / review_session columns and the admin pager."""
+
+    def test_new_fields_declared(self) -> None:
+        from dazzle.core.ir.feedback_widget import FEEDBACK_REPORT_FIELDS
+
+        by_name = {f[0]: f for f in FEEDBACK_REPORT_FIELDS}
+        assert by_name["anchor"][1] == "json"
+        assert by_name["context"][1] == "json"
+        assert by_name["surface"][1] == "str(100)"
+        assert by_name["review_session"][1] == "str(40)"
+        # Kept (the screenshot stays a text data URL).
+        assert by_name["screenshot_data"][1] == "text"
+        assert by_name["annotation_data"][1] == "text"
+        assert by_name["page_snapshot"][1] == "text"
+
+    def test_auto_entity_carries_json_columns(self) -> None:
+        from dazzle.core.ir import FieldTypeKind
+
+        app = _link(_BASE_1854 + "feedback_widget: enabled\n")
+        entity = app.get_entity("FeedbackReport")
+        kinds = {f.name: f.type.kind for f in entity.fields}
+        assert kinds["anchor"] is FieldTypeKind.JSON
+        assert kinds["context"] is FieldTypeKind.JSON
+        assert kinds["surface"] is FieldTypeKind.STR
+        assert kinds["review_session"] is FieldTypeKind.STR
+
+    def test_admin_surface_pager_columns_and_filters(self) -> None:
+        app = _link(_BASE_1854 + "feedback_widget: enabled\n")
+        admin = next(s for s in app.surfaces if s.name == "feedback_admin")
+        assert admin.page_size == 25
+        columns = [el.field_name for el in admin.sections[0].elements]
+        assert columns[:2] == ["surface", "severity"]
+        assert "review_session" in columns
+        for key in ("page_url", "surface", "review_session", "status"):
+            assert key in admin.ux.filter

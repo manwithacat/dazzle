@@ -1363,6 +1363,14 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                 visited.add(current)
                 current = dep_map[current]
 
+    # Validate feedback_widget review personas (#1854): the review posture
+    # is granted by persona name, so an undeclared name would never match.
+    _fw = symbols.feedback_widget
+    if _fw is not None and _fw.enabled and _fw.review is not None:
+        for persona_name in _fw.review.personas:
+            if persona_name not in symbols.personas:
+                errors.append(f"feedback_widget review references unknown persona '{persona_name}'")
+
     return errors
 
 

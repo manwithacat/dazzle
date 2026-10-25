@@ -13,7 +13,7 @@ from .errors import (
 )
 from .invariant_refs import resolve_invariant_refs
 from .ir.audit import AUDIT_ENTRY_FIELDS
-from .ir.feedback_widget import FEEDBACK_REPORT_FIELDS
+from .ir.feedback_widget import feedback_report_fields
 from .ir.fields import (
     FieldModifier,
     FieldSpec,
@@ -173,7 +173,7 @@ def build_appspec(
     # 9b. Auto-generate FeedbackReport entity + surfaces when feedback_widget is enabled
     fw = merged_fragment.feedback_widget
     if fw is not None and fw.enabled and not any(e.name == "FeedbackReport" for e in entities):
-        entities = [*entities, _build_feedback_report_entity()]
+        entities = [*entities, _build_feedback_report_entity(fw)]
         surfaces = [
             *surfaces,
             _build_feedback_create_surface(),
@@ -839,6 +839,8 @@ def _parse_field_type(type_str: str) -> FieldType:
         return FieldType(kind=FieldTypeKind.BOOL)
     if type_str == "datetime":
         return FieldType(kind=FieldTypeKind.DATETIME)
+    if type_str == "json":
+        return FieldType(kind=FieldTypeKind.JSON)
     if type_str.startswith("str(") and type_str.endswith(")"):
         max_len = int(type_str[4:-1])
         return FieldType(kind=FieldTypeKind.STR, max_length=max_len)
@@ -1150,10 +1152,15 @@ def _build_onboarding_state_entity() -> ir.EntitySpec:
     )
 
 
-def _build_feedback_report_entity() -> ir.EntitySpec:
-    """Build the auto-generated FeedbackReport entity for in-app feedback."""
+def _build_feedback_report_entity(fw: ir.FeedbackWidgetSpec | None = None) -> ir.EntitySpec:
+    """Build the auto-generated FeedbackReport entity for in-app feedback.
+
+    #1854: the ``category`` / ``severity`` enums come from the DSL's
+    ``categories:`` / ``severities:`` (``feedback_report_fields``); the
+    framework lists apply when the DSL declares none.
+    """
     fields: list[FieldSpec] = []
-    for name, type_str, modifiers, default in FEEDBACK_REPORT_FIELDS:
+    for name, type_str, modifiers, default in feedback_report_fields(fw):
         field_type = _parse_field_type(type_str)
         mods = [_MODIFIER_MAP[m] for m in modifiers]
         fields.append(
@@ -1261,15 +1268,19 @@ def _build_feedback_admin_surface() -> ir.SurfaceSpec:
 
     Renders at /app/feedbackreports. Shows triage fields for admin review.
     """
+    # #1854: a reviewer's walk-through is read by surface and severity first;
+    # ``review_session`` groups one walk-through's notes.
     elements = [
         ir.SurfaceElement(field_name=name, label=label)
         for name, label in [
-            ("category", "Category"),
+            ("surface", "Surface"),
             ("severity", "Severity"),
+            ("category", "Category"),
             ("description", "Description"),
             ("status", "Status"),
             ("reported_by", "Submitted By"),
             ("page_url", "Page URL"),
+            ("review_session", "Review session"),
             ("created_at", "Created"),
         ]
     ]
@@ -1283,9 +1294,21 @@ def _build_feedback_admin_surface() -> ir.SurfaceSpec:
     # rows. reported_by matters for admins (entity scope is ``all``); for
     # non-admins the entity-level ``reported_by = current_user.email``
     # scope already restricts rows, so adding it here is a no-op there.
+    # #1854: ``page_url`` / ``surface`` / ``review_session`` are bare query
+    # filters too, so the widget's pin poll and an agent's read path can
+    # narrow server-side (``GET /feedbackreports?page_url=…&status=new,triaged``).
     ux = ir.UXSpec(
         sort=[ir.SortSpec(field="created_at", direction="desc")],
-        filter=["category", "severity", "status", "notification_sent", "reported_by"],
+        filter=[
+            "category",
+            "severity",
+            "status",
+            "notification_sent",
+            "reported_by",
+            "page_url",
+            "surface",
+            "review_session",
+        ],
         search=["description", "reported_by"],
         empty_message="No feedback yet.",
     )
@@ -1295,6 +1318,9 @@ def _build_feedback_admin_surface() -> ir.SurfaceSpec:
         entity_ref="FeedbackReport",
         mode=ir.SurfaceMode.LIST,
         sections=[ir.SurfaceSection(name="main", title="Feedback", elements=elements)],
+        # #1854: a walk-through leaves dozens of notes; the pager keeps the
+        # admin list readable.
+        page_size=25,
         # v0.61.6 (#859): allow_personas dropped — persona-level restriction
         # was leaking onto the entity's shared LIST/PUT endpoints, 403ing the
         # non-admin feedback-widget polls. Entity-level ``reported_by =
