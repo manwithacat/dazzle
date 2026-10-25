@@ -4511,9 +4511,14 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     );
   }
 
+  // The separator's value range is set here, not in the markup: the Nu
+  // validator HM CI pins predates ARIA 1.2's focusable-separator values.
   function syncValue(root, key) {
     var handle = handleOf(root, key);
-    if (handle) handle.setAttribute("aria-valuenow", String(widthOf(root, key)));
+    if (!handle) return;
+    handle.setAttribute("aria-valuemin", "80");
+    handle.setAttribute("aria-valuemax", "800");
+    handle.setAttribute("aria-valuenow", String(widthOf(root, key)));
   }
 
   function setWidth(root, key, px) {

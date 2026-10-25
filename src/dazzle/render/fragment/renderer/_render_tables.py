@@ -214,12 +214,11 @@ class _RenderTablesMixin:
             if not resizable:
                 return ""
             # A focusable window-splitter separator (dz-grid-resize.js): drag,
-            # or Left/Right to step the width, Home to reset; aria-valuenow is
-            # kept in sync by the controller.
+            # or Left/Right to step the width, Home to reset; the controller
+            # sets aria-valuemin/max/now.
             return (
                 f'<span class="dz-table-resize-handle" data-dz-grid-resize="{key}" '
                 'role="separator" aria-orientation="vertical" tabindex="0" '
-                'aria-valuemin="80" aria-valuemax="800" '
                 f'aria-label="Resize {label} column"></span>'
             )
 
