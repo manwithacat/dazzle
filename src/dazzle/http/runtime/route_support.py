@@ -14,7 +14,7 @@ It depends only on fastapi/stdlib/pydantic + `auth`/`htmx_response`/`render` (no
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 from uuid import UUID
 
 from fastapi import Request
@@ -36,7 +36,9 @@ if TYPE_CHECKING:
 # leaf symbols a typed public API, so `route_generator` / satellites importing from
 # here don't trip implicit-reexport).
 __all__ = [
+    "CreateInterceptor",
     "HandlerConfig",
+    "ListFilterHook",
     "RouteSpec",
     "_extract_result_id",
     "_forbidden_detail",
@@ -85,6 +87,46 @@ class HandlerConfig:
 # ---------------------------------------------------------------------------
 # RouteSpec — per-route bundle (#1011 closeout)
 # ---------------------------------------------------------------------------
+
+
+class CreateInterceptor(Protocol):
+    """A per-entity policy the generated create route runs (#1854).
+
+    ``RouteGenerator.entity_create_interceptors[entity]`` threads one into
+    ``create_create_handler``. ``before_create`` runs after the body is
+    parsed and before validation / injection / scope: it may rewrite
+    ``body`` (stamp fields, drop payload values) or return a response that
+    short-circuits the create (an idempotent replay). ``on_constraint_violation``
+    runs when the insert raised ``ConstraintViolationError``: return a
+    response to answer the request, or ``None`` to re-raise.
+    """
+
+    async def before_create(
+        self,
+        body: dict[str, Any],
+        request: Request,
+        *,
+        service: Any,
+        input_schema: Any,
+        user_id: str | None,
+        user_email: str | None,
+        user_roles: list[str],
+    ) -> Any | None: ...
+
+    async def on_constraint_violation(
+        self,
+        exc: Any,
+        body: dict[str, Any],
+        request: Request,
+        *,
+        service: Any,
+    ) -> Any | None: ...
+
+
+#: A per-entity hook on the generated list route (#1854): receives the raw
+#: query params and the leftover-honest filters the route derived, returns
+#: the filters to query with (may add operator keys such as ``status__in``).
+ListFilterHook = Callable[[Any, dict[str, Any]], dict[str, Any]]
 
 
 @dataclass(frozen=True)

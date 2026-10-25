@@ -1975,6 +1975,26 @@ class DazzleBackendApp:
         if _user_ir is not None and _user_ir.auth_identity is not None:
             route_generator.auth_identity_user_link = _user_ir.auth_identity.link_via
 
+        # #1854: the feedback widget's create / list routes are the generated
+        # ones; the server-side policy (stamped identity, caps, idempotent
+        # replay, rate limit, comma-list / since filters) rides them as a
+        # per-entity interceptor and filter hook.
+        _fw = getattr(self._appspec, "feedback_widget", None) if self._appspec else None
+        if (
+            _fw is not None
+            and getattr(_fw, "enabled", False)
+            and "FeedbackReport" in self._services
+        ):
+            from dazzle.http.runtime.feedback_policy import (
+                FeedbackCreateInterceptor,
+                feedback_list_filters,
+            )
+
+            route_generator.entity_create_interceptors["FeedbackReport"] = (
+                FeedbackCreateInterceptor()
+            )
+            route_generator.entity_list_filter_hooks["FeedbackReport"] = feedback_list_filters
+
         # Collect (method, path) pairs already claimed by project overrides
         # and extension routers so the generic CRUD generator can skip
         # them — first-match still wins at request time, but a skipped

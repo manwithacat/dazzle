@@ -170,7 +170,9 @@ APIRouter = _APIRouter
 # ~18 in-function imports. Re-exported here so `route_generator.<name>` keeps resolving
 # for back-compat importers and patch points.
 from dazzle.http.runtime.route_support import (  # noqa: E402, F401  (re-exported for back-compat importers + patch points; route_support declares __all__)
+    CreateInterceptor,
     HandlerConfig,
+    ListFilterHook,
     RouteSpec,
     _extract_result_id,
     _forbidden_detail,
@@ -314,6 +316,11 @@ class RouteGenerator:
         # (#774). None = no binding → keep the #774 auth-id injection (D5). Set by the
         # caller from `appspec.domain` after construction.
         self.auth_identity_user_link: str | None = None
+        # #1854: per-entity create policy and list-filter extension. The
+        # server registers the FeedbackReport pair when `feedback_widget:
+        # enabled`; any other entity may be given one the same way.
+        self.entity_create_interceptors: dict[str, CreateInterceptor] = {}
+        self.entity_list_filter_hooks: dict[str, ListFilterHook] = {}
         # #1551: file service + per-entity file-field names for attach-time
         # triple verification. Passed through to create/update handler factories
         # so forged file references are rejected before the write proceeds.
@@ -463,6 +470,7 @@ class RouteGenerator:
                     file_service=self.file_service if _file_fields else None,
                     file_fields=_file_fields,
                     rich_text_fields=self.entity_rich_text_fields.get(entity_name or "") or None,
+                    create_interceptor=self.entity_create_interceptors.get(entity_name or ""),
                 )
                 # #1422: register the in-process create invoker. Every create
                 # handler variant (cedar / auth / noauth) now exposes
@@ -542,6 +550,7 @@ class RouteGenerator:
                 all_services=self.services,
                 display_field=self.entity_display_fields.get(entity_name or ""),
                 admin_personas=self.admin_personas,
+                filter_hook=self.entity_list_filter_hooks.get(entity_name or ""),
             )
             self._add_route(endpoint, handler, response_model=None)
 

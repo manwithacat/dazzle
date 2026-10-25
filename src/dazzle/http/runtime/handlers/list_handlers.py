@@ -52,6 +52,7 @@ from dazzle.http.runtime.page_routes import (
 # 2026-06-20). Was lazily imported from route_generator to dodge an import cycle;
 # route_support is a leaf, so these are now plain top-level imports.
 from dazzle.http.runtime.route_support import (
+    ListFilterHook,
     RouteSpec,
     _is_htmx_request,
     _wants_html,
@@ -308,6 +309,7 @@ def create_list_handler(
     all_services: dict[str, Any] | None = None,
     display_field: str | None = None,
     admin_personas: list[str] | None = None,
+    filter_hook: "ListFilterHook | None" = None,
 ) -> Callable[..., Any]:
     """Create a handler for list operations with optional access control.
 
@@ -326,6 +328,9 @@ def create_list_handler(
         htmx_empty_message: Message when no items found
         search_fields: Optional field names for LIKE-based search (#361)
         filter_fields: Allowed field names for bare query param filtering (#596)
+        filter_hook: Per-entity filter extension (#1854): receives the raw
+            query params and the leftover-honest filters, returns the filters
+            to query with (e.g. ``status=a,b`` → ``status__in``).
     """
     service = spec.service
     auto_include = spec.auto_include
@@ -444,6 +449,7 @@ def create_list_handler(
                 all_services=all_services,
                 display_field=display_field,
                 admin_personas=admin_personas,
+                filter_hook=filter_hook,
             )
 
         _auth_handler.__annotations__ = {
@@ -498,6 +504,7 @@ def create_list_handler(
             all_services=all_services,
             display_field=display_field,
             admin_personas=admin_personas,
+            filter_hook=filter_hook,
         )
 
     _noauth_handler.__annotations__ = {
@@ -549,6 +556,7 @@ async def _list_handler_body(
     all_services: dict[str, Any] | None = None,
     display_field: str | None = None,
     admin_personas: list[str] | None = None,
+    filter_hook: "ListFilterHook | None" = None,
 ) -> Any:
     """Shared list handler logic for both auth and no-auth paths."""
     # Parse user-supplied filters from the request (HTTP concern). The enforcement
@@ -600,6 +608,9 @@ async def _list_handler_body(
         filter_fields=filter_fields,
         entity_spec=getattr(service, "entity_spec", None),
     )
+    # #1854: per-entity filter extension (comma-list / since operators).
+    if filter_hook is not None:
+        filters = filter_hook(request.query_params, filters)
 
     # #1223 Phase 3a.iv — read the temporal `?as_of=` / `?include_closed=` RAW
     # values here (HTTP concern), but parse + validate them INSIDE gated_list,
