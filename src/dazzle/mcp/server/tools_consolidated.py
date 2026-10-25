@@ -255,29 +255,58 @@ def _tool_feedback() -> Tool:
     return Tool(
         name="feedback",
         description=(
-            "Feedback operations: list, get, triage, resolve. "
-            "Query and manage user-submitted feedback reports. "
-            "Use 'list' to see open feedback, 'get' for detail, "
-            "'triage' to mark as triaged, 'resolve' to close."
+            "Feedback operations: list, get, summarise, triage, resolve. "
+            "Query and manage user-submitted feedback reports and review notes. "
+            "Use 'list' to see open feedback (grouped by review_session when the "
+            "notes carry one), 'get' for one report with its anchor and context, "
+            "'summarise' for open notes grouped by surface then severity, "
+            "'triage' to mark as triaged, 'resolve' to close. "
+            "Targets the local `dazzle serve` by default; set DAZZLE_FEEDBACK_URL "
+            "(base URL) and DAZZLE_FEEDBACK_COOKIE (name=value session cookie) to "
+            "read a deployed app."
         ),
         input_schema={
             "type": "object",
             "properties": {
                 "operation": {
                     "type": "string",
-                    "enum": ["list", "get", "triage", "resolve"],
+                    "enum": ["list", "get", "summarise", "triage", "resolve"],
                     "description": "Operation to perform",
                 },
                 "id": {
                     "type": "string",
                     "description": "Feedback report ID (required for get/triage/resolve)",
                 },
-                "status": {"type": "string", "description": "Filter by status (list only)"},
+                "status": {
+                    "type": "string",
+                    "description": (
+                        "Filter by status; comma list, e.g. 'new,triaged' "
+                        "(list/summarise; summarise defaults to new,triaged)"
+                    ),
+                },
                 "category": {"type": "string", "description": "Filter by category (list only)"},
                 "severity": {"type": "string", "description": "Filter by severity (list only)"},
+                "surface": {
+                    "type": "string",
+                    "description": "Filter by the surface the note was left on (list only)",
+                },
+                "review_session": {
+                    "type": "string",
+                    "description": "Filter by review session, e.g. '2026-10-25-ab12' (list only)",
+                },
+                "page_url": {
+                    "type": "string",
+                    "description": "Filter by the page URL the note was left on (list only)",
+                },
+                "since": {
+                    "type": "string",
+                    "description": (
+                        "Only reports created at or after this ISO 8601 timestamp (list/summarise)"
+                    ),
+                },
                 "limit": {
                     "type": "integer",
-                    "description": "Max results (list only, default 20)",
+                    "description": "Max results (list default 20, summarise default 200)",
                 },
                 "agent_notes": {
                     "type": "string",

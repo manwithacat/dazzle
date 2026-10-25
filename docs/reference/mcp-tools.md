@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 18 tools, 91 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 18 tools, 92 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -20,7 +20,7 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`db`](#db) | 2 | Database operations: status (row counts per entity, database size), verify (FK integrity check, orphan detection) |
 | [`discovery`](#discovery) | 1 | Capability discovery operations: coherence (persona-by-persona authenticated UX coherence score) |
 | [`dsl`](#dsl) | 10 | DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec |
-| [`feedback`](#feedback) | 4 | Feedback operations: list, get, triage, resolve |
+| [`feedback`](#feedback) | 5 | Feedback operations: list, get, summarise, triage, resolve |
 | [`guide`](#guide) | 4 | Inspect declared onboarding guides |
 | [`knowledge`](#knowledge) | 9 | Knowledge lookup: concept, examples, cli_help, workflow, inference, changelog, counter_prior, get_spec, search_commands |
 | [`policy`](#policy) | 6 | Policy analysis operations for RBAC access control |
@@ -139,17 +139,21 @@ DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze
 
 ### `feedback`
 
-Feedback operations: list, get, triage, resolve. Query and manage user-submitted feedback reports. Use 'list' to see open feedback, 'get' for detail, 'triage' to mark as triaged, 'resolve' to close.
+Feedback operations: list, get, summarise, triage, resolve. Query and manage user-submitted feedback reports and review notes. Use 'list' to see open feedback (grouped by review_session when the notes carry one), 'get' for one report with its anchor and context, 'summarise' for open notes grouped by surface then severity, 'triage' to mark as triaged, 'resolve' to close. Targets the local `dazzle serve` by default; set DAZZLE_FEEDBACK_URL (base URL) and DAZZLE_FEEDBACK_COOKIE (name=value session cookie) to read a deployed app.
 
-**Operations (4):** `list`, `get`, `triage`, `resolve`
+**Operations (5):** `list`, `get`, `summarise`, `triage`, `resolve`
 
 **Parameters:**
 
 - `id` *(string)* — Feedback report ID (required for get/triage/resolve)
-- `status` *(string)* — Filter by status (list only)
+- `status` *(string)* — Filter by status; comma list, e.g. 'new,triaged' (list/summarise; summarise defaults to new,triaged)
 - `category` *(string)* — Filter by category (list only)
 - `severity` *(string)* — Filter by severity (list only)
-- `limit` *(integer)* — Max results (list only, default 20)
+- `surface` *(string)* — Filter by the surface the note was left on (list only)
+- `review_session` *(string)* — Filter by review session, e.g. '2026-10-25-ab12' (list only)
+- `page_url` *(string)* — Filter by the page URL the note was left on (list only)
+- `since` *(string)* — Only reports created at or after this ISO 8601 timestamp (list/summarise)
+- `limit` *(integer)* — Max results (list default 20, summarise default 200)
 - `agent_notes` *(string)* — Agent notes (triage/resolve)
 - `agent_classification` *(string)* — Classification (triage only)
 - `assigned_to` *(string)* — Assign to (triage only)

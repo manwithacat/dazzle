@@ -312,6 +312,7 @@ handle_feedback: Callable[[dict[str, Any]], str] = _make_project_handler(
     {
         "list": f"{_MOD_FEEDBACK}:list_handler",
         "get": f"{_MOD_FEEDBACK}:get_handler",
+        "summarise": f"{_MOD_FEEDBACK}:summarise_handler",
         "triage": f"{_MOD_FEEDBACK}:triage_handler",
         "resolve": f"{_MOD_FEEDBACK}:resolve_handler",
     },
