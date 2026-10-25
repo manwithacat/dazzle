@@ -102,7 +102,8 @@ _LUCIDE_UMD_JS = "/static/dist/dazzle-icons.min.js"
 # framework bundle, so no separate vendor widget JS is needed.
 _DEFAULT_FAVICON = "/static/assets/dazzle-favicon.svg"
 # `feedback_widget: enabled` mounts the in-app feedback widget (button +
-# panel posting to /feedbackreports). Its CSS ships inside dazzle.min.css.
+# panel posting to /feedbackreports). Its stylesheet lives in the script and is
+# injected into the widget's shadow root (#1854); dazzle.min.css carries none of it.
 FEEDBACK_WIDGET_JS = "/static/js/feedback-widget.js"
 
 # #1854: the meta names and their builder live in the core leaf
