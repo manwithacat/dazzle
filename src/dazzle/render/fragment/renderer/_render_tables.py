@@ -89,6 +89,7 @@ from dazzle.render.fragment.primitives import (
     Table,
 )
 from dazzle.render.fragment.primitives.data import (
+    COLUMN_MENU_MIN_COLUMNS,
     LIST_FILTER_SYNC,
     LIST_ROWS_TARGET_FROM_INSIDE,
     list_filters_include,
@@ -205,6 +206,23 @@ class _RenderTablesMixin:
                 else ("",) * len(keys or ())
             )
         )
+        # #1842 (WCAG 2.5.7): a column is resizable only where the Columns menu
+        # offers its Narrower / Wider buttons — the single-pointer alternative.
+        resizable = keys is not None and len(keys) >= COLUMN_MENU_MIN_COLUMNS
+
+        def _resize_handle(key: str, label: str) -> str:
+            if not resizable:
+                return ""
+            # A focusable window-splitter separator (dz-grid-resize.js): drag,
+            # or Left/Right to step the width, Home to reset; aria-valuenow is
+            # kept in sync by the controller.
+            return (
+                f'<span class="dz-table-resize-handle" data-dz-grid-resize="{key}" '
+                'role="separator" aria-orientation="vertical" tabindex="0" '
+                'aria-valuemin="80" aria-valuemax="800" '
+                f'aria-label="Resize {label} column"></span>'
+            )
+
         for i, c in enumerate(t.columns):
             if keys:
                 # Canonical list header: data-dz-col (column-visibility) +
@@ -227,10 +245,9 @@ class _RenderTablesMixin:
                     head_cells_parts.append(
                         f'<th data-dz-col="{ck}"{wstyle} aria-sort="{aria}" '
                         f'scope="col" title="{label}" class="dz-table-th">'
-                        # C2.2: the pointer-drag resize handle (decorative for
-                        # SR; dz-grid-resize.js drives col[data-dz-col] widths).
-                        f'<span class="dz-table-resize-handle" '
-                        f'data-dz-grid-resize="{ck}" aria-hidden="true"></span>'
+                        # C2.2: the resize handle (dz-grid-resize.js drives
+                        # col[data-dz-col] widths).
+                        f"{_resize_handle(ck, ctx.escape_attr(str(c)))}"
                         f'<button type="button" data-dz-grid-sort="{ck}" '
                         f'aria-label="Sort by {label}" class="dz-table-sort-button">'
                         f"{label}"
@@ -245,8 +262,7 @@ class _RenderTablesMixin:
                 else:
                     head_cells_parts.append(
                         f'<th data-dz-col="{ck}"{wstyle} scope="col" title="{label}" class="dz-table-th">'
-                        f'<span class="dz-table-resize-handle" '
-                        f'data-dz-grid-resize="{ck}" aria-hidden="true"></span>'
+                        f"{_resize_handle(ck, ctx.escape_attr(str(c)))}"
                         f"{label}</th>"
                     )
             elif isinstance(c, SortHeader):
@@ -875,11 +891,23 @@ class _RenderTablesMixin:
             ck = ctx.escape_attr(key)
             cl_attr = ctx.escape_attr(label)
             items.append(
+                '<div class="dz-table-col-menu-row">'
                 '<label class="dz-table-col-menu-item">'
                 '<input type="checkbox" checked class="dz-table-col-menu-checkbox" '
                 f'data-dz-grid-col-toggle="{ck}" '
                 f'aria-label="Show {cl_attr} column">'
                 f"<span>{ctx.escape(label)}</span></label>"
+                # #1842 (WCAG 2.5.7): the single-pointer alternative to the
+                # column-resize drag (dz-grid-resize.js `data-dz-grid-width`).
+                f'<span class="dz-table-col-menu-width" role="group" '
+                f'aria-label="{cl_attr} column width">'
+                f'<button type="button" class="dz-table-col-menu-step" '
+                f'data-dz-grid-width="{ck}" data-dz-step="-1" aria-label="Narrower">'
+                '<span aria-hidden="true">−</span></button>'
+                f'<button type="button" class="dz-table-col-menu-step" '
+                f'data-dz-grid-width="{ck}" data-dz-step="1" aria-label="Wider">'
+                '<span aria-hidden="true">+</span></button>'
+                "</span></div>"
             )
         return (
             '<details class="dz-popover dz-table-col-menu" data-dz-popover '
@@ -899,6 +927,8 @@ class _RenderTablesMixin:
             "</svg>Columns</summary>"
             '<div class="dz-popover__panel dz-table-col-menu-panel">'
             f"{''.join(items)}"
+            # #1842: width changes are announced here (dz-grid-resize.js).
+            '<span class="visually-hidden" aria-live="polite" data-dz-grid-width-status></span>'
             # #853 escape hatch: show every column + clear the stored set.
             '<button type="button" class="dz-table-col-menu-reset" '
             "data-dz-grid-cols-reset>Show all columns</button>"

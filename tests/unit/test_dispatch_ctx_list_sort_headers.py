@@ -123,9 +123,8 @@ def test_list_sortable_column_is_grid_sort_button() -> None:
     # non-sortable Score is a plain canonical header (no sort button)
     assert (
         '<th data-dz-col="score" scope="col" title="Score" class="dz-table-th">'
-        # C2.2: canonical headers carry the resize-handle span
-        '<span class="dz-table-resize-handle" data-dz-grid-resize="score" '
-        'aria-hidden="true"></span>Score</th>'
+        # #1842: fewer than four columns → no Columns menu, so no resize handle
+        "Score</th>"
     ) in html
 
 
@@ -155,8 +154,7 @@ def test_list_with_no_sortable_columns_emits_plain_headers() -> None:
     html = render_list(ctx)
     assert (
         '<th data-dz-col="name" scope="col" title="Name" class="dz-table-th">'
-        # C2.2: canonical headers carry the resize-handle span
-        '<span class="dz-table-resize-handle" data-dz-grid-resize="name" '
-        'aria-hidden="true"></span>Name</th>'
+        # #1842: fewer than four columns → no Columns menu, so no resize handle
+        "Name</th>"
     ) in html
     assert "toggleSort" not in html

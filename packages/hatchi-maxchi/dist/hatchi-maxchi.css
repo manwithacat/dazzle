@@ -7136,7 +7136,7 @@ summary.table-col-menu-trigger::-webkit-details-marker {
   right: 0;
   top: 100%;
   margin-block-start: var(--space-xs);
-  width: 11rem;
+  width: 14rem;
   z-index: 100;
   background: var(--colour-surface);
   border: 1px solid var(--colour-border);
@@ -7160,6 +7160,49 @@ summary.table-col-menu-trigger::-webkit-details-marker {
 
 .table-col-menu-item:hover {
   background: var(--colour-bg);
+}
+
+/* #1842 (WCAG 2.5.7): each row pairs the visibility toggle with the column's
+ * Narrower / Wider buttons — the single-pointer alternative to the resize
+ * drag (grid-resize.js `data-grid-width`). */
+.table-col-menu-row {
+  display: flex;
+  align-items: center;
+}
+
+.table-col-menu-row > .table-col-menu-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.table-col-menu-width {
+  display: inline-flex;
+  gap: var(--space-xs);
+  padding-inline-end: var(--space-sm);
+}
+
+.table-col-menu-step {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--colour-border-control);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.table-col-menu-step:hover {
+  background: var(--colour-bg);
+}
+
+.table-col-menu-step:focus-visible {
+  box-shadow: 0 0 0 2px var(--colour-brand);
 }
 
 /* #853 escape hatch: the "Show all columns" reset at the panel's foot. */
@@ -7465,10 +7508,11 @@ summary.table-col-menu-trigger::-webkit-details-marker {
 /* NB the select-column <col> class (table-col-select, in the grid's
  * colgroup) is SEMANTIC_ONLY: a structural marker with no rule — the table
  * stays layout:auto, so the col carries no width. */
-/* Column-resize handle (grid-resize.js extension): an 8px pointer strip
- * at the header's right edge driving col[data-col] widths via
- * grid-resize.js. Decorative (aria-hidden); a faint hairline appears on
- * hover; while a drag is live the root carries data-resizing. */
+/* Column-resize handle (grid-resize.js extension): an 8px strip at the
+ * header's right edge driving col[data-col] widths via grid-resize.js.
+ * A focusable separator (Left/Right step, Home resets); a faint hairline
+ * appears on hover, a brand one on keyboard focus; while a drag is live the
+ * root carries data-resizing. */
 .table-resize-handle {
   position: absolute;
   top: 0;
@@ -7497,6 +7541,16 @@ summary.table-col-menu-trigger::-webkit-details-marker {
 .table-resize-handle:hover::after,
 [data-resizing] .table-resize-handle::after {
   background: var(--colour-border);
+}
+
+.table-resize-handle:focus {
+  outline: none;
+}
+
+.table-resize-handle:focus-visible::after {
+  top: 10%;
+  bottom: 10%;
+  background: var(--colour-brand);
 }
 
 [data-grid][data-resizing] {
@@ -9934,6 +9988,39 @@ a.action-card:hover {
 .kanban-card-move select {
   font-size: var(--text-xs);
   max-width: 100%;
+}
+
+/* In-column order buttons (#1842, WCAG 2.5.7): the single-pointer
+ * alternative to the reorder drag, shown only when the board ranks cards. */
+.kanban-card-order {
+  display: inline-flex;
+  gap: var(--space-xs);
+  margin-inline-start: auto;
+}
+
+.kanban-card-step {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--colour-border-control);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: var(--colour-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.kanban-card-step:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.kanban-card-step:focus-visible {
+  box-shadow: 0 0 0 2px var(--colour-brand);
 }
 
 .kanban-announce {
@@ -16504,6 +16591,16 @@ onboarding-step {
   cursor: grabbing;
 }
 
+/* A read-only grid (`data-grid-editable="false"`, #1204) does not drag or
+ * resize (#1842), so it shows neither the grab cursor nor the resize grip. */
+[data-grid-editable="false"] .card-wrapper .card-header {
+  cursor: default;
+}
+
+[data-grid-editable="false"] .card-resize {
+  display: none;
+}
+
 /* Card footer — trailing action row (the Fragment `Card.footer` slot). */
 .card-footer {
   display: flex;
@@ -16550,6 +16647,23 @@ onboarding-step {
 .card-wrapper:hover .card-actions,
 .card-wrapper:focus-within .card-actions {
   opacity: 1;
+}
+
+/* Card options menu (#1842, WCAG 2.5.7): the single-pointer alternative to
+ * the reorder / resize drags. The card clips its overflow for the rounded
+ * corners, so while the menu is open the card lets the panel out and the
+ * slot rises above its neighbours. */
+.card:has(.card-options[open]) {
+  overflow: visible;
+}
+
+.card-wrapper:has(.card-options[open]) {
+  z-index: 10;
+}
+
+.card-options > summary.card-action-button::after {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .card-action-button {

@@ -62,6 +62,7 @@ from dazzle.render.fragment import (
     Text,
 )
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+from dazzle.render.fragment.primitives.data import COLUMN_MENU_MIN_COLUMNS
 from dazzle.render.fragment.renderer._data_row import _render_cell_display
 from dazzle.render.html import esc as _html_esc
 from dazzle.render.rating_cell import rating_field_name
@@ -388,7 +389,7 @@ class FragmentSurfaceAdapter:
                 )
             )
         body_children.extend(toolbar)
-        if len(visible) > 3:
+        if len(visible) >= COLUMN_MENU_MIN_COLUMNS:
             # Inside the region = inside the dzTable Alpine scope (see the
             # header comment above; C2 re-homes this as a delegated controller).
             body_children.append(

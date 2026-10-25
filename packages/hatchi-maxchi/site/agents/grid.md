@@ -51,10 +51,23 @@ A server-rendered data table on a real <table>, all HTML over the wire: search, 
       <details class="table-col-menu">
         <summary class="table-col-menu-trigger" aria-label="Toggle column visibility">Columns</summary>
         <div class="table-col-menu-panel">
-          <label class="table-col-menu-item"><input type="checkbox" checked class="table-col-menu-checkbox" data-grid-col-toggle="first" aria-label="Show First name column"><span>First name</span></label>
-          <label class="table-col-menu-item"><input type="checkbox" checked class="table-col-menu-checkbox" data-grid-col-toggle="last" aria-label="Show Last name column"><span>Last name</span></label>
-          <label class="table-col-menu-item"><input type="checkbox" checked class="table-col-menu-checkbox" data-grid-col-toggle="plan" aria-label="Show Plan column"><span>Plan</span></label>
-          <label class="table-col-menu-item"><input type="checkbox" checked class="table-col-menu-checkbox" data-grid-col-toggle="signed" aria-label="Show Signed up column"><span>Signed up</span></label>
+          <div class="table-col-menu-row">
+            <label class="table-col-menu-item"><input type="checkbox" checked class="table-col-menu-checkbox" data-grid-col-toggle="first" aria-label="Show First name column"><span>First name</span></label>
+            <span class="table-col-menu-width" role="group" aria-label="First name column width"><button type="button" class="table-col-menu-step" data-grid-width="first" data-step="-1" aria-label="Narrower"><span aria-hidden="true">−</span></button><button type="button" class="table-col-menu-step" data-grid-width="first" data-step="1" aria-label="Wider"><span aria-hidden="true">+</span></button></span>
+          </div>
+          <div class="table-col-menu-row">
+            <label class="table-col-menu-item"><input type="checkbox" checked class="table-col-menu-checkbox" data-grid-col-toggle="last" aria-label="Show Last name column"><span>Last name</span></label>
+            <span class="table-col-menu-width" role="group" aria-label="Last name column width"><button type="button" class="table-col-menu-step" data-grid-width="last" data-step="-1" aria-label="Narrower"><span aria-hidden="true">−</span></button><button type="button" class="table-col-menu-step" data-grid-width="last" data-step="1" aria-label="Wider"><span aria-hidden="true">+</span></button></span>
+          </div>
+          <div class="table-col-menu-row">
+            <label class="table-col-menu-item"><input type="checkbox" checked class="table-col-menu-checkbox" data-grid-col-toggle="plan" aria-label="Show Plan column"><span>Plan</span></label>
+            <span class="table-col-menu-width" role="group" aria-label="Plan column width"><button type="button" class="table-col-menu-step" data-grid-width="plan" data-step="-1" aria-label="Narrower"><span aria-hidden="true">−</span></button><button type="button" class="table-col-menu-step" data-grid-width="plan" data-step="1" aria-label="Wider"><span aria-hidden="true">+</span></button></span>
+          </div>
+          <div class="table-col-menu-row">
+            <label class="table-col-menu-item"><input type="checkbox" checked class="table-col-menu-checkbox" data-grid-col-toggle="signed" aria-label="Show Signed up column"><span>Signed up</span></label>
+            <span class="table-col-menu-width" role="group" aria-label="Signed up column width"><button type="button" class="table-col-menu-step" data-grid-width="signed" data-step="-1" aria-label="Narrower"><span aria-hidden="true">−</span></button><button type="button" class="table-col-menu-step" data-grid-width="signed" data-step="1" aria-label="Wider"><span aria-hidden="true">+</span></button></span>
+          </div>
+          <span class="visually-hidden" aria-live="polite" data-grid-width-status></span>
           <button type="button" class="table-col-menu-reset" data-grid-cols-reset>Show all columns</button>
         </div>
       </details>
@@ -74,10 +87,10 @@ A server-rendered data table on a real <table>, all HTML over the wire: search, 
           <thead>
             <tr>
               <th class="table-th-select"><input type="checkbox" data-grid-select-all aria-label="Select all rows"></th>
-              <th class="table-th" data-col="first" aria-sort="none"><button type="button" class="table-sort-button" data-grid-sort="first">First name<span class="table-sort-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-chevron-up"/></svg></span></button><span class="table-resize-handle" data-grid-resize="first" aria-hidden="true"></span></th>
-              <th class="table-th" data-col="last" aria-sort="none"><button type="button" class="table-sort-button" data-grid-sort="last">Last name<span class="table-sort-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-chevron-up"/></svg></span></button><span class="table-resize-handle" data-grid-resize="last" aria-hidden="true"></span></th>
-              <th class="table-th" data-col="plan" aria-sort="none"><button type="button" class="table-sort-button" data-grid-sort="plan">Plan<span class="table-sort-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-chevron-up"/></svg></span></button><span class="table-resize-handle" data-grid-resize="plan" aria-hidden="true"></span></th>
-              <th class="table-th" data-col="signed" aria-sort="none"><button type="button" class="table-sort-button" data-grid-sort="signed">Signed up<span class="table-sort-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-chevron-up"/></svg></span></button><span class="table-resize-handle" data-grid-resize="signed" aria-hidden="true"></span></th>
+              <th class="table-th" data-col="first" aria-sort="none"><button type="button" class="table-sort-button" data-grid-sort="first">First name<span class="table-sort-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-chevron-up"/></svg></span></button><span class="table-resize-handle" data-grid-resize="first" role="separator" aria-orientation="vertical" tabindex="0" aria-valuemin="80" aria-valuemax="800" aria-label="Resize First name column"></span></th>
+              <th class="table-th" data-col="last" aria-sort="none"><button type="button" class="table-sort-button" data-grid-sort="last">Last name<span class="table-sort-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-chevron-up"/></svg></span></button><span class="table-resize-handle" data-grid-resize="last" role="separator" aria-orientation="vertical" tabindex="0" aria-valuemin="80" aria-valuemax="800" aria-label="Resize Last name column"></span></th>
+              <th class="table-th" data-col="plan" aria-sort="none"><button type="button" class="table-sort-button" data-grid-sort="plan">Plan<span class="table-sort-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-chevron-up"/></svg></span></button><span class="table-resize-handle" data-grid-resize="plan" role="separator" aria-orientation="vertical" tabindex="0" aria-valuemin="80" aria-valuemax="800" aria-label="Resize Plan column"></span></th>
+              <th class="table-th" data-col="signed" aria-sort="none"><button type="button" class="table-sort-button" data-grid-sort="signed">Signed up<span class="table-sort-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-chevron-up"/></svg></span></button><span class="table-resize-handle" data-grid-resize="signed" role="separator" aria-orientation="vertical" tabindex="0" aria-valuemin="80" aria-valuemax="800" aria-label="Resize Signed up column"></span></th>
             </tr>
           </thead>
           <tbody class="table-body" data-grid-body data-grid-src="/mock/grid/rows" hx-get="/mock/grid/rows" hx-trigger="load, grid:refresh" hx-swap="innerMorph">

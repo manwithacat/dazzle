@@ -5046,7 +5046,7 @@ position: absolute;
 right: 0;
 top: 100%;
 margin-block-start: var(--space-xs);
-width: 11rem;
+width: 14rem;
 z-index: 100;
 background: var(--colour-surface);
 border: 1px solid var(--colour-border);
@@ -5068,6 +5068,40 @@ transition: background var(--duration-fast) var(--ease-out);
 }
 .dz-table-col-menu-item:hover {
 background: var(--colour-bg);
+}
+.dz-table-col-menu-row {
+display: flex;
+align-items: center;
+}
+.dz-table-col-menu-row > .dz-table-col-menu-item {
+flex: 1;
+min-width: 0;
+}
+.dz-table-col-menu-width {
+display: inline-flex;
+gap: var(--space-xs);
+padding-inline-end: var(--space-sm);
+}
+.dz-table-col-menu-step {
+width: 1.5rem;
+height: 1.5rem;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+padding: 0;
+border: 1px solid var(--colour-border-control);
+border-radius: var(--radius-sm);
+background: var(--colour-surface);
+color: var(--colour-text);
+font-size: var(--text-sm);
+line-height: 1;
+cursor: pointer;
+}
+.dz-table-col-menu-step:hover {
+background: var(--colour-bg);
+}
+.dz-table-col-menu-step:focus-visible {
+box-shadow: 0 0 0 2px var(--colour-brand);
 }
 .dz-table-col-menu-reset {
 display: block;
@@ -5296,6 +5330,14 @@ transition: background var(--duration-fast) var(--ease-out);
 .dz-table-resize-handle:hover::after,
 [data-dz-resizing] .dz-table-resize-handle::after {
 background: var(--colour-border);
+}
+.dz-table-resize-handle:focus {
+outline: none;
+}
+.dz-table-resize-handle:focus-visible::after {
+top: 10%;
+bottom: 10%;
+background: var(--colour-brand);
 }
 [data-dz-grid][data-dz-resizing] {
 cursor: col-resize;
@@ -7077,6 +7119,33 @@ color: var(--colour-text-muted);
 .dz-kanban-card-move select {
 font-size: var(--text-xs);
 max-width: 100%;
+}
+.dz-kanban-card-order {
+display: inline-flex;
+gap: var(--space-xs);
+margin-inline-start: auto;
+}
+.dz-kanban-card-step {
+width: 1.5rem;
+height: 1.5rem;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+padding: 0;
+border: 1px solid var(--colour-border-control);
+border-radius: var(--radius-sm);
+background: var(--colour-surface);
+color: var(--colour-text-muted);
+font-size: var(--text-xs);
+line-height: 1;
+cursor: pointer;
+}
+.dz-kanban-card-step:hover {
+background: var(--colour-bg);
+color: var(--colour-text);
+}
+.dz-kanban-card-step:focus-visible {
+box-shadow: 0 0 0 2px var(--colour-brand);
 }
 .dz-kanban-announce {
 position: absolute;
@@ -11713,6 +11782,12 @@ cursor: grabbing;
 .dz-card-header.is-dragging {
 cursor: grabbing;
 }
+[data-grid-editable="false"] .dz-card-wrapper .dz-card-header {
+cursor: default;
+}
+[data-grid-editable="false"] .dz-card-resize {
+display: none;
+}
 .dz-card-footer {
 display: flex;
 align-items: center;
@@ -11750,6 +11825,16 @@ transition: opacity var(--duration-fast) var(--ease-out);
 .dz-card-wrapper:hover .dz-card-actions,
 .dz-card-wrapper:focus-within .dz-card-actions {
 opacity: 1;
+}
+.dz-card:has(.dz-card-options[open]) {
+overflow: visible;
+}
+.dz-card-wrapper:has(.dz-card-options[open]) {
+z-index: 10;
+}
+.dz-card-options > summary.dz-card-action-button::after {
+width: 0.875rem;
+height: 0.875rem;
 }
 .dz-card-action-button {
 width: 1.5rem;

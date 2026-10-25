@@ -32,6 +32,7 @@ Status columns of cards — the flow view. Columns show a count; overflowing boa
                 <option value="done">Done</option>
               </select>
             </label>
+            <span class="kanban-card-order"><button type="button" class="kanban-card-step" data-kanban-step="-1" aria-label="Move Refund request — Acme up"><span aria-hidden="true">↑</span></button><button type="button" class="kanban-card-step" data-kanban-step="1" aria-label="Move Refund request — Acme down"><span aria-hidden="true">↓</span></button></span>
           </div>
         </div>
       </div>
@@ -47,6 +48,7 @@ Status columns of cards — the flow view. Columns show a count; overflowing boa
                 <option value="in_progress">In Progress</option>
               </select>
             </label>
+            <span class="kanban-card-order"><button type="button" class="kanban-card-step" data-kanban-step="-1" aria-label="Move KYC review — Globex up"><span aria-hidden="true">↑</span></button><button type="button" class="kanban-card-step" data-kanban-step="1" aria-label="Move KYC review — Globex down"><span aria-hidden="true">↓</span></button></span>
           </div>
         </div>
       </div>
@@ -68,6 +70,7 @@ Status columns of cards — the flow view. Columns show a count; overflowing boa
                 <option value="open">Open</option>
               </select>
             </label>
+            <span class="kanban-card-order"><button type="button" class="kanban-card-step" data-kanban-step="-1" aria-label="Move Chargeback — Initech up"><span aria-hidden="true">↑</span></button><button type="button" class="kanban-card-step" data-kanban-step="1" aria-label="Move Chargeback — Initech down"><span aria-hidden="true">↓</span></button></span>
           </div>
         </div>
       </div>

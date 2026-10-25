@@ -187,6 +187,39 @@
   max-width: 100%;
 }
 
+/* In-column order buttons (#1842, WCAG 2.5.7): the single-pointer
+ * alternative to the reorder drag, shown only when the board ranks cards. */
+.dz-kanban-card-order {
+  display: inline-flex;
+  gap: var(--space-xs);
+  margin-inline-start: auto;
+}
+
+.dz-kanban-card-step {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--colour-border-control);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: var(--colour-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dz-kanban-card-step:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.dz-kanban-card-step:focus-visible {
+  box-shadow: 0 0 0 2px var(--colour-brand);
+}
+
 .dz-kanban-announce {
   position: absolute;
   width: 1px;

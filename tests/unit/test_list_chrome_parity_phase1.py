@@ -329,14 +329,12 @@ class TestColumnVisibilityWiring:
         # canonical headers carry the dz-table-th class.
         assert (
             '<th data-dz-col="name" scope="col" title="Name" class="dz-table-th">'
-            # C2.2: canonical headers carry the resize-handle span
-            '<span class="dz-table-resize-handle" data-dz-grid-resize="name" '
-            'aria-hidden="true"></span>Name</th>'
+            # #1842: fewer than four columns → no Columns menu, so no resize
+            # handle (test_drag_alternatives_1842 covers the resizable form)
+            "Name</th>"
         ) in html
         assert (
-            '<th data-dz-col="status" scope="col" title="Status" class="dz-table-th">'
-            '<span class="dz-table-resize-handle" data-dz-grid-resize="status" '
-            'aria-hidden="true"></span>Status</th>'
+            '<th data-dz-col="status" scope="col" title="Status" class="dz-table-th">Status</th>'
         ) in html
 
     def test_skeleton_sortable_header_is_grid_sort_button(self) -> None:

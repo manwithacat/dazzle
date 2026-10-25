@@ -110,22 +110,41 @@ EXEMPLARS: list[KanbanCard] = [
 
 
 def _move_select_html(card: KanbanCard) -> str:
-    """Keyboard parity control — same targets as drag (Linear requirement R6)."""
-    if not card.row_id or not card.allowed_to:
+    """Keyboard parity controls — same targets as drag (Linear requirement R6).
+
+    The "Move to…" select covers the cross-column move. When the board ranks
+    cards (``rank`` set), Move up / Move down buttons cover the in-column
+    reorder — the single-pointer alternative to that drag (WCAG 2.5.7).
+    """
+    if not card.row_id:
         return ""
-    options = ['<option value="">Move to…</option>']
-    for state in card.allowed_to:
-        label = html.escape(state.replace("_", " ").title())
-        val = html.escape(state, quote=True)
-        options.append(f'<option value="{val}">{label}</option>')
-    return (
-        f'<div class="dz-kanban-card-move">'
-        f'<label><span class="visually-hidden">Move card</span>'
-        f'<select data-dz-kanban-move aria-label="Move {html.escape(card.title)}">'
-        f"{''.join(options)}"
-        f"</select></label>"
-        f"</div>"
-    )
+    select_html = ""
+    if card.allowed_to:
+        options = ['<option value="">Move to…</option>']
+        for state in card.allowed_to:
+            label = html.escape(state.replace("_", " ").title())
+            val = html.escape(state, quote=True)
+            options.append(f'<option value="{val}">{label}</option>')
+        select_html = (
+            f'<label><span class="visually-hidden">Move card</span>'
+            f'<select data-dz-kanban-move aria-label="Move {html.escape(card.title)}">'
+            f"{''.join(options)}"
+            f"</select></label>"
+        )
+    order_html = ""
+    if card.rank is not None and card.rank != "":
+        title = html.escape(card.title)
+        order_html = (
+            '<span class="dz-kanban-card-order">'
+            '<button type="button" class="dz-kanban-card-step" data-dz-kanban-step="-1" '
+            f'aria-label="Move {title} up"><span aria-hidden="true">↑</span></button>'
+            '<button type="button" class="dz-kanban-card-step" data-dz-kanban-step="1" '
+            f'aria-label="Move {title} down"><span aria-hidden="true">↓</span></button>'
+            "</span>"
+        )
+    if not select_html and not order_html:
+        return ""
+    return f'<div class="dz-kanban-card-move">{select_html}{order_html}</div>'
 
 
 def render(card: KanbanCard) -> str:

@@ -4404,9 +4404,14 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  * on the table's `<col data-col>` elements + localStorage.
  *
  * Contract:
- *   - handle:  `[data-grid-resize="<key>"]` (a decorative span at the
- *              header's right edge; pointer-only — column width is
- *              presentational, so there is no keyboard path yet).
+ *   - handle:  `[data-grid-resize="<key>"]` at the header's right edge —
+ *              a focusable window-splitter `role="separator"`: drag it, or
+ *              Left/Right steps the width by STEP px and Home resets it.
+ *              `aria-valuenow` follows the rendered width.
+ *   - step:    `[data-grid-width="<key>"][data-step="-1|1"]` buttons
+ *              (the Columns menu's Narrower / Wider) — the single-pointer
+ *              alternative to the drag (#1842, WCAG 2.5.7). The result is
+ *              announced in `[data-grid-width-status]` when present.
  *   - target:  `col[data-col="<key>"]` in the table's colgroup — resizing
  *              the col resizes the whole column (header + cells), and cols
  *              survive tbody-only swaps untouched.
@@ -4424,6 +4429,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
   "use strict";
 
   var drag = null; // {root, key, startX, startWidth} — one drag at a time
+  var STEP = 24; // px per keyboard / button step (three 8px snaps)
 
   function storageKey(root) {
     return "widths-" + (root.id || "grid");
@@ -4460,6 +4466,11 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       var col = colOf(root, key);
       if (col) col.style.width = widths[key] + "px";
     }
+    // A focusable separator must carry aria-valuenow from the start.
+    var handles = root.querySelectorAll("[data-grid-resize]");
+    for (var i = 0; i < handles.length; i++) {
+      syncValue(root, handles[i].getAttribute("data-grid-resize"));
+    }
   }
 
   // Drop stored widths whose column no longer exists (the #853 analogue) —
@@ -4481,6 +4492,60 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     if (dropped) writeWidths(root, cleaned);
   }
 
+  function handleOf(root, key) {
+    return root.querySelector('[data-grid-resize="' + key + '"]');
+  }
+
+  // The column's ACTUAL rendered width. col.offsetWidth reports it in
+  // Chromium + WebKit; the th-rect fallback covers engines where col boxes
+  // don't report, and 160 is unreachable in practice.
+  function widthOf(root, key) {
+    var col = colOf(root, key);
+    if (!col) return 0;
+    var handle = handleOf(root, key);
+    var th = handle && handle.closest("th");
+    return (
+      col.offsetWidth ||
+      parseInt(col.style.width, 10) ||
+      (th ? Math.round(th.getBoundingClientRect().width) : 160)
+    );
+  }
+
+  function syncValue(root, key) {
+    var handle = handleOf(root, key);
+    if (handle) handle.setAttribute("aria-valuenow", String(widthOf(root, key)));
+  }
+
+  function setWidth(root, key, px) {
+    var col = colOf(root, key);
+    if (!col) return;
+    var width = snapClamp(px);
+    col.style.width = width + "px";
+    var widths = readWidths(root);
+    widths[key] = width;
+    writeWidths(root, widths);
+    syncValue(root, key);
+  }
+
+  function resetWidth(root, key) {
+    var col = colOf(root, key);
+    if (!col) return;
+    col.style.width = "";
+    var widths = readWidths(root);
+    delete widths[key];
+    writeWidths(root, widths);
+    syncValue(root, key);
+  }
+
+  // "<Label> column width 184 pixels" — the label is the button's group name.
+  function announce(root, btn, key) {
+    var status = root.querySelector("[data-grid-width-status]");
+    if (!status) return;
+    var group = btn.closest("[role=group]");
+    var label = (group && group.getAttribute("aria-label")) || key;
+    status.textContent = label + " " + widthOf(root, key) + " pixels";
+  }
+
   function onMove(evt) {
     if (!drag) return;
     var col = colOf(drag.root, drag.key);
@@ -4492,12 +4557,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
 
   function onUp(evt) {
     if (!drag) return;
-    var width = snapClamp(drag.startWidth + (evt.clientX - drag.startX));
-    var col = colOf(drag.root, drag.key);
-    if (col) col.style.width = width + "px";
-    var widths = readWidths(drag.root);
-    widths[drag.key] = width;
-    writeWidths(drag.root, widths);
+    setWidth(drag.root, drag.key, drag.startWidth + (evt.clientX - drag.startX));
     drag.root.removeAttribute("data-resizing");
     document.body.style.cursor = "";
     drag = null;
@@ -4516,21 +4576,12 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     var root = handle.closest("[data-grid]");
     if (!root) return;
     var key = handle.getAttribute("data-grid-resize");
-    var col = colOf(root, key);
-    if (!col) return;
-    // Baseline = the column's ACTUAL rendered width. col.offsetWidth reports
-    // it correctly in Chromium + WebKit (verified empirically); the th-rect
-    // fallback covers engines where col boxes don't report, and the 160
-    // sentinel is unreachable in practice (the handle lives inside a th).
-    var th = handle.closest("th");
+    if (!colOf(root, key)) return;
     drag = {
       root: root,
       key: key,
       startX: evt.clientX,
-      startWidth:
-        col.offsetWidth ||
-        parseInt(col.style.width, 10) ||
-        (th ? Math.round(th.getBoundingClientRect().width) : 160),
+      startWidth: widthOf(root, key),
     };
     root.setAttribute("data-resizing", "");
     document.body.style.cursor = "col-resize";
@@ -4540,6 +4591,51 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     // A drag must not select text or start a sort click.
     evt.preventDefault();
     evt.stopPropagation();
+  });
+
+  // Keyboard: the handle is a window-splitter separator.
+  document.addEventListener("keydown", function (evt) {
+    var handle =
+      evt.target && evt.target.matches && evt.target.matches("[data-grid-resize]")
+        ? evt.target
+        : null;
+    if (!handle) return;
+    var root = handle.closest("[data-grid]");
+    if (!root) return;
+    var key = handle.getAttribute("data-grid-resize");
+    if (evt.key === "ArrowLeft" || evt.key === "ArrowRight") {
+      setWidth(root, key, widthOf(root, key) + (evt.key === "ArrowRight" ? STEP : -STEP));
+    } else if (evt.key === "Home") {
+      resetWidth(root, key);
+    } else {
+      return;
+    }
+    // Never a sort keypress or a page scroll.
+    evt.preventDefault();
+    evt.stopPropagation();
+  });
+
+  document.addEventListener("focusin", function (evt) {
+    var handle =
+      evt.target && evt.target.matches && evt.target.matches("[data-grid-resize]")
+        ? evt.target
+        : null;
+    var root = handle && handle.closest("[data-grid]");
+    if (root) syncValue(root, handle.getAttribute("data-grid-resize"));
+  });
+
+  // Single pointer (#1842): the Columns menu's Narrower / Wider buttons.
+  document.addEventListener("click", function (evt) {
+    var btn =
+      evt.target && evt.target.closest && evt.target.closest("[data-grid-width]");
+    if (!btn) return;
+    var root = btn.closest("[data-grid]");
+    if (!root) return;
+    var key = btn.getAttribute("data-grid-width");
+    if (!colOf(root, key)) return;
+    var dir = Number(btn.getAttribute("data-step")) < 0 ? -1 : 1;
+    setWidth(root, key, widthOf(root, key) + dir * STEP);
+    announce(root, btn, key);
   });
 
   // Re-apply after swaps: cols survive tbody-only swaps, but a full-page
@@ -5277,6 +5373,10 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  *             draggable="true" when rearrange-capable
  *   - stack:  [data-kanban-stack][data-to-state]
  *   - move:   [data-kanban-move] <select> keyboard parity (column only)
+ *   - order:  [data-kanban-step="-1|1"] Move up / Move down buttons
+ *             (rank boards only) — the single-pointer alternative to the
+ *             in-column reorder drag (WCAG 2.5.7); focus returns to the same
+ *             button after the board refreshes
  *
  * No Alpine. Document-delegated. Survives morph (re-reads attrs each event).
  */
@@ -5687,6 +5787,53 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       /* announced */
     });
   });
+
+  // ── Single pointer: Move up / Move down within the column (rank boards) ──
+
+  var pendingFocus = null; // {id, step} — refocus the button after refresh
+
+  document.addEventListener("click", function (e) {
+    var btn =
+      e.target && e.target.closest && e.target.closest("[data-kanban-step]");
+    if (!btn) return;
+    var card = btn.closest("[data-kanban-card]");
+    var board = boardOf(btn);
+    var stack = card && card.closest("[data-kanban-stack]");
+    if (!card || !board || !stack || !rankFieldOf(board)) return;
+    var up = Number(btn.getAttribute("data-kanban-step")) < 0;
+    var all = siblingCards(stack, null);
+    var idx = all.indexOf(card);
+    if (up ? idx <= 0 : idx === -1 || idx >= all.length - 1) {
+      announce(board, up ? "Already first" : "Already last");
+      return;
+    }
+    // Land before the card above (up), or before the one after the next
+    // (down; null = append at the end).
+    var before = up ? all[idx - 1] : all[idx + 2] || null;
+    pendingFocus = {
+      id: card.getAttribute("data-entity-id") || "",
+      step: btn.getAttribute("data-kanban-step"),
+    };
+    putMove(board, card, card.getAttribute("data-from-state") || "", before).catch(
+      function () {
+        pendingFocus = null;
+      },
+    );
+  });
+
+  function restoreFocus() {
+    if (!pendingFocus) return;
+    var card = document.getElementById("kanban-card-" + pendingFocus.id);
+    var btn =
+      card &&
+      card.querySelector('[data-kanban-step="' + pendingFocus.step + '"]');
+    if (btn) {
+      btn.focus();
+      pendingFocus = null;
+    }
+  }
+  document.addEventListener("htmx:after:settle", restoreFocus); // htmx 4
+  document.addEventListener("htmx:afterSettle", restoreFocus); // htmx ≤2
 
   // ── Keyboard / pointer-free: native select (column only) ──
 

@@ -47,6 +47,15 @@ from dazzle.render.user_chip import initials_from_display
 if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
 
+# #1842: the Card options menu items — (data-dz-card-op, label). The same ops
+# the keyboard move (Space + arrows) and resize (R + arrows) modes perform.
+_CARD_OPS: tuple[tuple[str, str], ...] = (
+    ("move-up", "Move up"),
+    ("move-down", "Move down"),
+    ("narrower", "Narrower"),
+    ("wider", "Wider"),
+)
+
 
 def _dashboard_card_first_fetch_trigger(c: DashboardCard) -> str:
     """The one-shot first fetch of a skeleton card body (#864): ``load`` when
@@ -128,14 +137,27 @@ class _RenderDashboardMixin:
         eyebrow_html = (
             f'<span class="dz-card-eyebrow">{ctx.escape(c.eyebrow)}</span>' if c.eyebrow else ""
         )
-        # #1204: actions block (Remove-card × button) is permission-gated.
-        # When `edit_enabled` is False (safe default), the entire
-        # `dz-card-actions` div is omitted — no hover-flash, no a11y tab
-        # target, no surprise screen-reader click target. Page-route call
-        # site flips this from the existing `is_superuser` check.
+        # #1204: the actions block is permission-gated. When `edit_enabled` is
+        # False (safe default) the whole `dz-card-actions` div is omitted — no
+        # hover-flash, no a11y tab target, and (dashboard-builder.js) no drag or
+        # resize either: layout editing is edit-mode chrome. Page-route call site
+        # flips this from the existing `is_superuser` check.
+        # #1842 (WCAG 2.5.7): reorder and resize are drags, so edit mode also
+        # gets the single-pointer alternative — a Card options menu whose items
+        # run the keyboard paths' moves (`data-dz-card-op`).
         actions_html = (
             (
                 '<div class="dz-card-actions">'
+                '<details class="dz-menu dz-card-options">'
+                '<summary class="dz-card-action-button" data-test-id="dz-card-options">'
+                '<span class="visually-hidden">Card options</span></summary>'
+                '<div class="dz-menu__panel">'
+                + "".join(
+                    f'<button type="button" class="dz-menu__item" data-dz-card-op="{op}">'
+                    f"{label}</button>"
+                    for op, label in _CARD_OPS
+                )
+                + "</div></details>"
                 '<button data-test-id="dz-card-remove" '
                 'class="dz-card-action-button" aria-label="Remove card">'
                 '<svg width="14" height="14" fill="none" stroke="currentColor" '

@@ -11,9 +11,14 @@
  * on the table's `<col data-dz-col>` elements + localStorage.
  *
  * Contract:
- *   - handle:  `[data-dz-grid-resize="<key>"]` (a decorative span at the
- *              header's right edge; pointer-only — column width is
- *              presentational, so there is no keyboard path yet).
+ *   - handle:  `[data-dz-grid-resize="<key>"]` at the header's right edge —
+ *              a focusable window-splitter `role="separator"`: drag it, or
+ *              Left/Right steps the width by STEP px and Home resets it.
+ *              `aria-valuenow` follows the rendered width.
+ *   - step:    `[data-dz-grid-width="<key>"][data-dz-step="-1|1"]` buttons
+ *              (the Columns menu's Narrower / Wider) — the single-pointer
+ *              alternative to the drag (#1842, WCAG 2.5.7). The result is
+ *              announced in `[data-dz-grid-width-status]` when present.
  *   - target:  `col[data-dz-col="<key>"]` in the table's colgroup — resizing
  *              the col resizes the whole column (header + cells), and cols
  *              survive tbody-only swaps untouched.
@@ -31,6 +36,7 @@
   "use strict";
 
   var drag = null; // {root, key, startX, startWidth} — one drag at a time
+  var STEP = 24; // px per keyboard / button step (three 8px snaps)
 
   function storageKey(root) {
     return "dz-widths-" + (root.id || "grid");
@@ -67,6 +73,11 @@
       var col = colOf(root, key);
       if (col) col.style.width = widths[key] + "px";
     }
+    // A focusable separator must carry aria-valuenow from the start.
+    var handles = root.querySelectorAll("[data-dz-grid-resize]");
+    for (var i = 0; i < handles.length; i++) {
+      syncValue(root, handles[i].getAttribute("data-dz-grid-resize"));
+    }
   }
 
   // Drop stored widths whose column no longer exists (the #853 analogue) —
@@ -88,6 +99,60 @@
     if (dropped) writeWidths(root, cleaned);
   }
 
+  function handleOf(root, key) {
+    return root.querySelector('[data-dz-grid-resize="' + key + '"]');
+  }
+
+  // The column's ACTUAL rendered width. col.offsetWidth reports it in
+  // Chromium + WebKit; the th-rect fallback covers engines where col boxes
+  // don't report, and 160 is unreachable in practice.
+  function widthOf(root, key) {
+    var col = colOf(root, key);
+    if (!col) return 0;
+    var handle = handleOf(root, key);
+    var th = handle && handle.closest("th");
+    return (
+      col.offsetWidth ||
+      parseInt(col.style.width, 10) ||
+      (th ? Math.round(th.getBoundingClientRect().width) : 160)
+    );
+  }
+
+  function syncValue(root, key) {
+    var handle = handleOf(root, key);
+    if (handle) handle.setAttribute("aria-valuenow", String(widthOf(root, key)));
+  }
+
+  function setWidth(root, key, px) {
+    var col = colOf(root, key);
+    if (!col) return;
+    var width = snapClamp(px);
+    col.style.width = width + "px";
+    var widths = readWidths(root);
+    widths[key] = width;
+    writeWidths(root, widths);
+    syncValue(root, key);
+  }
+
+  function resetWidth(root, key) {
+    var col = colOf(root, key);
+    if (!col) return;
+    col.style.width = "";
+    var widths = readWidths(root);
+    delete widths[key];
+    writeWidths(root, widths);
+    syncValue(root, key);
+  }
+
+  // "<Label> column width 184 pixels" — the label is the button's group name.
+  function announce(root, btn, key) {
+    var status = root.querySelector("[data-dz-grid-width-status]");
+    if (!status) return;
+    var group = btn.closest("[role=group]");
+    var label = (group && group.getAttribute("aria-label")) || key;
+    status.textContent = label + " " + widthOf(root, key) + " pixels";
+  }
+
   function onMove(evt) {
     if (!drag) return;
     var col = colOf(drag.root, drag.key);
@@ -99,12 +164,7 @@
 
   function onUp(evt) {
     if (!drag) return;
-    var width = snapClamp(drag.startWidth + (evt.clientX - drag.startX));
-    var col = colOf(drag.root, drag.key);
-    if (col) col.style.width = width + "px";
-    var widths = readWidths(drag.root);
-    widths[drag.key] = width;
-    writeWidths(drag.root, widths);
+    setWidth(drag.root, drag.key, drag.startWidth + (evt.clientX - drag.startX));
     drag.root.removeAttribute("data-dz-resizing");
     document.body.style.cursor = "";
     drag = null;
@@ -123,21 +183,12 @@
     var root = handle.closest("[data-dz-grid]");
     if (!root) return;
     var key = handle.getAttribute("data-dz-grid-resize");
-    var col = colOf(root, key);
-    if (!col) return;
-    // Baseline = the column's ACTUAL rendered width. col.offsetWidth reports
-    // it correctly in Chromium + WebKit (verified empirically); the th-rect
-    // fallback covers engines where col boxes don't report, and the 160
-    // sentinel is unreachable in practice (the handle lives inside a th).
-    var th = handle.closest("th");
+    if (!colOf(root, key)) return;
     drag = {
       root: root,
       key: key,
       startX: evt.clientX,
-      startWidth:
-        col.offsetWidth ||
-        parseInt(col.style.width, 10) ||
-        (th ? Math.round(th.getBoundingClientRect().width) : 160),
+      startWidth: widthOf(root, key),
     };
     root.setAttribute("data-dz-resizing", "");
     document.body.style.cursor = "col-resize";
@@ -147,6 +198,51 @@
     // A drag must not select text or start a sort click.
     evt.preventDefault();
     evt.stopPropagation();
+  });
+
+  // Keyboard: the handle is a window-splitter separator.
+  document.addEventListener("keydown", function (evt) {
+    var handle =
+      evt.target && evt.target.matches && evt.target.matches("[data-dz-grid-resize]")
+        ? evt.target
+        : null;
+    if (!handle) return;
+    var root = handle.closest("[data-dz-grid]");
+    if (!root) return;
+    var key = handle.getAttribute("data-dz-grid-resize");
+    if (evt.key === "ArrowLeft" || evt.key === "ArrowRight") {
+      setWidth(root, key, widthOf(root, key) + (evt.key === "ArrowRight" ? STEP : -STEP));
+    } else if (evt.key === "Home") {
+      resetWidth(root, key);
+    } else {
+      return;
+    }
+    // Never a sort keypress or a page scroll.
+    evt.preventDefault();
+    evt.stopPropagation();
+  });
+
+  document.addEventListener("focusin", function (evt) {
+    var handle =
+      evt.target && evt.target.matches && evt.target.matches("[data-dz-grid-resize]")
+        ? evt.target
+        : null;
+    var root = handle && handle.closest("[data-dz-grid]");
+    if (root) syncValue(root, handle.getAttribute("data-dz-grid-resize"));
+  });
+
+  // Single pointer (#1842): the Columns menu's Narrower / Wider buttons.
+  document.addEventListener("click", function (evt) {
+    var btn =
+      evt.target && evt.target.closest && evt.target.closest("[data-dz-grid-width]");
+    if (!btn) return;
+    var root = btn.closest("[data-dz-grid]");
+    if (!root) return;
+    var key = btn.getAttribute("data-dz-grid-width");
+    if (!colOf(root, key)) return;
+    var dir = Number(btn.getAttribute("data-dz-step")) < 0 ? -1 : 1;
+    setWidth(root, key, widthOf(root, key) + dir * STEP);
+    announce(root, btn, key);
   });
 
   // Re-apply after swaps: cols survive tbody-only swaps, but a full-page

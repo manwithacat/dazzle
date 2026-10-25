@@ -3302,6 +3302,16 @@ dialog.dz-alert-dialog::backdrop {
   cursor: grabbing;
 }
 
+/* A read-only grid (`data-grid-editable="false"`, #1204) does not drag or
+ * resize (#1842), so it shows neither the grab cursor nor the resize grip. */
+[data-grid-editable="false"] .dz-card-wrapper .dz-card-header {
+  cursor: default;
+}
+
+[data-grid-editable="false"] .dz-card-resize {
+  display: none;
+}
+
 /* Card footer — trailing action row (the Fragment `Card.footer` slot). */
 .dz-card-footer {
   display: flex;
@@ -3348,6 +3358,23 @@ dialog.dz-alert-dialog::backdrop {
 .dz-card-wrapper:hover .dz-card-actions,
 .dz-card-wrapper:focus-within .dz-card-actions {
   opacity: 1;
+}
+
+/* Card options menu (#1842, WCAG 2.5.7): the single-pointer alternative to
+ * the reorder / resize drags. The card clips its overflow for the rounded
+ * corners, so while the menu is open the card lets the panel out and the
+ * slot rises above its neighbours. */
+.dz-card:has(.dz-card-options[open]) {
+  overflow: visible;
+}
+
+.dz-card-wrapper:has(.dz-card-options[open]) {
+  z-index: 10;
+}
+
+.dz-card-options > summary.dz-card-action-button::after {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .dz-card-action-button {
@@ -8881,6 +8908,39 @@ button.dz-item:hover {
   max-width: 100%;
 }
 
+/* In-column order buttons (#1842, WCAG 2.5.7): the single-pointer
+ * alternative to the reorder drag, shown only when the board ranks cards. */
+.dz-kanban-card-order {
+  display: inline-flex;
+  gap: var(--space-xs);
+  margin-inline-start: auto;
+}
+
+.dz-kanban-card-step {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--colour-border-control);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: var(--colour-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dz-kanban-card-step:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.dz-kanban-card-step:focus-visible {
+  box-shadow: 0 0 0 2px var(--colour-brand);
+}
+
 .dz-kanban-announce {
   position: absolute;
   width: 1px;
@@ -14318,7 +14378,7 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   right: 0;
   top: 100%;
   margin-block-start: var(--space-xs);
-  width: 11rem;
+  width: 14rem;
   z-index: 100;
   background: var(--colour-surface);
   border: 1px solid var(--colour-border);
@@ -14342,6 +14402,49 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 
 .dz-table-col-menu-item:hover {
   background: var(--colour-bg);
+}
+
+/* #1842 (WCAG 2.5.7): each row pairs the visibility toggle with the column's
+ * Narrower / Wider buttons — the single-pointer alternative to the resize
+ * drag (dz-grid-resize.js `data-dz-grid-width`). */
+.dz-table-col-menu-row {
+  display: flex;
+  align-items: center;
+}
+
+.dz-table-col-menu-row > .dz-table-col-menu-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.dz-table-col-menu-width {
+  display: inline-flex;
+  gap: var(--space-xs);
+  padding-inline-end: var(--space-sm);
+}
+
+.dz-table-col-menu-step {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--colour-border-control);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dz-table-col-menu-step:hover {
+  background: var(--colour-bg);
+}
+
+.dz-table-col-menu-step:focus-visible {
+  box-shadow: 0 0 0 2px var(--colour-brand);
 }
 
 /* #853 escape hatch: the "Show all columns" reset at the panel's foot. */
@@ -14647,10 +14750,11 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 /* NB the select-column <col> class (dz-table-col-select, in the grid's
  * colgroup) is SEMANTIC_ONLY: a structural marker with no rule — the table
  * stays layout:auto, so the col carries no width. */
-/* Column-resize handle (dz-grid-resize.js extension): an 8px pointer strip
- * at the header's right edge driving col[data-col] widths via
- * dz-grid-resize.js. Decorative (aria-hidden); a faint hairline appears on
- * hover; while a drag is live the root carries data-dz-resizing. */
+/* Column-resize handle (dz-grid-resize.js extension): an 8px strip at the
+ * header's right edge driving col[data-col] widths via dz-grid-resize.js.
+ * A focusable separator (Left/Right step, Home resets); a faint hairline
+ * appears on hover, a brand one on keyboard focus; while a drag is live the
+ * root carries data-dz-resizing. */
 .dz-table-resize-handle {
   position: absolute;
   top: 0;
@@ -14679,6 +14783,16 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 .dz-table-resize-handle:hover::after,
 [data-dz-resizing] .dz-table-resize-handle::after {
   background: var(--colour-border);
+}
+
+.dz-table-resize-handle:focus {
+  outline: none;
+}
+
+.dz-table-resize-handle:focus-visible::after {
+  top: 10%;
+  bottom: 10%;
+  background: var(--colour-brand);
 }
 
 [data-dz-grid][data-dz-resizing] {
