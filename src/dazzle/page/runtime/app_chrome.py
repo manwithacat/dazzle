@@ -104,6 +104,44 @@ _DEFAULT_FAVICON = "/static/assets/dazzle-favicon.svg"
 # panel posting to /feedbackreports). Its CSS ships inside dazzle.min.css.
 FEEDBACK_WIDGET_JS = "/static/js/feedback-widget.js"
 
+# #1854: meta names the feedback widget reads for its policy. Kept here (one
+# place) because `render/dispatch.py` reads `dz-feedback-review-personas` back
+# out of the chrome meta to stamp `dz-feedback-review` per request.
+FEEDBACK_META_CATEGORIES = "dz-feedback-categories"
+FEEDBACK_META_SEVERITIES = "dz-feedback-severities"
+FEEDBACK_META_SCREENSHOT = "dz-feedback-screenshot"
+FEEDBACK_META_REVIEW_SHORTCUT = "dz-feedback-review-shortcut"
+FEEDBACK_META_REVIEW_PERSONAS = "dz-feedback-review-personas"
+
+
+def feedback_policy_meta(feedback_widget: Any) -> list[tuple[str, str]]:
+    """The policy metas for a mounted feedback widget (#1854).
+
+    ``dz-feedback-categories`` / ``dz-feedback-severities`` are comma lists in
+    DSL order (the first severity is the default), ``dz-feedback-screenshot``
+    is ``off`` | ``optional``, ``dz-feedback-review-shortcut`` is the review
+    chord or ``none`` and ``dz-feedback-review-personas`` the comma list of
+    reviewer personas (absent when the DSL declares no ``review:``).
+    """
+    from dazzle.core.ir.feedback_widget import (
+        DEFAULT_FEEDBACK_CATEGORIES,
+        DEFAULT_FEEDBACK_SEVERITIES,
+    )
+
+    review = getattr(feedback_widget, "review", None)
+    categories = getattr(feedback_widget, "categories", None) or DEFAULT_FEEDBACK_CATEGORIES
+    severities = getattr(feedback_widget, "severities", None) or DEFAULT_FEEDBACK_SEVERITIES
+    out: list[tuple[str, str]] = [
+        (FEEDBACK_META_CATEGORIES, ",".join(str(c) for c in categories)),
+        (FEEDBACK_META_SEVERITIES, ",".join(str(s) for s in severities)),
+        (FEEDBACK_META_SCREENSHOT, str(getattr(review, "screenshot", "") or "off")),
+        (FEEDBACK_META_REVIEW_SHORTCUT, str(getattr(review, "shortcut", "") or "none")),
+    ]
+    personas = [str(p) for p in (getattr(review, "personas", None) or []) if p]
+    if personas:
+        out.append((FEEDBACK_META_REVIEW_PERSONAS, ",".join(personas)))
+    return out
+
 
 def _theme_css_url(theme: Any) -> str:
     """Mirror the legacy registry's URL convention.
@@ -258,6 +296,12 @@ def resolve_app_chrome(
         # #1842: the DSL `shortcut:` reaches the client as a meta tag
         # (`none` turns the shortcut off; the widget defaults to backtick).
         meta.append(("dz-feedback-shortcut", str(feedback_widget.shortcut)))
+        # #1854: the declared category / severity lists and the review posture
+        # policy ride the same way. The review chord is `none` when the DSL
+        # declares no `review:` block, so the client never arms anchor mode;
+        # the personas list lets the per-request renderer decide who is a
+        # reviewer (`dispatch._feedback_identity_meta` → `dz-feedback-review`).
+        meta.extend(feedback_policy_meta(feedback_widget))
 
     # Onboarding overlay JS (v0.71.6) — auto-mount when the project
     # declares any `guide` block. Apps without guides don't pay the

@@ -475,30 +475,86 @@ def build_app_chrome_page(
         css_links=css_links,
         js_scripts=js_scripts,
         favicon=favicon,
-        meta=extra_meta + _feedback_identity_meta(ctx, js_scripts),
+        meta=extra_meta + _feedback_identity_meta(ctx, js_scripts, extra_meta),
         og_meta=og_meta,
         font_preconnect=font_preconnect,
+        body_attrs=page_body_attrs(ctx),
     )
 
 
+def _first_role(ctx: PageContext) -> str:
+    roles = [r for r in (getattr(ctx, "user_roles", None) or []) if r]
+    return normalize_role(str(roles[0])) if roles else ""
+
+
 def _feedback_identity_meta(
-    ctx: PageContext, js_scripts: tuple[str, ...]
+    ctx: PageContext,
+    js_scripts: tuple[str, ...],
+    chrome_meta: tuple[tuple[str, str], ...] = (),
 ) -> tuple[tuple[str, str], ...]:
     """Signed-in identity for the feedback widget, emitted only when it is mounted.
 
-    ``feedback-widget.js`` stamps ``reported_by`` / ``persona`` on a report and
-    polls for the user's resolved reports; the FeedbackReport scope is
-    ``reported_by = current_user.email``. The pre-#1042 ``base.html`` wrote these
-    onto ``body.dataset``; the typed shell emits ``<meta>`` tags instead.
+    ``feedback-widget.js`` reads ``dz-user-email`` / ``dz-user-role`` to know who
+    is signed in (the server stamps ``reported_by`` / ``persona`` itself since
+    #1854) and polls for the user's resolved reports; the FeedbackReport scope
+    is ``reported_by = current_user.email``. The pre-#1042 ``base.html`` wrote
+    these onto ``body.dataset``; the typed shell emits ``<meta>`` tags instead.
+
+    #1854: ``dz-feedback-review`` = ``1`` when one of the user's normalised
+    roles is in the DSL's ``review: personas:`` (carried by the chrome meta
+    ``dz-feedback-review-personas``); absent otherwise.
     """
     if not any("/feedback-widget" in url for url in js_scripts):
         return ()
     email = (getattr(ctx, "user_email", "") or "").strip()
     if not email:
         return ()
-    roles = [r for r in (getattr(ctx, "user_roles", None) or []) if r]
-    role = normalize_role(roles[0]) if roles else ""
-    return (("dz-user-email", email), ("dz-user-role", role))
+    out: list[tuple[str, str]] = [("dz-user-email", email), ("dz-user-role", _first_role(ctx))]
+    if _is_feedback_reviewer(ctx, chrome_meta):
+        out.append(("dz-feedback-review", "1"))
+    return tuple(out)
+
+
+def _is_feedback_reviewer(ctx: PageContext, chrome_meta: tuple[tuple[str, str], ...]) -> bool:
+    """One of the user's roles (normalised) is a declared review persona."""
+    from dazzle.page.runtime.app_chrome import FEEDBACK_META_REVIEW_PERSONAS
+
+    personas: set[str] = set()
+    for name, content in chrome_meta:
+        if name == FEEDBACK_META_REVIEW_PERSONAS:
+            personas.update(normalize_role(p.strip()) for p in content.split(",") if p.strip())
+    if not personas:
+        return False
+    roles = {normalize_role(str(r)) for r in (getattr(ctx, "user_roles", None) or []) if r}
+    return bool(roles & personas)
+
+
+def page_body_attrs(ctx: PageContext) -> tuple[tuple[str, str], ...]:
+    """``<body data-dz-*>`` page context for client code (#1854).
+
+    ``data-dz-surface`` (the surface name), ``data-dz-entity``,
+    ``data-dz-record`` (the record id on a detail or edit page of one record),
+    ``data-dz-workspace`` and ``data-dz-persona`` (the normalised first role).
+    Only for an authenticated page; empty values are omitted, so an anonymous
+    or contextless page has no attributes at all.
+    """
+    if not getattr(ctx, "is_authenticated", False):
+        return ()
+    record = ""
+    detail = getattr(ctx, "detail", None)
+    if detail is not None:
+        record = str((getattr(detail, "item", None) or {}).get("id", "") or "")
+    form = getattr(ctx, "form", None)
+    if not record and form is not None and getattr(form, "mode", "") == "edit":
+        record = str((getattr(form, "initial_values", None) or {}).get("id", "") or "")
+    candidates = (
+        ("data-dz-surface", str(getattr(ctx, "view_name", "") or "")),
+        ("data-dz-entity", str(getattr(ctx, "entity_ref", "") or "")),
+        ("data-dz-record", record),
+        ("data-dz-workspace", str(getattr(ctx, "workspace_name", "") or "")),
+        ("data-dz-persona", _first_role(ctx)),
+    )
+    return tuple((name, value.strip()) for name, value in candidates if value.strip())
 
 
 def dispatch_render_page(

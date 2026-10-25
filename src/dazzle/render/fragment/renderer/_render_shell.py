@@ -197,7 +197,12 @@ class _RenderShellMixin:
         parts.append("</head>")
 
         # ── <body> ──
-        parts.append('<body class="dz-page">')
+        # #1854: page-context data attributes (surface, entity, record,
+        # workspace, persona) ride on <body>; names are validated by Page.
+        body_attrs = "".join(
+            f' {name}="{ctx.escape_attr(value)}"' for name, value in p.body_attrs if value
+        )
+        parts.append(f'<body class="dz-page"{body_attrs}>')
         # Cycle 2140: search-select leftover name=q lives on
         # form="hm-detached-q" (empty form="" fails Nu). Must be a
         # sibling of app forms, never nested.

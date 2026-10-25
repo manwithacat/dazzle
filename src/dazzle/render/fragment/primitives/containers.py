@@ -9,6 +9,7 @@ carries one card-safety invariant of its own — its header cannot be a
 Card (the surface IS the chrome).
 """
 
+import re
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -296,6 +297,9 @@ class AppShell:
     """
 
 
+_BODY_ATTR_NAME = re.compile(r"data-[a-z][a-z0-9-]*")
+
+
 @dataclass(frozen=True, slots=True)
 class Page:
     """Full HTML document — `<html>` + `<head>` + `<body>`.
@@ -378,9 +382,19 @@ class Page:
     toast_container: bool = True
     modal_slot: bool = True
     page_announcer: bool = True
+    # #1854: ``data-*`` attributes on ``<body>`` (name without the ``data-``
+    # prefix is NOT implied — pass the full attribute name). The app-shell
+    # builder stamps the page's surface / entity / record / workspace /
+    # persona here so client code (the feedback widget's anchors) can read
+    # where a note was left without parsing the URL. Names are restricted to
+    # ``data-`` + ``[a-z0-9-]`` so a value can never smuggle in an attribute.
+    body_attrs: tuple[tuple[str, str], ...] = ()
 
     def __post_init__(self) -> None:
         if not self.title:
             raise ValueError("Page requires a non-empty title")
         if not self.lang:
             raise ValueError("Page requires a non-empty lang")
+        for name, _value in self.body_attrs:
+            if not _BODY_ATTR_NAME.fullmatch(name):
+                raise ValueError(f"Page.body_attrs names must match data-[a-z0-9-]+; got {name!r}")
