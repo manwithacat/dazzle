@@ -74,18 +74,31 @@ Shortcut: triaged -> resolved (for quick fixes).
 category = "Workflow Pattern"
 definition = """
 The human-to-agent feedback loop:
-1. User submits feedback via the widget (POST /feedbackreports)
-2. Agent reads feedback via MCP tool: feedback(operation='list')
-3. Agent reads detail: feedback(operation='get', id='...')
-4. Agent fixes the issue (edits code, updates DSL, etc.)
-5. Agent resolves: feedback(operation='resolve', id='...', agent_notes='Fixed in commit ...')
+1. User submits feedback via the widget (POST /feedbackreports). A reviewer in the
+   review posture points at an element; the note carries an `anchor`, a `context`,
+   the `surface` and a per-tab `review_session` (`YYYY-MM-DD-xxxx`).
+2. Agent reads the open notes: feedback(operation='summarise') — grouped by surface
+   then severity, with the newest three descriptions per surface.
+3. Agent lists one review pass: feedback(operation='list', review_session='<id>')
+   (the list groups by review_session whenever the notes carry one; `since`,
+   `surface`, `page_url` and a comma-list `status` narrow it).
+4. Agent reads detail: feedback(operation='get', id='...') — `anchor` and `context`
+   come back parsed.
+5. Agent fixes the issue (edits code, updates DSL, etc.)
+6. Agent resolves: feedback(operation='resolve', id='...', agent_notes='Fixed in commit ...')
+
+The tool targets the local `dazzle serve` (.dazzle/runtime.json, .dazzle/session.json).
+To read a deployed app set DAZZLE_FEEDBACK_URL (base URL) and DAZZLE_FEEDBACK_COOKIE
+(`name=value`, the signed-in reviewer's session cookie).
 """
 
 [workflows.feedback_triage]
 name = "Feedback Triage Workflow"
 steps = [
-    "feedback(operation='list', status='new') — see unprocessed feedback",
-    "feedback(operation='get', id='<id>') — read full report with context",
+    "export DAZZLE_FEEDBACK_URL=https://<app> DAZZLE_FEEDBACK_COOKIE=<name>=<value> — only when the notes live on a deployed app",
+    "feedback(operation='summarise') — open notes (new,triaged) by surface then severity; start with the surface that has the most P1s",
+    "feedback(operation='list', review_session='<id>') or feedback(operation='list', surface='<surface>', status='new') — the notes of one review pass or one page",
+    "feedback(operation='get', id='<id>') — read the full report: anchor (dz_anchor, css, text_quote), context (surface, record, htmx_history, console_errors)",
     "Fix the reported issue (edit code, DSL, CSS, etc.)",
     "feedback(operation='resolve', id='<id>', agent_notes='Fixed in commit <sha>') — close the loop",
 ]
