@@ -108,7 +108,7 @@ class TestResolveAppChrome:
             feedback_widget=SimpleNamespace(enabled=True, shortcut=shortcut), app_config=None
         )
         chrome = resolve_app_chrome(appspec, project_root=None, manifest=None)
-        assert chrome.meta == (("dz-feedback-shortcut", shortcut),)
+        assert chrome.meta[0] == ("dz-feedback-shortcut", shortcut)
         assets = _resolve_chrome_assets(SimpleNamespace(fragment_chrome_meta=chrome.meta))
         ctx = PageContext(page_title="Tasks", app_name="Demo", user_email="ada@example.test")
         html = dispatch_render_page(
@@ -251,3 +251,177 @@ class TestProjectAssetFingerprint1793:
             chrome = self._chrome(project, ["/static/js/brand-chrome.js?v=8"])
         assert chrome.js_scripts[-1] == "/static/js/brand-chrome.js?v=8"
         assert "hand-bumped query string" in caplog.text
+
+
+class TestFeedbackPolicyMeta1854:
+    """The chrome carries the widget policy and the renderer the reviewer flag (#1854)."""
+
+    @staticmethod
+    def _spec(review: Any = None, **over: Any) -> Any:
+        from dazzle.core.ir.feedback_widget import FeedbackReviewSpec, FeedbackWidgetSpec
+
+        kwargs: dict[str, Any] = {"enabled": True, **over}
+        if review is not None:
+            kwargs["review"] = FeedbackReviewSpec(**review)
+        return FeedbackWidgetSpec(**kwargs)
+
+    def test_policy_metas_without_review(self) -> None:
+        chrome = resolve_app_chrome(
+            SimpleNamespace(
+                feedback_widget=self._spec(categories=["bug", "ux"], severities=["p1", "note"]),
+                app_config=None,
+            ),
+            project_root=None,
+            manifest=None,
+        )
+        meta = dict(chrome.meta)
+        assert meta["dz-feedback-categories"] == "bug,ux"
+        assert meta["dz-feedback-severities"] == "p1,note"
+        assert meta["dz-feedback-screenshot"] == "off"
+        assert meta["dz-feedback-review-shortcut"] == "none"
+        assert "dz-feedback-review-personas" not in meta
+
+    def test_policy_metas_with_review(self) -> None:
+        spec = self._spec(
+            review={"personas": ["super_admin", "trust_admin"], "screenshot": "optional"}
+        )
+        chrome = resolve_app_chrome(
+            SimpleNamespace(feedback_widget=spec, app_config=None), project_root=None, manifest=None
+        )
+        meta = dict(chrome.meta)
+        assert meta["dz-feedback-review-shortcut"] == "alt+shift+r"
+        assert meta["dz-feedback-screenshot"] == "optional"
+        assert meta["dz-feedback-review-personas"] == "super_admin,trust_admin"
+
+    def test_disabled_widget_emits_no_policy_metas(self) -> None:
+        chrome = resolve_app_chrome(
+            SimpleNamespace(feedback_widget=self._spec(enabled=False), app_config=None),
+            project_root=None,
+            manifest=None,
+        )
+        assert chrome.meta == ()
+
+    @staticmethod
+    def _render(roles: list[str], chrome_meta: tuple[tuple[str, str], ...]) -> str:
+        ctx = PageContext(
+            page_title="Tasks",
+            app_name="Demo",
+            is_authenticated=True,
+            user_email="ada@example.test",
+            user_roles=roles,
+        )
+        return dispatch_render_page(
+            ctx,
+            "<p>body</p>",
+            js_scripts=("/static/dist/dazzle.min.js", FEEDBACK_WIDGET_JS),
+            extra_meta=chrome_meta,
+        )
+
+    def test_reviewer_role_gets_the_review_meta(self) -> None:
+        """A `role_`-prefixed database role matches the bare DSL persona name."""
+        html = self._render(
+            ["role_trust_admin"], (("dz-feedback-review-personas", "super_admin,trust_admin"),)
+        )
+        assert '<meta name="dz-feedback-review" content="1">' in html
+        assert '<meta name="dz-user-role" content="trust_admin">' in html
+
+    def test_second_role_also_qualifies(self) -> None:
+        html = self._render(
+            ["teacher", "super_admin"], (("dz-feedback-review-personas", "super_admin"),)
+        )
+        assert 'name="dz-feedback-review"' in html
+
+    def test_non_reviewer_gets_no_review_meta(self) -> None:
+        html = self._render(["teacher"], (("dz-feedback-review-personas", "super_admin"),))
+        assert "dz-feedback-review" not in html.replace("dz-feedback-review-personas", "")
+
+    def test_no_review_block_means_no_review_meta(self) -> None:
+        html = self._render(["super_admin"], ())
+        assert 'name="dz-feedback-review"' not in html
+
+
+class TestPageBodyAttrs1854:
+    """`<body data-dz-*>` carries the page context for client anchors (#1854)."""
+
+    def test_authenticated_detail_page(self) -> None:
+        from dazzle.render.context import DetailContext
+
+        ctx = PageContext(
+            page_title="Task",
+            app_name="Demo",
+            is_authenticated=True,
+            user_email="ada@example.test",
+            user_roles=["role_teacher"],
+            view_name="task_detail",
+            entity_ref="Task",
+            detail=DetailContext(
+                entity_name="Task", title="Task", fields=[], item={"id": "abc-123", "title": "x"}
+            ),
+        )
+        html = dispatch_render_page(ctx, "<p>body</p>")
+        assert (
+            '<body class="dz-page" data-dz-surface="task_detail" data-dz-entity="Task" '
+            'data-dz-record="abc-123" data-dz-persona="teacher">' in html
+        )
+
+    def test_edit_form_record_and_workspace(self) -> None:
+        from dazzle.render.context import FormContext
+
+        ctx = PageContext(
+            page_title="Edit",
+            app_name="Demo",
+            is_authenticated=True,
+            user_email="ada@example.test",
+            user_roles=["admin"],
+            view_name="task_edit",
+            entity_ref="Task",
+            workspace_name="ops",
+            form=FormContext(
+                entity_name="Task",
+                title="Edit",
+                fields=[],
+                action_url="/x",
+                mode="edit",
+                initial_values={"id": "rec-9"},
+            ),
+        )
+        html = dispatch_render_page(ctx, "<p>body</p>")
+        assert 'data-dz-record="rec-9"' in html
+        assert 'data-dz-workspace="ops"' in html
+
+    def test_create_form_has_no_record(self) -> None:
+        from dazzle.render.context import FormContext
+
+        ctx = PageContext(
+            page_title="New",
+            app_name="Demo",
+            is_authenticated=True,
+            user_email="ada@example.test",
+            view_name="task_create",
+            entity_ref="Task",
+            form=FormContext(
+                entity_name="Task", title="New", fields=[], action_url="/x", mode="create"
+            ),
+        )
+        html = dispatch_render_page(ctx, "<p>body</p>")
+        assert "data-dz-record" not in html
+        assert 'data-dz-surface="task_create"' in html
+        # No roles → no persona attribute (empty values are omitted).
+        assert "data-dz-persona" not in html
+
+    def test_anonymous_page_has_no_body_attrs(self) -> None:
+        ctx = PageContext(page_title="Tasks", app_name="Demo", view_name="task_list")
+        html = dispatch_render_page(ctx, "<p>body</p>")
+        assert '<body class="dz-page">' in html
+
+    def test_values_are_attribute_escaped(self) -> None:
+        ctx = PageContext(
+            page_title="Tasks",
+            app_name="Demo",
+            is_authenticated=True,
+            user_email="ada@example.test",
+            view_name='x" onload="alert(1)',
+        )
+        html = dispatch_render_page(ctx, "<p>body</p>")
+        assert 'onload="alert' not in html
+        assert 'data-dz-surface="x&quot; onload=&quot;alert(1)"' in html

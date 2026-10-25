@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.core import ir
+from dazzle.core.feedback_meta import feedback_policy_meta
 from dazzle.core.manifest import TopbarTitleMode
 from dazzle.page.runtime.asset_fingerprint import StaticFingerprinter
 
@@ -101,8 +102,12 @@ _LUCIDE_UMD_JS = "/static/dist/dazzle-icons.min.js"
 # framework bundle, so no separate vendor widget JS is needed.
 _DEFAULT_FAVICON = "/static/assets/dazzle-favicon.svg"
 # `feedback_widget: enabled` mounts the in-app feedback widget (button +
-# panel posting to /feedbackreports). Its CSS ships inside dazzle.min.css.
+# panel posting to /feedbackreports). Its stylesheet lives in the script and is
+# injected into the widget's shadow root (#1854); dazzle.min.css carries none of it.
 FEEDBACK_WIDGET_JS = "/static/js/feedback-widget.js"
+
+# #1854: the meta names and their builder live in the core leaf
+# `dazzle.core.feedback_meta` (render reads them too; ADR-0038).
 
 
 def _theme_css_url(theme: Any) -> str:
@@ -258,6 +263,12 @@ def resolve_app_chrome(
         # #1842: the DSL `shortcut:` reaches the client as a meta tag
         # (`none` turns the shortcut off; the widget defaults to backtick).
         meta.append(("dz-feedback-shortcut", str(feedback_widget.shortcut)))
+        # #1854: the declared category / severity lists and the review posture
+        # policy ride the same way. The review chord is `none` when the DSL
+        # declares no `review:` block, so the client never arms anchor mode;
+        # the personas list lets the per-request renderer decide who is a
+        # reviewer (`dispatch._feedback_identity_meta` → `dz-feedback-review`).
+        meta.extend(feedback_policy_meta(feedback_widget))
 
     # Onboarding overlay JS (v0.71.6) — auto-mount when the project
     # declares any `guide` block. Apps without guides don't pay the

@@ -146,3 +146,21 @@ def test_page_emits_css_links_in_order() -> None:
     a = html.index('href="/static/dazzle.min.css"')
     b = html.index('href="/static/themes/dark.css"')
     assert a < b, "css_links must render in declaration order"
+
+
+# #1854: page-context data attributes on <body>.
+def test_page_body_attrs_are_emitted_and_escaped() -> None:
+    page = Page(
+        title="X",
+        body=Text("x"),
+        body_attrs=(("data-dz-surface", "tasks"), ("data-dz-record", 'a"b'), ("data-dz-empty", "")),
+    )
+    html = _render(page)
+    assert '<body class="dz-page" data-dz-surface="tasks" data-dz-record="a&quot;b">' in html
+    assert "data-dz-empty" not in html
+
+
+@pytest.mark.parametrize("name", ["onload", "data-", "data-Dz-x", "class"])
+def test_page_body_attrs_names_are_restricted(name: str) -> None:
+    with pytest.raises(ValueError, match="body_attrs names"):
+        Page(title="X", body=Text("x"), body_attrs=((name, "v"),))

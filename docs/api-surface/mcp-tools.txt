@@ -294,8 +294,8 @@ tool: dsl
   }
 
 tool: feedback
-  description_hash: e21079223443
-  description_len: 198
+  description_hash: 3c7d42c24071
+  description_len: 531
   {
     "properties": {
       "agent_classification": {
@@ -319,7 +319,7 @@ tool: feedback
         "type": "string"
       },
       "limit": {
-        "description": "Max results (list only, default 20)",
+        "description": "Max results (list default 20, summarise default 200)",
         "type": "integer"
       },
       "operation": {
@@ -327,9 +327,14 @@ tool: feedback
         "enum": [
           "list",
           "get",
+          "summarise",
           "triage",
           "resolve"
         ],
+        "type": "string"
+      },
+      "page_url": {
+        "description": "Filter by the page URL the note was left on (list only)",
         "type": "string"
       },
       "project_path": {
@@ -340,12 +345,24 @@ tool: feedback
         "description": "Who resolved (resolve only)",
         "type": "string"
       },
+      "review_session": {
+        "description": "Filter by review session, e.g. '2026-10-25-ab12' (list only)",
+        "type": "string"
+      },
       "severity": {
         "description": "Filter by severity (list only)",
         "type": "string"
       },
+      "since": {
+        "description": "Only reports created at or after this ISO 8601 timestamp (list/summarise)",
+        "type": "string"
+      },
       "status": {
-        "description": "Filter by status (list only)",
+        "description": "Filter by status; comma list, e.g. 'new,triaged' (list/summarise; summarise defaults to new,triaged)",
+        "type": "string"
+      },
+      "surface": {
+        "description": "Filter by the surface the note was left on (list only)",
         "type": "string"
       }
     },

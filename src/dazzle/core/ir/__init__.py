@@ -186,7 +186,9 @@ from .expressions import (
 # Feedback Widget
 from .feedback_widget import (
     FEEDBACK_REPORT_FIELDS,
+    FeedbackReviewSpec,
     FeedbackWidgetSpec,
+    feedback_report_fields,
 )
 from .fidelity import (
     FidelityGap,
@@ -1050,7 +1052,9 @@ __all__ = [
     "VisualTreatment",
     # Feedback Widget
     "FEEDBACK_REPORT_FIELDS",
+    "FeedbackReviewSpec",
     "FeedbackWidgetSpec",
+    "feedback_report_fields",
     # Guided onboarding (v0.71.0)
     "GuideCompleteOn",
     "GuideCompleteOnKind",

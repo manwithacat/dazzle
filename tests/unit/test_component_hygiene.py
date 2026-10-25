@@ -17,9 +17,9 @@ from dazzle.core.component_hygiene import (
 
 pytestmark = pytest.mark.gate
 
-# The per-component token-discipline floor (out of 100). Set just below the current
-# gated-corpus minimum (feedback-widget, 73.4 — its accepted raw-inline-motion baseline)
-# with a small margin. Teeth: a component that sprays raw colours loses the whole 40-pt
+# The per-component token-discipline floor (out of 100). Set just below the gated-corpus
+# minimum at the time (feedback-widget.css, 73.4; that sheet has since moved into the
+# widget's shadow root, dazzle#1854) with a small margin. Teeth: a component that sprays raw colours loses the whole 40-pt
 # colour dimension and tops out at 60 < FLOOR, so it fails here. Raise FLOOR as the
 # corpus improves to ratchet the gains in.
 FLOOR = 70.0

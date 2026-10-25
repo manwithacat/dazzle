@@ -1,6 +1,4 @@
 [
-  "feedback_widget.FeedbackWidgetSpec.categories",
-  "feedback_widget.FeedbackWidgetSpec.severities",
   "fidelity.FidelityReport.integration_fidelity",
   "fidelity.SurfaceFidelityScore.interaction",
   "fk_graph.FKEdge.from_entity",

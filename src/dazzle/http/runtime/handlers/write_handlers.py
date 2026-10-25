@@ -46,6 +46,7 @@ from dazzle.http.runtime.richtext_field import RichTextTooLongError, sanitise_ri
 # 2026-06-20). Was lazily imported from route_generator to dodge an import cycle;
 # route_support is a leaf, so these are now plain top-level imports.
 from dazzle.http.runtime.route_support import (
+    CreateInterceptor,
     RouteSpec,
     _extract_result_id,
     _htmx_current_url,
@@ -307,6 +308,7 @@ def create_create_handler(
     file_service: Any = None,
     file_fields: list[str] | None = None,
     rich_text_fields: dict[str, int] | None = None,
+    create_interceptor: "CreateInterceptor | None" = None,
 ) -> Callable[..., Any]:
     """Create a handler for create operations with optional Cedar-style access control.
 
@@ -335,6 +337,12 @@ def create_create_handler(
             ``widget=rich_text`` fields (``rich_text_fields_by_entity``).
             Their values are sanitised with ``clean_rich_text`` before
             validation; an over-cap value is a 422.
+        create_interceptor: Per-entity policy (#1854, see
+            :class:`~dazzle.http.runtime.route_support.CreateInterceptor`).
+            Runs ``before_create`` after the body is parsed and before any
+            injection / validation, so it takes precedence over the payload
+            (identity stamping) and the insert (idempotent replay); its
+            ``on_constraint_violation`` answers a unique-violation race.
     """
 
     service = spec.service
@@ -398,10 +406,31 @@ def create_create_handler(
                     },
                 ) from exc
 
-        # Inject idempotency key from header if present (#693)
-        idem_key = request.headers.get("x-idempotency-key")
+        # Inject idempotency key from header if present (#693). #1854: the
+        # standard `Idempotency-Key` name is read first; `X-Idempotency-Key`
+        # stays for existing clients.
+        idem_key = request.headers.get("idempotency-key") or request.headers.get(
+            "x-idempotency-key"
+        )
         if idem_key and "idempotency_key" not in body:
             body["idempotency_key"] = idem_key
+
+        # #1854: the per-entity create policy runs BEFORE injection and
+        # validation so it wins over the payload (stamped identity, caps,
+        # rate limit) and over the insert (an idempotent replay answers
+        # from the stored row without touching the table).
+        if create_interceptor is not None:
+            _early = await create_interceptor.before_create(
+                body,
+                request,
+                service=service,
+                input_schema=input_schema,
+                user_id=current_user,
+                user_email=_extra.get("user_email"),
+                user_roles=list(_extra.get("user_roles") or []),
+            )
+            if _early is not None:
+                return _early
 
         # Auto-inject current_user for missing required `ref User` fields
         # (manwithacat/dazzle#774). See inject_current_user_refs for the full rule set.
@@ -483,6 +512,14 @@ def create_create_handler(
         try:
             result = await service.execute(operation="create", data=data)
         except ConstraintViolationError as exc:
+            # #1854: two submissions racing on one key — the loser answers
+            # with the stored row (200 + Idempotent-Replayed), never a 500.
+            if create_interceptor is not None:
+                _replay = await create_interceptor.on_constraint_violation(
+                    exc, body, request, service=service
+                )
+                if _replay is not None:
+                    return _replay
             if idem_key and exc.field == "idempotency_key":
                 return {"status": "duplicate", "message": "Already submitted"}
             raise

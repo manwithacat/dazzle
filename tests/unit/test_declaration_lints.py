@@ -396,12 +396,6 @@ def test_known_tenancy_topics_values_parse(value: str) -> None:
 # ---------------------------------------------------------------------------
 
 _UNREAD_CASES = {
-    "feedback_widget": (
-        "feedback_widget: enabled\n  position: bottom-left\n  categories: [bug]\n"
-        "  severities: [blocker]\n",
-        "feedback_widget: `categories:`/`severities:` declared but not read by the runtime",
-        "feedback_widget: enabled\n  position: bottom-left\n",
-    ),
     "service stub": (
         "service calc:\n  kind: domain_logic\n  stub: python\n",
         "service 'calc': `stub:` declared but not read by the runtime",
@@ -443,6 +437,21 @@ def test_unread_clause_warns(case: str) -> None:
 def test_construct_without_unread_clause_is_silent(case: str) -> None:
     _, _, clean = _UNREAD_CASES[case]
     assert _parse_warnings(clean) == []
+
+
+def test_feedback_widget_categories_and_severities_are_read_1854() -> None:
+    """`categories:` / `severities:` left the W_DECLARED_NOT_READ registry (#1854):
+    the linker builds the FeedbackReport enums from them and the chrome sends
+    them to the widget, so declaring them now changes behaviour."""
+    body = (
+        "feedback_widget: enabled\n  position: bottom-left\n  categories: [bug]\n"
+        "  severities: [blocker]\n"
+    )
+    assert _parse_warnings(body) == []
+    fragment = _parse(body)
+    assert fragment.feedback_widget is not None
+    assert fragment.feedback_widget.categories == ["bug"]
+    assert fragment.feedback_widget.severities == ["blocker"]
 
 
 def test_parked_workspace_live_clause_warns_and_still_parses() -> None:

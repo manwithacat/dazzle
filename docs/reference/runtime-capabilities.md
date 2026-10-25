@@ -321,27 +321,80 @@ Returns HTTP 403 for any authenticated user without an admin role. Returns HTTP 
 
 When `feedback_widget: enabled` is declared at the module level, the runtime:
 
-1. **Auto-generates** a `FeedbackReport` entity with fields for category, severity, description, and auto-captured context (URL, persona, viewport, user agent, console errors, navigation history, page snapshot, screenshot, and annotation data).
-2. **Mounts** the widget on every signed-in app page: the app chrome adds `/static/js/feedback-widget.js` (CSS ships in `dazzle.min.css`) plus `dz-user-email` / `dz-user-role` meta tags the widget reads. A user is toasted once per newly resolved report (`notification_sent` is set on display).
+1. **Auto-generates** a `FeedbackReport` entity with fields for category, severity, description, auto-captured context (URL, persona, viewport, user agent, console errors, navigation history, page snapshot, screenshot, and annotation data) and, since #1854, the review anchor (`anchor`, `context` as `json`; `surface`; `review_session`). The `category` / `severity` enums are built from the DSL's `categories:` / `severities:` lists; the first declared severity is the default.
+2. **Mounts** the widget on every signed-in app page: the app chrome adds `/static/js/feedback-widget.js` plus the meta tags listed below. A user is toasted once per newly resolved report (`notification_sent` is set on display).
 3. **Exposes** the widget status in `/_diagnostics` under `features.feedback_widget`.
+4. **Runs a server-side policy** on `POST /feedbackreports` (identity stamping, caps, idempotent replay, a per-user rate limit) and extends `GET /feedbackreports` with the filters a reviewer's pins and an agent's read path need.
 
 ```dsl
 feedback_widget: enabled
   position: bottom-right
   shortcut: backtick
-  categories: [bug, ux, visual, behaviour, enhancement, other]
-  severities: [blocker, annoying, minor]
+  categories: [bug, ux, copy, data, question, idea]
+  severities: [p1, p2, p3, note]
   capture: [url, persona, viewport, user_agent, console_errors, nav_history, page_snapshot]
+  review:
+    personas: [super_admin, trust_admin]
+    shortcut: alt-shift-r
+    screenshot: off
 ```
 
-All fields except `enabled` are optional — the defaults above are used when omitted.
+All fields except `enabled` are optional — the defaults below are used when omitted.
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `position` | `bottom-right` | Screen corner for the floating button |
 | `shortcut` | `backtick` | Key that toggles the panel. `none` turns it off; also a key name (`f1`, `slash`, `question`) or a combination joined by `+` or `-` (`ctrl+shift+f`, quote values containing `+`). A bare key is ignored while focus is in a text field, select, button, link or contenteditable; a Ctrl/Alt/Meta combination works anywhere. |
-| `categories` | 6 values | Dropdown options for feedback type |
-| `severities` | 3 values | Dropdown options for severity |
+| `categories` | `bug, ux, visual, behaviour, enhancement, other` | The `FeedbackReport.category` enum and the widget's category toggles, in this order |
+| `severities` | `blocker, annoying, minor` | The `FeedbackReport.severity` enum and the widget's severity toggles; the first value is the default (`minor` when the framework list applies) |
 | `capture` | 7 fields | Context automatically attached to each report |
+| `review` | absent | The review posture (below). Absent → nobody gets it and the review chord is `none` |
+
+### Review posture (`review:`, #1854)
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `personas` | required | Declared persona names that get the review posture (point at an element, leave a note anchored to it, see the page's pins). A name that is not a declared persona fails `dazzle validate`. |
+| `shortcut` | `alt+shift+r` | Chord that arms anchor mode; same grammar as `shortcut:`; `none` turns it off. The bare-key rule applies. |
+| `screenshot` | `off` | `off` or `optional` — `optional` shows "Attach screenshot" where `getDisplayMedia` exists. The image is stored as a data URL in `screenshot_data` (≤ 1.5 MB). |
+
+A review note is an ordinary `FeedbackReport` whose `anchor` names the element (`dz_anchor` path, a unique CSS selector, a text quote and the rectangle), whose `context` holds the page context (surface, entity, record, workspace, persona, viewport, htmx history, console errors) and whose `surface` / `review_session` are also stored as their own columns so they filter.
+
+### What the page carries
+
+Meta tags on every app-shell page when the widget is mounted (`AppChrome.meta`):
+
+| Meta | Value |
+|------|-------|
+| `dz-feedback-shortcut` | the panel shortcut (`backtick`, `none`, `ctrl-shift-f`, …) |
+| `dz-feedback-categories` | the categories, comma-separated, DSL order |
+| `dz-feedback-severities` | the severities, comma-separated; the first is the default |
+| `dz-feedback-screenshot` | `off` or `optional` |
+| `dz-feedback-review-shortcut` | the review chord, or `none` when there is no `review:` block |
+| `dz-feedback-review-personas` | the review personas, comma-separated (absent without `review:`) |
+
+Per request, for a signed-in user: `dz-user-email`, `dz-user-role` (the normalised first role) and, when one of the user's normalised roles is a review persona, `dz-feedback-review` = `1` (absent otherwise).
+
+`<body>` carries the page context as data attributes on authenticated pages (empty values are omitted): `data-dz-surface` (the surface name), `data-dz-entity`, `data-dz-record` (the record id on a detail or edit page of one record), `data-dz-workspace` and `data-dz-persona` (the normalised first role).
+
+### The server contract
+
+`POST /feedbackreports` (JSON; CSRF-exempt; signed-in only — anonymous is refused as before):
+
+- `reported_by` is the session email and `persona` the normalised first role; values in the payload are ignored.
+- Caps, each a 422 with a message naming the field: `description` ≤ 4 000 characters; `anchor` + `context` + `page_snapshot` + `console_errors` ≤ 32 KB serialised; `screenshot_data` ≤ 1.5 MB.
+- Idempotency (draft-ietf-httpapi-idempotency-key-header): send `Idempotency-Key: <uuid>` (the `idempotency_key` body field, or the legacy `X-Idempotency-Key` header, also works). A replay answers **200** with the stored row and `Idempotent-Replayed: true`, also when two submissions race on the unique column (never a 500). The same key with a different payload is a 422.
+- Rate limit per user: 30 a minute and 300 a day, counted in process memory (one budget per worker), **429** with `Retry-After`. This is independent of the `[security] profile` limiter.
+
+`GET /feedbackreports` accepts, besides the generated `page` / `page_size` / `sort` / `search`:
+
+| Query | Meaning |
+|-------|---------|
+| `status=new,triaged` | one status, or a comma list (unknown values are dropped) |
+| `since=2026-10-25T09:00:00Z` | `created_at >=` the ISO 8601 instant (naive = UTC); an unparseable value is a 422 |
+| `page_url=`, `surface=`, `review_session=` | exact match |
+| `category=`, `severity=`, `reported_by=`, `notification_sent=` | exact match (as before) |
+
+Non-admins see only their own rows (`reported_by = current_user.email`); `admin` / `super_admin` see everything.
 
 The widget is only injected on authenticated pages. Public surfaces (declared with `access: public`) do not receive the widget.
