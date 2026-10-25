@@ -84,8 +84,12 @@ When a force lands:
     ship AR, `sse_wiring` also published a nudge envelope for `live: on`
     workspaces; see *Runtime transport*.)
   - **Auth events** (`auth.user.registered` and siblings) are published
-    straight to the bus by `auth/events.py`; cyfuture consumes them through
-    `EventFramework.register_handler`.
+    by `auth/events.py` through `EventFramework.publish`: to the bus with
+    Redis, and to the handlers registered in the same process without it
+    (#1852). cyfuture consumes them through
+    `EventFramework.register_handler(..., event_type="auth.user.registered")`.
+    Before #1852 a handler keyed on the full event type never matched,
+    because events publish on the topic `auth.user`.
   - **The process event-bus adapter** publishes its own envelopes to the bus.
   - **The transactional outbox has no framework writer.** Its only writer
     was `EventEmittingMixin`, which no CRUD service ever inherited (the
@@ -116,8 +120,9 @@ before ship AR); `git show 5bba9833f:<path>` returns every file below.
   `{prefix}consumer_offsets` and `{prefix}dlq` tables), its `asyncpg`-gated
   export in `http/events/__init__.py`, the `postgres` tier in `tier.py` and the
   `event_bus_transport` class of the DB-artifact registry. No consumer
-  deployment selected it: cyfuture and AegisMark run with `REDIS_URL`, and
-  nothing sets `EVENT_BACKEND`. `EventFramework` picked it whenever
+  deployment selected it: cyfuture and AegisMark ran with `REDIS_URL` at the
+  time, and nothing sets `EVENT_BACKEND`. (cyfuture has since dropped Redis;
+  #1852 delivers its auth-event handlers in-process.) `EventFramework` picked it whenever
   `redis_url` was empty, so local runs without Redis used it.
 - `src/dazzle/http/events/dev_memory.py` (373): `DevBusMemory`, the `memory`
   tier and the `EVENT_BACKEND` override. Tests use
@@ -169,7 +174,9 @@ dropped (no sign-off; Alembic autogenerate ignores the `_dazzle_` prefix).
   `cyfuture-provision` (`services/auth_event_handlers.py`). Dropping it would
   break de-duplication on cyfuture's production path.
 - Without `REDIS_URL` the bus is now the null tier (`EventTier.NULL`,
-  `NullBus`): publishes are dropped and registered handlers never fire. Before
+  `NullBus`): bus publishes are dropped. Since #1852, `EventFramework.publish`
+  (the auth-event path) calls the handlers registered in the same process
+  instead, inbox-deduplicated and not durable. Before
   ship AR the same setup ran the Postgres bus. Process execution without Redis
   is unchanged (`PostgresProcessAdapter`, not the bus).
 
@@ -181,8 +188,10 @@ dropped (no sign-off; Alembic autogenerate ignores the `_dazzle_` prefix).
    (or an HM controller using `EventSource`), keeping the `/_ops/sse/events`
    auth posture from flense ship AO (tenant from the session, never the query
    string).
-2. A consumer must deploy without Redis (Postgres only) but needs event
-   delivery (auth-event handlers, process events across workers). Restore
+2. A consumer must deploy without Redis (Postgres only) but needs *durable*
+   or cross-worker event delivery (process events across workers, retries
+   after a crash). In-process auth-event delivery without Redis shipped for
+   cyfuture in #1852 and does not reopen this. Restore
    `postgres_bus.py` and its tier; register its transport tables in the
    artifact registry (ADR-0047) and create them by migration (ADR-0017)
    instead of self-creation.
@@ -203,3 +212,4 @@ dropped (no sign-off; Alembic autogenerate ignores the `_dazzle_` prefix).
 | 2026-10-12 | Parked (this DD); events DSL and Kafka bus removed in flense ship F |
 | 2026-10-13 | Flense ship O: *Already shipped* corrected — CRUD events never reached the outbox; unused `EventEmittingMixin` removed |
 | 2026-10-16 | Flense ship AR: Postgres and in-memory buses, the `/_dazzle/events/*` explorer, SSE live push (`live:` now warns) and the channel `OutboxRepository` removed; `_dazzle_outbox` dropped by `0025_flense_park_event_transport`; the inbox kept (cyfuture's handler path) |
+| 2026-10-25 | #1852 (cyfuture dropped Redis): null-tier `EventFramework.publish` delivers to in-process handlers; `register_handler(event_type=...)` filters on the full event type. Reopen 2 narrowed to durable or cross-worker delivery; `PostgresBus` stays parked |

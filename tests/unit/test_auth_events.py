@@ -45,11 +45,10 @@ def mock_bus() -> AsyncMock:
 
 @pytest.fixture
 def mock_framework(mock_bus: AsyncMock) -> MagicMock:
-    """A MagicMock EventFramework whose get_bus().publish is async."""
+    """A running MagicMock EventFramework whose publish(envelope) is async."""
     fw = MagicMock()
-    bus = MagicMock()
-    bus.publish = mock_bus
-    fw.get_bus.return_value = bus
+    fw.is_running = True
+    fw.publish = mock_bus
     return fw
 
 
@@ -67,7 +66,8 @@ class TestEmitUserRegistered:
             await emit_user_registered(user, session_id="sess_abc")
 
         mock_bus.assert_awaited_once()
-        topic, envelope = mock_bus.await_args.args
+        (envelope,) = mock_bus.await_args.args
+        topic = envelope.topic
         assert topic == "auth.user"
         assert envelope.event_type == AUTH_USER_REGISTERED
         assert envelope.key == str(user.id)
@@ -86,7 +86,7 @@ class TestEmitUserRegistered:
         with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
             await emit_user_registered(user)
 
-        envelope = mock_bus.await_args.args[1]
+        envelope = mock_bus.await_args.args[0]
         assert "session_id" not in envelope.headers
 
 
@@ -99,7 +99,8 @@ class TestEmitUserLoggedIn:
             await emit_user_logged_in(user, session_id="sess_xyz", method="password")
 
         mock_bus.assert_awaited_once()
-        topic, envelope = mock_bus.await_args.args
+        (envelope,) = mock_bus.await_args.args
+        topic = envelope.topic
         assert topic == "auth.user"
         assert envelope.event_type == AUTH_USER_LOGGED_IN
         assert envelope.key == str(user.id)
@@ -116,7 +117,7 @@ class TestEmitUserLoggedIn:
         with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
             await emit_user_logged_in(user)
 
-        envelope = mock_bus.await_args.args[1]
+        envelope = mock_bus.await_args.args[0]
         assert envelope.payload["method"] == "password"
 
 
@@ -129,7 +130,8 @@ class TestEmitUserPasswordChanged:
             await emit_user_password_changed(user)
 
         mock_bus.assert_awaited_once()
-        topic, envelope = mock_bus.await_args.args
+        (envelope,) = mock_bus.await_args.args
+        topic = envelope.topic
         assert topic == "auth.user"
         assert envelope.event_type == AUTH_USER_PASSWORD_CHANGED
         assert envelope.key == str(user.id)
@@ -159,8 +161,8 @@ class TestPublishResilience:
 
     @pytest.mark.asyncio
     async def test_swallows_bus_publish_error(self, mock_framework: MagicMock) -> None:
-        """_publish should not raise when bus.publish fails."""
-        mock_framework.get_bus().publish = AsyncMock(side_effect=ConnectionError("redis down"))
+        """_publish should not raise when the framework's publish fails."""
+        mock_framework.publish = AsyncMock(side_effect=ConnectionError("redis down"))
 
         with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
             envelope = EventEnvelope.create(
@@ -171,10 +173,11 @@ class TestPublishResilience:
             await _publish(envelope)
 
     @pytest.mark.asyncio
-    async def test_skips_when_bus_is_none(self) -> None:
-        """_publish should skip gracefully when bus is None."""
+    async def test_skips_when_framework_not_running(self) -> None:
+        """_publish should skip gracefully when the framework is not running."""
         fw = MagicMock()
-        fw.get_bus.return_value = None
+        fw.is_running = False
+        fw.publish = AsyncMock()
 
         with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", fw):
             envelope = EventEnvelope.create(
@@ -183,6 +186,8 @@ class TestPublishResilience:
                 payload={},
             )
             await _publish(envelope)
+
+        fw.publish.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +204,7 @@ class TestEnvelopeShape:
         with patch("dazzle.http.runtime.auth.events._EventFrameworkRef.framework", mock_framework):
             await emit_user_registered(user)
 
-        envelope: EventEnvelope = mock_bus.await_args.args[1]
+        envelope: EventEnvelope = mock_bus.await_args.args[0]
         assert envelope.topic == "auth.user"
         assert envelope.action == "registered"
 
@@ -214,7 +219,7 @@ class TestEnvelopeShape:
             await emit_user_password_changed(user)
 
         for call in mock_bus.await_args_list:
-            envelope: EventEnvelope = call.args[1]
+            envelope: EventEnvelope = call.args[0]
             # Should not raise
             d = envelope.to_dict()
             assert isinstance(d, dict)

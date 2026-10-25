@@ -10,6 +10,7 @@ API without conditional checks. ``NullBus`` is also the bus tier when
 
 from __future__ import annotations  # required: forward reference
 
+import logging
 from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import Any
@@ -23,6 +24,8 @@ from dazzle.http.events.bus import (
     SubscriptionInfo,
 )
 from dazzle.http.events.envelope import EventEnvelope
+
+logger = logging.getLogger(__name__)
 
 # Probe for psycopg — the canary dependency for the full event system.
 try:
@@ -127,6 +130,26 @@ class NullEventFramework:
         envelope: EventEnvelope,
         topic: str | None = None,
     ) -> None:
+        pass
+
+    def get_bus(self) -> None:
+        return None
+
+    def register_handler(
+        self,
+        topic: str | None,
+        group_id: str,
+        handler: EventHandler,
+        *,
+        event_type: str | None = None,
+    ) -> None:
+        logger.warning(
+            "Event system unavailable (psycopg not installed): handler %s on %s will never run",
+            group_id,
+            event_type or topic,
+        )
+
+    async def publish(self, envelope: EventEnvelope, topic: str | None = None) -> None:
         pass
 
     async def health_check(self) -> dict[str, Any]:

@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 from dazzle.core.db_url import normalise_postgres_scheme
 from dazzle.http.events.bus import EventBus, EventHandler
 from dazzle.http.events.consumer import ConsumerConfig, IdempotentConsumer
-from dazzle.http.events.envelope import EventEnvelope
+from dazzle.http.events.envelope import EventEnvelope, topic_of
 from dazzle.http.events.inbox import EventInbox
 from dazzle.http.events.outbox import EventOutbox
 from dazzle.http.events.publisher import OutboxPublisher, PublisherConfig
@@ -131,8 +131,11 @@ class EventFramework:
         # Connection for outbox operations
         self._conn: Any = None
 
-        # Registered handlers
-        self._handlers: dict[str, list[tuple[str, EventHandler]]] = {}
+        # Registered handlers: topic -> [(group_id, handler, event_type filter)]
+        self._handlers: dict[str, list[tuple[str, EventHandler, str | None]]] = {}
+
+        # Null tier (no REDIS_URL): handlers delivered in-process by publish()
+        self._local_handlers: dict[str, list[tuple[str, EventHandler]]] = {}
 
         # Active consumers
         self._consumers: dict[str, IdempotentConsumer] = {}
@@ -157,6 +160,10 @@ class EventFramework:
             )
 
         return _pg_connect
+
+    @property
+    def _is_null_tier(self) -> bool:
+        return not self._config.redis_url
 
     def get_bus(self) -> EventBus | None:
         """Return the underlying event bus, or None if not configured."""
@@ -302,51 +309,97 @@ class EventFramework:
 
     def on(
         self,
-        topic: str,
+        topic: str | None = None,
         *,
         group_id: str | None = None,
+        event_type: str | None = None,
     ) -> Any:
         """
         Decorator to register an event handler.
 
         Args:
-            topic: Topic to subscribe to
+            topic: Topic to subscribe to (derived from ``event_type`` when omitted)
             group_id: Consumer group ID (defaults to handler function name)
+            event_type: Only deliver events of this full type (#1852)
 
         Example:
-            @framework.on("app.Order")
-            async def handle_order(event: EventEnvelope):
+            @framework.on(event_type="auth.user.registered")
+            async def handle_signup(event: EventEnvelope):
                 print(f"Received: {event.event_type}")
         """
 
         def decorator(func: EventHandler) -> EventHandler:
-            gid = group_id or func.__name__
-            if topic not in self._handlers:
-                self._handlers[topic] = []
-            self._handlers[topic].append((gid, func))
-            self._stats.active_subscriptions += 1
+            self.register_handler(topic, group_id or func.__name__, func, event_type=event_type)
             return func
 
         return decorator
 
     def register_handler(
         self,
-        topic: str,
+        topic: str | None,
         group_id: str,
         handler: EventHandler,
+        *,
+        event_type: str | None = None,
     ) -> None:
         """
         Register an event handler programmatically.
 
+        Events publish on their topic, which is the event type without the
+        action (``auth.user.registered`` -> ``auth.user``). A handler on a
+        topic receives every action; pass ``event_type`` to receive one.
+
         Args:
-            topic: Topic to subscribe to
+            topic: Topic to subscribe to (derived from ``event_type`` when None)
             group_id: Consumer group ID
             handler: Handler function
+            event_type: Only deliver events of this full type
+
+        Raises:
+            ValueError: If neither is given, or ``topic`` is not ``event_type``'s topic.
         """
-        if topic not in self._handlers:
-            self._handlers[topic] = []
-        self._handlers[topic].append((group_id, handler))
+        if event_type is not None:
+            derived = topic_of(event_type)
+            if topic is not None and topic != derived:
+                raise ValueError(
+                    f"event_type {event_type!r} publishes on topic {derived!r}, not {topic!r}"
+                )
+            topic = derived
+        if topic is None:
+            raise ValueError("register_handler needs a topic or an event_type")
+        if self._stats.is_running:
+            logger.warning(
+                "Handler %s registered on %s after the event framework started; "
+                "it will not receive events",
+                group_id,
+                event_type or topic,
+            )
+        self._handlers.setdefault(topic, []).append((group_id, handler, event_type))
         self._stats.active_subscriptions += 1
+
+    async def publish(self, envelope: EventEnvelope, topic: str | None = None) -> None:
+        """
+        Publish an event directly (not through the outbox).
+
+        With Redis the event goes to the bus. On the null tier (no
+        ``REDIS_URL``) the handlers registered in this process are called
+        in turn; a failing handler is logged and does not stop the others.
+        Null-tier delivery is not durable: an event is lost if the process
+        dies mid-delivery.
+        """
+        topic = topic or envelope.topic
+        if self._bus is None:
+            raise RuntimeError("EventFramework not started")
+        if not self._is_null_tier:
+            await self._bus.publish(topic, envelope)
+            return
+        for group_id, handler in self._local_handlers.get(topic, []):
+            try:
+                await handler(envelope)
+            except Exception:
+                logger.exception(
+                    "In-process handler %s failed on %s", group_id, envelope.event_type
+                )
 
     async def emit_event(
         self,
@@ -387,7 +440,7 @@ class EventFramework:
         connect_fn = self._make_connect_fn()
 
         for topic, handlers in self._handlers.items():
-            for group_id, handler in handlers:
+            for group_id, handler, event_type in handlers:
                 # Create idempotent consumer
                 consumer = IdempotentConsumer(
                     inbox=self._inbox,
@@ -398,12 +451,21 @@ class EventFramework:
                 await consumer.connect()
 
                 # Wrap handler with consumer
-                wrapped = consumer.handler(handler)
+                wrapped = _only_event_type(consumer.handler(handler), event_type)
 
-                # Subscribe to bus
-                await self._bus.subscribe(topic, group_id, wrapped)
+                if self._is_null_tier:
+                    self._local_handlers.setdefault(topic, []).append((group_id, wrapped))
+                else:
+                    await self._bus.subscribe(topic, group_id, wrapped)
 
                 self._consumers[f"{topic}:{group_id}"] = consumer
+
+        if self._is_null_tier and self._local_handlers:
+            logger.info(
+                "REDIS_URL not set: %d event handler(s) run in-process on publish "
+                "(not durable; outbox events are not delivered)",
+                sum(len(h) for h in self._local_handlers.values()),
+            )
 
         # Start bus consumer loops
         await self._bus.start_consumer_loop(poll_interval=self._config.consumer_poll_interval)  # type: ignore[attr-defined]
@@ -492,3 +554,15 @@ class EventFramework:
                 result["redis_connected"] = False
 
         return result
+
+
+def _only_event_type(handler: EventHandler, event_type: str | None) -> EventHandler:
+    """Wrap *handler* so it only sees events of *event_type* (None = all)."""
+    if event_type is None:
+        return handler
+
+    async def filtered(event: EventEnvelope) -> None:
+        if event.event_type == event_type:
+            await handler(event)
+
+    return filtered

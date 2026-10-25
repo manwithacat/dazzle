@@ -154,19 +154,20 @@ async def emit_user_email_verified(user_id: str, *, email: str) -> None:
 
 
 async def _publish(envelope: EventEnvelope) -> None:
-    """Publish *envelope* via the EventFramework bus.
+    """Publish *envelope* via the EventFramework.
 
-    Failures are logged at warning level and swallowed so that auth
-    responses are never blocked by event infrastructure issues.
+    With Redis it goes to the bus; without, the framework calls the
+    handlers registered in this process (#1852). Failures are logged at
+    warning level and swallowed so that auth responses are never blocked
+    by event infrastructure issues.
     """
     try:
         framework = _EventFrameworkRef.framework
-        bus = framework.get_bus() if framework else None
-        if bus:
-            await bus.publish(envelope.topic, envelope)
+        if framework is not None and framework.is_running:
+            await framework.publish(envelope)
             logger.debug("Published %s for key=%s", envelope.event_type, envelope.key)
         else:
-            logger.debug("Event bus not available, skipping %s", envelope.event_type)
+            logger.debug("Event framework not running, skipping %s", envelope.event_type)
     except Exception:
         # Never block auth on event failures.
         logger.warning(

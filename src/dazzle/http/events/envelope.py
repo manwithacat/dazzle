@@ -24,6 +24,12 @@ from uuid import UUID, uuid4
 from dazzle.core.clock import utcnow
 
 
+def topic_of(event_type: str) -> str:
+    """The topic an event type publishes on: ``app.Order.created`` -> ``app.Order``."""
+    parts = event_type.rsplit(".", 1)
+    return parts[0] if len(parts) > 1 else event_type
+
+
 @dataclass
 class EventEnvelope:
     """
@@ -71,8 +77,7 @@ class EventEnvelope:
         The topic is the event_type without the action suffix.
         Example: "app.Order.created" -> "app.Order"
         """
-        parts = self.event_type.rsplit(".", 1)
-        return parts[0] if len(parts) > 1 else self.event_type
+        return topic_of(self.event_type)
 
     @property
     def action(self) -> str:

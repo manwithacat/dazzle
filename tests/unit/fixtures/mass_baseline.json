@@ -1,7 +1,7 @@
 {
-  "src_lines": 333161,
-  "test_lines": 324875,
-  "docs_lines": 49845,
+  "src_lines": 333265,
+  "test_lines": 325024,
+  "docs_lines": 49864,
   "construct_count": 31,
   "written": "2026-10-25",
   "exceptions": [
@@ -748,6 +748,22 @@
         "test_lines"
       ],
       "reason": "#1842 follow-up: Label-in-Name toolbar check + form-control border gate"
+    },
+    {
+      "date": "2026-10-25",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "#1852 in-process null-tier delivery of auth events + event_type subscription (consumer-forced, cyfuture)"
+    },
+    {
+      "date": "2026-10-25",
+      "rose": [
+        "test_lines"
+      ],
+      "reason": "#1852 in-process null-tier delivery of auth events + event_type subscription (consumer-forced, cyfuture)"
     }
   ]
 }

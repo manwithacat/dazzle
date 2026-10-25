@@ -169,9 +169,18 @@ Redis Streams: auth lifecycle events (`auth.user.registered` and siblings),
 process events from the `EventBusProcessAdapter`, and handlers registered with
 `EventFramework.register_handler` (deduplicated per consumer group through the
 `_dazzle_event_inbox` table). Without `REDIS_URL` the bus is the null tier:
-publishes are accepted and dropped and registered handlers never fire. The
-startup log line `Event framework started` names the tier (`redis` or `null`)
-and the bus type.
+`EventFramework.publish` (the auth-event path) calls the handlers registered
+in the same process, inbox-deduplicated, and the startup log says how many.
+That delivery is not durable, and the null bus still drops outbox and
+process-adapter publishes. The startup log line `Event framework started`
+names the tier (`redis` or `null`) and the bus type.
+
+Events publish on their *topic*, the event type without the action
+(`auth.user.registered` → `auth.user`). Subscribe to one event type with
+`register_handler(None, "my-group", handler, event_type="auth.user.registered")`;
+a handler registered on the topic `auth.user` receives every auth action.
+Register handlers before the app starts: a handler added after the framework
+starts never receives events, and a WARNING says so.
 
 `EventFramework.health_check()` returns the tier, the bus type, whether the
 outbox publisher is running, the consumer count and the outbox depth; with

@@ -4,7 +4,8 @@ Event Bus Tier Configuration and Factory.
 Selects and builds the event bus for a deployment:
 
 - Redis Streams — every production consumer (``REDIS_URL`` set).
-- Null — no ``REDIS_URL``: publish is accepted and dropped, nothing is delivered.
+- Null — no ``REDIS_URL``: bus publishes are accepted and dropped.
+  ``EventFramework.publish`` delivers to in-process handlers instead (#1852).
 
 The PostgreSQL and in-memory tiers were parked in flense ship AR, the Kafka tier
 in flense ship F; both are recorded in DD-006.
