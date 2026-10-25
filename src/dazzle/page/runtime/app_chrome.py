@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.core import ir
+from dazzle.core.feedback_meta import feedback_policy_meta
 from dazzle.core.manifest import TopbarTitleMode
 from dazzle.page.runtime.asset_fingerprint import StaticFingerprinter
 
@@ -104,43 +105,8 @@ _DEFAULT_FAVICON = "/static/assets/dazzle-favicon.svg"
 # panel posting to /feedbackreports). Its CSS ships inside dazzle.min.css.
 FEEDBACK_WIDGET_JS = "/static/js/feedback-widget.js"
 
-# #1854: meta names the feedback widget reads for its policy. Kept here (one
-# place) because `render/dispatch.py` reads `dz-feedback-review-personas` back
-# out of the chrome meta to stamp `dz-feedback-review` per request.
-FEEDBACK_META_CATEGORIES = "dz-feedback-categories"
-FEEDBACK_META_SEVERITIES = "dz-feedback-severities"
-FEEDBACK_META_SCREENSHOT = "dz-feedback-screenshot"
-FEEDBACK_META_REVIEW_SHORTCUT = "dz-feedback-review-shortcut"
-FEEDBACK_META_REVIEW_PERSONAS = "dz-feedback-review-personas"
-
-
-def feedback_policy_meta(feedback_widget: Any) -> list[tuple[str, str]]:
-    """The policy metas for a mounted feedback widget (#1854).
-
-    ``dz-feedback-categories`` / ``dz-feedback-severities`` are comma lists in
-    DSL order (the first severity is the default), ``dz-feedback-screenshot``
-    is ``off`` | ``optional``, ``dz-feedback-review-shortcut`` is the review
-    chord or ``none`` and ``dz-feedback-review-personas`` the comma list of
-    reviewer personas (absent when the DSL declares no ``review:``).
-    """
-    from dazzle.core.ir.feedback_widget import (
-        DEFAULT_FEEDBACK_CATEGORIES,
-        DEFAULT_FEEDBACK_SEVERITIES,
-    )
-
-    review = getattr(feedback_widget, "review", None)
-    categories = getattr(feedback_widget, "categories", None) or DEFAULT_FEEDBACK_CATEGORIES
-    severities = getattr(feedback_widget, "severities", None) or DEFAULT_FEEDBACK_SEVERITIES
-    out: list[tuple[str, str]] = [
-        (FEEDBACK_META_CATEGORIES, ",".join(str(c) for c in categories)),
-        (FEEDBACK_META_SEVERITIES, ",".join(str(s) for s in severities)),
-        (FEEDBACK_META_SCREENSHOT, str(getattr(review, "screenshot", "") or "off")),
-        (FEEDBACK_META_REVIEW_SHORTCUT, str(getattr(review, "shortcut", "") or "none")),
-    ]
-    personas = [str(p) for p in (getattr(review, "personas", None) or []) if p]
-    if personas:
-        out.append((FEEDBACK_META_REVIEW_PERSONAS, ",".join(personas)))
-    return out
+# #1854: the meta names and their builder live in the core leaf
+# `dazzle.core.feedback_meta` (render reads them too; ADR-0038).
 
 
 def _theme_css_url(theme: Any) -> str:

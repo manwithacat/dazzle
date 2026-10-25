@@ -32,6 +32,7 @@ from html.parser import HTMLParser
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.condition_eval import evaluate_condition
+from dazzle.core.feedback_meta import FEEDBACK_META_REVIEW, FEEDBACK_META_REVIEW_PERSONAS
 from dazzle.core.manifest import TopbarTitleMode
 from dazzle.core.renderer_registry import default_renderer_names
 from dazzle.core.strings import normalize_role
@@ -511,14 +512,12 @@ def _feedback_identity_meta(
         return ()
     out: list[tuple[str, str]] = [("dz-user-email", email), ("dz-user-role", _first_role(ctx))]
     if _is_feedback_reviewer(ctx, chrome_meta):
-        out.append(("dz-feedback-review", "1"))
+        out.append((FEEDBACK_META_REVIEW, "1"))
     return tuple(out)
 
 
 def _is_feedback_reviewer(ctx: PageContext, chrome_meta: tuple[tuple[str, str], ...]) -> bool:
     """One of the user's roles (normalised) is a declared review persona."""
-    from dazzle.page.runtime.app_chrome import FEEDBACK_META_REVIEW_PERSONAS
-
     personas: set[str] = set()
     for name, content in chrome_meta:
         if name == FEEDBACK_META_REVIEW_PERSONAS:

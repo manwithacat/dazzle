@@ -37,6 +37,7 @@ from dazzle.http.runtime.auth.partition_root import (
 from dazzle.http.runtime.csrf import apply_csrf_protection
 from dazzle.http.runtime.document_routes import create_document_routes
 from dazzle.http.runtime.exception_handlers import register_exception_handlers
+from dazzle.http.runtime.feedback_policy import FeedbackCreateInterceptor, feedback_list_filters
 from dazzle.http.runtime.file_routes import create_file_routes, create_static_file_routes
 from dazzle.http.runtime.file_storage import (
     FileMetadataStore,
@@ -1985,11 +1986,6 @@ class DazzleBackendApp:
             and getattr(_fw, "enabled", False)
             and "FeedbackReport" in self._services
         ):
-            from dazzle.http.runtime.feedback_policy import (
-                FeedbackCreateInterceptor,
-                feedback_list_filters,
-            )
-
             route_generator.entity_create_interceptors["FeedbackReport"] = (
                 FeedbackCreateInterceptor()
             )

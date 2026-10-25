@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 283 BaseModels, 105 Enums, 27 other (functions / typealiases / constants)
+# Counts: 284 BaseModels, 105 Enums, 28 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -752,6 +752,13 @@ ir_class: FeatureItem
   optional:
     - icon: str | None = None
 
+ir_class: FeedbackReviewSpec
+  required: (none)
+  optional:
+    - personas: list[str] = []
+    - screenshot: str = 'off'
+    - shortcut: str = 'alt+shift+r'
+
 ir_class: FeedbackWidgetSpec
   required: (none)
   optional:
@@ -759,6 +766,7 @@ ir_class: FeedbackWidgetSpec
     - categories: list[str] = <factory:FeedbackWidgetSpec.<lambda>>
     - enabled: bool = False
     - position: str = 'bottom-right'
+    - review: FeedbackReviewSpec | None = None
     - severities: list[str] = <factory:FeedbackWidgetSpec.<lambda>>
     - shortcut: str = 'backtick'
 
@@ -3491,7 +3499,7 @@ category: constant
   - CURRENCY_SCALES: dict (len=29)
   - DEFAULT_CURRENCY_SCALE: int = 2
   - DEFAULT_PAGE_SIZE: int = 20
-  - FEEDBACK_REPORT_FIELDS: tuple (len=27)
+  - FEEDBACK_REPORT_FIELDS: tuple (len=31)
   - MAX_PAGE_SIZE: int = 100
   - MAX_TEMPLATE_HOPS: int = 2
   - MONEY_FIELD_PATTERNS: frozenset (len=22)
@@ -3504,6 +3512,7 @@ category: function
   - ScopePredicate (callable, type=_AnnotatedAlias)
   - column_width_error (callable, type=function)
   - create_default_sitespec (callable, type=function)
+  - feedback_report_fields (callable, type=function)
   - from_money (callable, type=function)
   - get_currency_scale (callable, type=function)
   - is_money_field_name (callable, type=function)
