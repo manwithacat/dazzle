@@ -119,7 +119,8 @@ CSS_SOURCES = [
     # pre-move state where Dazzle dashboard.css loaded after the whole HM dist).
     ("components", "components/dashboard-card.css"),
     ("components", "components/sitespec.css"),
-    ("components", "components/feedback-widget.css"),
+    # feedback-widget.css left the package (dazzle#1854): the widget renders in a
+    # shadow root and carries its stylesheet in feedback-widget.js.
 ]
 
 LAYER_ORDER = "@layer vendor, tokens, base, components;"

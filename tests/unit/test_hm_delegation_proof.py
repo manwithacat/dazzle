@@ -69,7 +69,8 @@ DELEGATION_ALLOWLIST: dict[str, str] = {
     # Main-bundle reservoir floor: 31 -> 0.
     # css/site-sections.css DELEGATED → HM components/sitespec.css (phase 1B, 2026-07-09).
     # css/feedback-widget.css DELEGATED → HM components/feedback-widget.css (phase 1C,
-    # 2026-07-09) — was orphaned (unlinked) on the Dazzle side; now served via the HM dist.
+    # 2026-07-09), then moved into feedback-widget.js as the widget's shadow-root
+    # stylesheet (dazzle#1854) — no stylesheet is served for it any more.
     # css/themes/{stripe,paper,linear-dark}.css DELEGATED → HM families/*.css (phase 2C-a,
     # 2026-07-09) — HM-owned aesthetic-family sources, generated to /static/css/themes/ by
     # build_dist.py (carry the AUTO-GENERATED-from-HM marker → recognised as delegated).
