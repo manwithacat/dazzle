@@ -695,28 +695,28 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button>'
             '<span class="dz-table-resize-handle" data-dz-grid-resize="first" '
             'role="separator" aria-orientation="vertical" tabindex="0" '
-            'aria-valuemin="80" aria-valuemax="800" aria-label="Resize First name column">'
+            'aria-label="Resize First name column">'
             "</span></th>"
             '<th class="dz-table-th" data-dz-col="last" aria-sort="none">'
             '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="last">Last name'
             '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button>'
             '<span class="dz-table-resize-handle" data-dz-grid-resize="last" '
             'role="separator" aria-orientation="vertical" tabindex="0" '
-            'aria-valuemin="80" aria-valuemax="800" aria-label="Resize Last name column">'
+            'aria-label="Resize Last name column">'
             "</span></th>"
             '<th class="dz-table-th" data-dz-col="plan" aria-sort="none">'
             '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="plan">Plan'
             '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button>'
             '<span class="dz-table-resize-handle" data-dz-grid-resize="plan" '
             'role="separator" aria-orientation="vertical" tabindex="0" '
-            'aria-valuemin="80" aria-valuemax="800" aria-label="Resize Plan column">'
+            'aria-label="Resize Plan column">'
             "</span></th>"
             '<th class="dz-table-th" data-dz-col="signed" aria-sort="none">'
             '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="signed">Signed up'
             '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button>'
             '<span class="dz-table-resize-handle" data-dz-grid-resize="signed" '
             'role="separator" aria-orientation="vertical" tabindex="0" '
-            'aria-valuemin="80" aria-valuemax="800" aria-label="Resize Signed up column">'
+            'aria-label="Resize Signed up column">'
             "</span></th>"
             "</tr></thead>"
             # The tbody hydrates over the wire: hx-get on `load` fetches the rows,
