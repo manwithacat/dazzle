@@ -6,7 +6,8 @@ rejected loudly. Each row names the section and the issue that introduced it:
 [ui] adaptive_ui (#1843),
 [auth.admin_capabilities] (admin-authz) and
 [serve] app (ADR-0046), [auth.enterprise] protocols (DD-013),
-[auth.two_factor] (DD-014).
+[auth.two_factor] (DD-014), [auth.self_signup] and
+[auth] auto_provision_single_org (#1853).
 """
 
 from pathlib import Path
@@ -16,7 +17,7 @@ import pytest
 
 from dazzle.core.errors import DazzleError
 from dazzle.core.ir.security import TwoFactorConfig, TwoFactorMethod
-from dazzle.core.manifest import load_manifest
+from dazzle.core.manifest import AuthSelfSignupConfig, load_manifest
 
 _MINIMAL_TOML = '[project]\nname = "t"\nversion = "0.0.1"\n\n[modules]\npaths = ["./dsl"]\n'
 
@@ -46,6 +47,8 @@ def _attr(obj: Any, dotted: str) -> Any:
         pytest.param("serve.app", None, id="serve_app_adr0046"),
         pytest.param("auth.enterprise.protocols", [], id="auth_enterprise_dd013"),
         pytest.param("auth.two_factor", TwoFactorConfig(), id="auth_two_factor_off_dd014"),
+        pytest.param("auth.self_signup", AuthSelfSignupConfig(), id="auth_self_signup_off_1853"),
+        pytest.param("auth.auto_provision_single_org", False, id="auth_auto_provision_off_1853"),
     ],
 )
 def test_absent_section_defaults_empty(tmp_path: Path, attr: str, expected: Any) -> None:
@@ -152,6 +155,18 @@ def test_absent_section_defaults_empty(tmp_path: Path, attr: str, expected: Any)
             (TwoFactorMethod.TOTP,),
             id="auth_two_factor_default_totp_dd014",
         ),
+        pytest.param(
+            '\n[auth.self_signup]\njoin_host_org = true\nrole = "customer"\n',
+            "auth.self_signup",
+            AuthSelfSignupConfig(join_host_org=True, role="customer", require_verified_email=True),
+            id="auth_self_signup_1853",
+        ),
+        pytest.param(
+            "\n[auth]\nauto_provision_single_org = true\n",
+            "auth.auto_provision_single_org",
+            True,
+            id="auth_auto_provision_read_from_toml_1853",
+        ),
     ],
 )
 def test_section_parsed(tmp_path: Path, extra: str, attr: str, expected: Any) -> None:
@@ -250,6 +265,21 @@ def test_lenient_section_filters_bad_entries(
             "\n[auth.two_factor]\nenabled = true\nrecovery_code_count = 0\n",
             "recovery_code_count",
             id="auth_two_factor_recovery_count_dd014",
+        ),
+        pytest.param(
+            "\n[auth.self_signup]\njoin_host_org = true\n",
+            "requires a role",
+            id="auth_self_signup_join_without_role_1853",
+        ),
+        pytest.param(
+            '\n[auth.self_signup]\njoin_host_org = true\nrole = "customer"\nat_root = true\n',
+            "unknown keys",
+            id="auth_self_signup_unknown_key_1853",
+        ),
+        pytest.param(
+            '\n[auth.self_signup]\njoin_host_org = "yes"\nrole = "customer"\n',
+            "must be true or false",
+            id="auth_self_signup_non_bool_1853",
         ),
     ],
 )

@@ -37,12 +37,14 @@ from dazzle.core.strings import normalize_role
 from dazzle.http.runtime.auth.cookie_name import read_session_id, set_session_cookies
 from dazzle.http.runtime.auth.crypto import cookie_secure
 from dazzle.http.runtime.auth.events import emit_user_logged_in, emit_user_registered
-from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
+from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response, verify_to_join_response
 from dazzle.http.runtime.auth.models import SecondFactorProof
 from dazzle.http.runtime.auth.org_activation import (
     FORBIDDEN_SENTINEL,
+    VERIFY_TO_JOIN_SENTINEL,
     Activated,
     HostForbidden,
+    VerifyToJoin,
     _login_redirect_for_outcome,
     activate_session_for_login,
     memberships_required,
@@ -89,6 +91,8 @@ def json_active_membership_id(auth_store: Any, user: Any, request: Any) -> str |
     gates login on membership.
     """
     outcome = activate_session_for_login(auth_store, user, request)
+    if isinstance(outcome, VerifyToJoin):
+        raise HTTPException(status_code=403, detail="verify your email to join this organization")
     if isinstance(outcome, HostForbidden):
         if memberships_required(request):
             raise HTTPException(status_code=403, detail="no membership for this organization")
@@ -109,6 +113,8 @@ def _resolve_landing(
     )
     if redirect_to == FORBIDDEN_SENTINEL:
         return forbidden_org_response(request)  # #1393: branded host-pin 403
+    if redirect_to == VERIFY_TO_JOIN_SENTINEL:
+        return verify_to_join_response(request, email=str(user.email))  # #1853
     return Landing(membership_id, redirect_to)
 
 

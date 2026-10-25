@@ -16,7 +16,12 @@ from __future__ import annotations
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 
+from dazzle.http.runtime.auth.org_context_views import (
+    build_forbidden_org_view,
+    build_verify_to_join_view,
+)
 from dazzle.http.runtime.auth.product_name import product_name
+from dazzle.render.fragment.renderer import FragmentRenderer
 
 
 def forbidden_org_response(request: Request) -> HTMLResponse:
@@ -25,8 +30,18 @@ def forbidden_org_response(request: Request) -> HTMLResponse:
     Returned (not raised) by the browser login flows when a proven identity is
     pinned by the host to an organisation it isn't a member of.
     """
-    from dazzle.http.runtime.auth.org_context_views import build_forbidden_org_view
-    from dazzle.render.fragment.renderer import FragmentRenderer
 
     html = FragmentRenderer().render(build_forbidden_org_view(product_name=product_name(request)))
     return HTMLResponse(html, status_code=403)
+
+
+def verify_to_join_response(request: Request, *, email: str) -> HTMLResponse:
+    """The "verify your email to join" page (#1853), status 403.
+
+    ``[auth.self_signup]`` would admit this identity to the host org, but
+    ``require_verified_email`` holds the join until the address is verified. The
+    page offers a resend; the join happens on the first sign-in after verifying.
+    """
+
+    page = build_verify_to_join_view(product_name=product_name(request), email=email)
+    return HTMLResponse(FragmentRenderer().render(page), status_code=403)

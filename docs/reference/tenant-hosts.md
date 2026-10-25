@@ -97,6 +97,40 @@ It warns on:
 - The full lookup order across multi-entity domains (helper output)
 - Multi-domain configurations (slugs are not unique across domains)
 
+## Self-service sign-up on a host (`[auth.self_signup]`)
+
+On a membership-gated host, an identity that signs in with no membership in
+the host org (or its ancestors) gets the branded 403 "This isn't your
+organisation". A product whose funnel is "sign up on our site, become our
+client" declares the exception in `dazzle.toml` (#1853):
+
+```toml
+[auth.self_signup]
+join_host_org = true
+role = "customer"              # required; a declared persona
+require_verified_email = true  # default
+```
+
+On any sign-in path (password, sign-up, magic link, OAuth, OIDC), an identity
+with **no memberships anywhere and no membership history** joins the host org
+with `role`. The membership is created at the host itself, never at an
+ancestor, and records a `provisioned` membership event.
+
+- An identity that belongs to another org, or is suspended or invited there,
+  still gets the 403.
+- An identity that was removed from any org still gets the 403: removal
+  deletes the row, and the membership event stream remembers it.
+- With `require_verified_email` (the default), an unverified identity sees
+  "Verify your email to continue" (status 403, with a resend form; JSON
+  sign-in returns 403 `verify your email to join this organization`). It
+  joins on the first sign-in after verifying. Turn this off only if no scope
+  rule keys on `current_user.email`: an unverified address could otherwise
+  inherit rows addressed to that email.
+
+Boot fails if `role` is not a declared persona or holds a framework admin
+capability (`org_admin_roles` / `admin_capabilities`). On an app with no
+membership-gated `tenant_host:` the setting has no effect and logs a warning.
+
 ## Cross-tenant guard
 
 `dazzle.http.runtime.tenant.guard.check_cross_tenant()` enforces the

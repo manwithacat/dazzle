@@ -153,6 +153,23 @@ class EnterpriseAuthConfig:
             )
 
 
+@dataclass(frozen=True)
+class AuthSelfSignupConfig:
+    """``[auth.self_signup]`` (#1853): who may join a host-pinned org by signing in.
+
+    With ``join_host_org = true``, an identity with no memberships anywhere, and
+    no membership history, that signs in on a ``tenant_host:`` org's own address
+    joins that org with ``role``, instead of getting the host-pin 403. An
+    identity that belongs to (or was removed from) any org still gets the 403.
+    ``require_verified_email`` (default true) holds the join until the email is
+    verified, so an unverified address cannot inherit email-keyed scope rows.
+    """
+
+    join_host_org: bool = False
+    role: str | None = None
+    require_verified_email: bool = True
+
+
 @dataclass
 class AuthConfig:
     """Authentication configuration.
@@ -209,6 +226,9 @@ class AuthConfig:
 
     # Enterprise auth (DD-013): OIDC sign-in / SCIM provisioning, opt-in per protocol
     enterprise: EnterpriseAuthConfig = field(default_factory=EnterpriseAuthConfig)
+
+    # Host-org self-join on sign-in (#1853): [auth.self_signup], off by default.
+    self_signup: AuthSelfSignupConfig = field(default_factory=AuthSelfSignupConfig)
 
     # Two-factor sign-in (DD-014): [auth.two_factor], off by default. Threaded onto
     # the IR as AppSpec.security.two_factor by build_appspec.
@@ -835,6 +855,38 @@ def _parse_two_factor_auth(data: object) -> TwoFactorConfig:
     )
 
 
+_SELF_SIGNUP_KEYS = frozenset({"join_host_org", "role", "require_verified_email"})
+
+
+def _parse_self_signup_auth(data: object) -> AuthSelfSignupConfig:
+    """Parse ``[auth.self_signup]`` (#1853); a malformed table raises.
+
+    [auth.self_signup]
+    join_host_org = true
+    role = "customer"              # required with join_host_org
+    require_verified_email = true  # default
+    """
+    if not isinstance(data, dict):
+        raise ValueError("[auth.self_signup] must be a TOML table")
+    unknown_keys = sorted(set(data) - _SELF_SIGNUP_KEYS)
+    if unknown_keys:
+        raise ValueError(
+            f"[auth.self_signup] unknown keys {unknown_keys!r}; "
+            f"allowed: {sorted(_SELF_SIGNUP_KEYS)!r}"
+        )
+    join = data.get("join_host_org", False)
+    verified = data.get("require_verified_email", True)
+    for key, value in (("join_host_org", join), ("require_verified_email", verified)):
+        if not isinstance(value, bool):
+            raise ValueError(f"[auth.self_signup] {key} must be true or false; got {value!r}")
+    role = data.get("role")
+    if role is not None and (not isinstance(role, str) or not role):
+        raise ValueError(f"[auth.self_signup] role must be a persona id; got {role!r}")
+    if join and role is None:
+        raise ValueError("[auth.self_signup] join_host_org = true requires a role")
+    return AuthSelfSignupConfig(join_host_org=join, role=role, require_verified_email=verified)
+
+
 def _parse_storage_configs(data: dict[str, object]) -> dict[str, StorageConfig]:
     """Parse ``[storage.<name>]`` blocks from manifest TOML data (#932).
 
@@ -1056,6 +1108,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         user_entity=auth_data.get("user_entity", "User"),
         require_email_verification=auth_data.get("require_email_verification", False),
         allow_registration=auth_data.get("allow_registration", True),
+        auto_provision_single_org=bool(auth_data.get("auto_provision_single_org", False)),
         org_admin_roles=list(auth_data.get("org_admin_roles", [])),
         admin_capabilities={
             str(k): [str(r) for r in (v or [])]
@@ -1066,6 +1119,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         oauth_providers=oauth_providers,
         enterprise=_parse_enterprise_auth(auth_data.get("enterprise", {})),
         two_factor=_parse_two_factor_auth(auth_data.get("two_factor", {})),
+        self_signup=_parse_self_signup_auth(auth_data.get("self_signup", {})),
         password_min_length=auth_data.get("password_min_length", 8),
         max_login_attempts=auth_data.get("max_login_attempts", 5),
         lockout_duration_minutes=auth_data.get("lockout_duration_minutes", 15),

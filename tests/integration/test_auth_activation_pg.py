@@ -316,6 +316,49 @@ def test_host_pin_activates_matching_org_and_403s_on_mismatch(scratch_url: str) 
     assert isinstance(activate_session_for_login(store, user, _req("t-UNKNOWN")), HostForbidden)
 
 
+def test_self_signup_joins_host_once_and_a_removed_member_stays_out(scratch_url: str) -> None:
+    """#1853: [auth.self_signup] creates the host membership (with its PROVISIONED
+    event), holds an unverified identity, and never re-admits a removed member."""
+    from types import SimpleNamespace
+
+    from dazzle.core.manifest import AuthSelfSignupConfig
+    from dazzle.http.runtime.auth.org_activation import (
+        Activated,
+        HostForbidden,
+        VerifyToJoin,
+        activate_session_for_login,
+    )
+    from dazzle.http.runtime.auth.store import AuthStore
+
+    store = AuthStore(database_url=scratch_url)
+    store._init_db()
+    user = store.create_user(email="new@b.test", password="pw123456")
+    cfg = AuthSelfSignupConfig(join_host_org=True, role="customer")
+    req = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace(self_signup=cfg)),
+        state=SimpleNamespace(tenant=SimpleNamespace(id="t-host", ancestor_ids=())),
+    )
+
+    assert isinstance(activate_session_for_login(store, user, req), VerifyToJoin)
+    assert store.get_memberships_for_identity(str(user.id)) == []
+
+    store.mark_email_verified(user.id)
+    user = store.get_user_by_id(user.id)
+    out = activate_session_for_login(store, user, req)
+    assert isinstance(out, Activated)
+    joined = store.get_membership(out.membership_id)
+    assert (joined.tenant_id, joined.roles) == ("t-host", ["customer"])
+    assert [e.event_type for e in store.get_membership_events(identity_id=str(user.id))] == [
+        "provisioned"
+    ]
+
+    again = activate_session_for_login(store, user, req)
+    assert isinstance(again, Activated) and again.membership_id == out.membership_id
+
+    store.remove_membership(out.membership_id, reason="left")
+    assert isinstance(activate_session_for_login(store, user, req), HostForbidden)
+
+
 def test_host_pin_uuid_discriminator_round_trips(scratch_url: str) -> None:
     """MEDIUM-1 invariant guard (review): the host-pin matches a membership whose
     `tenant_id` is `str(ResolvedTenant.id)` for a real UUID-shaped org id. This

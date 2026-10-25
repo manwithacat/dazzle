@@ -44,11 +44,19 @@ class HostForbidden:
     """Host-pinned to an org the identity has no active membership in → 403."""
 
 
-ActivationOutcome = Activated | NeedsPicker | NoOrgs | HostForbidden
+@dataclass(frozen=True)
+class VerifyToJoin:
+    """[auth.self_signup] would admit this identity to the host org, but its email
+    is not verified yet (#1853) — show "verify your email, then sign in again"."""
+
+
+ActivationOutcome = Activated | NeedsPicker | NoOrgs | HostForbidden | VerifyToJoin
 
 # Sentinel redirect target meaning "raise 403" — the caller turns it into an
 # HTTPException so this pure module stays free of FastAPI imports.
 FORBIDDEN_SENTINEL = "__forbidden__"
+# Sentinel redirect target meaning "render the verify-to-join page" (#1853).
+VERIFY_TO_JOIN_SENTINEL = "__verify_to_join__"
 
 
 def resolve_activation(
@@ -164,6 +172,34 @@ def single_org_auto_provision(request: Any) -> bool:
     return bool(getattr(state, "single_org_auto_provision", False))
 
 
+def self_signup_join_role(request: Any) -> tuple[str, bool] | None:
+    """``(role, require_verified_email)`` when the app declares
+    ``[auth.self_signup] join_host_org`` (validated at boot by AuthSubsystem), else None."""
+    state = getattr(getattr(request, "app", None), "state", None)
+    cfg = getattr(state, "self_signup", None)
+    if cfg is None or not getattr(cfg, "join_host_org", False) or not cfg.role:
+        return None
+    return cfg.role, bool(cfg.require_verified_email)
+
+
+def _join_host_org(
+    auth_store: Any, user: Any, host_tenant_id: str, role: str
+) -> list[MembershipRecord]:
+    """Create the self-signup membership at the host org; re-read on a lost race."""
+    import psycopg
+
+    try:
+        auth_store.create_membership(
+            tenant_id=host_tenant_id,
+            identity_id=str(user.id),
+            roles=[role],
+            reason="self-signup host join (#1853)",
+        )
+    except psycopg.errors.UniqueViolation:
+        pass  # a concurrent sign-in created it first; the re-read below finds it
+    return list(auth_store.get_memberships_for_identity(str(user.id)))
+
+
 def activate_session_for_login(auth_store: Any, user: Any, request: Any) -> ActivationOutcome:
     """Resolve Phase 2 for a just-proven ``user`` on this ``request``.
 
@@ -173,9 +209,28 @@ def activate_session_for_login(auth_store: Any, user: Any, request: Any) -> Acti
     backfills pre-1c users on next login. The host-pin guard is load-bearing: a
     host-pinned request names a specific org, so a missing membership there must
     stay ``HostForbidden`` (403) — never silently provision a default and admit.
+
+    #1853: the one host-pinned exception is a declared ``[auth.self_signup]
+    join_host_org``. An identity with no memberships *and no membership history*
+    (a removed member's row is deleted, so the event stream is what remembers
+    them) joins the host org with the declared role. With
+    ``require_verified_email`` an unverified identity gets ``VerifyToJoin`` and
+    joins on a later sign-in. The membership is created at the host itself, never
+    at an ancestor, so a leaf host never admits the identity tree-wide.
     """
     host_tenant_id = host_tenant_id_from_request(request)
     memberships = auth_store.get_memberships_for_identity(str(user.id))
+    join = self_signup_join_role(request)
+    if (
+        join is not None
+        and host_tenant_id is not None
+        and not memberships
+        and not auth_store.get_membership_events(identity_id=str(user.id))
+    ):
+        role, require_verified = join
+        if require_verified and not getattr(user, "email_verified", False):
+            return VerifyToJoin()
+        memberships = _join_host_org(auth_store, user, host_tenant_id, role)
     if not memberships and host_tenant_id is None and single_org_auto_provision(request):
         # Plan 1d: pass the AppSpec so an is_tenant_root app provisions the org
         # with a matching tenant-root row at the shared id (1:1 mirror); a
@@ -213,6 +268,8 @@ def _login_redirect_for_outcome(
         return outcome.membership_id, next_target
     if isinstance(outcome, NeedsPicker):
         return None, "/auth/select-org"
+    if isinstance(outcome, VerifyToJoin):
+        return None, VERIFY_TO_JOIN_SENTINEL
     if isinstance(outcome, HostForbidden):
         # #1418: a host-pinned no-membership is a 403 only when the app gates login on
         # membership. An app that declared `tenant_host: membership_gated: false` (so

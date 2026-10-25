@@ -14,6 +14,7 @@ from typing import Any
 from dazzle.render.fragment import (
     URL,
     Combobox,
+    Field,
     FormStack,
     Heading,
     Link,
@@ -105,6 +106,47 @@ def build_forbidden_org_view(
     ]
     return Page(
         title=f"Not your organisation — {product_name}",
+        body=Stack(children=tuple(body_children)),
+        css_links=css_links,
+        js_scripts=js_scripts,
+    )
+
+
+def build_verify_to_join_view(
+    *,
+    product_name: str,
+    email: str,
+    css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
+    js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
+) -> Page:
+    """ "Verify your email to continue" — ``[auth.self_signup]`` holds the host-org
+    join until the address is verified (#1853). Resend posts to the #1109 route."""
+    body_children: list[Any] = [
+        Link(label=product_name, href=URL("/")),
+        Heading(body="Verify your email to continue", level=1),
+        Text(
+            body="Your account is ready. Open the verification link we sent to your "
+            "email, then sign in again to join this organisation.",
+            tone="muted",
+        ),
+        FormStack(
+            action=URL("/auth/resend-verification?next=/auth/login"),
+            method="POST",
+            fields=(
+                Field(
+                    name="email",
+                    label="Email",
+                    kind="email",
+                    initial_value=email,
+                    readonly=True,
+                    autocomplete="email",
+                ),
+            ),
+            submit=Submit(label="Resend the link", variant="secondary"),
+        ),
+    ]
+    return Page(
+        title=f"Verify your email — {product_name}",
         body=Stack(children=tuple(body_children)),
         css_links=css_links,
         js_scripts=js_scripts,

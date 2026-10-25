@@ -8,6 +8,11 @@ optional_auth_dep) are set on SubsystemContext by DazzleBackendApp._setup_auth()
 import logging
 from typing import Any
 
+from dazzle.http.runtime.auth.admin_policy import (
+    CAPABILITIES,
+    AdminPolicy,
+    unknown_admin_personas,
+)
 from dazzle.http.runtime.auth.enterprise_guard import (
     require_protocol_extras,
     undeclared_connection_errors,
@@ -97,8 +102,6 @@ class AuthSubsystem:
         ctx.app.state.org_admin_roles = list(getattr(_auth_cfg, "org_admin_roles", []) or [])
         # Admin-capability policy (manage_members). org_admin_roles is the
         # default for any unlisted capability, so apps that set only org_admin_roles are unchanged.
-        from dazzle.http.runtime.auth.admin_policy import AdminPolicy, unknown_admin_personas
-
         _admin_caps = dict(getattr(_auth_cfg, "admin_capabilities", {}) or {})
         ctx.app.state.admin_policy = AdminPolicy.from_config(
             org_admin_roles=ctx.app.state.org_admin_roles,
@@ -115,6 +118,13 @@ class AuthSubsystem:
                 sorted(_unknown),
                 sorted(_declared),
             )
+        # #1853: [auth.self_signup] join_host_org — validated fail-closed at boot.
+        ctx.app.state.self_signup = _validated_self_signup(
+            getattr(_auth_cfg, "self_signup", None),
+            declared_personas=_declared,
+            admin_policy=ctx.app.state.admin_policy,
+            memberships_required=ctx.app.state.memberships_required,
+        )
         # auth Plan 1d: expose the AppSpec for the activation path's 1:1 org<->
         # tenant-root mirror provisioning (archetype apps).
         ctx.app.state.appspec = ctx.appspec
@@ -593,3 +603,36 @@ class AuthSubsystem:
 
     def shutdown(self) -> None:
         pass
+
+
+def _validated_self_signup(
+    cfg: Any, *, declared_personas: set[str], admin_policy: Any, memberships_required: bool
+) -> Any:
+    """The ``[auth.self_signup]`` config the activation path reads, or None (#1853).
+
+    Fail closed: the join role must be a declared persona and must not hold any
+    framework admin capability (self-service sign-up never grants member
+    management). Without membership-gated hosts there is no host-pin 403 to
+    replace, so the setting is ignored with a warning.
+    """
+    if cfg is None or not getattr(cfg, "join_host_org", False):
+        return None
+    role = cfg.role
+    if role not in declared_personas:
+        raise ValueError(
+            f"[auth.self_signup] role {role!r} is not a declared persona; "
+            f"declared: {sorted(declared_personas)}"
+        )
+    granted = [c for c in CAPABILITIES if admin_policy.may(c, [role])]
+    if granted:
+        raise ValueError(
+            f"[auth.self_signup] role {role!r} holds admin capabilities {granted}; "
+            "a self-service join must not grant member management"
+        )
+    if not memberships_required:
+        logger.warning(
+            "[auth.self_signup] join_host_org is set but no tenant_host: entity is "
+            "membership-gated; the setting has no effect"
+        )
+        return None
+    return cfg
