@@ -503,24 +503,38 @@ def render_kanban_card(card: KanbanCard) -> str:
         level = _html.escape(card.attention_level, quote=True)
         msg = _html.escape(card.attention_message)
         attn_html = f'<p class="dz-kanban-card-attn" data-dz-attn="{level}">{msg}</p>'
-    # Keyboard parity (R6): Move select when rearrange targets exist.
+    # Keyboard parity (R6): the "Move to…" select covers the cross-column move;
+    # when the board ranks cards, Move up / Move down cover the in-column
+    # reorder — the single-pointer alternative to that drag (#1842, WCAG 2.5.7).
     move_html = ""
     allowed = getattr(card, "allowed_to", ()) or ()
     row_id = getattr(card, "row_id", "") or ""
+    rank = getattr(card, "rank", None)
+    select_html = ""
     if row_id and allowed:
         options = ['<option value="">Move to…</option>']
         for state in allowed:
             label = _html.escape(str(state).replace("_", " ").title())
             val = _html.escape(str(state), quote=True)
             options.append(f'<option value="{val}">{label}</option>')
-        move_html = (
-            f'<div class="dz-kanban-card-move">'
+        select_html = (
             f'<label><span class="visually-hidden">Move card</span>'
             f'<select data-dz-kanban-move aria-label="Move {title}">'
             f"{''.join(options)}"
             f"</select></label>"
-            f"</div>"
         )
+    order_html = ""
+    if row_id and rank is not None and rank != "":
+        order_html = (
+            '<span class="dz-kanban-card-order">'
+            '<button type="button" class="dz-kanban-card-step" data-dz-kanban-step="-1" '
+            f'aria-label="Move {title} up"><span aria-hidden="true">↑</span></button>'
+            '<button type="button" class="dz-kanban-card-step" data-dz-kanban-step="1" '
+            f'aria-label="Move {title} down"><span aria-hidden="true">↓</span></button>'
+            "</span>"
+        )
+    if select_html or order_html:
+        move_html = f'<div class="dz-kanban-card-move">{select_html}{order_html}</div>'
     root_attrs = kanban_card_root_attrs(card) + open_host_attrs
     id_attr = ""
     if row_id:

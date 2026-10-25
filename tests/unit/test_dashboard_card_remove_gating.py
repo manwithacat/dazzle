@@ -68,6 +68,9 @@ class TestDashboardCardEditGating:
         assert "dz-card-actions" in html
         assert 'aria-label="Remove card"' in html
         assert 'data-test-id="dz-card-remove"' in html
+        # #1842: edit mode's single-pointer alternative to the drags.
+        for op in ("move-up", "move-down", "narrower", "wider"):
+            assert f'data-dz-card-op="{op}"' in html
 
 
 class TestDashboardGridEditableAttr:

@@ -24,6 +24,10 @@
  *             draggable="true" when rearrange-capable
  *   - stack:  [data-dz-kanban-stack][data-dz-to-state]
  *   - move:   [data-dz-kanban-move] <select> keyboard parity (column only)
+ *   - order:  [data-dz-kanban-step="-1|1"] Move up / Move down buttons
+ *             (rank boards only) — the single-pointer alternative to the
+ *             in-column reorder drag (WCAG 2.5.7); focus returns to the same
+ *             button after the board refreshes
  *
  * No Alpine. Document-delegated. Survives morph (re-reads attrs each event).
  */
@@ -434,6 +438,53 @@
       /* announced */
     });
   });
+
+  // ── Single pointer: Move up / Move down within the column (rank boards) ──
+
+  var pendingFocus = null; // {id, step} — refocus the button after refresh
+
+  document.addEventListener("click", function (e) {
+    var btn =
+      e.target && e.target.closest && e.target.closest("[data-dz-kanban-step]");
+    if (!btn) return;
+    var card = btn.closest("[data-dz-kanban-card]");
+    var board = boardOf(btn);
+    var stack = card && card.closest("[data-dz-kanban-stack]");
+    if (!card || !board || !stack || !rankFieldOf(board)) return;
+    var up = Number(btn.getAttribute("data-dz-kanban-step")) < 0;
+    var all = siblingCards(stack, null);
+    var idx = all.indexOf(card);
+    if (up ? idx <= 0 : idx === -1 || idx >= all.length - 1) {
+      announce(board, up ? "Already first" : "Already last");
+      return;
+    }
+    // Land before the card above (up), or before the one after the next
+    // (down; null = append at the end).
+    var before = up ? all[idx - 1] : all[idx + 2] || null;
+    pendingFocus = {
+      id: card.getAttribute("data-dz-entity-id") || "",
+      step: btn.getAttribute("data-dz-kanban-step"),
+    };
+    putMove(board, card, card.getAttribute("data-dz-from-state") || "", before).catch(
+      function () {
+        pendingFocus = null;
+      },
+    );
+  });
+
+  function restoreFocus() {
+    if (!pendingFocus) return;
+    var card = document.getElementById("dz-kanban-card-" + pendingFocus.id);
+    var btn =
+      card &&
+      card.querySelector('[data-dz-kanban-step="' + pendingFocus.step + '"]');
+    if (btn) {
+      btn.focus();
+      pendingFocus = null;
+    }
+  }
+  document.addEventListener("htmx:after:settle", restoreFocus); // htmx 4
+  document.addEventListener("htmx:afterSettle", restoreFocus); // htmx ≤2
 
   // ── Keyboard / pointer-free: native select (column only) ──
 

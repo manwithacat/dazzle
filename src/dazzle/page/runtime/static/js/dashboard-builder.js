@@ -88,6 +88,10 @@ function createDzDashboardBuilder(root) {
       // handling without re-init. The cards themselves are pure
       // server-rendered HTML — no Alpine `@` directives on them.
       this._onGridPointerDown = (e) => {
+        // #1842: layout editing is edit-mode chrome (#1204) — a read-only
+        // grid neither drags nor resizes, and the header's action controls
+        // (Card options menu, remove ×) never start a drag.
+        if (!this._editable() || e.target.closest(".dz-card-actions")) return;
         const dragHandle = e.target.closest(
           '[data-test-id="dz-card-drag-handle"]',
         );
@@ -101,6 +105,18 @@ function createDzDashboardBuilder(root) {
         }
       };
       this._onGridClick = (e) => {
+        // #1842 (WCAG 2.5.7): the Card options menu — single-pointer
+        // alternatives to the reorder / resize drags.
+        const opBtn = e.target.closest("[data-dz-card-op]");
+        if (opBtn) {
+          const cardEl = opBtn.closest("[data-card-id]");
+          const menu = opBtn.closest("details");
+          if (menu) menu.open = false;
+          if (cardEl) this._runCardOp(cardEl, opBtn.getAttribute("data-dz-card-op"));
+          const summary = menu && menu.querySelector("summary");
+          if (summary) summary.focus();
+          return;
+        }
         const removeBtn = e.target.closest('[data-test-id="dz-card-remove"]');
         if (removeBtn) {
           e.stopPropagation();
@@ -109,6 +125,7 @@ function createDzDashboardBuilder(root) {
         }
       };
       this._onGridKeydown = (e) => {
+        if (!this._editable() || e.target.closest(".dz-card-actions")) return;
         const cardEl = e.target.closest("[data-card-id]");
         if (cardEl) this.handleCardKeydown(cardEl, e);
       };
@@ -242,6 +259,73 @@ function createDzDashboardBuilder(root) {
     _setCardSpan(cardEl, span) {
       cardEl.setAttribute("data-card-col-span", String(span));
       cardEl.style.gridColumn = "span " + span + " / span " + span;
+    },
+
+    _editable() {
+      const grid = document.querySelector("[data-grid-container]");
+      return !!grid && grid.getAttribute("data-grid-editable") === "true";
+    },
+
+    // Move a card one slot (delta -1 up / +1 down). Shared by keyboard move
+    // mode and the Card options menu (#1842). Returns false at either end.
+    _moveCardBy(cardEl, delta) {
+      const idx = this._cardIndex(cardEl);
+      const newIdx = idx + delta;
+      if (idx < 0 || newIdx < 0 || newIdx > this._allCards().length - 1) {
+        return false;
+      }
+      this._pushUndo({
+        type: "reorder",
+        cardId: cardEl.getAttribute("data-card-id"),
+        fromIndex: idx,
+      });
+      const grid = document.querySelector("[data-grid-container]");
+      if (grid) {
+        // To move down: insert before the (newIdx+1)th element so we land in
+        // the (newIdx)th slot. To move up: insert before the (newIdx)th. The
+        // +1 for downward moves accounts for the moved element occupying its
+        // current slot before the reorder.
+        const refNode =
+          newIdx > idx ? grid.children[newIdx + 1] || null : grid.children[newIdx];
+        grid.insertBefore(cardEl, refNode);
+      }
+      this._markDirty();
+      this._announce("Card moved to position " + (newIdx + 1));
+      return true;
+    },
+
+    // The next snap width in `dir` (+1 wider / -1 narrower), or null. A
+    // pointer resize can leave a span between snaps; step to the nearest.
+    _nextSnap(span, dir) {
+      const snaps = this._resizeSnaps;
+      if (dir > 0) return snaps.find((s) => s > span) || null;
+      const smaller = snaps.filter((s) => s < span);
+      return smaller.length ? smaller[smaller.length - 1] : null;
+    },
+
+    _runCardOp(cardEl, op) {
+      if (op === "move-up" || op === "move-down") {
+        if (!this._moveCardBy(cardEl, op === "move-up" ? -1 : 1)) {
+          this._announce(op === "move-up" ? "Already first" : "Already last");
+        }
+        return;
+      }
+      if (op === "wider" || op === "narrower") {
+        const span = this._cardSpan(cardEl);
+        const next = this._nextSnap(span, op === "wider" ? 1 : -1);
+        if (next === null) {
+          this._announce(op === "wider" ? "Already full width" : "Already narrowest");
+          return;
+        }
+        this._pushUndo({
+          type: "resize",
+          cardId: cardEl.getAttribute("data-card-id"),
+          fromSpan: span,
+        });
+        this._setCardSpan(cardEl, next);
+        this._markDirty();
+        this._announce(next + " columns");
+      }
     },
 
     _workspaceName() {
@@ -426,6 +510,34 @@ function createDzDashboardBuilder(root) {
       if (gridEditable) {
         const actions = document.createElement("div");
         actions.className = "dz-card-actions";
+        // #1842: mirror `_emit_dashboard_card`'s Card options menu (_CARD_OPS).
+        const menu = document.createElement("details");
+        menu.className = "dz-menu dz-card-options";
+        const summary = document.createElement("summary");
+        summary.className = "dz-card-action-button";
+        summary.setAttribute("data-test-id", "dz-card-options");
+        const summaryLabel = document.createElement("span");
+        summaryLabel.className = "visually-hidden";
+        summaryLabel.textContent = "Card options";
+        summary.appendChild(summaryLabel);
+        menu.appendChild(summary);
+        const panel = document.createElement("div");
+        panel.className = "dz-menu__panel";
+        [
+          ["move-up", "Move up"],
+          ["move-down", "Move down"],
+          ["narrower", "Narrower"],
+          ["wider", "Wider"],
+        ].forEach(([op, label]) => {
+          const item = document.createElement("button");
+          item.type = "button";
+          item.className = "dz-menu__item";
+          item.setAttribute("data-dz-card-op", op);
+          item.textContent = label;
+          panel.appendChild(item);
+        });
+        menu.appendChild(panel);
+        actions.appendChild(menu);
         const removeBtn = document.createElement("button");
         removeBtn.setAttribute("data-test-id", "dz-card-remove");
         removeBtn.setAttribute("aria-label", "Remove card");
@@ -579,30 +691,10 @@ function createDzDashboardBuilder(root) {
 
       // Arrow keys — move (when in keyboard-move mode)
       if (this._keyboardMoveCardId === cardId) {
-        const idx = this._cardIndex(cardEl);
-        let newIdx = idx;
-        if (e.key === "ArrowUp" && idx > 0) newIdx = idx - 1;
-        if (e.key === "ArrowDown" && idx < this._allCards().length - 1) {
-          newIdx = idx + 1;
-        }
-        if (newIdx !== idx) {
+        const delta =
+          e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0;
+        if (delta && this._moveCardBy(cardEl, delta)) {
           e.preventDefault();
-          this._pushUndo({ type: "reorder", cardId, fromIndex: idx });
-          const grid = document.querySelector("[data-grid-container]");
-          if (grid) {
-            // To move down: insert before the (newIdx+1)th element
-            // so we land in the (newIdx)th slot. To move up: insert
-            // before the (newIdx)th. The +1 adjustment for downward
-            // moves accounts for the dragged element occupying its
-            // current slot before the reorder.
-            const refNode =
-              newIdx > idx
-                ? grid.children[newIdx + 1] || null
-                : grid.children[newIdx];
-            grid.insertBefore(cardEl, refNode);
-          }
-          this._markDirty();
-          this._announce("Card moved to position " + (newIdx + 1));
           // Restore focus after the move
           requestAnimationFrame(() => cardEl.focus());
         }

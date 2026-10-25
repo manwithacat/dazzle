@@ -146,6 +146,16 @@
   cursor: grabbing;
 }
 
+/* A read-only grid (`data-grid-editable="false"`, #1204) does not drag or
+ * resize (#1842), so it shows neither the grab cursor nor the resize grip. */
+[data-grid-editable="false"] .dz-card-wrapper .dz-card-header {
+  cursor: default;
+}
+
+[data-grid-editable="false"] .dz-card-resize {
+  display: none;
+}
+
 /* Card footer — trailing action row (the Fragment `Card.footer` slot). */
 .dz-card-footer {
   display: flex;
@@ -192,6 +202,23 @@
 .dz-card-wrapper:hover .dz-card-actions,
 .dz-card-wrapper:focus-within .dz-card-actions {
   opacity: 1;
+}
+
+/* Card options menu (#1842, WCAG 2.5.7): the single-pointer alternative to
+ * the reorder / resize drags. The card clips its overflow for the rounded
+ * corners, so while the menu is open the card lets the panel out and the
+ * slot rises above its neighbours. */
+.dz-card:has(.dz-card-options[open]) {
+  overflow: visible;
+}
+
+.dz-card-wrapper:has(.dz-card-options[open]) {
+  z-index: 10;
+}
+
+.dz-card-options > summary.dz-card-action-button::after {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .dz-card-action-button {

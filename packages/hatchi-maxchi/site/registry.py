@@ -595,22 +595,52 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<summary class="dz-table-col-menu-trigger" '
             'aria-label="Toggle column visibility">Columns</summary>'
             '<div class="dz-table-col-menu-panel">'
+            '<div class="dz-table-col-menu-row">'
             '<label class="dz-table-col-menu-item">'
             '<input type="checkbox" checked class="dz-table-col-menu-checkbox" '
             'data-dz-grid-col-toggle="first" aria-label="Show First name column">'
             "<span>First name</span></label>"
+            '<span class="dz-table-col-menu-width" role="group" aria-label="First name column width">'
+            '<button type="button" class="dz-table-col-menu-step" data-dz-grid-width="first" '
+            'data-dz-step="-1" aria-label="Narrower"><span aria-hidden="true">−</span></button>'
+            '<button type="button" class="dz-table-col-menu-step" data-dz-grid-width="first" '
+            'data-dz-step="1" aria-label="Wider"><span aria-hidden="true">+</span></button>'
+            "</span></div>"
+            '<div class="dz-table-col-menu-row">'
             '<label class="dz-table-col-menu-item">'
             '<input type="checkbox" checked class="dz-table-col-menu-checkbox" '
             'data-dz-grid-col-toggle="last" aria-label="Show Last name column">'
             "<span>Last name</span></label>"
+            '<span class="dz-table-col-menu-width" role="group" aria-label="Last name column width">'
+            '<button type="button" class="dz-table-col-menu-step" data-dz-grid-width="last" '
+            'data-dz-step="-1" aria-label="Narrower"><span aria-hidden="true">−</span></button>'
+            '<button type="button" class="dz-table-col-menu-step" data-dz-grid-width="last" '
+            'data-dz-step="1" aria-label="Wider"><span aria-hidden="true">+</span></button>'
+            "</span></div>"
+            '<div class="dz-table-col-menu-row">'
             '<label class="dz-table-col-menu-item">'
             '<input type="checkbox" checked class="dz-table-col-menu-checkbox" '
             'data-dz-grid-col-toggle="plan" aria-label="Show Plan column">'
             "<span>Plan</span></label>"
+            '<span class="dz-table-col-menu-width" role="group" aria-label="Plan column width">'
+            '<button type="button" class="dz-table-col-menu-step" data-dz-grid-width="plan" '
+            'data-dz-step="-1" aria-label="Narrower"><span aria-hidden="true">−</span></button>'
+            '<button type="button" class="dz-table-col-menu-step" data-dz-grid-width="plan" '
+            'data-dz-step="1" aria-label="Wider"><span aria-hidden="true">+</span></button>'
+            "</span></div>"
+            '<div class="dz-table-col-menu-row">'
             '<label class="dz-table-col-menu-item">'
             '<input type="checkbox" checked class="dz-table-col-menu-checkbox" '
             'data-dz-grid-col-toggle="signed" aria-label="Show Signed up column">'
             "<span>Signed up</span></label>"
+            '<span class="dz-table-col-menu-width" role="group" aria-label="Signed up column width">'
+            '<button type="button" class="dz-table-col-menu-step" data-dz-grid-width="signed" '
+            'data-dz-step="-1" aria-label="Narrower"><span aria-hidden="true">−</span></button>'
+            '<button type="button" class="dz-table-col-menu-step" data-dz-grid-width="signed" '
+            'data-dz-step="1" aria-label="Wider"><span aria-hidden="true">+</span></button>'
+            "</span></div>"
+            # #1842: Narrower / Wider (the single-pointer resize) announce here.
+            '<span class="visually-hidden" aria-live="polite" data-dz-grid-width-status></span>'
             # #853 escape hatch: show every column + clear the stored preference.
             '<button type="button" class="dz-table-col-menu-reset" '
             "data-dz-grid-cols-reset>Show all columns</button>"
@@ -658,27 +688,35 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<th class="dz-table-th-select">'
             '<input type="checkbox" data-dz-grid-select-all aria-label="Select all rows"></th>'
             # Each data header carries data-dz-col (column-visibility hides header
-            # + cells + col in lock-step) and an in-th resize handle (decorative;
-            # pointer drag resizes col[data-col] — a drag never fires the sort).
+            # + cells + col in lock-step) and an in-th resize handle (a focusable
+            # separator: drag, or Left/Right/Home — a drag never fires the sort).
             '<th class="dz-table-th" data-dz-col="first" aria-sort="none">'
             '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="first">First name'
             '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button>'
-            '<span class="dz-table-resize-handle" data-dz-grid-resize="first" aria-hidden="true">'
+            '<span class="dz-table-resize-handle" data-dz-grid-resize="first" '
+            'role="separator" aria-orientation="vertical" tabindex="0" '
+            'aria-valuemin="80" aria-valuemax="800" aria-label="Resize First name column">'
             "</span></th>"
             '<th class="dz-table-th" data-dz-col="last" aria-sort="none">'
             '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="last">Last name'
             '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button>'
-            '<span class="dz-table-resize-handle" data-dz-grid-resize="last" aria-hidden="true">'
+            '<span class="dz-table-resize-handle" data-dz-grid-resize="last" '
+            'role="separator" aria-orientation="vertical" tabindex="0" '
+            'aria-valuemin="80" aria-valuemax="800" aria-label="Resize Last name column">'
             "</span></th>"
             '<th class="dz-table-th" data-dz-col="plan" aria-sort="none">'
             '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="plan">Plan'
             '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button>'
-            '<span class="dz-table-resize-handle" data-dz-grid-resize="plan" aria-hidden="true">'
+            '<span class="dz-table-resize-handle" data-dz-grid-resize="plan" '
+            'role="separator" aria-orientation="vertical" tabindex="0" '
+            'aria-valuemin="80" aria-valuemax="800" aria-label="Resize Plan column">'
             "</span></th>"
             '<th class="dz-table-th" data-dz-col="signed" aria-sort="none">'
             '<button type="button" class="dz-table-sort-button" data-dz-grid-sort="signed">Signed up'
             '<span class="dz-table-sort-icon" aria-hidden="true">{svg:chevron-up}</span></button>'
-            '<span class="dz-table-resize-handle" data-dz-grid-resize="signed" aria-hidden="true">'
+            '<span class="dz-table-resize-handle" data-dz-grid-resize="signed" '
+            'role="separator" aria-orientation="vertical" tabindex="0" '
+            'aria-valuemin="80" aria-valuemax="800" aria-label="Resize Signed up column">'
             "</span></th>"
             "</tr></thead>"
             # The tbody hydrates over the wire: hx-get on `load` fetches the rows,
@@ -4176,7 +4214,15 @@ def select(source: str, id: str) -> str:
             '<option value="">Move to…</option>'
             '<option value="in_progress">In Progress</option>'
             '<option value="done">Done</option>'
-            "</select></label></div>"
+            "</select></label>"
+            # #1842 (WCAG 2.5.7): rank boards get Move up / Move down — the
+            # single-pointer alternative to the in-column reorder drag.
+            '<span class="dz-kanban-card-order">'
+            '<button type="button" class="dz-kanban-card-step" data-dz-kanban-step="-1" '
+            'aria-label="Move Refund request — Acme up"><span aria-hidden="true">↑</span></button>'
+            '<button type="button" class="dz-kanban-card-step" data-dz-kanban-step="1" '
+            'aria-label="Move Refund request — Acme down"><span aria-hidden="true">↓</span></button>'
+            "</span></div>"
             "</div></div>"
             '<div class="dz-kanban-card" data-dz-kanban-card '
             'id="dz-kanban-card-k2" data-dz-entity-id="k2" '
@@ -4190,7 +4236,15 @@ def select(source: str, id: str) -> str:
             '<select data-dz-kanban-move aria-label="Move KYC review — Globex">'
             '<option value="">Move to…</option>'
             '<option value="in_progress">In Progress</option>'
-            "</select></label></div>"
+            "</select></label>"
+            # #1842 (WCAG 2.5.7): rank boards get Move up / Move down — the
+            # single-pointer alternative to the in-column reorder drag.
+            '<span class="dz-kanban-card-order">'
+            '<button type="button" class="dz-kanban-card-step" data-dz-kanban-step="-1" '
+            'aria-label="Move KYC review — Globex up"><span aria-hidden="true">↑</span></button>'
+            '<button type="button" class="dz-kanban-card-step" data-dz-kanban-step="1" '
+            'aria-label="Move KYC review — Globex down"><span aria-hidden="true">↓</span></button>'
+            "</span></div>"
             "</div></div></div></div>"
             '<div class="dz-kanban-column">'
             '<div class="dz-kanban-column-head">'
@@ -4211,7 +4265,15 @@ def select(source: str, id: str) -> str:
             '<option value="">Move to…</option>'
             '<option value="done">Done</option>'
             '<option value="open">Open</option>'
-            "</select></label></div>"
+            "</select></label>"
+            # #1842 (WCAG 2.5.7): rank boards get Move up / Move down — the
+            # single-pointer alternative to the in-column reorder drag.
+            '<span class="dz-kanban-card-order">'
+            '<button type="button" class="dz-kanban-card-step" data-dz-kanban-step="-1" '
+            'aria-label="Move Chargeback — Initech up"><span aria-hidden="true">↑</span></button>'
+            '<button type="button" class="dz-kanban-card-step" data-dz-kanban-step="1" '
+            'aria-label="Move Chargeback — Initech down"><span aria-hidden="true">↓</span></button>'
+            "</span></div>"
             "</div></div></div></div>"
             '<div class="dz-kanban-column">'
             '<div class="dz-kanban-column-head">'

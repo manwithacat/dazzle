@@ -331,6 +331,12 @@ class RelatedGroup:
     active_tab: str = ""
 
 
+# #1842: a list with this many visible columns gets the Columns menu, and only
+# then resizable columns — the menu carries each column's single-pointer
+# Narrower / Wider alternative to the resize drag (WCAG 2.5.7).
+COLUMN_MENU_MIN_COLUMNS = 4
+
+
 @dataclass(frozen=True, slots=True)
 class ColumnVisibilityMenu:
     """The list toolbar's column-visibility menu (convergence C2.1).
@@ -342,7 +348,8 @@ class ColumnVisibilityMenu:
     every `[data-dz-col]` cell in the grid root (re-applied after swaps).
     No Alpine bindings. `columns` is the ordered tuple of visible
     `(key, label)` pairs. `_build_list` only constructs the menu when there
-    are more than three visible columns (the legacy gate)."""
+    are at least `COLUMN_MENU_MIN_COLUMNS` visible columns; each row also
+    carries the column's Narrower / Wider width buttons (#1842)."""
 
     columns: tuple[tuple[str, str], ...]
 

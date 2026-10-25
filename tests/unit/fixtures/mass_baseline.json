@@ -1,6 +1,6 @@
 {
-  "src_lines": 333482,
-  "test_lines": 325253,
+  "src_lines": 333556,
+  "test_lines": 325518,
   "docs_lines": 49898,
   "construct_count": 31,
   "written": "2026-10-25",
@@ -773,6 +773,14 @@
         "docs_lines"
       ],
       "reason": "#1853 declared [auth.self_signup] host-org join + verify-to-join page (consumer-forced, cyfuture)"
+    },
+    {
+      "date": "2026-10-25",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "#1842 WCAG 2.5.7 single-pointer alternatives to dashboard/grid/kanban drags (consumer-forced, cyfuture)"
     }
   ]
 }
