@@ -9,7 +9,7 @@ table ambiguity), the scope predicate stayed unqualified — so
 `"school"` could bind to a JOINed table's `school` column instead
 of the source entity's.
 
-AegisMark hit this with StudentProfile (joined User + School both
+A consumer app hit this with StudentProfile (joined User + School both
 have `school` columns). The teacher-scope filter
 `school = current_user.school` ANDed with the user's
 `id = current_context` PK filter returned 0 rows because the
@@ -162,7 +162,7 @@ class TestBoolCompositeRecursesQualification:
 
 
 class TestQualificationSurvivesJoinScenario:
-    """The AegisMark scenario: StudentProfile filter `id = current_context`
+    """The consumer scenario: StudentProfile filter `id = current_context`
     plus scope `school = current_user.school`. With FK display joins on
     User + School (which both have `school` columns), the scope predicate
     must bind to StudentProfile.school, not User.school.

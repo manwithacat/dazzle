@@ -178,10 +178,10 @@ class TestAppDescriptor:
     def test_custom_app_descriptor_used_in_opening(self) -> None:
         prompt = build_subagent_prompt(
             **_sample_params(  # type: ignore[arg-type]
-                app_descriptor="AegisMark production app",
+                app_descriptor="Acme production app",
             )
         )
-        assert "AegisMark production app" in prompt
+        assert "Acme production app" in prompt
         # Old framework-specific wording is gone
         assert "Dazzle example app" not in prompt
 

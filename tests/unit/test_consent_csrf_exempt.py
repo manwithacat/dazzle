@@ -42,7 +42,7 @@ class TestConsentEndpointBehindCSRFMiddleware:
         return app
 
     def test_post_consent_without_csrf_token_returns_204(self) -> None:
-        """Matches real AegisMark call: no `X-CSRF-Token` header, no token
+        """Matches real a consumer app call: no `X-CSRF-Token` header, no token
         cookie — pre-fix this was 403, post-fix it's 204 (consent stored)."""
         client = TestClient(self._make_app())
         response = client.post(

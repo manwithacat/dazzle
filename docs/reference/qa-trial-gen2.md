@@ -85,5 +85,5 @@ Full published recipe: **`docs/recipes/agent-qa-ladder.md`**.
 | JSON closed loop | trial report sidecar `schema_version: 2` + `auto_seed` |
 | Multi-act handoff | Still consumer skill (framework hook later) |
 
-See GitHub #1625 for CyFuture + AegisMark field notes.
+See GitHub #1625 for CyFuture + a consumer app field notes.
 """

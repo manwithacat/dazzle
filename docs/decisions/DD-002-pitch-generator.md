@@ -45,7 +45,7 @@ from DSL without the fact-only brief discipline of `dazzle spec brief`.
 
 ## Reopen when (consumer force)
 
-1. **Named consumer** — AegisMark (which carries `pitchspec.yaml` and a
+1. **Named consumer** — a consumer app (which carries `pitchspec.yaml` and a
    generated `pitch_deck/` directory) or another consumer app asks to
    regenerate a deck from `pitchspec.yaml`.
 2. **Evidence** — the request in an issue, or a consumer CI/Makefile step
@@ -62,7 +62,7 @@ When a force lands:
 
 ## Already shipped (do not re-litigate)
 
-- AegisMark's existing deck (`pitch_deck/`) generated from its
+- A consumer's existing deck (`pitch_deck/`) generated from its
   `pitchspec.yaml` — it stays valid as a static artefact in that repo.
 - Flense inventory evidence (`docs/reference/flense-inventory.md`):
   `dazzle pitch` CLI and the `pitch` MCP tool at zero uses for every consumer.

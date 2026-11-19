@@ -61,7 +61,7 @@
  * system was migrated to the OKLCH --colour-* semantics; css_loader/
  * build_dist read it via the @hm: sentinel like the entries above.
  *
- * Found broken in production by aegismark on the v0.62 merge — base.html
+ * Found broken in production by a consumer app on the v0.62 merge — base.html
  * had been left pointing at the old `dazzle-framework.css` entry which
  * imported only the legacy stack and skipped every component family. */
 /* dazzle-layer.css deleted (HM-sitespec 1C, 2026-07-09) — its rules were already

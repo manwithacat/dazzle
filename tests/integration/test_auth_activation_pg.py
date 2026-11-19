@@ -443,11 +443,11 @@ def test_cross_tenant_guard_reads_real_membership_binding(scratch_url: str) -> N
     assert ctx.active_membership.tenant_id == str(org_id)
 
     # Matching host → PASS (no exception raised).
-    enforce_cross_tenant(_guard_request(app_name="AegisMark", tenant_id=org_id), ctx)
+    enforce_cross_tenant(_guard_request(app_name="Acme", tenant_id=org_id), ctx)
 
     # A different tenant host → 403.
     with pytest.raises(HTTPException) as exc:
-        enforce_cross_tenant(_guard_request(app_name="AegisMark", tenant_id=uuid4()), ctx)
+        enforce_cross_tenant(_guard_request(app_name="Acme", tenant_id=uuid4()), ctx)
     assert exc.value.status_code == 403
 
 
@@ -473,5 +473,5 @@ def test_cross_tenant_guard_fails_closed_without_membership(scratch_url: str) ->
     assert ctx.active_membership is None
 
     with pytest.raises(HTTPException) as exc:
-        enforce_cross_tenant(_guard_request(app_name="AegisMark", tenant_id=uuid4()), ctx)
+        enforce_cross_tenant(_guard_request(app_name="Acme", tenant_id=uuid4()), ctx)
     assert exc.value.status_code == 403

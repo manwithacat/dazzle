@@ -165,3 +165,6 @@ PLAN-*.md
 # HaTchi-MaXchi pycache (site fonts became TRACKED in Stage 3 — the split
 # repo serves site/ on GitHub Pages as-is, so the woff2 must travel)
 packages/**/__pycache__/
+
+# Local consumer manifest for scripts/flense_inventory.py (paths are local checkouts)
+flense_consumers.toml

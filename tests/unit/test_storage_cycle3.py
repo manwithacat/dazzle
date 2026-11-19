@@ -445,7 +445,7 @@ entity Doc:
 
 
 class TestStorageDefsPropagation:
-    """Regression tests for AegisMark report against v0.61.106:
+    """Regression tests for a consumer app report against v0.61.106:
     `manifest.storage_defs` was loaded correctly but never reached
     `DazzleBackendApp`, so `_wire_storage_routes()` raised at startup
     even though the TOML was right."""

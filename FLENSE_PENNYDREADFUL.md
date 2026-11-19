@@ -11,7 +11,7 @@ from here.
 ## 0. Why this matters for pennydreadful
 
 pennydreadful is publishing: IP and authorship verification, royalties, rights auctions. It
-is not a regulated consumer in the sense AegisMark and cyfuture are, so the assurance pack
+is not a regulated consumer in the sense a consumer app and cyfuture are, so the assurance pack
 is **advisory** here, not a CI gate on day one. pennydreadful matters to the framework for a
 different reason: it is the named forcing consumer for two parked designs — the events DSL
 (DD-006, ordered or replayable bid streams for rights auctions) and the ledger

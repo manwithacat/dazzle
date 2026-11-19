@@ -13,7 +13,7 @@ from dazzle.http.runtime.tenant.cookies import (
 
 
 def test_normalise_app_name_lowercase_and_underscores():
-    assert normalise_app_name("AegisMark-Prod") == "aegismark_prod"
+    assert normalise_app_name("Acme-Prod") == "acme_prod"
     assert normalise_app_name("acme") == "acme"
     assert normalise_app_name("a.b.c") == "a_b_c"
 

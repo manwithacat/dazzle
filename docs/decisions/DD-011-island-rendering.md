@@ -58,7 +58,7 @@ raw HTML from the DSL.
 
 ## Reopen when (consumer force)
 
-1. **Named consumer** — cyfuture or AegisMark needs a DSL-declared island
+1. **Named consumer** — cyfuture or a consumer app needs a DSL-declared island
    rendered on a page. cyfuture is the likely one: it declares
    `liveness_capture` and `video_call` (`entity: AMLVerification`) and ships
    `static/js/islands/liveness-capture.js` / `video-call.js` with the

@@ -20,7 +20,7 @@ def _make_user_and_session() -> tuple[Any, Any]:
 
     user = UserRecord(
         id=uuid4(),
-        email="admin@oakwood.sch.uk",
+        email="admin@example.sch.uk",
         password_hash="hashed",
         username="admin",
         roles=["school_admin"],
@@ -55,7 +55,7 @@ class TestLoadDomainUserAttributes:
         # Mock the SQL execution
         domain_row = {
             "id": "user-123",
-            "email": "admin@oakwood.sch.uk",
+            "email": "admin@example.sch.uk",
             "password_hash": "hashed",
             "school": "school-uuid-456",
             "department": "maths",
@@ -64,7 +64,7 @@ class TestLoadDomainUserAttributes:
             "nullable_field": None,
         }
         with patch.object(store, "_execute", return_value=[domain_row]):
-            result = store._load_domain_user_attributes("admin@oakwood.sch.uk")
+            result = store._load_domain_user_attributes("admin@example.sch.uk")
 
         # Should include scalar domain fields
         assert result["school"] == "school-uuid-456"
@@ -94,14 +94,14 @@ class TestLoadDomainUserAttributes:
         dept_uuid = uuid4()
         domain_row = {
             "id": UUID("00000000-0000-0000-0000-000000000001"),
-            "email": "teacher@oakwood.sch.uk",
+            "email": "teacher@example.sch.uk",
             "password_hash": "hashed",
             "school": school_uuid,  # psycopg3 returns UUID objects
             "department": dept_uuid,
             "name": "Teacher",
         }
         with patch.object(store, "_execute", return_value=[domain_row]):
-            result = store._load_domain_user_attributes("teacher@oakwood.sch.uk")
+            result = store._load_domain_user_attributes("teacher@example.sch.uk")
 
         # UUID values must be converted to strings
         assert result["school"] == str(school_uuid)
@@ -168,7 +168,7 @@ class TestValidateSessionMergesDomainAttrs:
                             "school": "school-456",
                             "department": "maths",
                             "org": org_uuid,
-                            "email": "admin@oakwood.sch.uk",
+                            "email": "admin@example.sch.uk",
                             "id": "x",
                         }
                     ],  # domain user query
@@ -205,7 +205,7 @@ class TestValidateSessionMergesDomainAttrs:
                 side_effect=[
                     [{"key": "school", "value": "override-school"}],  # explicit preference
                     [
-                        {"school": "domain-school", "email": "admin@oakwood.sch.uk", "id": "x"}
+                        {"school": "domain-school", "email": "admin@example.sch.uk", "id": "x"}
                     ],  # domain user
                 ],
             ),
@@ -242,7 +242,7 @@ def _auth(*, prefs: dict[str, str] | None = None, membership_tenant: str | None 
 # One row per resolution rule of ``current_user.<attr>`` in a scope predicate.
 # The deny rows are the fail-closed contract: each is its own case id.
 _RESOLUTION_CASES = [
-    pytest.param("email", {}, "admin@oakwood.sch.uk", id="builtin-userrecord-field"),
+    pytest.param("email", {}, "admin@example.sch.uk", id="builtin-userrecord-field"),
     pytest.param(
         "school", {"school": "school-uuid-456"}, "school-uuid-456", id="domain-attr-from-prefs"
     ),

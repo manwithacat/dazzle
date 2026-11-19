@@ -1,6 +1,6 @@
 # Proposal: Compliance Compiler for Dazzle DSL
 
-**Author**: AegisMark team (proof-of-concept)
+**Author**: a consumer app team (proof-of-concept)
 **Date**: 2026-03-23
 **Branch**: `feat/compliance-compiler`
 
@@ -10,7 +10,7 @@ Dazzle projects already declare data classification, access controls, processes,
 
 The Compliance Compiler extracts this evidence, identifies gaps, and produces a structured AuditSpec IR that drives AI-powered document generation.
 
-**Proven at AegisMark**: 21-document ISO 27001 ISMS pack generated from DSL, ~166 pages, covering all 93 Annex A controls. 37 controls (40%) fully evidenced from DSL alone.
+**Proven at a consumer app**: 21-document ISO 27001 ISMS pack generated from DSL, ~166 pages, covering all 93 Annex A controls. 37 controls (40%) fully evidenced from DSL alone.
 
 ## What This Branch Adds
 
@@ -127,7 +127,7 @@ Adding a new framework = adding a new YAML file. No code changes.
 5. **Ship framework taxonomy files** as bundled data (ISO 27001, NIST CSF 2.0, SOC 2)
 6. **Add compliance workspace** concept for browsable compliance surface in the UI
 
-## AegisMark Results
+## a consumer app Results
 
 From the proof-of-concept:
 

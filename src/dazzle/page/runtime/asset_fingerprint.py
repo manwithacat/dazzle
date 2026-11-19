@@ -5,7 +5,7 @@ filename (never a query string):
 
     /static/dist/dazzle.min.js   → /static/dist/dazzle.min.a1b2c3d4.js
     /static/js/brand-chrome.js   → /static/js/brand-chrome.0f3c9e21.js
-    /static/themes/aegismark.css → /static/themes/aegismark.5d1e77b0.css
+    /static/themes/acme.css → /static/themes/acme.5d1e77b0.css
 
 The static file server (``CombinedStaticFiles``) recognises the hashed
 pattern, strips the hash to find the real file on disk, and serves it with

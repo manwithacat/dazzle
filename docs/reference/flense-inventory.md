@@ -27,7 +27,7 @@ never zero. The non-DSL scanners are text matches: they over-count rather than m
 
 | Consumer | Domain | Present |
 |---|---|---|
-| AegisMark | state education — safeguarding, data protection, high-stakes formative marking | yes |
+| A consumer app | state education — safeguarding, data protection, high-stakes formative marking | yes |
 | cyfuture | accountancy — regulatory filings, KYC/AML, document signing | yes |
 | pennydreadful | publishing — IP and authorship verification, royalties, rights auctions | yes |
 
@@ -35,7 +35,7 @@ never zero. The non-DSL scanners are text matches: they over-count rather than m
 
 Counts are top-level declarations in `.dsl` files.
 
-| Construct | AegisMark | cyfuture | pennydreadful | examples | Disposition hint |
+| Construct | A consumer app | cyfuture | pennydreadful | examples | Disposition hint |
 |---|---:|---:|---:|---:|---|
 | `analytics` | 1 | 1 | 0 | 0 | consumer-used |
 | `app` | 1 | 1 | 1 | 5 | consumer-used |
@@ -152,7 +152,7 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 
 Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.sh`, `*.yml`, `*.yaml`, `*.toml`, `*.md`, `*.py`, excluding `node_modules`, `.venv`, `.git`, `dev_docs/`, `archive/`, `.grok/`, `.dazzle/`, `__pycache__`. "Subcommands seen" is the next word after the group, so prose can add noise.
 
-| CLI group / command | AegisMark | cyfuture | pennydreadful | examples | Subcommands seen |
+| CLI group / command | A consumer app | cyfuture | pennydreadful | examples | Subcommands seen |
 |---|---:|---:|---:|---:|---|
 | `agent` | 28 | 35 | 1 | 2 | `playbook`, `prove`, `seed`, `signals`, `sync`, `wall` |
 | `analytics` | 0 | 0 | 0 | 0 |  |
@@ -199,7 +199,7 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 
 `from dazzle.<a>[.<b>] import` / `import dazzle.<a>[.<b>]` in `*.py`, keyed by the first two levels. A module not listed is imported by nobody.
 
-| Module | AegisMark | cyfuture | pennydreadful | examples |
+| Module | A consumer app | cyfuture | pennydreadful | examples |
 |---|---:|---:|---:|---:|
 | `dazzle` | 0 | 0 | 1 | 0 |
 | `dazzle.api_kb.loader` | 0 | 2 | 0 | 0 |
@@ -241,7 +241,7 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 
 Number of `dazzle.toml` files declaring each top-level table (`[[auth.oauth_providers]]` counts as `auth`). A section not listed is declared by nobody.
 
-| Section | AegisMark | cyfuture | pennydreadful | examples |
+| Section | A consumer app | cyfuture | pennydreadful | examples |
 |---|---:|---:|---:|---:|
 | `audit` | 1 | 0 | 0 | 0 |
 | `auth` | 1 | 1 | 0 | 4 |
@@ -264,7 +264,7 @@ Number of `dazzle.toml` files declaring each top-level table (`[[auth.oauth_prov
 
 Files the framework reads from a project (`*spec.yaml` literals in `src/dazzle`, `*.toml` literals in `src/dazzle/cli`), counted by name. This is how `pitch`, `sitespec` and `theme` are consumed without any CLI call.
 
-| File | AegisMark | cyfuture | pennydreadful | examples |
+| File | A consumer app | cyfuture | pennydreadful | examples |
 |---|---:|---:|---:|---:|
 | `brandspec.yaml` | 1 | 0 | 0 | 0 |
 | `dazzle.toml` | 1 | 1 | 1 | 4 |
@@ -278,7 +278,7 @@ Files the framework reads from a project (`*spec.yaml` literals in `src/dazzle`,
 
 Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: the first segment of every route in `docs/api-surface/runtime-urls.txt` plus the router mount prefixes in `src/dazzle/http`. Baseline routes are router-relative, so generic segments (`/app`, `/api`, `/select`) also match app-owned URLs: a non-zero is *possible* use, a zero is strong evidence of none.
 
-| Path prefix | AegisMark | cyfuture | pennydreadful | examples |
+| Path prefix | A consumer app | cyfuture | pennydreadful | examples |
 |---|---:|---:|---:|---:|
 | `__test__` | 12 | 9 | 51 | 0 |
 | `_dazzle` | 45 | 8 | 2 | 3 |
@@ -315,7 +315,7 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 
 `mcp__dazzle__<tool>`, a backticked tool name followed by one of its operations, or `<tool>(operation=...)` in `*.md`, `*.toml`, `*.py`. Approximate: bare prose mentions are missed and agent transcripts are not scanned.
 
-| Tool | AegisMark | cyfuture | pennydreadful | examples |
+| Tool | A consumer app | cyfuture | pennydreadful | examples |
 |---|---:|---:|---:|---:|
 | `agent` | 0 | 1 | 0 | 0 |
 | `bootstrap` | 0 | 0 | 0 | 0 |

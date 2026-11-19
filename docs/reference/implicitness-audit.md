@@ -94,6 +94,6 @@ The v0.57.69 bug was "personas[0] means admin". The v0.57.67 bug was "data-dz-re
 
 Making everything explicit isn't free. An over-specified DSL is also hard for agents — more syntax, more rules, more rejected valid-looking inputs. The test is: *does removing this implicitness stop a real class of bugs, or is it defensive padding?*
 
-The v0.57.69 bug cost a cycle of diagnosis and a round-trip to AegisMark. That's well past the threshold for making admin-access explicit. An imagined bug about "someone might not realize entities are declared in file order" is not.
+The v0.57.69 bug cost a cycle of diagnosis and a round-trip to a consumer app. That's well past the threshold for making admin-access explicit. An imagined bug about "someone might not realize entities are declared in file order" is not.
 
 Save the explicitness budget for patterns that have already burned us once. Ship the gate, run the heuristic, and wait for the next incident to tell us where the next one is.

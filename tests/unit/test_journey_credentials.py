@@ -14,11 +14,11 @@ def creds_toml(tmp_path: Path) -> Path:
     toml_path = dazzle_dir / "test_personas.toml"
     toml_path.write_text(
         "[personas.school_admin]\n"
-        'email = "admin@oakwood.sch.uk"\n'
+        'email = "admin@example.sch.uk"\n'
         'password = "test-password-123"\n'
         "\n"
         "[personas.teacher]\n"
-        'email = "teacher@oakwood.sch.uk"\n'
+        'email = "teacher@example.sch.uk"\n'
         'password = "test-password-456"\n'
     )
     return tmp_path
@@ -30,11 +30,11 @@ class TestLoadCredentials:
 
         assert result == {
             "school_admin": {
-                "email": "admin@oakwood.sch.uk",
+                "email": "admin@example.sch.uk",
                 "password": "test-password-123",
             },
             "teacher": {
-                "email": "teacher@oakwood.sch.uk",
+                "email": "teacher@example.sch.uk",
                 "password": "test-password-456",
             },
         }
@@ -53,7 +53,7 @@ class TestLoadCredentials:
 
         assert result == {
             "teacher": {
-                "email": "teacher@oakwood.sch.uk",
+                "email": "teacher@example.sch.uk",
                 "password": "test-password-456",
             },
         }

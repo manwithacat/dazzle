@@ -38,7 +38,7 @@ the framework's tenant middleware. `request.state.tenant` carries a typed
 | Sub-field | Default | Meaning |
 |---|---|---|
 | `topology:` (required) | — | `apex` (canonical hosts only) or `provider_subdomain` (`{slug}.{domain}`). Not inferred. |
-| `domain:` (required) | — | the base host suffix (e.g. `aegismark.ai`) |
+| `domain:` (required) | — | the base host suffix (e.g. `example.com`) |
 | `slug_field:` (required) | — | name of the `slug:` field on this entity |
 | `canonical_hosts:` | `[]` | host(s) that pass through with `request.state.tenant = None`. **Required and exhaustive on `topology: apex`.** |
 | `cookie_scope:` | `host` | Bounce intent on B only. Cross-host slug bounce fires iff `topology: provider_subdomain` **and** `cookie_scope: apex`. That is **not** session sharing until Domain cookies are wired. A + `cookie_scope: apex` is a validate error. |

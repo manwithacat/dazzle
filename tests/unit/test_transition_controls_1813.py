@@ -1,6 +1,6 @@
 """#1813 — transition labels + confirms in the DSL, and ``row_transitions: none``.
 
-AegisMark's legal records (an agreement, a parent's consent) must not offer a
+A consumer's legal records (an agreement, a parent's consent) must not offer a
 one-click ``Set to Withdrawn`` next to a status badge. One gate per invariant:
 
 - the transition grammar takes an optional label and ``confirm`` (bare or with

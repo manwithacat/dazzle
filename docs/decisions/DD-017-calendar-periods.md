@@ -16,7 +16,7 @@ parent: null
 conditions (#1800 U21). Two further asks from the same issue are parked:
 **named periods** (`start_of(term)`, `start_of(half_term)`, a project
 `calendar:`) and **`window … anchored_to today`** on aggregate windows. The
-fixed ISO periods cover AegisMark's "this week" strip today; both residuals
+fixed ISO periods cover a consumer's "this week" strip today; both residuals
 need a second shape of evidence before they earn grammar.
 
 ## Plan (what we already concluded)
@@ -67,7 +67,7 @@ rule: hard-coding them in the DSL hides essential complexity (MDF-01), a
 
 ## Reopen when (consumer force)
 
-1. **Named consumer** — AegisMark declares term dates as an entity and asks
+1. **Named consumer** — a consumer app declares term dates as an entity and asks
    for a "this half-term" / "this term" strip; or a second consumer (cyfuture,
    pennydreadful) needs fiscal periods that are not calendar quarters.
 2. **Evidence of host workaround** — a project-side label such as "Last 7

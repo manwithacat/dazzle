@@ -148,7 +148,7 @@ both have the same rounded + bordered + filled edge.
 **Rule**: A card container may contain at most one heading (`<h1>`
 through `<h6>`) with any given text.
 
-**Why**: Duplicate titles are the symptom AegisMark reported for
+**Why**: Duplicate titles are the symptom a consumer app reported for
 #794 — `page.get_by_text("Grade Distribution").count() == 3`. Two
 layers both rendering the title is the structural bug; the visible
 shape is a card with its header text showing twice.

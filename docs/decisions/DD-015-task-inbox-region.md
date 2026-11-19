@@ -15,7 +15,7 @@ parent: flense-programme
 `display: task_inbox` gathered rows from several entities into one
 prioritised "what needs me" list: one typed task per row (`as_task`) or one
 count chip per source (`count_as`), each source scoped by its own entity's
-RBAC. AegisMark was its only consumer and dropped its last use in fb673bc8
+RBAC. A consumer app was its only consumer and dropped its last use in fb673bc8
 (2026-10-16, "focused Teacher Workspace", WP7); no example, fixture or other
 consumer declares it, and `dazzle coverage --consumers --fail-on-uncovered`
 reported it uncovered. The operator cut it the same day (ADR-0057). The
@@ -94,7 +94,7 @@ reach the DOM unescaped.
 
 1. **Named consumer** — a consumer workspace needs one landing list of due
    actions drawn from two or more entities, and one `queue` region per source
-   (the replacement AegisMark chose) is rejected by its users or its
+   (the replacement a consumer app chose) is rejected by its users or its
    assurance pack.
 2. **Evidence** — the consumer's DSL or issue shows the per-source queues, or
    a hand-written route merging entities into one list.
@@ -118,4 +118,4 @@ reach the DOM unescaped.
 
 | Date | Event |
 |------|--------|
-| 2026-10-16 | AegisMark fb673bc8 dropped its last `display: task_inbox`; operator cut the mode; parked (this DD) |
+| 2026-10-16 | A consumer app fb673bc8 dropped its last `display: task_inbox`; operator cut the mode; parked (this DD) |

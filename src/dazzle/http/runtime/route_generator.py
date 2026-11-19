@@ -778,7 +778,7 @@ class RouteGenerator:
                 # More segments first, then static before dynamic at same depth.
                 return (-ep.path.count("/"), 0 if "{" not in ep.path else 1)
 
-            # #1140: backstop dedup. AegisMark hit a case where AssessmentEvent
+            # #1140: backstop dedup. A consumer app hit a case where AssessmentEvent
             # (referenced by both an `analytics:` block and regular workspace
             # surfaces) produced two `EndpointSpec` entries for each of GET
             # /assessmentevents and POST /assessmentevents, so the CRUD list +

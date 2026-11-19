@@ -54,7 +54,7 @@ def load_target_metadata() -> sqlalchemy.MetaData:
         return sqlalchemy.MetaData()
 
     modules = parse_modules(dsl_files)
-    # ``build_appspec`` wants the module name (e.g. "aegismark.core" from
+    # ``build_appspec`` wants the module name (e.g. "myapp.core" from
     # `[project] root` in dazzle.toml), NOT the filesystem path.
     # ProjectManifest.project_root is misleadingly named — it holds the
     # module string, not a Path. Passing the cwd here raises LinkError on

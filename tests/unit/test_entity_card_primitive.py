@@ -1,10 +1,10 @@
 """Issue #1017 (v0.67.5): regression tests for the `entity_card`
-region primitive — fourth AegisMark Day-One demo region primitive,
+region primitive — fourth consumer demo region primitive,
 follows the discriminated `region_config` IR pattern from #1018.
 
 The primitive is deliberately domain-agnostic: pupil-360 in MIS,
 customer-360 in CRM, asset-360 in field-ops, patient-360 in healthcare
-all reuse the same shape. The DSL keyword is `entity_card`; the AegisMark
+all reuse the same shape. The DSL keyword is `entity_card`; the consumer
 spec called it `pupil_card` originally — generalised before ship per
 review feedback ("might be worth pondering ways to generalise them to
 items").

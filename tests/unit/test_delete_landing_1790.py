@@ -1,6 +1,6 @@
 """#1790: delete stays where it was issued; only the record's own page leaves.
 
-AegisMark: a list-row DELETE answered ``HX-Redirect: /app`` (the blind
+A consumer app: a list-row DELETE answered ``HX-Redirect: /app`` (the blind
 parent of ``HX-Current-URL``), so deleting from a list left the list.
 """
 

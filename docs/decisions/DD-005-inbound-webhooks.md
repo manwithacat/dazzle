@@ -34,7 +34,7 @@ framework own the transport concerns the consumers re-implement today:
   `(webhook, event_id)` so a replayed delivery is acknowledged and not
   re-dispatched. Dispatch goes to a declared handler (a `process` or a service
   hook), never to inline code in the DSL.
-- **Health** — an optional `GET` for portal reachability checks (AegisMark
+- **Health** — an optional `GET` for portal reachability checks (a consumer app
   ships `routes/wonde_webhook_health.py` for this).
 
 Counter-priors: do not restore the outbound construct to stand in for this;
@@ -44,7 +44,7 @@ configured.
 
 ## Reopen when (consumer force)
 
-1. **Named consumer** — AegisMark (`routes/wonde_webhook.py`, Wonde partner
+1. **Named consumer** — a consumer app (`routes/wonde_webhook.py`, Wonde partner
    lifecycle events) **or** cyfuture (`routes/xero_webhook.py`,
    `services/vendor/webhooks.py`) asks to replace its hand-written route with a
    declared webhook.

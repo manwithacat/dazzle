@@ -1,6 +1,6 @@
 """Tests for the v0.61.72 confirm_action_panel display mode (#6).
 
-The AegisMark UX patterns roadmap (item #6) — irreversible-action
+The consumer UX patterns roadmap (item #6) — irreversible-action
 consent primitive. The SIMS-sync-opt-in prototype's "Final
 authorisation" panel: a checklist of obligations, a primary commit
 button gated on all required checkboxes being ticked, an optional

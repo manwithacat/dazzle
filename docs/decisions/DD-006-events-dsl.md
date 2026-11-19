@@ -103,7 +103,7 @@ When a force lands:
     object rather than the open transaction, so neither was transactional
     (mixin restore point: `src/dazzle/http/events/service_mixin.py` at
     `7879465836d4c38ded550e9c564f1a7d7d29d9e8`).
-- AegisMark's production boot log confirms the **Redis Streams** bus
+- A consumer's production boot log confirms the **Redis Streams** bus
   (`REDIS_URL` set), so the Redis tier is core, not parked.
 
 ## Runtime transport (parked 2026-10-16, flense ship AR)
@@ -120,7 +120,7 @@ before ship AR); `git show 5bba9833f:<path>` returns every file below.
   `{prefix}consumer_offsets` and `{prefix}dlq` tables), its `asyncpg`-gated
   export in `http/events/__init__.py`, the `postgres` tier in `tier.py` and the
   `event_bus_transport` class of the DB-artifact registry. No consumer
-  deployment selected it: cyfuture and AegisMark ran with `REDIS_URL` at the
+  deployment selected it: cyfuture and a consumer app ran with `REDIS_URL` at the
   time, and nothing sets `EVENT_BACKEND`. (cyfuture has since dropped Redis;
   #1852 delivers its auth-event handlers in-process.) `EventFramework` picked it whenever
   `redis_url` was empty, so local runs without Redis used it.

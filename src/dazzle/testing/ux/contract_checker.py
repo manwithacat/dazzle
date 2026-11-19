@@ -135,7 +135,7 @@ class _DuplicateTitleScanner(HTMLParser):
     text it contains. Exposed via :func:`find_duplicate_titles_in_cards`.
 
     A card with multiple heading descendants bearing the same text means
-    the card header is printed twice — the exact counter AegisMark
+    the card header is printed twice — the exact counter a consumer app
     reported for #794 (``page.get_by_text("Grade Distribution") == 3``).
     The #794 second follow-up stripped the duplicate from ``region_card``,
     but nothing was gating against re-introduction.

@@ -1,6 +1,6 @@
 # Recipe: Agent QA ladder for Dazzle apps
 
-**Audience:** downstream builders (CyFuture / AegisMark class) and Dazzle
+**Audience:** downstream builders (CyFuture / a consumer app class) and Dazzle
 example-app maintainers.
 **Status:** framework-supported recipe (2026-07, #1625).
 **Thesis:** human QA is neither necessary nor sufficient for inventory,
@@ -155,4 +155,4 @@ Empty mechanical runs with “hypotheses untested” are honest.
 - `docs/reference/qa-trial-gen2.md` — nested trial gen-2 posture
 - `docs/reference/qa-trial-patterns.md` — early multi-app findings
 - `.agents/skills/qa-trial/SKILL.md` — authoring skill
-- GitHub #1625 — CyFuture + AegisMark field notes
+- GitHub #1625 — CyFuture + a consumer app field notes

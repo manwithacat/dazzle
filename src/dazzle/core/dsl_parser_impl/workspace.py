@@ -447,7 +447,7 @@ class WorkspaceParserMixin:
                 caption: "manual triage"
                 value: "Daily 02:00 UTC"
 
-        v0.61.66 (AegisMark UX patterns #4): the ``value:`` key accepts
+        v0.61.66 (consumer UX patterns #4): the ``value:`` key accepts
         either an aggregate expression (same vocabulary as region-level
         ``aggregate:``) OR a quoted literal string. Per ADR-0024 the
         parser shape-detects at parse time — :meth:`peek_is_aggregate_call`
@@ -1545,7 +1545,7 @@ class WorkspaceParserMixin:
               - title: "Audit trail will be visible to school admins"
                 required: false
 
-        v0.61.72 (AegisMark UX patterns roadmap item #6).
+        v0.61.72 (consumer UX patterns roadmap item #6).
         """
         items: list[ir.ConfirmationItemSpec] = []
         _VALID_KEYS = {"title", "caption", "required"}

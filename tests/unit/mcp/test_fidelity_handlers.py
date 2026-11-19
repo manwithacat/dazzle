@@ -178,7 +178,7 @@ paths = ["./dsl"]
 
         # Force the second import to fail at a sub-symbol level —
         # mimics the stale-bytecode-after-rename failure mode from the
-        # AegisMark repro.
+        # A consumer app repro.
         target = "dazzle.page.runtime.template_renderer"
         monkeypatch.setitem(sys.modules, target, None)
 

@@ -29,7 +29,7 @@ once read as unused; mypy is the backstop) and not in `docs/api-surface/`.
 The ratchet sees module-level definitions only. Ship AI reviewed every vulture
 candidate at 60 % confidence (functions, methods, properties, classes; dataclass
 and pydantic fields are data shape and were not candidates) against `src`,
-`tests`, `scripts`, `packages`, `docs`, skills, hooks, CI and the AegisMark,
+`tests`, `scripts`, `packages`, `docs`, skills, hooks, CI and the consumer,
 cyfuture and pennydreadful checkouts. These were reviewed and **kept**, by reason:
 
 | reason | what |
@@ -40,7 +40,7 @@ cyfuture and pennydreadful checkouts. These were reviewed and **kept**, by reaso
 | retention paths, unwired rather than superseded | `TokenStore.cleanup_expired`, `GrantStore.expire_stale_grants` (the channel `OutboxRepository` and its `_dazzle_outbox` table went in flense ship AR) |
 | test and QA infrastructure | `qa_sign`, `qa_provision`, `vendor_mock`, `perf.tracer.reset_tracer`, `testing.session_manager` helpers, `tenant/metrics` counters, the ratchet helpers in `fitness/` (`compare_complexity`, `stale_baseline_clusters`, `count_swallows`) and `db/artifact_registry` (`framework_boot_entries`, `concrete_creators`) the gates call |
 | read by the tests of the owning feature as an assertion or setup helper | IR query properties (`is_pii`, `is_grant_check`, `action_names`, `get_computed_field` …), `KnowledgeGraph.query`, `get_activity_sessions`, `controls_by_id`, `ParamResolver.set_override`, `save_processes` and the copy/theme/workspace/page-spec accessors; deleting them rewrites tests, so they go when those tests are retargeted |
-| consumer constructs it | `BarChart.label` (AegisMark's cohort and class-summary viewers pass it; the renderer does not draw it, and wiring it needs a HaTchi-MaXchi seam change) |
+| consumer constructs it | `BarChart.label` (a consumer's cohort and class-summary viewers pass it; the renderer does not draw it, and wiring it needs a HaTchi-MaXchi seam change) |
 | named by a counter-prior | `route_overrides.scan_handler_for_raw_db` (`raw-db-in-custom-route`, #1420) |
 | unused parameters in kept signatures | callers pass them; removal is a signature change, not a definition deletion |
 

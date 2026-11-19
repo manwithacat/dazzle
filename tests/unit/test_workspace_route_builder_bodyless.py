@@ -6,7 +6,7 @@ The pre-fix code in `WorkspaceRouteBuilder.init_workspace_routes`
 short-circuited via `if not ctx_region.source: continue` — which
 silently skipped registration for any sourceless region. Result:
 the HTMX endpoint 404'd, the skeleton placeholder never got
-replaced, the entries never rendered. AegisMark's
+replaced, the entries never rendered. A consumer's
 sims_sync_settings_workspace hit this on three consecutive
 status_list regions before reporting it.
 

@@ -1,5 +1,5 @@
 """Issue #1016 (v0.67.3): regression tests for the `day_timeline`
-region primitive — second AegisMark Day-One demo region primitive,
+region primitive — second consumer demo region primitive,
 follows the discriminated `region_config` IR pattern landed by #1018.
 
 Coverage:

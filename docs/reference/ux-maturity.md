@@ -35,7 +35,7 @@ to solve than the author — which is why maturity tops out at **adaptive**, not
 
 ## The five lenses (human-readable spine)
 
-Per workspace/region, the rubric asks (after AegisMark `strategy.md`):
+Per workspace/region, the rubric asks (after a consumer app `strategy.md`):
 
 1. **Question** — what decision is this persona here to make?
 2. **Answer-first?** — does the surface lead with the answer/anomaly, or a raw
@@ -254,13 +254,13 @@ One source, every Dazzle app, via Dazzle's existing agent-command channel:
   transitions-from-state-graph, scope→RLS) so scorers calibrate "adaptive" against
   what already ships.
 
-## How the AegisMark prototype relates
+## How the consumer prototype relates
 
-This rubric is the framework-altitude abstraction over AegisMark's
+This rubric is the framework-altitude abstraction over a consumer's
 instance-level UX work: `strategy.md` (the "answer the question" synthesis →
 "grow ~6 native primitives"), `target.md` / `scorecard.json` / `verdicts.json`
 (the `/ux-pass` story walk), `ssr-htmx-ux-doctrine.md` (the SSR+htmx substrate
-doctrine + operating rules). Those judge *AegisMark*; this judges *Dazzle*. Most
+doctrine + operating rules). Those judge *a consumer app*; this judges *Dazzle*. Most
 of the 6 primitives `strategy.md` called for have since shipped (#1470 comparison
 / outlier / heatmap / insight_summary, the format layer, sparkline/timeseries) —
 so this rubric's job today is to **re-score and repoint at what's left**, which

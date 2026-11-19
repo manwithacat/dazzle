@@ -31,7 +31,7 @@ from dazzle.http.runtime.auth.models import MembershipRecord
 from dazzle.http.runtime.tenant.cookies import host_cookie_name
 from dazzle.http.runtime.tenant.resolver import ResolvedTenant
 
-APP_NAME = "AegisMark"
+APP_NAME = "Acme"
 HOST_COOKIE = host_cookie_name(APP_NAME)
 
 

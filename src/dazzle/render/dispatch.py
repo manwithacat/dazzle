@@ -102,7 +102,7 @@ def dispatch_render(
     # The built-in `fragment` renderer is the trusted typed substrate; a custom
     # renderer (any name not in the framework defaults) bypasses it entirely, so
     # nothing previously stopped it returning a blank string — which ships as an
-    # empty 200 (the AegisMark "passes render, blank screen" failure). The
+    # empty 200 (the consumer "passes render, blank screen" failure). The
     # framework now asserts non-blank, well-formed output on every custom-renderer
     # path. On by default; raises a typed FragmentError naming the renderer.
     if renderer_name not in default_renderer_names():

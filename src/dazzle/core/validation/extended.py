@@ -758,7 +758,7 @@ _GRAPH_EDGE_FIELD_NAMES: frozenset[str] = frozenset(
 # graph-edge endpoint. Fields with BOTH an edge token AND an audit token
 # (e.g. `assigned_to`, `reported_from`) are resolved as audit fields and
 # excluded from edge candidacy. This catches the false-positive class
-# observed by AegisMark where mixed-vocabulary field names — and in
+# observed by a consumer app where mixed-vocabulary field names — and in
 # particular `assigned_to`, `sent_to`, `returned_from` — were flagged as
 # graph edges despite being workflow/routing metadata.
 _AUDIT_METADATA_FIELD_NAMES: frozenset[str] = frozenset(

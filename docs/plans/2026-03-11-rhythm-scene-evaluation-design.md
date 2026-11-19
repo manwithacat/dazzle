@@ -19,7 +19,7 @@ A **rhythm** is a longitudinal journey map for a single persona through the app,
 Rhythms are abstract — they define journey structure without hardcoded dates or schedules. An AI agent specializes the abstract rhythm to a domain-specific context:
 
 - Cyfuture (accounting): maps phases to UK annual regulatory calendar (Apr–Mar)
-- Aegismark (education): maps phases to academic calendar (Sept–Sept)
+- a consumer app (education): maps phases to academic calendar (Sept–Sept)
 - A SaaS onboarding: maps phases to "days since signup"
 
 The DSL captures structure deterministically. Agents interpret temporal semantics per domain.

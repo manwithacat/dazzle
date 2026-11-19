@@ -1,10 +1,10 @@
 # Recipe: Evergreen product docs site for a Dazzle app
 
-**Status:** Proven at AegisMark (live at https://docs.aegismark.ai). Landed as
+**Status:** Proven at a consumer app (live at a consumer's docs site). Landed as
 a Dazzle **consumer guide** (#1612 Stage A). Framework code extraction is
 optional and phased (see [Upstream ladder](#upstream-ladder)).
 
-**Proof-of-shape:** AegisMark `docs-site/`, `pipeline/docsite/`,
+**Proof-of-shape:** a consumer app `docs-site/`, `pipeline/docsite/`,
 `scripts/docs_ship.sh`, `tests/docs/`, design
 `archive/docs-superpowers/specs/2026-07-01-evergreen-docs-site-design.md`.
 
@@ -34,7 +34,7 @@ Every product team that wants evergreen user docs reimplements the same stack:
 4. Decoupled static hosting on a custom domain (`docs.<product>`)
 5. (Later) screen recordings that stay true to the real UI
 
-AegisMark has run this end-to-end. The recipe below is what other Dazzle apps
+A consumer app has run this end-to-end. The recipe below is what other Dazzle apps
 should copy.
 
 ## Non-goals
@@ -225,7 +225,7 @@ Load the AppSpec with the same path the project already uses
 (`BuildService(dazzle.toml).load_appspec()` or `load_project_appspec`). The
 macros and the drift gate share one `load_facts()` — no second source of truth.
 
-**Reference implementation:** AegisMark `pipeline/docsite/facts.py` (~100 lines).
+**Reference implementation:** a consumer app `pipeline/docsite/facts.py` (~100 lines).
 
 ### 6. Drift gate (tiered, so it has teeth without being brittle)
 
@@ -253,7 +253,7 @@ Rollout:
 Negative-control test: feed a fabricated stale workspace id and assert Tier 1
 rejects it (proves the gate has teeth).
 
-**Reference implementation:** AegisMark `pipeline/docsite/drift.py` +
+**Reference implementation:** a consumer app `pipeline/docsite/drift.py` +
 `tests/docs/test_drift.py`.
 
 ### 7. Honest boundary (text vs video)
@@ -327,7 +327,7 @@ the project's nightly / quality loop so drift is caught without requiring PR CI.
 1. Start from **stories**: each persona's `actor`-matched stories give "what they
    do"; `happy_path_outcome` is the success beat; `given/when/then` seeds steps.
 2. Ground non-obvious flows against the live UI with the project's QA harness
-   (AegisMark: `/qa-tenant` magic-link + Playwright MCP) — the same traces that
+   (consumer: `/qa-tenant` magic-link + Playwright MCP) — the same traces that
    become videos later.
 3. Write warm, task-oriented prose. Prefer how-tos for workflows shared across
    personas; prefer guides for "a day in the life".
@@ -364,7 +364,7 @@ optional and should follow real second-consumer demand.
 |-------|----------------------|------|
 | **A. Guide** | This document as `docs/guides/product-docs-site.md` (+ nav entry) | Now — zero risk, unblocks every app |
 | **B. Scaffold** | `dazzle docs site init` writes the `docs-site/` skeleton, wrangler.toml, ship script stubs, and a minimal `docsite/` package | When ≥2 apps adopt the guide |
-| **C. Library** | Promote facts/drift/macros into `dazzle.docsite` (project package becomes a thin config: platform personas, coverage mode, docs path) | When the AegisMark + second-consumer packages diverge only in config |
+| **C. Library** | Promote facts/drift/macros into `dazzle.docsite` (project package becomes a thin config: platform personas, coverage mode, docs path) | When the consumer + second-consumer packages diverge only in config |
 | **D. Trace→video** | Shared pipeline: Playwright `trace.zip` → narration script → TTS → MP4/WebM assets embedded on how-to pages; drift extends to "video asset present for every how-to with `video: required`" | Separate design; depends on stable QA-trace capture in consumers |
 
 Stage A is the ask of this draft. B–D are not blockers.
@@ -435,7 +435,7 @@ qa harness (persona walk)          how-to page front-matter
    `video: required` in how-to front-matter → Tier 1 fails if the asset is
    missing after the flip to complete coverage.
 
-AegisMark already produces Playwright `trace.zip` from `/qa-tenant` and
+A consumer app already produces Playwright `trace.zip` from `/qa-tenant` and
 `/qa-flow`; filmstrip extraction exists for QA reports. Phase 2 reuses that
 capture path rather than inventing a second walker.
 
@@ -447,7 +447,7 @@ capture path rather than inventing a second walker.
 - [x] Filed: https://github.com/manwithacat/dazzle/issues/1612
 - [x] Landed as `docs/guides/product-docs-site.md` + `mkdocs.yml` Guides nav
 - [x] Linked from `docs/reference/deployment.md`
-- [ ] AegisMark keeps `pipeline/docsite/` as the reference implementation until
+- [ ] a consumer app keeps `pipeline/docsite/` as the reference implementation until
       Stage C; no pin-bump required for Stage A
 - [ ] Stage B/C when second consumer appears (track on #1612 or a follow-up)
 
@@ -463,9 +463,9 @@ capture path rather than inventing a second walker.
 
 ---
 
-## Reference map (AegisMark → recipe §)
+## Reference map (consumer → recipe §)
 
-| AegisMark path | Recipe section |
+| A consumer app path | Recipe section |
 |----------------|----------------|
 | `docs-site/` | §1, §3 |
 | `pipeline/docsite/facts.py` | §5 |
@@ -476,4 +476,4 @@ capture path rather than inventing a second walker.
 | `docs-site/wrangler.toml` | §8 |
 | `pyproject.toml` `[dependency-groups].docs` | §2 |
 | Design spec `archive/docs-superpowers/specs/2026-07-01-evergreen-docs-site-design.md` | full rationale |
-| Live site | https://docs.aegismark.ai |
+| Live site | a consumer's docs site |

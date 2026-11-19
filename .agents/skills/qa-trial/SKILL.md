@@ -198,4 +198,4 @@ Use `--fresh-db` to avoid stale rows from prior trials corrupting the signal (#8
 - `references/authoring-guide.md` — domain patterns
 - `templates/trial-toml-template.toml` — blank form
 - `examples/support_tickets/trial.toml` + `agent/domain-theory/` — flagship
-- GitHub #1625 — CyFuture + AegisMark field notes
+- GitHub #1625 — CyFuture + a consumer app field notes

@@ -107,7 +107,7 @@ def current_user_id(request: Any) -> str | None:
 
 def current_user(request: Any) -> dict[str, Any] | None:
     """Return a JSON-serialisable dict of the authenticated user, or
-    None. Mirrors the AegisMark-style `user` payload most projects want
+    None. Mirrors the consumer-style `user` payload most projects want
     (id, email, roles, preferences). Use `current_auth` if you need the
     full pydantic AuthContext."""
     auth = _resolve_auth(request)

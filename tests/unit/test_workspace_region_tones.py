@@ -1,13 +1,13 @@
 """Tests for the v0.61.65 region `tones:` block.
 
-The AegisMark UX patterns roadmap (item #2) — metric tiles in the
+The consumer UX patterns roadmap (item #2) — metric tiles in the
 SIMS-sync-opt-in prototype carry per-tile accent strips so authors can
 distinguish a "good" count (resolved) from a "bad" one (errors) at a
 glance. Promoting tones to a region-level dict mirrors `aggregate:`,
 keeps the per-metric vocabulary together, and reuses the action_grid
 tone tokens (positive / warning / destructive / accent / neutral).
 
-See ``dev_docs/2026-04-27-aegismark-ux-patterns.md`` for the full
+See ``a consumer's UX-patterns note`` for the full
 roadmap context.
 """
 
@@ -196,7 +196,7 @@ class TestTonesTemplateBinding:
     def test_template_reads_metric_tone(self) -> None:
         text = self._template_text()
         assert "metric.tone" in text, (
-            "metrics.html dropped `metric.tone` binding — AegisMark roadmap item #2 lost"
+            "metrics.html dropped `metric.tone` binding — a consumer app roadmap item #2 lost"
         )
 
     def test_template_emits_data_dz_tone_attribute(self) -> None:

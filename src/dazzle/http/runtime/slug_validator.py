@@ -12,7 +12,7 @@ Rules enforced here:
     * Must start and end with a letter or digit (no leading/trailing hyphen)
     * No double-hyphens anywhere
 
-These mirror the constants used by AegisMark's ``pipeline/tenant/validation.py``
+These mirror the constants used by a consumer's ``pipeline/tenant/validation.py``
 which we are upstreaming.
 """
 

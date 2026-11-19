@@ -11,7 +11,7 @@ Pins the three layers that compose the L3 leg:
    with quoted identifiers; ``build_aggregate_sql`` threads inner
    measure params ahead of WHERE params.
 
-Includes the AegisMark canonical lens
+Includes the consumer canonical lens
 (``avg(MarkingResult.score::float / nullif(MarkingResult.max_score, 0))``)
 end-to-end through parser + compiler + build_aggregate_sql.
 """
@@ -176,7 +176,7 @@ def test_parser_function_call_becomes_expression() -> None:
     assert r.expression.function_name == "nullif"
 
 
-def test_parser_aegismark_canonical() -> None:
+def test_parser_consumer_canonical() -> None:
     r = _parse("avg(MarkingResult.score::float / nullif(MarkingResult.max_score, 0))")
     assert r.entity == "MarkingResult"
     assert r.expression is not None

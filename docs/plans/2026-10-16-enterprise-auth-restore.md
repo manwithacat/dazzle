@@ -14,7 +14,7 @@ the `/auth/connections` pages, `manage_connections`.
 | cheapest (Haiku) | EA-0 inventory of the archive: fixed-signature scrape, no judgement | mechanical |
 | strong, below session (Opus, worktree) | EA-1 substrate, EA-2 OIDC, EA-3 SCIM | security-bearing restore with design changes (manifest gating, `require_sso`, SAML excision) |
 | mid (Sonnet, worktree) | EA-4 CLI + doctor, EA-5 operator guide | prune-and-restore with a clear spec; little new design |
-| session (Fable) | harvest, gates, commit, push, EA-6 acceptance pack and the AegisMark hand-off | ship path and final review stay with the session |
+| session (Fable) | harvest, gates, commit, push, EA-6 acceptance pack and the consumer hand-off | ship path and final review stay with the session |
 
 Agents in worktrees never commit to `main`, push, bump or tag. They hand back a worktree with
 `make ci-fast` green and a report in the house format (what restored, what pruned, what changed from
@@ -106,11 +106,11 @@ start before it lands.
   *Agent Guidance* bullet.
 
 ### EA-6 — Acceptance pack and hand-off (session)
-- Against AegisMark's `docs/enterprise-auth-enablement.md` minus its SAML lines: a local app with
+- Against a consumer's `docs/enterprise-auth-enablement.md` minus its SAML lines: a local app with
   `[auth.enterprise] protocols = ["oidc", "scim"]` boots, `dazzle auth connection create` →
   `add-domain` → `verify-domain` → `doctor` exit 0; the OIDC double signs a verified-domain user into
   the right org with group-mapped roles; `require_sso` refuses the password path; SCIM provisions
-  and deprovisions a user and a group end to end. Hand-off to `dev_docs/handoff/` in AegisMark.
+  and deprovisions a user and a group end to end. Hand-off to `dev_docs/handoff/` in a consumer app.
 - Readiness checklist exposure on the org admin page is a follow-up after EA-6, not before.
 
 ## 3. Rules every ship obeys

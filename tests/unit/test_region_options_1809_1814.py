@@ -1,4 +1,4 @@
-"""#1809 / #1814 (AegisMark): region presentation options.
+"""#1809 / #1814: region presentation options.
 
 * ``filters: none``  — a list region hides its filter/search bar.
 * ``exclude: <region>`` — omit rows a sibling region shows on its first page.

@@ -9,7 +9,7 @@ entity_card was scoped to.
 
 These tests run the fetcher against a recording repository and assert on
 the filters the section query actually carries. Real DB integration is
-exercised by AegisMark's pupil_dashboard.
+exercised by a consumer's pupil_dashboard.
 """
 
 import asyncio

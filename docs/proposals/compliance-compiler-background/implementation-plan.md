@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a pipeline that generates ISO 27001:2022 compliance documentation from AegisMark's Dazzle DSL, producing a customer-facing statement and a formal audit pack as branded PDFs.
+**Goal:** Build a pipeline that generates ISO 27001:2022 compliance documentation from a consumer's Dazzle DSL, producing a customer-facing statement and a formal audit pack as branded PDFs.
 
 **Architecture:** Framework taxonomy (YAML) defines ISO 27001 controls with DSL evidence mappings. A Python compiler walks the DSL (via MCP tools) and produces an AuditSpec IR (JSON). Per-document AI agents expand the IR into markdown. WeasyPrint renders branded PDFs via CSS driven by brandspec.yaml.
 
@@ -67,7 +67,7 @@ This task builds the data layer: the YAML schema for compliance frameworks and a
 
 ```python
 # pipeline/compliance/__init__.py
-"""AegisMark Compliance Compiler — generates audit documentation from DSL."""
+"""A consumer app Compliance Compiler — generates audit documentation from DSL."""
 ```
 
 - [ ] **Step 2: Write failing test for taxonomy loader**
@@ -366,7 +366,7 @@ Create `.dazzle/compliance/frameworks/iso27001.yaml` with all 93 Annex A control
 - Leave `dsl_evidence: []` for controls with no DSL representation (physical security, HR screening, etc.)
 - Include `attributes` with control_type, security_concepts, operational_capabilities
 
-This is best done by dispatching an AI agent with web search access to retrieve the full ISO 27001:2022 Annex A control list and cross-referencing against AegisMark's DSL constructs.
+This is best done by dispatching an AI agent with web search access to retrieve the full ISO 27001:2022 Annex A control list and cross-referencing against a consumer's DSL constructs.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -416,7 +416,7 @@ from pipeline.compliance.evidence import (
     extract_all_evidence,
 )
 
-PROJECT_PATH = Path("/Volumes/SSD/AegisMark")
+PROJECT_PATH = Path("/Volumes/SSD/a consumer app")
 
 
 def test_classify_evidence_structure():
@@ -1206,13 +1206,13 @@ git commit -m "feat(compliance): add AuditSpec compiler (taxonomy + evidence →
 **Files:**
 - Test: `tests/compliance/test_integration.py`
 
-Run the full compiler against the real AegisMark DSL and the full ISO 27001 taxonomy.
+Run the full compiler against the real a consumer app DSL and the full ISO 27001 taxonomy.
 
 - [ ] **Step 1: Write integration test**
 
 ```python
 # tests/compliance/test_integration.py
-"""Integration test: compile AuditSpec from real AegisMark DSL + ISO 27001 taxonomy."""
+"""Integration test: compile AuditSpec from real a consumer app DSL + ISO 27001 taxonomy."""
 import json
 import pytest
 from pathlib import Path
@@ -1221,7 +1221,7 @@ from pipeline.compliance.taxonomy import load_taxonomy
 from pipeline.compliance.evidence import extract_all_evidence
 from pipeline.compliance.compiler import compile_auditspec
 
-PROJECT = Path("/Volumes/SSD/AegisMark")
+PROJECT = Path("/Volumes/SSD/a consumer app")
 ISO_PATH = PROJECT / ".dazzle" / "compliance" / "frameworks" / "iso27001.yaml"
 OUTPUT = PROJECT / ".dazzle" / "compliance" / "output" / "iso27001"
 
@@ -1281,7 +1281,7 @@ Review the output manually. Check:
 
 ```bash
 git add tests/compliance/test_integration.py .dazzle/compliance/output/iso27001/auditspec.json
-git commit -m "feat(compliance): integration test — compile full AuditSpec from AegisMark DSL"
+git commit -m "feat(compliance): integration test — compile full AuditSpec from a consumer app DSL"
 ```
 
 ---
@@ -1297,7 +1297,7 @@ Review `themespec.yaml` and `static/images/` for existing brand assets (logo, co
 
 - [ ] **Step 2: Create brandspec.yaml**
 
-Create `brandspec.yaml` at project root following the spec (Section 8). Use actual AegisMark brand values from `themespec.yaml` where they exist.
+Create `brandspec.yaml` at project root following the spec (Section 8). Use actual a consumer app brand values from `themespec.yaml` where they exist.
 
 - [ ] **Step 3: Commit**
 
@@ -1347,11 +1347,11 @@ def sample_markdown(tmp_path):
 
 @pytest.fixture
 def brandspec():
-    return load_brandspec(Path("/Volumes/SSD/AegisMark/brandspec.yaml"))
+    return load_brandspec(Path("/Volumes/SSD/a consumer app/brandspec.yaml"))
 
 
 def test_load_brandspec(brandspec):
-    assert brandspec["brand"]["identity"]["name"] == "AegisMark"
+    assert brandspec["brand"]["identity"]["name"] == "a consumer app"
     assert "colours" in brandspec["brand"]
     assert "print" in brandspec["brand"]
 
@@ -1962,7 +1962,7 @@ from pathlib import Path
 
 from pipeline.compliance.slicer import load_document_spec
 
-DOCS_DIR = Path("/Volumes/SSD/AegisMark/.dazzle/compliance/documents")
+DOCS_DIR = Path("/Volumes/SSD/a consumer app/.dazzle/compliance/documents")
 
 
 def test_audit_pack_loads():
@@ -2015,7 +2015,7 @@ Dispatch an AI agent with ISO 27001 domain knowledge to draft the three template
 
 - [ ] **Step 2: Review templates for accuracy**
 
-Read each template. Verify ISO 27001 terminology is correct and content is appropriate for AegisMark's context (UK schools, AI-powered assessment marking, cloud-hosted SaaS).
+Read each template. Verify ISO 27001 terminology is correct and content is appropriate for a consumer's context (UK schools, AI-powered assessment marking, cloud-hosted SaaS).
 
 - [ ] **Step 3: Commit**
 
@@ -2380,7 +2380,7 @@ Expected: AuditSpec compiled, summary printed (e.g., "93 controls: 61 evidenced,
 - [ ] **Step 3: Test customer statement generation**
 
 Run: `/audit --pack customer`
-Expected: `compliance_statement.md` written with coherent prose about AegisMark's security posture
+Expected: `compliance_statement.md` written with coherent prose about a consumer's security posture
 
 - [ ] **Step 4: Commit**
 
@@ -2403,14 +2403,14 @@ Run: `/audit --pack customer --render`
 Expected outputs:
 - `.dazzle/compliance/output/iso27001/auditspec.json`
 - `.dazzle/compliance/output/iso27001/markdown/compliance_statement.md`
-- `.dazzle/compliance/output/iso27001/pdf/AegisMark-Information-Security-Statement-v1.0.pdf`
+- `.dazzle/compliance/output/iso27001/pdf/Acme-Information-Security-Statement-v1.0.pdf`
 
 - [ ] **Step 2: Review the generated PDF**
 
 Open the PDF manually. Check:
 - Title page has logo, document ID, version, date, classification
 - Document control table is populated
-- Content is coherent and references AegisMark's actual data (classify directives, role names, entity counts)
+- Content is coherent and references a consumer's actual data (classify directives, role names, entity counts)
 - No hallucinated citations (citation validator should have caught these)
 - Tone is appropriate (customer-facing, non-technical)
 
@@ -2423,7 +2423,7 @@ Expected: 6 markdown files + 6 PDFs in the output directory.
 - [ ] **Step 4: Review audit pack for completeness**
 
 Check each document:
-- ISMS Scope: mentions AegisMark, 53 entities, 9 personas, 11 workspaces
+- ISMS Scope: mentions a consumer app, 53 entities, 9 personas, 11 workspaces
 - Risk Assessment: asset register from classify directives, risk register with likelihood/impact
 - SoA: all 93 controls listed with status, justification, evidence summary
 - Access Control Policy: role definitions from personas, RBAC matrix from permit/scope
@@ -2436,7 +2436,7 @@ Check each document:
 git add .dazzle/compliance/output/iso27001/auditspec.json .dazzle/compliance/output/iso27001/markdown/ .dazzle/compliance/output/iso27001/review.yaml
 echo ".dazzle/compliance/output/*/pdf/" >> .gitignore
 git add .gitignore
-git commit -m "feat(compliance): first full ISO 27001 document generation for AegisMark"
+git commit -m "feat(compliance): first full ISO 27001 document generation for a consumer app"
 ```
 
 ---

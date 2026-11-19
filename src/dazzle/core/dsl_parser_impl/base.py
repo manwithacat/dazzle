@@ -641,21 +641,21 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     # v0.61.56 (#890) added pipeline_steps `caption:` keyword. Same
     # rationale — `caption` is a common field name.
     TokenType.CAPTION,
-    # v0.61.60 added region-level `eyebrow:` keyword (AegisMark UX patterns
+    # v0.61.60 added region-level `eyebrow:` keyword (consumer UX patterns
     # roadmap item #1). Common field name; must remain usable as identifier.
     TokenType.EYEBROW,
-    # v0.61.65 added region-level `tones:` block (AegisMark UX patterns
+    # v0.61.65 added region-level `tones:` block (consumer UX patterns
     # roadmap item #2). `tones` is an unlikely field name but reserve the
     # escape hatch for parity with other keyword-shaped identifiers.
     TokenType.TONES,
-    # v0.61.69 added status_list `entries:` / `state:` keywords (AegisMark
+    # v0.61.69 added status_list `entries:` / `state:` keywords (consumer
     # UX patterns roadmap item #3). Both are common field names —
     # `state` especially could clash with state machines, `entries`
     # with collection counters. (`caption` already in this list from
     # the pipeline_steps work.)
     TokenType.ENTRIES,
     TokenType.STATE,
-    # v0.61.72 added confirm_action_panel keywords (AegisMark UX patterns
+    # v0.61.72 added confirm_action_panel keywords (consumer UX patterns
     # roadmap item #6). `state_field` could be a column name, `revoke`
     # could be an action name. (`required` deliberately NOT promoted —
     # it's a field modifier and must remain IDENTIFIER for the field

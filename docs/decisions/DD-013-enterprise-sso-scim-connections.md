@@ -18,7 +18,7 @@ parent: flense-programme
 Per-org enterprise identity (OIDC and SAML 2.0 sign-in, SCIM 2.0 provisioning,
 DNS-verified domains, the connection admin surface and `dazzle auth connection`)
 was gated on `[capabilities] enabled = ["auth.enterprise.*"]` in `dazzle.toml`.
-No consumer declared the section, and AegisMark's runbook
+No consumer declared the section, and a consumer's runbook
 (`docs/enterprise-auth-enablement.md` in that repo) records the capability as
 inert and names go-live as a reviewed architecture change. Flense ship AD
 (ADR-0057, operator decision 2026-10-15) removed it: about 7.4k lines of
@@ -150,7 +150,7 @@ plan**). Until then the status stays `PARKED` and
 the `memberships.external_id` drop that plan §10 listed as "open for the
 operator" is **off the table** (SCIM identity is `externalId`-first).
 
-1. **Named consumer** — AegisMark (school SSO via Entra ID or Google) is the
+1. **Named consumer** — a consumer app (school SSO via Entra ID or Google) is the
    candidate; its runbook `docs/enterprise-auth-enablement.md` already treats
    go-live as a reviewed change. Any consumer qualifies.
 2. **Evidence** — the consumer declares `[capabilities] enabled =
@@ -204,7 +204,7 @@ protocol. The counter-priors above hold.
    a hosted broker (Keycloak, Auth0, Entra External ID) that terminates SAML
    and presents OIDC to Dazzle, as a per-customer deployment choice. The
    known triggers are UK education federations: RM Unify and UK Access
-   Management Federation (Shibboleth). AegisMark's pilot material names
+   Management Federation (Shibboleth). A consumer's pilot material names
    neither.
 4. **`require_sso` per org is the gate.** New behaviour, not a restore: once
    an org has a verified domain and an active connection and sets
@@ -223,8 +223,8 @@ protocol. The counter-priors above hold.
    SCIM attribute, about 3.5k of the 11.6k test lines) into one parametrised
    gate (flense ship AX principle: one gate per invariant). The SAML tests
    and `saml_idp_double.py` are not restored.
-7. **Consumer shape.** AegisMark is the design partner. Its ADR-0012
-   migration onto the framework membership model **did** ship (AegisMark
+7. **Consumer shape.** a consumer app is the design partner. Its ADR-0012
+   migration onto the framework membership model **did** ship (a consumer app
    CHANGELOG, "Enterprise-auth membership migration, EAM P1–P4": native
    `tenant_host:` routing, login-time membership gating, the custom
    `pipeline/tenant` gate retired), so the group → role mapping has a
@@ -244,7 +244,7 @@ protocol. The counter-priors above hold.
 
 `platform (core requirement)` — the operator's ruling of 2026-10-16, not a named
 customer. The work plan is `docs/plans/2026-10-16-enterprise-auth-restore.md`
-(ships EA-0 to EA-6, model placement, the rules every ship obeys). AegisMark is
+(ships EA-0 to EA-6, model placement, the rules every ship obeys). A consumer app is
 the design partner and receives the hand-off; its enablement runbook minus the
 SAML lines is the acceptance script.
 

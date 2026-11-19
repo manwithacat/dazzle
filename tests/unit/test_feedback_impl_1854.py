@@ -1,4 +1,4 @@
-"""The MCP ``feedback`` tool's read path (#1854, consumer-forced by aegismark).
+"""The MCP ``feedback`` tool's read path (#1854, consumer-forced).
 
 Pins, through a real ``httpx.AsyncClient`` on an ``httpx.MockTransport`` (no
 network):

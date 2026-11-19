@@ -366,7 +366,7 @@ class TestPlaywrightSmokeSimpleTask:
 
     @pytest.mark.e2e
     def test_workspace_fits_a_phone_viewport(self, browser, server: DazzleLocalServer) -> None:
-        """#1798 (AegisMark U14) — at 390px the app shell must not widen the
+        """#1798 (consumer U14) — at 390px the app shell must not widen the
         page (dashboard cards kept their inline `span N` and opened implicit
         columns: 623px) and the default-open desktop sidebar must not paint
         over the content: below 64rem it is a drawer, parked off-screen."""

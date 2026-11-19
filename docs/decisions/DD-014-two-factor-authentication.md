@@ -112,7 +112,7 @@ re-adds them in the same revision.
 1. **Named consumer** — a consumer declares two-factor sign-in in its app
    configuration (the restored equivalent of `security: two_factor`), **or** a
    consumer's assurance pack (flense Phase 4) names MFA as a required control.
-   AegisMark (school staff accounts holding pupil data) is the likely candidate.
+   A consumer app (school staff accounts holding pupil data) is the likely candidate.
 2. **Evidence** — the requirement is written in the consumer's repo (assurance
    pack, DPIA or security policy), not inferred.
 3. **Acceptance that unblocks** — in the consumer's staging, a user enrols an

@@ -149,11 +149,11 @@ class RegionContext(BaseModel):
     # v0.61.65: per-tile palette tokens for `display: metrics`. Map metric
     # name → tone token (positive / warning / destructive / accent /
     # neutral). The metrics template surfaces the tone as a per-tile
-    # background tint via the `dz-tone-*` class. AegisMark UX patterns
+    # background tint via the `dz-tone-*` class. consumer UX patterns
     # roadmap item #2.
     tones: dict[str, str] = Field(default_factory=dict)
     # v0.61.68: optional notice band rendered above the region body
-    # in the dashboard slot (AegisMark UX patterns roadmap item #7).
+    # in the dashboard slot (consumer UX patterns roadmap item #7).
     # Plain dict {title, body, tone} — empty when no notice declared.
     # The dashboard panel template branches on truthy `card.notice` to
     # emit the band.
@@ -229,10 +229,10 @@ STAGE_DEFAULT_SPANS: dict[str, list[int] | int] = {
     "scanner_table": 12,
     "monitor_wall": 6,
     "command_center": [12, 6, 6, 4, 4, 4],
-    # v0.61.71 (#5, AegisMark UX patterns roadmap): pair_strip is for
+    # v0.61.71 (#5, consumer UX patterns roadmap): pair_strip is for
     # consent-flow / authorisation layouts where the page is a stack
     # of explicit (info, action) pairs — three sections × two panels
-    # each in AegisMark's SIMS opt-in prototype. Every region is
+    # each in a consumer's SIMS opt-in prototype. Every region is
     # half-width; CSS grid auto-flow stacks them into rows of two.
     # On narrow viewports the responsive rules in the project's
     # bundle (or any consumer's media queries) collapse them to a

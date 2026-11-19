@@ -362,12 +362,12 @@ def test_html_escapes_raw_values(
 
 
 def test_quick_actions_mode_renders_button_row() -> None:
-    section = _quick_actions(["log_behaviour", "message_parent", "open_in_fastmark"])
+    section = _quick_actions(["log_behaviour", "message_parent", "open_in_marker"])
     body = _one(section)["body"]
     assert "dz-entity-card-quick-actions" in body
     assert 'data-dz-action="log_behaviour"' in body
     assert 'data-dz-action="message_parent"' in body
-    assert 'data-dz-action="open_in_fastmark"' in body
+    assert 'data-dz-action="open_in_marker"' in body
     # Button labels humanise the action id (#1815: sentence case).
     assert ">Log behaviour<" in body
     assert ">Message parent<" in body

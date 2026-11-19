@@ -47,7 +47,7 @@ def served(
     _write(tmp_path / "static" / "js" / "brand-chrome.js", "brand();")
     _write(tmp_path / "static" / "css" / "accents.css", ":root{--a:1}")
     _write(tmp_path / "static" / "css" / "brand.css", '@import url("/static/css/accents.css");')
-    _write(tmp_path / "themes" / "aegismark.css", '@import url("/static/css/brand.css");\n')
+    _write(tmp_path / "themes" / "acme.css", '@import url("/static/css/brand.css");\n')
     pkg = tmp_path_factory.mktemp("renderer_pkg")
     registry = RendererRegistry()
     registry.register(
@@ -77,7 +77,7 @@ def test_hashed_app_script_is_served_immutable(served) -> None:
 
 def test_hashed_theme_entry_rewrites_imports_and_is_immutable(served) -> None:
     client, fp, _ = served
-    resp = client.get(fp.hashed("/static/themes/aegismark.css"))
+    resp = client.get(fp.hashed("/static/themes/acme.css"))
     assert resp.status_code == 200
     assert resp.headers["cache-control"] == IMMUTABLE
     assert fp.hashed("/static/css/brand.css") in resp.text
@@ -88,7 +88,7 @@ def test_hashed_theme_entry_rewrites_imports_and_is_immutable(served) -> None:
 
 def test_plain_theme_entry_is_not_immutable_but_still_rewritten(served) -> None:
     client, fp, _ = served
-    resp = client.get("/static/themes/aegismark.css")
+    resp = client.get("/static/themes/acme.css")
     assert resp.status_code == 200
     assert "immutable" not in resp.headers["cache-control"]
     assert "max-age=" in resp.headers["cache-control"]

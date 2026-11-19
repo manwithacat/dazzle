@@ -132,7 +132,7 @@ class TestInferredCreateCta:
         ]
 
     def test_authored_block_suppresses_inferred_create_cta(self) -> None:
-        """#1798 (AegisMark U16): an authored heading got the inferred
+        """#1798 (consumer U16): an authored heading got the inferred
         "New Invoice" too, so the header showed two creates."""
         ws = ir.WorkspaceSpec(
             name="reports",

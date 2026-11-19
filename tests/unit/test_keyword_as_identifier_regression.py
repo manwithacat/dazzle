@@ -10,7 +10,7 @@ Each token here MUST appear in `KEYWORD_AS_IDENTIFIER_TYPES` in
 treats it as an identifier in expression / enum contexts. Regression:
 without this list, downstream projects with enums like
 ``school_phase: enum[primary, secondary, all_through, special]``
-fail to parse — exactly the AegisMark scenario reported in #899.
+fail to parse — exactly the consumer scenario reported in #899.
 """
 
 from __future__ import annotations

@@ -110,7 +110,7 @@ async def _fetch_entity_card_section_rows(
                 # the scoped record id. Pre-fix this argument was None
                 # → filter silently dropped → sections rendered the
                 # first-scope row regardless of which entity the
-                # entity_card was scoped to. AegisMark's pupil_dashboard
+                # entity_card was scoped to. A consumer's pupil_dashboard
                 # made the data-attribution-wrongness visible.
                 _extract_condition_filters(
                     section_filter,

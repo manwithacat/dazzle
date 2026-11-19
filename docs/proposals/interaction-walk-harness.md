@@ -2,14 +2,14 @@
 
 **Status**: draft, awaiting review
 **Source issue**: [#800](https://github.com/manwithacat/dazzle/issues/800)
-**Originating observation**: AegisMark's #797/#798/#799 all shipped after passing every static gate
+**Originating observation**: a consumer's #797/#798/#799 all shipped after passing every static gate
 **Author**: autonomous improvement loop (cycle 68, 2026-04-18)
 
 ## Problem
 
 The shape-nesting (INV-1), duplicate-title (INV-2), hidden-primary-action
 (INV-9), and composite-fetch gates all test the *rendered output*. They
-don't exercise *interactions*: the DOM AegisMark's three bugs rendered
+don't exercise *interactions*: the DOM a consumer's three bugs rendered
 was fine on paper. The bugs only manifest under a real gesture — a
 drag, a click on "Add Card", a keyboard Tab sequence. That class of
 regression is the next blind spot.

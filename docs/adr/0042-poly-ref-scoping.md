@@ -1,7 +1,7 @@
 # ADR-0042 — `poly_ref`: the realized polymorphic-ref escape hatch
 
 **Status:** Accepted (#1448)
-**Issue:** #1448 (AegisMark lens)
+**Issue:** #1448 (consumer lens)
 **Supersedes (in part):** ADR-0027 — realizes its pre-committed escape hatch
 **Builds on:** ADR-0009 (predicate algebra), #1447 (RLS app-layer degradation)
 
@@ -34,7 +34,7 @@ pre-committed the shape and the trigger:
 > field and an exhaustive targets list. **Build it when the interrogation fails,
 > not before.**"
 
-That event has now occurred. **AegisMark** — named in ADR-0027 as a consumer that
+That event has now occurred. **A consumer app** — named in ADR-0027 as a consumer that
 "models around it" — hit `AIJob` (the AI-gateway audit entity): an entity that
 *references* one of several domain entities (a cohort assessment, a manuscript)
 and must be **visible to the non-admin persona who owns the referenced entity**.

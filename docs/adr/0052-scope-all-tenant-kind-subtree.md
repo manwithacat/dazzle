@@ -68,7 +68,7 @@ scope here.
 - **Behaviour change**: apps relying on `all` to mean "platform-wide"
   on a tenant kind now get subtree rows. Platform-wide listings belong
   to admin personas (which bypass scopes) or an explicit non-kind
-  reporting entity. AegisMark's workaround filter
+  reporting entity. A consumer's workaround filter
   (`trust = current_user.trust`) remains valid and now redundant.
 - The #1541 zero-rows report did not reproduce and is not this defect;
   the silent-empty observability fixes shipped alongside make any

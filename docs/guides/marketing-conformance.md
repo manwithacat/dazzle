@@ -2,7 +2,7 @@
 
 This guide walks a Dazzle project through bringing its public-facing surface (marketing pages, legal pages, blog) into conformance with [ADR-0021](../adr/0021-marketing-via-sitespec.md). It is the prescribed remediation path for the #969 cookie-clearing regression class.
 
-**Audience:** project owners (e.g. AegisMark) preparing for 1.0 stability or hunting auth flakiness on the same hostname as their app.
+**Audience:** project owners (e.g. A consumer app) preparing for 1.0 stability or hunting auth flakiness on the same hostname as their app.
 
 **Time:** 30–60 minutes for a project with ~10 marketing pages.
 
@@ -57,7 +57,7 @@ from fastapi import Request
 async def handler(request: Request):
     return HTMLResponse("""
     <html><body>
-        <h1>About AegisMark</h1>
+        <h1>About a consumer app</h1>
         <p>...</p>
     </body></html>
     """)
@@ -69,10 +69,10 @@ async def handler(request: Request):
 pages:
   - route: "/about"
     type: landing
-    title: "About AegisMark"
+    title: "About a consumer app"
     sections:
       - type: hero
-        headline: "About AegisMark"
+        headline: "About a consumer app"
         subhead: "..."
       - type: markdown
         source:
@@ -136,7 +136,7 @@ In a properly conforming project, the only hits should be:
 
 - `auth/` routes you're explicitly allowed to extend (none, in normal usage — auth is framework-provided)
 - Tests
-- Demo seeders (one-shot scripts that read external Set-Cookie, like AegisMark's `pipeline/demo/load_seed.py`)
+- Demo seeders (one-shot scripts that read external Set-Cookie, like a consumer's `pipeline/demo/load_seed.py`)
 
 Any project-side runtime code writing `dazzle_session` or `dazzle_csrf` is a bug. Delete it; the framework owns those cookies.
 

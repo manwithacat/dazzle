@@ -48,7 +48,7 @@ second runtime:
 
 1. **Named consumer** — a consumer declares a `process` with an `llm_intent`
    step (candidates: pennydreadful's story intents run as an editorial
-   pipeline; AegisMark marking as a multi-step process).
+   pipeline; a consumer app marking as a multi-step process).
 2. **Evidence of host workaround** — a consumer calling `llm_executor`
    from a service step or app code to get AI work inside a process.
 3. **Acceptance that unblocks** — the consumer's process runs its

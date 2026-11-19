@@ -1,6 +1,6 @@
 # ADR-0027 — No `polymorphic_ref:` Keyword, Now or Planned
 
-**Status:** Accepted (v0.72.14) — **superseded in part by [ADR-0042](0042-poly-ref-scoping.md) (#1448)**: the pre-committed escape hatch below has now fired (the four-question interrogation failed against AegisMark's `AIJob`) and is realized as the validated, scope-composable typed `poly_ref` construct. The blanket "now or planned" closure becomes "closed except via `poly_ref` + the `field[Type]` scope selector."
+**Status:** Accepted (v0.72.14) — **superseded in part by [ADR-0042](0042-poly-ref-scoping.md) (#1448)**: the pre-committed escape hatch below has now fired (the four-question interrogation failed against a consumer's `AIJob`) and is realized as the validated, scope-composable typed `poly_ref` construct. The blanket "now or planned" closure becomes "closed except via `poly_ref` + the `field[Type]` scope selector."
 **Issue:** #1240 (closed wontfix-by-design); part of the #1217 3NF coverage audit
 **Pair:** [inference KB `polymorphic_association_antipattern`](https://github.com/manwithacat/dazzle/blob/main/src/dazzle/mcp/inference_kb.toml)
 
@@ -124,7 +124,7 @@ issue get filed — and even then, the shape is the explicit
 - **`polymorphic_ref:` block, ship now.** Speculatively building the
   feature without a real consumer risks over-fitting to a hypothetical
   case. The four-question interrogation has not yet failed against any
-  Dazzle consumer (AegisMark, Penny Dreadful, hr_records, asset_registry
+  Dazzle consumer (a consumer app, Penny Dreadful, hr_records, asset_registry
   all model around it). Build it when the interrogation fails, not before.
 - **`ref X | Y | Z` union-type sugar.** Rejected outright. Hides the
   discriminator (authors can't query by `subject_type` directly), makes

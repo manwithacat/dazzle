@@ -35,7 +35,7 @@ def project(tmp_path: Path) -> Path:
         '@import url("/static/css/accents.css");\n.brand{}',
     )
     _write(
-        tmp_path / "themes" / "aegismark.css",
+        tmp_path / "themes" / "acme.css",
         '@import url("/static/css/brand.css") layer(brand);\n',
     )
     return tmp_path
@@ -57,13 +57,13 @@ def test_resolve_precedence_extra_then_project_then_framework(
     assert _prod(project).resolve("js/brand-chrome.js") == project / "static/js/brand-chrome.js"
     # Not in the project → the framework's copy.
     assert _prod(project).resolve("dist/dazzle.min.js") is not None
-    assert fp.resolve("themes/aegismark.css") == project / "themes" / "aegismark.css"
+    assert fp.resolve("themes/acme.css") == project / "themes" / "acme.css"
     assert fp.resolve("../etc/passwd") is None
 
 
 @pytest.mark.parametrize(
     "url",
-    ["/static/js/brand-chrome.js", "/static/css/brand.css", "/static/themes/aegismark.css"],
+    ["/static/js/brand-chrome.js", "/static/css/brand.css", "/static/themes/acme.css"],
 )
 def test_project_urls_are_hashed_in_production(project: Path, url: str) -> None:
     out = _prod(project).hashed(url)
@@ -92,13 +92,13 @@ def test_dev_env_emits_plain_urls(project: Path) -> None:
 
 def test_editing_an_imported_sheet_changes_the_entry_url(project: Path) -> None:
     before = _prod(project)
-    entry_a = before.hashed("/static/themes/aegismark.css")
+    entry_a = before.hashed("/static/themes/acme.css")
     brand_a = before.hashed("/static/css/brand.css")
     # Nested: accents is imported by brand, which is imported by the entry.
     _write(project / "static" / "css" / "accents.css", ":root{--a:2}")
     after = _prod(project)
     assert after.hashed("/static/css/brand.css") != brand_a
-    assert after.hashed("/static/themes/aegismark.css") != entry_a
+    assert after.hashed("/static/themes/acme.css") != entry_a
 
 
 def test_cyclic_import_terminates(project: Path) -> None:

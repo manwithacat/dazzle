@@ -569,7 +569,7 @@ class TestGraphLintHints:
         from dazzle.core.validator import extended_lint
 
         user = _make_entity("User")
-        # AegisMark-style entities from #823.
+        # Consumer-style entities from #823.
         manuscript = _make_entity(
             "Manuscript",
             fields=[

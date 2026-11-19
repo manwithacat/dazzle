@@ -324,7 +324,7 @@ _RULE_PINS: list[tuple[str, Path, str, str | None, dict[str, object], dict[str, 
         {"flex-wrap": "wrap"},
         {},
     ),
-    # #1798 (AegisMark): the app shell's narrow viewport is an off-canvas
+    # #1798: the app shell's narrow viewport is an off-canvas
     # drawer on transient `data-dz-drawer`; the persisted desktop state only
     # slides the sidebar in from 64rem, the backdrop is hidden until the drawer
     # opens, and nothing in the shell or dashboard widens a 390px page.

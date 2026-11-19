@@ -29,7 +29,7 @@ from dazzle.http.runtime.tenant.cookies import (
     host_cookie_name,
 )
 
-APP_NAME = "AegisMark"
+APP_NAME = "Acme"
 HOST_COOKIE = host_cookie_name(APP_NAME)
 APEX_COOKIE = apex_cookie_name(APP_NAME)
 

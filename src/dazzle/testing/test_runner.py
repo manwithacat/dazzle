@@ -71,7 +71,7 @@ class UICheckResult:
     Pre-#1135, ``check_ui_loads`` returned a bare ``bool`` and the
     ``assert_visible`` step surfaced only "UI check failed" — no
     URL, no HTTP status, no body excerpt. Triage of 18 simultaneous
-    ``WS_*_NAV`` failures across AegisMark cost ~an hour before
+    ``WS_*_NAV`` failures across a consumer app cost ~an hour before
     the operator deduced the no-op ``navigate_to`` from source.
 
     Attributes:

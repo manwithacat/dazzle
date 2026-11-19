@@ -1,4 +1,4 @@
-"""#1798 U15 (AegisMark): a metrics / summary region's `action:` drills the WHOLE tile.
+"""#1798 U15: a metrics / summary region's `action:` drills the WHOLE tile.
 
 "12 stacks awaiting review" must open the queue it counts. `action:` already
 parsed on any region but only ever reached list rows. A tile counts many rows,

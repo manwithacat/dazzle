@@ -34,13 +34,13 @@ class _R:
 
 @pytest.fixture
 def app(tmp_path: Path) -> SimpleNamespace:
-    css = tmp_path / "fastmark.css"
+    css = tmp_path / "marker.css"
     css.write_text(".fm{}")
     js = tmp_path / "picker.js"
     js.write_text("pick();")
     registry = RendererRegistry()
     registry.register(
-        name="fastmark",
+        name="marker",
         handler=_R(
             [
                 RendererAsset(path=css, kind="css"),
@@ -68,10 +68,10 @@ def test_injects_css_before_custom_and_appends_js(app, caplog) -> None:
     links = app.state.fragment_chrome.css_links
     assert links == (
         "/static/dist/dazzle.min.css",
-        "/static/dazzle-renderers/fastmark/fastmark.css",
+        "/static/dazzle-renderers/marker/marker.css",
         CUSTOM,
     )
-    assert app.state.fragment_chrome.js_scripts[-1] == "/static/dazzle-renderers/fastmark/picker.js"
+    assert app.state.fragment_chrome.js_scripts[-1] == "/static/dazzle-renderers/marker/picker.js"
     assert app.state.fragment_chrome_css_links == links
     assert app.state.fragment_chrome_js_scripts == app.state.fragment_chrome.js_scripts
     assert "gone.css" in caplog.text
@@ -95,7 +95,7 @@ async def test_server_lifespan_links_assets_of_a_hook_registered_renderer(
     from dazzle.page.runtime.asset_fingerprint import FINGERPRINT_RE, StaticFingerprinter
 
     monkeypatch.setenv("DAZZLE_ENV", "production")
-    css = tmp_path / "fastmark.css"
+    css = tmp_path / "marker.css"
     css.write_text(".fm{}")
     builder = DazzleBackendApp(
         ir.AppSpec(name="t", domain=ir.DomainSpec(entities=[])),
@@ -113,11 +113,11 @@ async def test_server_lifespan_links_assets_of_a_hook_registered_renderer(
 
     def _register() -> None:
         app.state.services.renderer_registry.register(
-            name="fastmark", handler=_R([RendererAsset(path=css, kind="css")])
+            name="marker", handler=_R([RendererAsset(path=css, kind="css")])
         )
 
     register_lifespan_hook(app, startup=_register)
     async with app.router.lifespan_context(app):
         linked = app.state.fragment_chrome_css_links[-1]
-    assert linked.startswith("/static/dazzle-renderers/fastmark/fastmark.")
+    assert linked.startswith("/static/dazzle-renderers/marker/marker.")
     assert FINGERPRINT_RE.match(linked.rsplit("/", 1)[1])

@@ -16,7 +16,7 @@ from dazzle.http.runtime.tenant.cookies import apex_cookie_name, host_cookie_nam
 from dazzle.http.runtime.tenant.guard_wiring import enforce_cross_tenant
 from dazzle.http.runtime.tenant.resolver import ResolvedTenant
 
-APP_NAME = "AegisMark"
+APP_NAME = "Acme"
 HOST_COOKIE = host_cookie_name(APP_NAME)
 APEX_COOKIE = apex_cookie_name(APP_NAME)
 

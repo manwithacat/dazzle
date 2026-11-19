@@ -1,7 +1,7 @@
 """Dotted FK predicates inside `via` clauses for scope rules (#858).
 
 The `via EntityName(field = target, ...)` scope form previously required
-flat single-segment junction fields. AegisMark hit this when expressing
+flat single-segment junction fields. A consumer app hit this when expressing
 "a teacher sees a pupil iff the pupil is enrolled in a class the teacher
 teaches" — a two-hop traversal from the junction:
 

@@ -56,13 +56,13 @@ def test_declared_asset_url_carries_hash_in_path(tmp_path: pathlib.Path) -> None
 
 def test_asset_under_static_dir_uses_its_static_url(tmp_path: pathlib.Path) -> None:
     (tmp_path / "static" / "js").mkdir(parents=True)
-    js = tmp_path / "static" / "js" / "fastmark.js"
+    js = tmp_path / "static" / "js" / "marker.js"
     js.write_text("x();")
     reg = RendererRegistry()
     reg.register(name="fm", handler=_Picker([RendererAsset(path=js, kind="js")]))
     reg.fingerprinter = StaticFingerprinter([tmp_path / "static"], env="production")
-    url = reg.asset_url("fm", "fastmark.js")
-    assert url.startswith("/static/js/fastmark.") and FINGERPRINT_RE.match(url.rsplit("/", 1)[1])
+    url = reg.asset_url("fm", "marker.js")
+    assert url.startswith("/static/js/marker.") and FINGERPRINT_RE.match(url.rsplit("/", 1)[1])
 
 
 @pytest.mark.parametrize(

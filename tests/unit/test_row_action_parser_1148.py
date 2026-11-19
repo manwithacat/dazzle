@@ -3,7 +3,7 @@
 Per-row click-to-POST action that resolves against the project's
 declared surface actions. Closes the "every workflow surface needs
 a custom Python route for its primary per-row action" gap that
-AegisMark/Manuscript review/Fastmark all worked around.
+Several consumer apps all worked around.
 
 These tests pin the IR + parser surface. Renderer plumbing per
 display mode (list, cohort_strip, day_timeline, status_list)
@@ -114,7 +114,7 @@ def test_confirm_required_defaults_true() -> None:
 
 
 def test_full_shape() -> None:
-    """The canonical AegisMark example from the issue."""
+    """The canonical a consumer app example from the issue."""
     spec = _parse(
         """      label: "Approve & release"
       action_id: feedback_release

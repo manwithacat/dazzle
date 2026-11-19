@@ -10,7 +10,7 @@ three registered transforms close the gap:
 - `age` — "N minutes ago" / "N hours ago" / "N days ago"
 - `until` — day-granularity "due today" / "due in N days" / "overdue by N days"
 
-Tests pin the format AegisMark's `_minutes_until` helper already
+Tests pin the format a consumer's `_minutes_until` helper already
 produces — the migration target.
 """
 

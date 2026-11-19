@@ -1,4 +1,4 @@
-# DD-008: `job` construct and `dazzle worker` — parked until AegisMark retires Heroku Scheduler
+# DD-008: `job` construct and `dazzle worker` — parked until a consumer app retires Heroku Scheduler
 
 ```yaml
 id: DD-008
@@ -55,12 +55,12 @@ job thumbnail_render "Generate thumbnail":
 
 ## Reopen when (consumer force)
 
-1. **Named consumer** — AegisMark's SP-1 plan
+1. **Named consumer** — a consumer's SP-1 plan
    (`docs/superpowers/specs/2026-06-21-sp1-tenancy-rls-foundation-design.md`)
    replaces Heroku Scheduler (`cohort_analysis`) with a `worker` dyno running
    `dazzle worker`.
 2. **Evidence of host workaround** — the Heroku Scheduler entry itself.
-3. **Acceptance that unblocks** — AegisMark's `cohort_analysis` runs from a
+3. **Acceptance that unblocks** — a consumer's `cohort_analysis` runs from a
    `job` in its CI, writes a `JobRun`, and retries with backoff.
 
 When a force lands:

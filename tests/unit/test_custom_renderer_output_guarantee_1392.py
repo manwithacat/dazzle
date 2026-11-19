@@ -3,7 +3,7 @@
 The built-in ``fragment`` renderer is the trusted typed substrate. A custom
 renderer (any name not in the framework defaults) bypasses it, so nothing
 previously stopped it returning a blank string — which ships as an empty 200
-(the AegisMark "passes render, blank screen" failure).
+(the consumer "passes render, blank screen" failure).
 
 ``dispatch_render`` now asserts non-blank, well-formed, string output on every
 custom-renderer path, raising a typed ``FragmentError`` that names the surface

@@ -74,13 +74,13 @@ verification and invitation mailers receive nothing about expiry.
 
 ## Reopen when (consumer force)
 
-1. **Named consumer**: cyfuture or AegisMark asks for the expiry (or another field, such as
+1. **Named consumer**: cyfuture or a consumer app asks for the expiry (or another field, such as
    the product name or the requesting IP) inside a magic-link, verification or invitation
    email. Or a consumer's WCAG / regulatory audit fails on the email body.
 2. **Evidence of host workaround**: a host mailer that imports `EMAIL_MAGIC_LINK_TTL` or
    re-derives product branding to fill a gap the message would carry.
 3. **Acceptance that unblocks**: the four Protocols take message objects whose default
-   `text`/`html` state the expiry. cyfuture's and AegisMark's mailers are migrated in the
+   `text`/`html` state the expiry. cyfuture's and a consumer's mailers are migrated in the
    same release (CHANGELOG `### Agent Guidance` bullet, plus an upgrade note naming each
    method).
 

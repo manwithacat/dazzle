@@ -105,9 +105,9 @@ def primitive(
 
     Usage:
 
-        @primitive(name="aegismark_kanban_board")
+        @primitive(name="acme_kanban_board")
         @dataclass(frozen=True, slots=True)
-        class AegismarkKanbanBoard:
+        class AcmeKanbanBoard:
             columns: tuple[KanbanColumn, ...]
     """
     target = registry if registry is not None else DEFAULT_REGISTRY

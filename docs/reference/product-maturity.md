@@ -67,7 +67,7 @@ python scripts/example_product_maturity.py --warehouse-index
 python scripts/example_product_maturity.py --next-wi
 # Sibling / real apps (not only examples/):
 python scripts/example_product_maturity.py --warehouse-index \
-  --paths ../cyfuture ../pennydreadful ../AegisMark
+  --paths ../cyfuture ../pennydreadful ../a consumer app
 ```
 
 | Component | Weight | What it measures | Anti-gaming (v3, #1637) |

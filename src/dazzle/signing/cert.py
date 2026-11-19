@@ -12,7 +12,7 @@ so any Dazzle downstream can mint its own CA via ``dazzle signing init``.
 
 Per the locked design (issue #1283):
     * One CA per Dazzle project. The cert subject reflects project
-      identity. Tenant identity (e.g. the school in AegisMark) lives
+      identity. Tenant identity (e.g. the school in a consumer app) lives
       in the signed document body, not in the PKCS#7 envelope.
     * No per-tenant CAs at phase 1.
     * No HSM-backed CSP at phase 1, but the env-var shape is forward-
@@ -48,7 +48,7 @@ def generate_cert_chain(
     """Generate a CA + signing certificate chain as PKCS#12.
 
     Args:
-        project_name: Organisation name on the cert (e.g. "AegisMark Ltd").
+        project_name: Organisation name on the cert (e.g. "Acme Ltd").
             Used as the X.509 Organization Name attribute on both certs.
         country: Two-letter ISO 3166-1 alpha-2 country code. Default "GB".
         password: PKCS#12 encryption password. If ``None`` a random

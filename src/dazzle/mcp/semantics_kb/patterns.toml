@@ -1368,7 +1368,7 @@ pivot entity, but there is no direct FK between them. `share:` bridges
 the diamond with a single GROUP BY query keyed on the source row's
 primary key — the pivot itself doesn't appear in the FROM clause.
 
-Surfaced concretely by AegisMark in #1213-#1216. Before `share:` shipped,
+Surfaced concretely by a consumer app in #1213-#1216. Before `share:` shipped,
 the only expression was a Python override route — agents went through
 2-3 design rounds before landing on the canonical shape, which is why
 discoverability (Phase 2) matters as much as the feature itself.
@@ -1384,7 +1384,7 @@ when_NOT_to_use = [
     "The diamond doesn't actually share a parent (use a regular JOIN via a computed view)",
 ]
 example = '''
-# AegisMark's canonical surface: per-enrolment average marking score,
+# A consumer's canonical surface: per-enrolment average marking score,
 # where MarkingResult is keyed on StudentProfile, not ClassEnrolment.
 entity StudentProfile "Student":
   id: uuid pk

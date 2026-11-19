@@ -46,7 +46,7 @@ slice the forcing consumer needs — almost certainly `notification` alone:
 
 1. **Named consumer** — cyfuture's eight SLAs declare
    `on_breach: notify: manager` and expect a manager to be told; **or**
-   AegisMark safeguarding alerts must reach a designated safeguarding lead.
+   A consumer app safeguarding alerts must reach a designated safeguarding lead.
 2. **Evidence of host workaround** — a consumer sending email from a route
    override or a service stub, or reading SLA breach log lines.
 3. **Acceptance that unblocks** — an SLA breach in the consumer's CI

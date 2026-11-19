@@ -77,7 +77,7 @@ def build_subagent_prompt(
         strategy: One of the six supported strategies (see module
             docstring).
         app_name: The Dazzle app name (e.g. "contact_manager" or
-            "aegismark" for a downstream project).
+            "acme" for a downstream project).
         persona_id: DSL persona id the subagent walks as.
         persona_label: Human-readable label from ``PersonaSpec.label``.
         site_url: ``AppConnection.site_url`` from ModeRunner.

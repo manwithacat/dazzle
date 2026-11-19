@@ -3,7 +3,7 @@
 The workspace-region code path only needs each FK's display value to render
 ``_display`` columns — not the full related row. Before this fix, ``repo.list``
 always issued one follow-up ``SELECT *`` per FK relation via the batched
-``_load_to_one`` path: 1 + N queries per region. For AegisMark's teacher
+``_load_to_one`` path: 1 + N queries per region. For a consumer's teacher
 workspace (14 regions × ~3 FKs each) that's ~50+ round-trips per page.
 
 ``build_display_join_plan`` + ``apply_display_joins_to_rows`` collapse the

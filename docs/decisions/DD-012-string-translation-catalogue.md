@@ -49,7 +49,7 @@ the catalogue earns its keep. Counter-priors, even when forced:
 
 ## Reopen when (consumer force)
 
-1. **Named consumer** — AegisMark, cyfuture or pennydreadful ships a `locale/`
+1. **Named consumer** — a consumer app, cyfuture or pennydreadful ships a `locale/`
    tree with `.po` files, or files an issue asking for a non-English UI.
 2. **Evidence of a host workaround** — a consumer monkey-patching renderer
    strings or carrying its own gettext layer.

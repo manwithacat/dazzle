@@ -16,7 +16,7 @@ parent: null
 The founder-prose → `AGENT_DOMAIN.md` → DSL intermediate is removed until a new
 consumer is bootstrapped from founder prose and the `bootstrap` / `spec_analyze`
 path proves insufficient. No current consumer uses it (flense inventory: zero
-`dazzle domain` hits in AegisMark, cyfuture or pennydreadful; MCP `domain`
+`dazzle domain` hits in a consumer app, cyfuture or pennydreadful; MCP `domain`
 unused).
 
 ## Plan (what we already concluded)
@@ -63,7 +63,7 @@ When a force lands:
 
 ## Already shipped (do not re-litigate)
 
-- The three consumers' DSL (AegisMark, cyfuture, pennydreadful) was authored
+- The three consumers' DSL (a consumer app, cyfuture, pennydreadful) was authored
   without the domain intermediate.
 - `bootstrap` and `spec_analyze` remain the new-consumer entry point, with
   `bootstrap_pollution` as the standing counter-prior.

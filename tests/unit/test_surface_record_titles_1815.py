@@ -1,12 +1,12 @@
 """Record-interpolating view titles, authored breadcrumbs, labelled quick_actions.
 
-#1815 (AegisMark WP21): a view surface's ``title:`` interpolates the row
+#1815 (consumer WP21): a view surface's ``title:`` interpolates the row
 (``"{agreement_type|upper} — {school.name}"``) into the page heading, the
 document ``<title>`` and the breadcrumb leaf; entity_card ``quick_actions``
 take ``id "Label"`` and never print raw snake_case.
-#1810 (AegisMark WP20): ``ux: breadcrumb: off`` suppresses the shell trail and
+#1810 (consumer WP20): ``ux: breadcrumb: off`` suppresses the shell trail and
 ``ux: breadcrumb: "A" -> target > "{field}"`` replaces it.
-#1825 (AegisMark class record / manuscript / agreement pages): a crumb binds a
+#1825 (consumer class record / manuscript / agreement pages): a crumb binds a
 row (``-> school_detail({school})``), templates follow two FK hops, and
 ``|label`` prints an enum value humanised.
 

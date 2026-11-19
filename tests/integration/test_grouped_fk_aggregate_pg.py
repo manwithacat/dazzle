@@ -41,7 +41,7 @@ _PASSWORD = "grouped-fk-aggregate-password"  # nosec B105 — disposable scratch
 _ADMIN = "admin@scope.test"
 
 # `score` and `department` exist on BOTH Klass (the FK target) and
-# CohortAnalysis (the source) — the AegisMark collision shape.
+# CohortAnalysis (the source) — the consumer collision shape.
 _GROUPED_DSL = """
 
 entity Klass "Class":

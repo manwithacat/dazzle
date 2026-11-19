@@ -1,7 +1,7 @@
 """Shared friction schema for ``dazzle qa trial`` and consumer improve loops.
 
 Gen-2+ (#1625): categories, ownership triage, and auto-seed rules so
-CyFuture/AegisMark-class agents can close the loop (PENDING seed) without
+CyFuture/Acme-class agents can close the loop (PENDING seed) without
 re-filing harness ghosts.
 """
 
@@ -83,7 +83,7 @@ def normalize_friction_entry(raw: dict[str, Any]) -> dict[str, Any]:
 def is_auto_seed_eligible(entry: dict[str, Any]) -> bool:
     """True when a consumer improve loop should seed PENDING from this row.
 
-    Rule (#1625 AegisMark): medium+ product categories only.
+    Rule (#1625): medium+ product categories only.
     ``ownership=framework`` is eligible when the *consumer* is the framework
     itself (Dazzle core); for downstream apps, prefer ownership=product.
     Callers pass ``allow_framework=True`` for Dazzle's own improve loop.
@@ -106,7 +106,7 @@ def friction_cluster_key(entry: dict[str, Any]) -> tuple[str, ...]:
     return (e["category"], e["severity"], url, " ".join(tokens))
 
 
-# Console thrash / headless resource exhaustion — AegisMark harness artifacts.
+# Console thrash / headless resource exhaustion — a consumer app harness artifacts.
 _HARNESS_EVIDENCE_MARKERS: tuple[str, ...] = (
     "err_insufficient_resources",
     "net::err_insufficient_resources",

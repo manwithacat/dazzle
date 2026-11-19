@@ -43,11 +43,11 @@ Restore from the commit this DD was parked at
 
 ## Reopen when (consumer force)
 
-1. **Named consumer** — AegisMark wants staff with a school's email domain
+1. **Named consumer** — a consumer app wants staff with a school's email domain
    to join that school's tenant without an invitation.
 2. **Evidence of host workaround** — bulk invitation scripts per school, or
    an `app/` route that creates memberships from email domains.
-3. **Acceptance that unblocks** — in AegisMark's CI a verified
+3. **Acceptance that unblocks** — in a consumer's CI a verified
    `@school.example` user lands in the school tenant (auto-join) or in the
    admin queue (approval), and an off-domain user is refused when the
    tenant restricts membership.

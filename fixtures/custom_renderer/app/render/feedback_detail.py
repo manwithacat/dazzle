@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 # Sentiment → (label, accent colour) for the bespoke banner this viewer
 # adds above the standard field layout. A real per-entity viewer would
-# render a domain widget here (AegisMark: a per-AO marks grid); we keep
+# render a domain widget here (consumer: a per-AO marks grid); we keep
 # the example focused on the *delegation* mechanics.
 _SENTIMENT_ACCENT = {
     "positive": ("Positive", "#16a34a"),

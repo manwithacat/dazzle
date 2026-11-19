@@ -1,6 +1,6 @@
 """Tests for the v0.61.71 `pair_strip` workspace stage (#5).
 
-The AegisMark UX patterns roadmap (item #5) — the SIMS-sync-opt-in
+The consumer UX patterns roadmap (item #5) — the SIMS-sync-opt-in
 prototype's `consent-grid` is a vertical stack of explicit
 (info, action) pairs. Each row is two half-width panels; the layout
 auto-flows multiple pairs into rows of two via CSS grid.

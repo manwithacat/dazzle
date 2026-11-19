@@ -1,6 +1,6 @@
 """Continuous click-through fuzzer for the Dazzle dev server.
 
-Ported from AegisMark (https://github.com/manwithacat/aegismark) where it
+Ported from a consumer app, where it
 was used to surface htmx morph race conditions, Alpine listener leaks,
 and console errors that structured per-surface tests don't see. Brought
 upstream because the same race conditions live in the framework, and

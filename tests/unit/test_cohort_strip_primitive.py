@@ -1,12 +1,12 @@
 """Issue #1018 (v0.67.2): regression tests for the `cohort_strip`
-region primitive — first AegisMark Day-One demo region primitive,
+region primitive — first consumer demo region primitive,
 architectural pilot for the discriminated `region_config` IR pattern.
 
 The primitive is deliberately domain-agnostic: school class
 (pupils + grades), sales team (reps + quota), engineering team
 (engineers + commits), customer cohort (customers + MRR), field crew
 (technicians + SLA) all reuse the same shape. The DSL keyword is
-`cohort_strip`; the AegisMark spec called it `class_strip` originally
+`cohort_strip`; the consumer spec called it `class_strip` originally
 — renamed in v0.67.6 alongside the field generalisation
 (pupil_id → member_id, year_form → subtitle, pupil_via → member_via)
 so the framework vocabulary stays domain-neutral.

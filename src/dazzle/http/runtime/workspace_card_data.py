@@ -89,7 +89,7 @@ def _coerce_to_datetime(value: Any) -> _dt.datetime | None:
 def _transform_minutes_until(value: Any) -> str:
     """``minutes_until`` — render the gap between a target time and now.
 
-    Output shape (matches AegisMark's `pipeline/views/today.py`
+    Output shape (matches a consumer's `pipeline/views/today.py`
     `_minutes_until` contract):
 
     - target == now (within a minute) → ``"now"``

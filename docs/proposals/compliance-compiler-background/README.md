@@ -1,6 +1,6 @@
 # Compliance Compiler — Design Background
 
-These documents were produced during the AegisMark proof-of-concept that led to this Dazzle feature branch. They provide the full design context, architectural decisions, and implementation plan.
+These documents were produced during the consumer proof-of-concept that led to this Dazzle feature branch. They provide the full design context, architectural decisions, and implementation plan.
 
 ## Documents
 
@@ -14,7 +14,7 @@ The full design specification (883 lines). Covers:
 - Human-in-the-loop workflow (review.yaml, tier 2/3 gaps)
 - Compliance graph (document dependencies, DSL→app surface links)
 - Brand identity pack (brandspec.yaml for print rendering)
-- DSL evidence baseline (what AegisMark already had)
+- DSL evidence baseline (what a consumer app already had)
 - Implementation approach and success criteria
 
 ### [implementation-plan.md](implementation-plan.md)
@@ -44,7 +44,7 @@ The design was produced through collaborative brainstorming:
 7. Spec reviewed (2 rounds) and plan reviewed (2 rounds) before implementation
 8. 15-task implementation executed with subagent-driven development
 
-## AegisMark Proof-of-Concept Results
+## a consumer app Proof-of-Concept Results
 
 - 21 documents generated (~166 pages, 473 KB markdown, 1.6 MB PDF)
 - 93 ISO 27001 controls assessed (37 evidenced, 54 planned, 2 excluded)

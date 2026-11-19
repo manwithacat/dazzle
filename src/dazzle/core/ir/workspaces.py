@@ -73,7 +73,7 @@ class DisplayMode(StrEnum):
     CONFIRM_ACTION_PANEL = (
         "confirm_action_panel"  # v0.61.72 (#6): irreversible-action consent panel
     )
-    # AegisMark Day-One demo region primitives (#1015–#1018).
+    # consumer demo region primitives (#1015–#1018).
     # Currently driven by `cohort_strip_config` /
     # `day_timeline_config` / `entity_card_config` typed config blocks
     # on WorkspaceRegion — discriminated by the `display` value here.
@@ -288,7 +288,7 @@ class StatusListEntrySpec(BaseModel):
     """v0.61.69 (#3): one entry in a status_list region.
 
     Each entry is an icon + title + secondary copy + state pill —
-    the canonical row shape for AegisMark's "agreement card",
+    the canonical row shape for a consumer's "agreement card",
     "schedule grid", and "scope grid" patterns. Authored as a static
     list (this initial cycle); a source-bound variant that maps
     entity rows to entries is deferred per the roadmap.
@@ -318,7 +318,7 @@ class StatusListEntrySpec(BaseModel):
 class ConfirmationItemSpec(BaseModel):
     """v0.61.72 (#6): one row in a confirm_action_panel `confirmations:` block.
 
-    The AegisMark "Final authorisation" panel uses a checklist of
+    The consumer "Final authorisation" panel uses a checklist of
     obligations the actor must affirm before the irreversible action
     (e.g. ``Enable live SIMS sync``) becomes available. Required
     items must all be ticked for the primary action to enable;
@@ -344,9 +344,9 @@ class RowActionSpec(BaseModel):
     """#1148: per-row click-to-POST action on row-oriented region displays.
 
     Closes the "every workflow surface needs a custom Python route for
-    its primary per-row action" gap that overrides in AegisMark, the
+    its primary per-row action" gap that overrides in a consumer app, the
     Manuscript review queue, the Behaviour incident inbox, and the
-    Fastmark starter-pack picker all worked around. One typed block
+    starter-pack picker all worked around. One typed block
     covers `list`, `cohort_strip`, `day_timeline`, and `status_list`
     rows — `action_id` resolves against the project's declared
     surface actions (same machinery `entity_card.quick_actions` uses
@@ -385,14 +385,14 @@ class RowActionSpec(BaseModel):
 
 class NoticeSpec(BaseModel):
     """v0.61.68: prominent notice band rendered above the region body
-    inside the dashboard slot. AegisMark's SIMS-sync-opt-in prototype
+    inside the dashboard slot. A consumer's SIMS-sync-opt-in prototype
     uses notices for legal-basis disclosure, status banners, and
     consent context — strong line + secondary copy with a tone tint.
 
     Authors declare a notice region-side (per-region, not per-card)
     and the framework renders it as a horizontal band between the
     panel header and the data body. Pure presentation hook — no
-    impact on data, scope, or aggregates. AegisMark UX patterns
+    impact on data, scope, or aggregates. consumer UX patterns
     roadmap item #7.
 
     Attributes:
@@ -519,7 +519,7 @@ class CompositePrimarySpec(BaseModel):
         parts: Ordered list of value slots. Empty list is rejected
             (use the scalar ``primary:`` form for a single value).
         separator: String inserted between rendered parts.
-            Defaults to ``" / "`` matching the AegisMark contract.
+            Defaults to ``" / "`` matching the consumer contract.
     """
 
     parts: list[CompositePrimaryPart]
@@ -915,13 +915,13 @@ class WorkspaceRegion(BaseModel):
     # v0.61.68: optional notice band rendered above the region body
     # inside the dashboard slot. Authors declare title (strong),
     # body (secondary copy), and tone (positive/warning/destructive/
-    # accent/neutral). AegisMark UX patterns roadmap item #7.
+    # accent/neutral). consumer UX patterns roadmap item #7.
     notice: NoticeSpec | None = None
     # v0.61.65: per-tile palette tokens for `display: metrics`. Map metric
     # name → tone token (positive / warning / destructive / accent / neutral).
     # Shared tone vocabulary with notice / status_list. Surfaced by
     # the metrics template as a per-tile background tint. Pure presentation
-    # — no impact on data, scope, or semantics. AegisMark UX patterns
+    # — no impact on data, scope, or semantics. consumer UX patterns
     # roadmap item #2.
     tones: dict[str, str] = Field(default_factory=dict)
     # v0.34.0: Date-range filtering
@@ -962,12 +962,12 @@ class WorkspaceRegion(BaseModel):
     # scope, or semantics.
     css_class: str | None = None
     # v0.61.60: kicker line rendered ABOVE the region's title in the
-    # dashboard-slot panel header. Establishes the AegisMark "eyebrow /
+    # dashboard-slot panel header. Establishes the consumer "eyebrow /
     # title / copy" header convention as a first-class field. Pure
     # presentation; no impact on data or semantics. See
-    # `dev_docs/2026-04-27-aegismark-ux-patterns.md` item #1.
+    # `a consumer's UX-patterns note` item #1.
     eyebrow: str | None = None
-    # AegisMark Day-One demo region primitives — discriminated typed
+    # consumer demo region primitives — discriminated typed
     # config blocks (#1015–#1018). Only one config is populated per
     # region, matched against `display`. Establishes the pattern for
     # subsequent primitives' configs to land alongside without
@@ -1024,7 +1024,7 @@ class WorkspaceRegion(BaseModel):
     # Empty list = legacy behaviour (no entries).
     status_entries: list[StatusListEntrySpec] = Field(default_factory=list)
     # v0.61.72 (#6): confirm_action_panel — irreversible-action consent
-    # primitive. AegisMark UX patterns roadmap item #6. The panel reads
+    # primitive. consumer UX patterns roadmap item #6. The panel reads
     # the entity's `state_field` to decide its visual mode (off/pending
     # → checklist + primary; live/active → summary + revoke; revoked →
     # audit + re-enable). All five fields default to empty so non-

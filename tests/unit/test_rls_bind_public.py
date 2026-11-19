@@ -3,8 +3,8 @@
 ``resolve_rls_gucs`` is the single truth for the ``dazzle.tenant_id`` /
 ``dazzle.user_<attr>`` GUCs. ``bind_rls_context`` (the per-request contextvars the
 framework's leased connection reads) and ``bind_rls`` (an app-owned DB-API
-connection — AegisMark's custom routes / renderers) both derive from it. This file
-is AegisMark's ``tests/serve/test_rls_bind_contract.py`` moved upstream: for every
+connection — a consumer's custom routes / renderers) both derive from it. This file
+is a consumer's ``tests/serve/test_rls_bind_contract.py`` moved upstream: for every
 case the connection GUCs, the contextvar GUCs and the resolver agree.
 """
 

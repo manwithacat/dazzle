@@ -13,7 +13,7 @@ target market makes that the whole product:
 
 | Consumer | Domain | Obligations the app must demonstrate |
 |---|---|---|
-| AegisMark | state education, formative marking | safeguarding of children, data protection, high-stakes integrity of marks |
+| A consumer app | state education, formative marking | safeguarding of children, data protection, high-stakes integrity of marks |
 | cyfuture | accountancy | regulatory filings, KYC/AML, document signing, client-money discipline |
 | pennydreadful | publishing | IP and authorship verification, royalty calculation, rights auctions |
 
@@ -59,7 +59,7 @@ consumers, and the framework's growth has been driven by exploration, not force.
 
 - Accept ADR-0057. Add `scripts/flense_inventory.py` that emits one committed
   table, `docs/reference/flense-inventory.md`: per subpackage / construct / MCP
-  tool / CLI group → lines, test lines, and **consumer users** (AegisMark,
+  tool / CLI group → lines, test lines, and **consumer users** (a consumer app,
   cyfuture, pennydreadful, examples). Consumer paths come from a small
   `flense_consumers.toml` the operator maintains. The inventory is the only
   admissible evidence for a removal or a keep.
@@ -117,11 +117,11 @@ on the moat, unused today, a consumer adopts it or it is parked.
 | `i18n`, `saml`, `mobile` extras | ~2k / ~2k | Park (DD: cyfuture SSO is OAuth today; SAML returns on a named tenant) | no consumer |
 | `perf/` envelope | 1.2k / 1.8k | Delete; keep `dazzle perf report` only if cyfuture adopts it | — |
 | `api_kb/` packs (Stripe, Companies House remain) | 1k | Keep only packs a consumer declares | already in progress (#1768, #1771) |
-| `hless`, `stream`, `event_model`, `subscribe`, `projection`, `channel`, `message`, `notification`, `job` | parser + `http/events` 8k + `channels` 4.8k / ~9k | Park (DD: pennydreadful rights auctions may force events; a notification construct may be forced by AegisMark safeguarding alerts) | zero consumer use |
+| `hless`, `stream`, `event_model`, `subscribe`, `projection`, `channel`, `message`, `notification`, `job` | parser + `http/events` 8k + `channels` 4.8k / ~9k | Park (DD: pennydreadful rights auctions may force events; a notification construct may be forced by a consumer app safeguarding alerts) | zero consumer use |
 | `ledger`, `transaction`, `atomic` | ? / 2.7k | Park (DD: pennydreadful royalties, cyfuture client money) | zero use today; likely forced within months — keep the IR design in the DD |
 | `approval`, `sla`, `rhythm`, `flow`, `rule`, `test`, `question` | ? / ~4k | `sla`/`rhythm`: keep (cyfuture uses). Others: delete | — |
 | `document`, `template`, `asset`, `demo`, `interfaces`, `data_products`, `ingest`, `webhook` | `http/data_products` 1.5k … / ~6k | `webhook`/`ingest`: Prove — cyfuture KYC and signing callbacks should be webhooks, not app code. Rest: delete | — |
-| `audit` construct | ? / 9.3k | **Prove** — AegisMark declares `[audit]` in config; the moat needs the DSL-level construct exercised by both regulated consumers, or the config path is the construct | the biggest test mass in the unused set |
+| `audit` construct | ? / 9.3k | **Prove** — a consumer app declares `[audit]` in config; the moat needs the DSL-level construct exercised by both regulated consumers, or the config path is the construct | the biggest test mass in the unused set |
 | `compliance/`, `policy`, `rbac/`, `signing/`, `tenant/`, `risk/`, `pii` | 4.3k + 4.2k + 2.1k + … | **Prove** — see Phase 4 | the moat, unexercised |
 | `http/pra` (parser-conformance runtime) | 6k | Keep as a fixture-only test asset | — |
 | `http/tests` routes, `test_routes.py` (1k) | 10k | Fold into `testing/`; delete what `ux verify` does not use | — |
@@ -137,9 +137,9 @@ The deliverable is an **assurance pack** per app, produced by one command
 (`dazzle assure`, or the existing commands composed in each app's CI):
 
 - RBAC matrix + scope proofs (`rbac matrix`, `db explain-scope`, the dynamic verifier)
-- Tenancy / RLS proof for cyfuture; safeguarding data-boundary proof for AegisMark
+- Tenancy / RLS proof for cyfuture; safeguarding data-boundary proof for a consumer app
 - Audit-trail coverage: every state transition and every PII read/write is evidenced
-- Signing chain (`signing_validation` shape) for cyfuture filings and AegisMark marks
+- Signing chain (`signing_validation` shape) for cyfuture filings and a consumer app marks
 - PII inventory and retention from the model
 - Compliance evidence (`compliance compile|gaps`) mapped to ISO 27001 / SOC 2 /
   the UK education and AML control sets the two consumers face
@@ -166,7 +166,7 @@ whatever the pack reveals (today: nobody runs `compliance`, so expect gaps).
 | 1 | ADR-0057, inventory script + table, mass ratchet gate, consumer bugs fixed, improve loop retired |
 | 1–2 | docs archive, harness gates pruned, skills pruned |
 | 2–6 | one flense ship per working day; ~25 ships |
-| 3–8 | assurance pack on AegisMark and cyfuture; framework fixes it forces |
+| 3–8 | assurance pack on a consumer app and cyfuture; framework fixes it forces |
 | 8 | first thesis benchmark; review targets |
 
 ## 6. Risks
@@ -215,7 +215,7 @@ Decisions taken on 2026-10-13: (1) the drop of `_dazzle_atomic_audit`,
 `_dazzle_ingest_fingerprint` and `join_requests` is approved — revision
 `0022_flense_park_tables` now performs it (it had shipped as a no-op on `main`, before any
 release carried it); (2) Phase 4 runs inside the consumer repos through hand-off files
-`FLENSE_AEGISMARK.md`, `FLENSE_CYFUTURE.md` and `FLENSE_PENNYDREADFUL.md`, each given to an
+`FLENSE_CYFUTURE.md` and `FLENSE_PENNYDREADFUL.md`, each given to an
 agent working in that checkout; (3) Phases 0–3 are released as v0.116.0 (minor; Breaking
 entries in the CHANGELOG); (4) the strategy for the remaining src and test mass is agreed:
 surgical cuts inside the kept subsystems from the inventory's per-subpackage table
@@ -226,7 +226,7 @@ Phase 4 starting point, measured on 2026-10-13 with the v0.116.0 tree against ea
 
 | Consumer | `rbac prove` | ISO 27001 gaps | PII hints / subprocessors | Routes outside the matrix | DSL evidence |
 |---|---|---:|---:|---:|---|
-| AegisMark | 2 proved, 1 informational, 2 vacuous, 12 residual notes | 10 (all tier 3) | 31 / 12 | 0 (route scan cannot import `pipeline`) | 111 classify, 354 permit, 612 scope, 10 persona |
+| A consumer app | 2 proved, 1 informational, 2 vacuous, 12 residual notes | 10 (all tier 3) | 31 / 12 | 0 (route scan cannot import `pipeline`) | 111 classify, 354 permit, 612 scope, 10 persona |
 | cyfuture | 2 proved, 1 informational, 2 vacuous, 4 residual notes | 16 (incl. A.5.12/13 classification, A.5.34 PII, A.8.11 masking) | 32 / 8 | 1 (`POST /companycontacts`); 4 `admin` delete permits with no scope rule | 0 classify, 296 permit, 881 scope, 8 sla |
 | pennydreadful | 2 proved, 1 informational, 2 vacuous, 16 residual notes | 10 (all tier 3) | 3 / 8 | 0 | 0 classify, 144 permit, 271 scope; persona `agent` unreferenced |
 
@@ -297,7 +297,7 @@ test suite, which is now larger than the framework it tests (351k test lines for
 
 | Finding | Size (src / tests) | Evidence |
 |---|---:|---|
-| Enterprise auth (SAML, SCIM, enterprise OIDC, connections, domain verification, `dazzle auth connection`) | ≈ 5,500 / ≈ 13,000 | gated on `[capabilities] enabled` in `dazzle.toml`; no consumer declares the section; AegisMark's `docs/enterprise-auth-enablement.md` records the capability as "inert" and names go-live as a reviewed architecture change |
+| Enterprise auth (SAML, SCIM, enterprise OIDC, connections, domain verification, `dazzle auth connection`) | ≈ 5,500 / ≈ 13,000 | gated on `[capabilities] enabled` in `dazzle.toml`; no consumer declares the section; a consumer's `docs/enterprise-auth-enablement.md` records the capability as "inert" and names go-live as a reviewed architecture change |
 | Two-factor auth (TOTP, recovery codes, `/2fa/*` pages) | ≈ 1,100 / ≈ 1,400 | mounted for every app; no consumer declares `security: two_factor`; zero `/2fa` references in any checkout |
 | `dazzle init` and the bundled `dazzle.examples` package | ≈ 8,100 (4,700 of it a Vite/`dnr-ui` SPA and a Docker frontend) / 9 test files | no consumer runs `init`; `bootstrap` (MCP) is the documented entry point and does not use it; a bundled SPA contradicts ADR-0011 |
 | `/_ops/sse` streaming, `/_site/*` JSON API | ≈ 600 / ≈ 100 | no JS, HM, test or consumer caller beyond registration |
@@ -305,7 +305,7 @@ test suite, which is now larger than the framework it tests (351k test lines for
 | Function clones | 138 clone pairs, 76 exact families (`tests/unit/fixtures/clone_*.json`) | `dazzle fitness clones` |
 | Test redundancy | 989 clusters of ≥3 same-shape tests (3,899 tests; ≈ 2,910 collapsible), 21 cross-file clusters (205 tests), 74 implementation mirrors | `tests/audit/redundancy_report.md`, `cross_file_report.md`, `taxonomy_report.md` |
 | Test mass by area | `tests/unit` 323k of 351k; largest files `test_parser.py` 3.7k, `test_region_adapter.py` 2.5k, `test_rhythm_mcp.py` 2.1k, `test_validator.py` 1.8k, `test_template_compiler.py` 1.5k | 16,750 test functions, 1,459 parametrised |
-| Kept and load-bearing (not candidates) | `http/events` (cyfuture subscribes to the entity bus and runs `EventBusProcessAdapter`), `http/channels` (the email kernel the auth subsystem uses), social OAuth via `authlib` (cyfuture google/github/apple), magic link (AegisMark), S3 storage (AegisMark), `sitespec`/`themespec`/`brandspec`, `/__test__` seed routes (all three), `dazzle pipeline` (AegisMark, cyfuture), `dazzle test` (cyfuture, 14 files) | inventory + `rg` |
+| Kept and load-bearing (not candidates) | `http/events` (cyfuture subscribes to the entity bus and runs `EventBusProcessAdapter`), `http/channels` (the email kernel the auth subsystem uses), social OAuth via `authlib` (cyfuture google/github/apple), magic link, S3 storage, `sitespec`/`themespec`/`brandspec`, `/__test__` seed routes (all three), `dazzle pipeline` (a consumer app, cyfuture), `dazzle test` (cyfuture, 14 files) | inventory + `rg` |
 
 Not a cut, noted for the operator: `src/dazzle/examples/simple_task/build/` holds 700 MB of
 ignored `node_modules` on disk (safe to delete locally); cyfuture's
@@ -320,7 +320,7 @@ cherry-pick, `make ci-fast`, push gate, no bump mid-loop; a `minor` bump closes 
 
 | Ship | Scope | Disposition | Expected Δ (src / tests) |
 |---|---|---|---:|
-| **AD** (D) | Enterprise auth: `auth/saml_*`, `scim_*`, `oidc_provider`, `enterprise_*`, `connection_*`, `connections`, `leftover_*`, `sso_session`, DNS resolvers, `connection_crypto`, `cli/auth_connection.py`, the `auth.enterprise.*` capability registrations, their tables (drop revision, operator sign-off like `devices`), the `saml` extra and python3-saml/xmlsec | **Park** as DD-013 "Enterprise SSO / SCIM connections"; reopen when AegisMark (or any consumer) declares the capability. Social OAuth (`sso_routes`, `sso_config`, authlib) and magic link stay | −5.5k / −13k |
+| **AD** (D) | Enterprise auth: `auth/saml_*`, `scim_*`, `oidc_provider`, `enterprise_*`, `connection_*`, `connections`, `leftover_*`, `sso_session`, DNS resolvers, `connection_crypto`, `cli/auth_connection.py`, the `auth.enterprise.*` capability registrations, their tables (drop revision, operator sign-off like `devices`), the `saml` extra and python3-saml/xmlsec | **Park** as DD-013 "Enterprise SSO / SCIM connections"; reopen when a consumer app (or any consumer) declares the capability. Social OAuth (`sso_routes`, `sso_config`, authlib) and magic link stay | −5.5k / −13k |
 | **AE** | `/_ops/sse` (`sse_stream.py`), the `/_site/*` JSON API in `site_routes.py`, `/_dazzle/metrics` if the operator confirms the constant document goes (§8.1), `fixtures/investigator_smoke` | Delete | −1k / −0.3k |
 | **AF** (D) | `dazzle init`, `dazzle.examples` (bundled `simple_task` with `dnr-ui` SPA, Docker frontend, testspec, generated e2e), `cli/project.py` paths that only serve them | Delete; `bootstrap` + `examples/simple_task` in the repo remain the way a new app starts. If the operator wants `init` kept, it scaffolds from `examples/simple_task` with no bundled copy | −8k / −1k |
 | **AG** (D) | Two-factor auth: `routes_2fa`, `two_factor_*`, `leftover_2fa_code`, TOTP/recovery helpers, the `/2fa/*` pages in `site_routes.py`, `security.two_factor` IR | **Park** as DD-014 "Two-factor authentication"; reopen when a consumer declares `security: two_factor`. Alternative the operator may prefer: keep, and make a consumer adopt it in Phase 4 as part of its assurance pack | −1.1k / −1.4k |
@@ -347,7 +347,7 @@ the commit body; HM tests (`test_hm_*`, `packages/hatchi-maxchi/tests`) are out 
    scaffolds from the repo example without a bundled copy.
 3. **AG — park two-factor auth.** Recommendation: park (DD-014) with the explicit note that a
    regulated consumer's assurance pack is the forcing function to bring it back; the
-   alternative is to make AegisMark adopt it now under Phase 4.
+   alternative is to make a consumer app adopt it now under Phase 4.
 
 ### 9.5 Targets for this phase
 
@@ -414,7 +414,7 @@ targets (≤ 250k / ≤ 200k) remain Phase 7 material: the runtime monoliths (`p
 
 Consumer actions from this phase are in each `FLENSE_*.md` §2 step 6: `dazzle db upgrade head`
 now reaches 0024 (seven empty framework tables dropped), confirm no user row has
-`totp_enabled`/`email_otp_enabled` set, and AegisMark's enterprise-auth runbook is obsolete.
+`totp_enabled`/`email_otp_enabled` set, and a consumer's enterprise-auth runbook is obsolete.
 
 ## 10. Phase 7 — the third flense (planned 2026-10-15, after v0.118.0)
 
@@ -442,13 +442,13 @@ where evidence-only cutting stops, so the §7 numbers can be reaffirmed or revis
 | `page_routes.py` 3,902: a 476-line per-field-kind filter family at lines 430–905 (`entity_<kind>_filter_fields`, `leftover_honest_filter_<kind>`, `_parse_list_filter_<kind>_values` for nine kinds) and three persona-override walkers at 1203–1448 | ≈ 700 collapsible | one shape per kind; the clone detector misses it because the bodies differ only in string-valued AST fields (`fitness/clones.py:194`) |
 | Zero-importer modules after Phase 6 (static scan re-run) | 2,964 | `core/llm_context` 643, `qa/subscription_vision` 515, `core/design_context` 347, `qa/work_surface_utility` 330, `testing/ux/reconciler` 269, `http/runtime/response_helpers` 262, `core/process/context` 250, `qa/evaluate` 181, `qa/hyperpart_dsl_shapes` 127, `fitness/swallows` 40 |
 | `testing/` modules with no importer outside `tests/` once relative imports are counted | ≈ 3,000 | `auth_flows` 660, `walk/actions_api` 428, `ux/reconciler` 269, `viewport_screenshot` 249, `cleanup_manager` 236, `ux/seed_values` 218, `ux/interactions/card_add` 212, `ux_catalogue_manifest` 204; `vendor_mock/*` 1,516 reached only through `test populate` (to confirm). Kept: the eight consumer-imported modules, `fuzz_runtime` (fuzz skill), `ux/contract_checker` (card-safety gate), `tier2_playwright`, `e2e_runner`, `viewport*` (CLI-reached) |
-| CLI groups with no consumer reach outside prose and no harness reach | ≈ 1,700 / ≈ 1,500 | `analytics` 260, `representation` 136, `rhythm` 162 (the MCP `rhythm` tool stays: AegisMark names it), `vocab` 316 (examples only), `walk` 460 (cyfuture imports `testing.walk`, not the command), `activity` 133, `claims` 131 (unless it backs `docs claims`, cyfuture 12), `prove` 116 (`scripts/example_agent_prove.sh` and the stems skill; examples only). `doctor` (release-cli workflow), `fragment-audit` (CI), `coverage` (preflight), `spec` (ship skill) stay |
+| CLI groups with no consumer reach outside prose and no harness reach | ≈ 1,700 / ≈ 1,500 | `analytics` 260, `representation` 136, `rhythm` 162 (the MCP `rhythm` tool stays: a consumer app names it), `vocab` 316 (examples only), `walk` 460 (cyfuture imports `testing.walk`, not the command), `activity` 133, `claims` 131 (unless it backs `docs claims`, cyfuture 12), `prove` 116 (`scripts/example_agent_prove.sh` and the stems skill; examples only). `doctor` (release-cli workflow), `fragment-audit` (CI), `coverage` (preflight), `spec` (ship skill) stay |
 | MCP: 19 tools pinned; `spec_analyze` (handler 1,181 plus `spec_questions` 406, `spec_lifecycles` 424, `domain` if only it reads them) and `project` have zero consumer mentions | ≈ 2,500 / ≈ 1,500 | `docs/api-surface/mcp-tools.txt`; `bootstrap` must be re-pointed if it calls `spec_analyze` (ship C flag) |
 | `core/grammar_gen.py` 1,703 reached only from `cli/__init__.py` and two tests | 1,703 / ≈ 300 | no `grammar` group is registered; check what in `cli/__init__.py` imports it |
 | Vulture ≥ 60 % after ship AI: 629 function/class/method flags | — | mostly typer-decorated commands and pydantic fields (false positives); the real residue is unread IR attributes (`core/ir/workspaces` 54, `sitespec` 43, `themespec` 21, `test_design` 21, `surfaces` 21, `domain` 21, `process` 17, `governance` 16, `llm` 15, `onboarding` 14, `rhythm` 13) and `testing/step_executor.py` 29 |
 | Tests 319,714 lines by the package a file mainly imports | — | `core.ir` 64k (223 files), `http.runtime` 55k, `render.fragment` 27k, no-`dazzle`-import harness/docs/fixture tests 25k, `http.specs` 12.8k, `core.errors` 11.8k. Redundancy: 745 clusters spread over ≈ 400 flat `tests/unit` files (deepest: `test_expression_lang.py` 12, `test_rbac_verifier.py` 7, `test_mapping_executor.py` 6, `test_htmx_details.py` 6, `test_vendor_mock_generator.py` 6, `test_schema_diff.py` 5, `test_org_activation.py` 5, `test_csrf_origin_gate_phase2.py` 5, `test_fidelity_scorer.py` 5, `test_scope_rules.py` 5). Largest undistilled: `test_persona_journey.py` 1,464, `test_workspace_rendering.py` 1,344, `test_mapping_executor.py` 1,338, `test_fidelity_scorer.py` 1,273, `test_events.py` 1,178, `test_qa_trial.py` 1,177, `test_testspec_generator.py` 1,122 (`test_hm_contract_dom_conformance.py` 1,782 is HM, exempt) |
 | Monoliths (structure, not mass) | — | `server.py` 2,624 (`DazzleBackendApp` with twenty `_mount_*`/`_wire_*` methods), `page_routes.py` 3,902, `auth/store.py` 1,685 (three mixins on `LazyPgStore` after AH), `cli/db.py` 2,380 (24 commands, consumers use most), `dsl_parser_impl/workspace.py` 3,399 and `entity.py` 3,047 (the grammar) |
-| Kept and load-bearing (not candidates) | — | `__test__` routes (pennydreadful 51, AegisMark 12, cyfuture 9), `consent_routes` (`analytics` construct: AegisMark, cyfuture), `audit_routes` no-auth twins (only when auth is off), `task_routes` + `core/process` (cyfuture `process`, hr_records), `sentinel` (`sentinel scan`: AegisMark, cyfuture; MCP 4/6), `signing` (AegisMark), `grant_routes` (both regulated consumers), FTS/search/files/documents/bulk/i18n (consumer-declared or consumer-imported) |
+| Kept and load-bearing (not candidates) | — | `__test__` routes (pennydreadful 51, a consumer app 12, cyfuture 9), `consent_routes` (`analytics` construct: a consumer app, cyfuture), `audit_routes` no-auth twins (only when auth is off), `task_routes` + `core/process` (cyfuture `process`, hr_records), `sentinel` (`sentinel scan`: a consumer app, cyfuture; MCP 4/6), `signing`, `grant_routes` (both regulated consumers), FTS/search/files/documents/bulk/i18n (consumer-declared or consumer-imported) |
 
 ### 10.3 Ships
 
@@ -462,7 +462,7 @@ run on evidence alone with the §9.6 mechanics.
 | **AR** (D) | Event transport residue: `postgres_bus.py`, `dev_memory.py` (its fake moves into `tests/`), `inbox.py` with `_dazzle_event_inbox`, `event_explorer.py` and its dev route, `sse_stream.py` + `sse_wiring.py` + `/_ops/sse/events` + the workspace `live:` flag, `channels/outbox.py` `OutboxRepository` + `email_outbox`; the Redis bus, `null`, `framework`, `publisher`, `consumer`, `outbox` (`_dazzle_event_outbox`), `EventBusProcessAdapter` and the in-process `EntityEventBus` stay | **Park** into DD-006 (extended from the DSL to the transport); revision 0025 drops `_dazzle_event_inbox` and `email_outbox` — **approved 2026-10-16, landed 06d1be1bb; inbox kept (cyfuture production path)** | −3k / −3k |
 | **AS** (D) | CLI groups `analytics`, `representation`, `rhythm` (command only), `vocab`, `walk`, `activity`, `prove` with `scripts/example_agent_prove.sh` (stems skill re-pointed to MCP `knowledge counter_prior`), `claims` unless `docs claims` reads it | Delete — **approved 2026-10-16, landed adb829f75; `analytics` and `representation` kept on evidence** | −1.7k / −1.5k |
 | **AT** | MCP `spec_analyze` and `project`, with `spec_questions`, `spec_lifecycles`, `domain` and the `domain_brief` residue if nothing else reads them; `bootstrap` re-pointed; `core/grammar_gen.py` if no registered command reaches it | Delete — **result: all three kept, see §10.7** | 0 / 0 |
-| **AU** | Unread IR attributes (vulture residue in `core/ir/*`), each verified against the parser's writes and every reader including the consumers' `dazzle.core.ir` imports (AegisMark 9, cyfuture 5); `testing/step_executor.py` residue; `ir-types` baseline regenerated with a CHANGELOG entry | Delete | −1k / −0.5k |
+| **AU** | Unread IR attributes (vulture residue in `core/ir/*`), each verified against the parser's writes and every reader including the consumers' `dazzle.core.ir` imports (consumer 9, cyfuture 5); `testing/step_executor.py` residue; `ir-types` baseline regenerated with a CHANGELOG entry | Delete | −1k / −0.5k |
 | **AV** | Distillation: the twenty deepest cluster files | Distil | 0 / −5k |
 | **AW** | Distillation: `test_persona_journey.py`, `test_workspace_rendering.py`, `test_mapping_executor.py`, `test_fidelity_scorer.py`, `test_qa_trial.py`, `test_testspec_generator.py` | Distil | 0 / −6k |
 | **AX** | The 25k lines of tests with no `dazzle` import: fold duplicate harness gates (docs, agents, stems, drift), delete tests pinning features removed in Phases 3–6, keep one gate per invariant | Distil | 0 / −7k |
@@ -569,7 +569,7 @@ without retiring features consumers use; §10.4 records the 2026-10-16 decision 
 
 Findings for the operator, from the commit bodies: cyfuture's `themespec.yaml` attention-map
 rules are silently dropped by `themespec_loader.py:104-110` (shape mismatch, nothing renders
-attention maps); AegisMark writes `ErasurePolicy.PSEUDONYMIZE`, which nothing implements; no
+attention maps); a consumer app writes `ErasurePolicy.PSEUDONYMIZE`, which nothing implements; no
 gate bans Alpine `x-*` emission from the typed renderers any more and
 `page/runtime/static/test-workspace-perf.html` still carries `x-data`; `MANIFEST.in:13` does
 not ship the default favicon `.svg` or `static/css/themes/*.toml`, the `dazzle.page` package-data

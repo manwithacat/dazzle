@@ -390,7 +390,7 @@ class TestFindNestedChromes:
 
 
 class TestFindDuplicateTitlesInCards:
-    """Gate on AegisMark's #794 second counter:
+    """Gate on a consumer's #794 second counter:
     ``page.get_by_text("Grade Distribution").count() → 3``.
 
     A card with the same heading text more than once = the header
@@ -440,7 +440,7 @@ class TestFindDuplicateTitlesInCards:
 
     def test_whitespace_and_casing_normalised(self) -> None:
         # `<h3>\n  Grade Distribution  </h3>` must match
-        # `<h3>Grade Distribution</h3>` — the AegisMark counter is
+        # `<h3>Grade Distribution</h3>` — the consumer counter is
         # page.get_by_text which already normalises whitespace.
         from dazzle.testing.ux.contract_checker import find_duplicate_titles_in_cards
 
@@ -462,7 +462,7 @@ class TestFindDuplicateTitlesInCards:
         assert find_duplicate_titles_in_cards(html) == []
 
     def test_dashboard_slot_plus_region_with_duplicate_title(self) -> None:
-        # Exact shape AegisMark reported — dashboard card header
+        # Exact shape a consumer app reported — dashboard card header
         # renders the title and the region partial (pre-#794-followup
         # region_card macro) renders it again inside.
         from dazzle.testing.ux.contract_checker import find_duplicate_titles_in_cards

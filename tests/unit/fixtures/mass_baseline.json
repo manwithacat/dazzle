@@ -398,7 +398,7 @@
         "test_lines",
         "docs_lines"
       ],
-      "reason": "#1772 consumer-forced (AegisMark): public bind_rls leaf"
+      "reason": "#1772 consumer-forced: public bind_rls leaf"
     },
     {
       "date": "2026-10-17",
@@ -434,7 +434,7 @@
         "test_lines",
         "docs_lines"
       ],
-      "reason": "#1797 + #1796 consumer-forced (AegisMark): effect wiring, role alternatives, custom.css in app chrome"
+      "reason": "#1797 + #1796 consumer-forced: effect wiring, role alternatives, custom.css in app chrome"
     },
     {
       "date": "2026-10-17",
@@ -443,7 +443,7 @@
         "test_lines",
         "docs_lines"
       ],
-      "reason": "#1790 consumer-forced (AegisMark): delete landing by origin"
+      "reason": "#1790 consumer-forced: delete landing by origin"
     },
     {
       "date": "2026-10-17",
@@ -452,7 +452,7 @@
         "test_lines",
         "docs_lines"
       ],
-      "reason": "#1790 + #1791 consumer-forced (AegisMark): delete landing by origin; qualified grouped aggregates"
+      "reason": "#1790 + #1791 consumer-forced: delete landing by origin; qualified grouped aggregates"
     },
     {
       "date": "2026-10-17",
@@ -460,7 +460,7 @@
         "src_lines",
         "test_lines"
       ],
-      "reason": "#1795 consumer-forced (AegisMark): lens swap target, single toast controller, confirm variant"
+      "reason": "#1795 consumer-forced: lens swap target, single toast controller, confirm variant"
     },
     {
       "date": "2026-10-17",
@@ -469,7 +469,7 @@
         "test_lines",
         "docs_lines"
       ],
-      "reason": "#1794 topbar_title setting, identity chip and renderer Principal (consumer-forced by AegisMark)"
+      "reason": "#1794 topbar_title setting, identity chip and renderer Principal (consumer-forced)"
     },
     {
       "date": "2026-10-17",
@@ -485,7 +485,7 @@
         "src_lines",
         "docs_lines"
       ],
-      "reason": "#1793 consumer-forced project-asset fingerprinting + renderer asset mount/injection (AegisMark deletes its three shims)"
+      "reason": "#1793 consumer-forced project-asset fingerprinting + renderer asset mount/injection (consumer deletes its three shims)"
     },
     {
       "date": "2026-10-17",
@@ -493,7 +493,7 @@
         "src_lines",
         "test_lines"
       ],
-      "reason": "#1793 consumer-forced project-asset fingerprinting + renderer asset mount/injection (AegisMark deletes its three shims)"
+      "reason": "#1793 consumer-forced project-asset fingerprinting + renderer asset mount/injection (consumer deletes its three shims)"
     },
     {
       "date": "2026-10-17",
@@ -789,7 +789,7 @@
         "test_lines",
         "docs_lines"
       ],
-      "reason": "#1854/PR #1855 feedback_widget review posture (consumer-forced, AegisMark; operator exception granted 2026-10-25)"
+      "reason": "#1854/PR #1855 feedback_widget review posture (consumer-forced; operator exception granted 2026-10-25)"
     }
   ]
 }

@@ -1,7 +1,7 @@
 # feedback_widget: review posture, element anchors, server-stamped context, agent read path
 
 Plan and contract for the work split across three worktrees (2026-10-25).
-Consumer: AegisMark (`/Volumes/SSD/AegisMark`), spec
+Consumer: a consumer app (`/Volumes/SSD/a consumer app`), spec
 `docs/superpowers/specs/2026-10-25-native-review-widget.md` and the survey
 `2026-10-25-review-widget-landscape.md` there. Decision taken by the
 maintainer: **evolve `feedback_widget` / `FeedbackReport`**, no sibling
@@ -182,7 +182,7 @@ screenshot policy; server-stamped identity, idempotency, caps, rate limit;
 list filters; MCP filters + summarise + remote target), Fixed (categories /
 severities applied; replayed key no longer 500; feedback_admin pager),
 Agent Guidance (how to read review notes from a deployed app). Every bullet
-"consumer-forced by aegismark". Version bump is the maintainer's.
+"consumer-forced". Version bump is the maintainer's.
 
 ## 7. Out of scope now
 

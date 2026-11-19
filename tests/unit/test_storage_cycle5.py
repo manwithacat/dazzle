@@ -5,7 +5,7 @@ pipe operator:
 
     source_pdf_url: file storage=cohort_pdfs|starter_packs
 
-Models the real shared+private fan-in case from AegisMark: a field
+Models the real shared+private fan-in case from a consumer app: a field
 that can hold either a per-user upload (sandboxed under
 `{user_id}` in the cohort_pdfs prefix) OR a reference to a
 shared starter-pack asset (under starter_packs prefix, no user

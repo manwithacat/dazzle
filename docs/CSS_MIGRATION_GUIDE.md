@@ -63,14 +63,14 @@ The old `--primary`, `--success`, `--destructive` etc. (US English) are renamed:
 
 ```css
 /* Before (pre-#1280 — data-theme overloaded) */
-[data-theme="aegismark"] {
+[data-theme="a consumer app"] {
   --primary: 220 90% 56%;
   --success: 142 76% 36%;
 }
 
 /* After (#1280+ — project theme identity on data-theme-name;
    data-theme is now the colour-scheme carrier owned by runtime JS) */
-[data-theme-name="aegismark"] {
+[data-theme-name="a consumer app"] {
   --colour-brand: oklch(55% 0.18 260);
   --colour-success: oklch(65% 0.15 142);
 }
@@ -190,6 +190,6 @@ The vendor layer is appended to the cascade order in `dazzle.css`:
 ## Where to find help
 
 - This guide.
-- `dev_docs/css-refactor-2026-04-27.md` (root project plan, in the AegisMark repo for historical reasons).
+- `dev_docs/css-refactor-2026-04-27.md` (root project plan, in the consumer repo for historical reasons).
 - The cascade-layer order in `src/dazzle/page/runtime/static/css/dazzle.css`.
 - `tokens.css` — the design system. Read it first before debugging any colour or spacing question.

@@ -1,7 +1,7 @@
 """#1140: backstop dedup in generate_all_routes.
 
 When the same `(method, path)` appears twice in the `endpoints` list
-(AegisMark's AssessmentEvent was visited twice because it was
+(a consumer's AssessmentEvent was visited twice because it was
 referenced from both an `analytics:` block and regular workspace
 surfaces), the generator must emit it exactly once.
 
