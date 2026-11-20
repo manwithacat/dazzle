@@ -2,7 +2,7 @@
 
 # AUTO-GENERATED vendored copy of packages/hatchi-maxchi/icons/registry.py
 # (regenerate via icons/gen_registry.py --sync) — do not edit.
-Source: lucide-static@1.59.0 (https://lucide.dev), ISC license:
+Source: lucide-static@1.73.0 (https://lucide.dev), ISC license:
 Copyright (c) Lucide Contributors 2022 — permission to use, copy,
 modify, and/or distribute this software for any purpose with or
 without fee is hereby granted (full text: lucide.dev/license).
@@ -12,7 +12,7 @@ wrap them in the <svg> shell at render time. Regenerate (never
 hand-edit) via packages/hatchi-maxchi/icons/gen_registry.py.
 """
 
-LUCIDE_VERSION = "1.59.0"
+LUCIDE_VERSION = "1.73.0"
 
 ICONS: dict[str, str] = {
     "archive": '<rect width="20" height="5" x="2" y="3" rx="1" /> <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /> <path d="M10 12h4" />',
@@ -48,7 +48,7 @@ ICONS: dict[str, str] = {
     "chevrons-right": '<path d="m6 17 5-5-5-5" /> <path d="m13 17 5-5-5-5" />',
     "circle-alert": '<circle cx="12" cy="12" r="10" /> <line x1="12" x2="12" y1="8" y2="12" /> <line x1="12" x2="12.01" y1="16" y2="16" />',
     "circle-check": '<circle cx="12" cy="12" r="10" /> <path d="m16 9-5.5 5.5L8 12" />',
-    "circle-help": '<circle cx="12" cy="12" r="10" /> <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /> <path d="M12 17h.01" />',
+    "circle-help": '<circle cx="12" cy="12" r="10" /> <path d="M9 9.5a3 2.5 0 016 0c0 2-2 2-3 3.5" /> <path d="M12 17h.01" />',
     "circle-plus": '<circle cx="12" cy="12" r="10" /> <path d="M8 12h8" /> <path d="M12 8v8" />',
     "circle-x": '<circle cx="12" cy="12" r="10" /> <path d="m15 9-6 6" /> <path d="m9 9 6 6" />',
     "clipboard-list": '<rect width="8" height="4" x="8" y="2" rx="1" ry="1" /> <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /> <path d="M12 11h4" /> <path d="M12 16h4" /> <path d="M8 11h.01" /> <path d="M8 16h.01" />',
